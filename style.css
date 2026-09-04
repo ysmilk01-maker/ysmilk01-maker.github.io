@@ -1,0 +1,218 @@
+/* ------------------------------------------------------------------ *
+ * 나인투식스랩
+ *
+ * 앱 세 개가 각자 다른 색을 쓴다 — 코인은 검정, 사주는 먹빛, 스도쿠는
+ * 연녹색. 회사 페이지까지 튀면 넷이 서로 싸운다. 그래서 여기는 종이처럼
+ * 두고, 색은 앱 카드 안에서만 쓴다.
+ * ------------------------------------------------------------------ */
+
+:root {
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --ink: #1a1917;
+  --ink-2: #3f3d39;
+  --muted: #6f6c66;
+  --faint: #a09c94;
+  --line: #e4e1da;
+  --accent: #2f6d4f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #16161a;
+    --surface: #1e1e23;
+    --ink: #f0eeea;
+    --ink-2: #cbc7c0;
+    --muted: #97938c;
+    --faint: #6d6961;
+    --line: #2c2c33;
+    --accent: #6fbf94;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-size: 16px;
+  line-height: 1.75;
+  word-break: keep-all;
+}
+
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 24px 96px;
+}
+
+/* ---------- 머리말 ---------- */
+
+header {
+  padding: 72px 0 8px;
+}
+
+.brand {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+h1 {
+  margin: 18px 0 0;
+  font-size: 34px;
+  line-height: 1.35;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.lead {
+  margin: 14px 0 0;
+  font-size: 16.5px;
+  color: var(--muted);
+}
+
+/* ---------- 본문 ---------- */
+
+h2 {
+  margin: 56px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+h3 {
+  margin: 32px 0 6px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+p { margin: 12px 0 0; }
+
+a { color: var(--accent); }
+
+small { color: var(--muted); font-size: 13.5px; }
+
+/* ---------- 앱 카드 ---------- */
+
+.apps {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app {
+  display: block;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+
+.app:hover { border-color: var(--accent); }
+
+.app-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.app-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.tag {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--faint);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+
+.app-desc {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+/* ---------- 표 ---------- */
+
+.tablewrap { overflow-x: auto; margin-top: 14px; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 460px;
+  font-size: 14.5px;
+}
+
+th, td {
+  text-align: left;
+  padding: 11px 14px 11px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  font-weight: 700;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+td { color: var(--muted); }
+
+/* ---------- 목록 ---------- */
+
+ul { margin: 12px 0 0; padding-left: 20px; }
+li { margin: 6px 0; color: var(--muted); }
+li strong { color: var(--ink-2); }
+
+/* ---------- 꼬리말 ---------- */
+
+footer {
+  margin-top: 72px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--faint);
+}
+
+footer a { color: var(--muted); }
+
+.rows { margin-top: 10px; }
+.rows div { display: flex; gap: 12px; }
+.rows dt { flex: none; width: 92px; color: var(--faint); }
+.rows dd { margin: 0; color: var(--muted); }
+
+@media (max-width: 480px) {
+  h1 { font-size: 28px; }
+  header { padding-top: 52px; }
+  .wrap { padding: 0 20px 72px; }
+}
