@@ -2,12 +2,12 @@
  * 나인투식스랩
  *
  * 이 스튜디오가 만드는 건 "설치가 필요 없는 앱"이다. 그래서 페이지의
- * 주인공은 글이 아니라 이미 켜져 있는 화면이어야 한다. 앱 하나가 전체
- * 화면을 하나씩 갖고, 그 안에서 폰이 가운데 선다.
+ * 주인공은 글이 아니라 이미 켜져 있는 화면이어야 한다.
  *
- * 앱 셋이 각자 색이 강하다 — 코인은 금색, 사주는 분홍, 스도쿠는 초록.
- * 페이지 바탕을 검게 깔아서 그 색들이 서로 싸우지 않고 각자 자기 무대
- * 에서만 켜지게 했다.
+ * 구성은 둘이다. 메인은 첫 화면 + 앱 격자. 앱마다 상세 페이지가 따로 있고
+ * 거기서 폰이 가운데 선다. 앱 넷이 각자 색이 강해서 — 금색, 파랑, 분홍,
+ * 초록 — 바탕을 검게 깔아 그 색들이 서로 싸우지 않고 각자 자기 카드 안에서만
+ * 켜지게 했다.
  * ------------------------------------------------------------------ */
 
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
@@ -127,30 +127,13 @@ a { color: inherit; }
   overflow: hidden;
 }
 
-.inner { width: 100%; max-width: 980px; margin: 0 auto; }
+.inner { width: 100%; max-width: 980px; margin: 0 auto; position: relative; }
 
 /*
  * 상단 바가 sticky 라, 앵커로 뛰면 제목이 바 밑에 깔린다.
  * 무대마다 바 높이만큼 여유를 준다.
  */
-.stage { scroll-margin-top: 48px; }
-
-/* ---------- 첫 화면 ---------- */
-
-.hero { background: var(--black); }
-
-/*
- * 배경의 옅은 빛. 색을 거의 안 쓰는 페이지라 이 정도 온도만 있어도
- * 검정이 죽지 않는다.
- */
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: -20% 0 auto;
-  height: 120%;
-  background: radial-gradient(58% 42% at 50% 32%, rgba(90, 96, 120, 0.28), transparent 72%);
-  pointer-events: none;
-}
+.stage, .apps { scroll-margin-top: 48px; }
 
 .eyebrow {
   margin: 0 0 22px;
@@ -170,6 +153,81 @@ h1 {
   text-wrap: balance;
 }
 
+h2 {
+  margin: 0;
+  font-size: var(--d2);
+  line-height: 1.14;
+  font-weight: 800;
+  letter-spacing: -0.032em;
+  text-wrap: balance;
+}
+
+/* ---------- 첫 화면 ---------- */
+
+.hero { background: var(--black); }
+
+/*
+ * 빛.
+ *
+ * 사진 대신 광막 한 장을 그린다. 세 겹이다 — 비스듬히 지나가는 얇은 시트,
+ * 그 뒤에서 넓게 퍼지는 차가운 번짐, 그리고 위에 아주 옅은 알갱이. 알갱이가
+ * 없으면 그라디언트가 매끈해서 화면이 아니라 렌더처럼 보인다.
+ *
+ * 시트는 아주 천천히 흔들린다. 눈에 띄게 움직이면 배경이 아니라 애니메이션이
+ * 된다. 움직임을 줄인 설정에서는 멈춘다.
+ */
+.hero .light {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero .sheet {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 150vmax;
+  height: 34vmax;
+  transform: translate(-50%, -50%) rotate(-24deg);
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.035) 28%,
+    rgba(255, 242, 220, 0.14) 50%,
+    rgba(255, 255, 255, 0.035) 72%,
+    transparent 100%);
+  filter: blur(26px);
+  animation: sheet-drift 22s ease-in-out infinite alternate;
+}
+
+.hero .bloom {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 78vmax;
+  height: 78vmax;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(118, 128, 168, 0.22), transparent 70%);
+  filter: blur(8px);
+}
+
+.hero .grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes sheet-drift {
+  from { transform: translate(-52%, -54%) rotate(-26deg); }
+  to   { transform: translate(-48%, -46%) rotate(-22deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero .sheet { animation: none; }
+}
+
 .hero .sub {
   margin: 26px auto 0;
   max-width: 34ch;
@@ -178,6 +236,22 @@ h1 {
   color: var(--muted-dark);
   letter-spacing: -0.012em;
 }
+
+.hero .cta {
+  display: inline-block;
+  margin-top: 38px;
+  padding: 13px 30px;
+  border-radius: 999px;
+  background: var(--ink-on-dark);
+  color: #0a0a0b;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  text-decoration: none;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.hero .cta:hover, .hero .cta:focus-visible { transform: translateY(-1px); filter: brightness(1.06); }
 
 .scroll-cue {
   position: absolute;
@@ -197,23 +271,179 @@ h1 {
   background: linear-gradient(#55555d, transparent);
 }
 
-/* ---------- 앱 무대 ---------- */
+/* ---------- 앱 격자 ---------- */
+
+.apps {
+  background: var(--black);
+  padding: clamp(96px, 12vw, 160px) 24px clamp(96px, 12vw, 160px);
+  text-align: center;
+  border-top: 1px solid var(--line-dark);
+}
+
+.grid {
+  list-style: none;
+  margin: 56px auto 0;
+  padding: 0;
+  max-width: 1040px;
+  display: grid;
+  gap: 18px;
+  text-align: left;
+}
+
+@media (min-width: 760px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /*
- * 앱 무대는 높이를 화면에 맞추지 않는다.
+ * 카드.
  *
- * 폰 스크린샷이 세로로 길어서(2532px) 100svh 안에 글과 폰을 같이 넣으면
- * 폰 아래가 잘린다. 잘린 폰은 화면이 아니라 사고처럼 보인다. 그래서 여백만
- * 넉넉히 주고 내용이 길면 길어지게 둔다.
+ * 카드 전체가 링크다. 글은 위, 폰은 아래에서 올라오다 잘린다. 폰이 잘리는 게
+ * 의도다 — 끝까지 보여주면 카드가 길어지고, 잘려 있으면 눌러서 더 보고 싶어진다.
+ * 앱 색은 위쪽 번짐으로만 켠다. 카드 전체를 칠하면 넷이 나란히 서로 싸운다.
+ */
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 30px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--stage);
+  border: 1px solid var(--line-dark);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.45s cubic-bezier(0.22, 0.7, 0.28, 1),
+    border-color 0.45s ease;
+}
+
+.tile::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 70%;
+  background: radial-gradient(60% 55% at 50% 0%, var(--glow, transparent), transparent 72%);
+  pointer-events: none;
+}
+
+.tile:hover, .tile:focus-visible {
+  transform: translateY(-5px);
+  border-color: #2c2c34;
+  outline: none;
+}
+
+.tile-text {
+  position: relative;
+  z-index: 2;
+  padding: 34px 34px 0;
+}
+
+.tile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 4px 9px;
+  border: 1px solid var(--line-dark);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted-dark);
+}
+
+.tile-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tint, #666);
+}
+
+.tile-badge.wait i { background: #55555d; }
+
+.tile h3 {
+  margin: 18px 0 0;
+  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.tile p {
+  margin: 10px 0 0;
+  max-width: 30ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted-dark);
+  letter-spacing: -0.01em;
+}
+
+.tile-more {
+  display: inline-block;
+  margin-top: 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tint, var(--ink-on-dark));
+  letter-spacing: -0.01em;
+}
+
+.tile-more::after {
+  content: ' →';
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.tile:hover .tile-more::after { transform: translateX(3px); }
+
+/*
+ * 폰은 글 아래 흐름에 둔다. 절대위치로 띄우면 글이 길어질 때 폰 윗선이
+ * 글에 닿는다. 흐름에 두고 카드 바닥에 붙인 다음(margin-top: auto) 높이를
+ * 잘라내면, 글이 몇 줄이든 겹칠 수가 없다. 잘린 폰은 의도다.
+ */
+.tile-phone {
+  position: relative;
+  width: min(246px, 62%);
+  height: 320px;
+  margin: auto auto 0;
+  padding: 7px 7px 0;
+  border-radius: 38px 38px 0 0;
+  overflow: hidden;
+  background: linear-gradient(160deg, #34343c, #131317 42%, #26262d);
+  box-shadow:
+    0 2px 3px rgba(255, 255, 255, 0.09) inset,
+    0 -18px 60px -24px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(0, 0, 0, 0.7);
+}
+
+.tile-phone img {
+  border-radius: 31px 31px 0 0;
+  background: #0b0e11;
+  transition: transform 0.6s cubic-bezier(0.22, 0.7, 0.28, 1);
+}
+
+/* 눌러보라는 신호 — 화면이 살짝 위로 스크롤된다 */
+.tile:hover .tile-phone img { transform: translateY(-16px); }
+
+/* 글이 짧아 폰이 바닥에 붙지 못할 때 최소 간격 */
+.tile-text { padding-bottom: 30px; }
+
+@media (max-width: 759px) {
+  .tile-text { padding: 28px 26px 26px; }
+  .tile-phone { height: 280px; }
+}
+
+/* ---------- 상세 페이지 ---------- */
+
+/*
+ * 상세는 예전 메인의 앱 무대를 그대로 이어받았다. 폰이 가운데 서고 글은
+ * 위, 여는 버튼은 아래. 높이를 화면에 맞추지 않는다 — 폰 스크린샷이
+ * 세로로 길어서 100svh 안에 넣으면 아래가 잘리고, 잘린 폰은 사고처럼 보인다.
  */
 .app-stage {
   background: var(--stage);
-  border-top: 1px solid var(--line-dark);
   min-height: auto;
-  padding: clamp(88px, 11vw, 148px) 24px clamp(96px, 12vw, 160px);
+  padding: clamp(72px, 9vw, 120px) 24px clamp(96px, 12vw, 160px);
 }
 
-/* 각 앱의 색을 위쪽에서 은은하게 켠다 */
 .app-stage::before {
   content: '';
   position: absolute;
@@ -223,7 +453,17 @@ h1 {
   pointer-events: none;
 }
 
-.app-stage .inner { position: relative; }
+.back {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 30px;
+  font-size: 13px;
+  color: var(--muted-dark);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.back:hover, .back:focus-visible { color: var(--ink-on-dark); }
 
 .badge {
   display: inline-flex;
@@ -247,14 +487,7 @@ h1 {
   font-style: normal;
 }
 
-h2 {
-  margin: 0;
-  font-size: var(--d2);
-  line-height: 1.14;
-  font-weight: 800;
-  letter-spacing: -0.032em;
-  text-wrap: balance;
-}
+.app-stage h1 { font-size: var(--d2); line-height: 1.14; letter-spacing: -0.032em; }
 
 .app-stage .desc {
   margin: 20px auto 0;
@@ -277,10 +510,7 @@ h2 {
     0 0 0 1px rgba(0, 0, 0, 0.7);
 }
 
-.phone img {
-  border-radius: 33px;
-  background: #0b0e11;
-}
+.phone img { border-radius: 33px; background: #0b0e11; }
 
 .how {
   margin: 40px auto 0;
@@ -332,9 +562,69 @@ h2 {
   color: #5c5c65;
 }
 
+/* 상세 아래 — 다른 앱들 */
+.others {
+  background: var(--black);
+  border-top: 1px solid var(--line-dark);
+  padding: clamp(64px, 8vw, 96px) 24px;
+  text-align: center;
+}
+
+.others .eyebrow { margin-bottom: 26px; }
+
+.others ul {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 860px;
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 620px) {
+  .others ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.others a {
+  display: block;
+  padding: 20px 20px 22px;
+  border: 1px solid var(--line-dark);
+  border-radius: 18px;
+  background: var(--stage);
+  text-align: left;
+  text-decoration: none;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.others a:hover, .others a:focus-visible { border-color: #2c2c34; transform: translateY(-2px); }
+
+.others a b {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.others a span {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  color: var(--muted-dark);
+}
+
+.others i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: 1px;
+  background: var(--tint);
+}
+
 /* ---------- 밝은 구간 ---------- */
 
-.light {
+.light-stage {
   background: var(--paper);
   color: var(--ink-on-light);
   border-top: 1px solid var(--line-dark);
@@ -342,9 +632,9 @@ h2 {
   padding: clamp(96px, 14vw, 168px) 24px;
 }
 
-.light h2 { max-width: 18ch; margin-inline: auto; }
+.light-stage h2 { max-width: 18ch; margin-inline: auto; }
 
-.light .desc {
+.light-stage .desc {
   margin: 20px auto 0;
   max-width: 40ch;
   color: var(--muted-light);

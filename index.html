@@ -16,124 +16,111 @@
 <nav class="nav">
   <a class="mark" href="#top">NINE TO SIX LAB</a>
   <ul>
-    <li><a href="#coin">코인</a></li>
-    <li><a href="#krx">국내주식</a></li>
-    <li><a href="#saju">사주</a></li>
-    <li><a href="#sudoku">스도쿠</a></li>
+    <li><a href="#apps">앱</a></li>
     <li><a href="#way">만드는 방식</a></li>
+    <li><a href="privacy.html">개인정보</a></li>
   </ul>
 </nav>
 
 <!--
   첫 화면.
 
-  이 스튜디오의 한 줄은 "설치가 필요 없다"는 것이다. 앱 이름을 먼저 늘어
-  놓지 않고 그 사실을 먼저 세운다. 앱은 아래에서 하나씩 자기 화면을 갖는다.
+  배경에 사진을 깔지 않는다. 생성 이미지는 어디서 본 듯한 "혁신" 스톡 사진이
+  되기 쉽고, 그 위에 글을 올리면 글이 죽는다. 대신 빛 한 장을 CSS 로 그린다 —
+  검정 위에 비스듬히 지나가는 얇은 광막 하나. 애플이 키노트 배경에 쓰는 방식과
+  같은 원리다. 가운데는 비워 두어 제목이 산다.
 -->
 <header class="stage hero" id="top">
+  <div class="light" aria-hidden="true">
+    <span class="sheet"></span>
+    <span class="bloom"></span>
+    <span class="grain"></span>
+  </div>
   <div class="inner">
     <p class="eyebrow rise">나인투식스랩</p>
     <h1 class="rise">받지 않아도<br>이미 켜져 있는 앱</h1>
     <p class="sub rise">
       토스 안에서 바로 열립니다. 설치도, 회원가입도, 로그인도 없습니다.
     </p>
+    <a class="cta rise" href="#apps">앱 보기</a>
   </div>
   <div class="scroll-cue rise">SCROLL<span></span></div>
 </header>
 
-<!-- 코인 -->
-<section class="stage app-stage" id="coin" style="--tint:var(--coin); --glow:rgba(240,185,11,0.11)">
-  <div class="inner">
-    <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
-    <h2 class="rise">잃어도<br>계좌는 그대로</h2>
-    <p class="desc rise">
-      비트코인·이더리움·솔라나·리플의 실시간 시세로 레버리지 롱과 숏을 연습합니다.
-      수수료와 펀딩비, 청산까지 무기한 선물 규칙 그대로 계산하고 돈만 가상입니다.
-    </p>
-    <div class="phone rise">
-      <img src="img/coin.png" width="1170" height="2532" alt="해외 코인 선물 챌린지 거래 화면. 비트코인 캔들 차트와 호가창, 롱과 숏 버튼." loading="lazy" decoding="async">
-    </div>
-    <ul class="how rise">
-      <li>실시간 시세</li>
-      <li>최대 125배</li>
-      <li>롱 · 숏</li>
-      <li>수익률 랭킹</li>
-    </ul>
-    <a class="open rise" href="intoss://coin-futures-sim">토스에서 열기</a>
-    <p class="hint rise">토스 앱에서 열립니다. 검색창에 ‘해외 코인 선물 챌린지’</p>
-  </div>
-</section>
+<!--
+  앱 격자.
 
-<!-- 국내주식 -->
-<section class="stage app-stage" id="krx" style="--tint:var(--krx); --glow:rgba(49,130,246,0.11)">
+  앱마다 한 화면씩 주던 구성을 버리고 한 자리에 모았다. 카드 전체가 링크라
+  어디를 눌러도 상세로 간다. 폰은 카드 아래에서 올라오다 잘리게 두었다 —
+  다 보여주면 카드가 세로로 너무 길어지고, 잘린 화면은 "더 있다"는 신호가 된다.
+-->
+<section class="apps" id="apps">
   <div class="inner">
-    <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
-    <h2 class="rise">국장에서<br>숏을 쳐봅니다</h2>
-    <p class="desc rise">
-      개인은 공매도가 사실상 막혀 있습니다. 여기서는 코스피·코스닥 전 종목을
-      내리는 쪽에도 걸어볼 수 있습니다. 가상 자금 1,000만원으로 시작합니다.
-    </p>
-    <div class="phone rise">
-      <img src="img/krx.png" width="1170" height="2532" alt="국내주식 롱숏 챌린지 주문 화면. 삼성전자 일봉 차트와 롱·숏 버튼, 레버리지 선택과 청산가." loading="lazy" decoding="async">
-    </div>
-    <ul class="how rise">
-      <li>코스피 · 코스닥 전 종목</li>
-      <li>최대 100배</li>
-      <li>롱 · 숏</li>
-      <li>수익률 랭킹</li>
-    </ul>
-    <a class="open rise" href="intoss://krx-sim">토스에서 열기</a>
-    <p class="hint rise">시세는 최근 영업일 종가입니다. 검색창에 ‘국내주식 롱숏 챌린지’</p>
-  </div>
-</section>
+    <p class="eyebrow rise">지금 토스에서</p>
+    <h2 class="rise">네 개의 앱</h2>
 
-<!-- 사주 -->
-<section class="stage app-stage" id="saju" style="--tint:var(--saju); --glow:rgba(247,108,130,0.10)">
-  <div class="inner">
-    <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
-    <h2 class="rise">생년월일은<br>폰 밖으로 안 나갑니다</h2>
-    <p class="desc rise">
-      태양황경으로 절기를 계산해 사주 여덟 글자를 세웁니다.
-      오늘의 운과 궁합까지 보는데, 모든 계산이 기기 안에서 끝납니다.
-    </p>
-    <div class="phone rise">
-      <img src="img/saju.png" width="1170" height="2532" alt="사주 여덟 글자 시작 화면. 오늘의 일진과 절기 기준 만세력 설명." loading="lazy" decoding="async">
-    </div>
-    <ul class="how rise">
-      <li>절기 기준 만세력</li>
-      <li>오늘의 운</li>
-      <li>궁합</li>
-      <li>서버 전송 없음</li>
-    </ul>
-    <a class="open rise" href="intoss://saju-eight">토스에서 열기</a>
-    <p class="hint rise">토스 앱에서 열립니다. 검색창에 ‘사주 여덟 글자’</p>
-  </div>
-</section>
+    <ul class="grid">
+      <li class="rise">
+        <a class="tile" href="apps/coin.html" style="--tint:var(--coin); --glow:rgba(240,185,11,0.16)">
+          <div class="tile-text">
+            <span class="tile-badge"><i></i>출시됨</span>
+            <h3>해외 코인 선물 챌린지</h3>
+            <p>잃어도 계좌는 그대로. 실시간 시세로 롱과 숏을 연습합니다.</p>
+            <span class="tile-more">자세히 보기</span>
+          </div>
+          <div class="tile-phone">
+            <img src="img/coin.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
+          </div>
+        </a>
+      </li>
 
-<!-- 스도쿠 -->
-<section class="stage app-stage" id="sudoku" style="--tint:var(--sudoku); --glow:rgba(79,158,119,0.10)">
-  <div class="inner">
-    <p class="badge rise"><i></i> 준비 중</p>
-    <h2 class="rise">찍어서 맞히는<br>자리가 없습니다</h2>
-    <p class="desc rise">
-      답이 하나뿐인 판만 내보냅니다. 논리만으로 끝까지 풀립니다.
-      판은 기기 안에서 만들어서, 연결이 끊겨도 계속 풀 수 있습니다.
-    </p>
-    <div class="phone rise">
-      <img src="img/sudoku.png" width="1170" height="2532" alt="오늘도 무료 스도쿠 시작 화면. 3x3 미니 격자와 특징 세 가지." loading="lazy" decoding="async">
-    </div>
-    <ul class="how rise">
-      <li>유일해 보장</li>
-      <li>오늘의 퍼즐</li>
-      <li>오프라인</li>
-      <li>광고로 안 막음</li>
+      <li class="rise">
+        <a class="tile" href="apps/krx.html" style="--tint:var(--krx); --glow:rgba(49,130,246,0.16)">
+          <div class="tile-text">
+            <span class="tile-badge"><i></i>출시됨</span>
+            <h3>국내주식 롱숏 챌린지</h3>
+            <p>국장에서 숏을 쳐봅니다. 코스피·코스닥 전 종목, 가상 1,000만원.</p>
+            <span class="tile-more">자세히 보기</span>
+          </div>
+          <div class="tile-phone">
+            <img src="img/krx.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
+          </div>
+        </a>
+      </li>
+
+      <li class="rise">
+        <a class="tile" href="apps/saju.html" style="--tint:var(--saju); --glow:rgba(247,108,130,0.15)">
+          <div class="tile-text">
+            <span class="tile-badge"><i></i>출시됨</span>
+            <h3>사주 여덟 글자</h3>
+            <p>생년월일은 폰 밖으로 안 나갑니다. 오늘의 운, 오늘의 옷차림, 궁합까지.</p>
+            <span class="tile-more">자세히 보기</span>
+          </div>
+          <div class="tile-phone">
+            <img src="img/saju.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
+          </div>
+        </a>
+      </li>
+
+      <li class="rise">
+        <a class="tile" href="apps/sudoku.html" style="--tint:var(--sudoku); --glow:rgba(79,158,119,0.15)">
+          <div class="tile-text">
+            <span class="tile-badge wait"><i></i>준비 중</span>
+            <h3>오늘도 무료 스도쿠</h3>
+            <p>답이 하나뿐인 판만 냅니다. 연결이 끊겨도 계속 풀립니다.</p>
+            <span class="tile-more">자세히 보기</span>
+          </div>
+          <div class="tile-phone">
+            <img src="img/sudoku.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
+          </div>
+        </a>
+      </li>
     </ul>
-    <span class="open wait rise">곧 나옵니다</span>
   </div>
 </section>
 
 <!-- 만드는 방식 -->
-<section class="stage light" id="way">
+<section class="stage light-stage" id="way">
   <div class="inner">
     <h2 class="rise">혼자 만듭니다.<br>그래서 적게 넣습니다.</h2>
     <p class="desc rise">
@@ -142,7 +129,7 @@
     <ul class="principles rise">
       <li>
         <h3>기록은 기기에</h3>
-        <p>서버로 보내야 할 이유가 없으면 보내지 않습니다. 사주와 스도쿠는 밖으로 나가는 데이터가 아예 없습니다.</p>
+        <p>서버로 보내야 할 이유가 없으면 보내지 않습니다. 사주와 스도쿠는 개인 정보가 밖으로 나가지 않습니다.</p>
       </li>
       <li>
         <h3>인터넷 없이도</h3>
@@ -170,44 +157,7 @@
   </div>
 </footer>
 
-<script>
-/*
- * 스크롤에 맞춰 한 번만 올라오게 한다.
- *
- * 한 번 올라온 것은 다시 감추지 않는다 — 위아래로 스크롤할 때마다 글이
- * 깜빡이면 읽는 사람이 피곤하다. 그래서 들어온 요소는 관찰을 끊는다.
- */
-(function () {
-  var items = document.querySelectorAll('.rise');
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  if (reduce || !('IntersectionObserver' in window)) {
-    for (var i = 0; i < items.length; i++) items[i].classList.add('in');
-    return;
-  }
-
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) {
-      if (!e.isIntersecting) return;
-      e.target.classList.add('in');
-      io.unobserve(e.target);
-    });
-  }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
-
-  items.forEach(function (el, i) {
-    // 같은 무대 안에서는 위에서부터 차례로 — 한꺼번에 뜨면 순서가 안 읽힌다
-    el.style.transitionDelay = (Math.min(i % 7, 5) * 0.06) + 's';
-    io.observe(el);
-  });
-
-  // 첫 화면은 스크롤을 기다리지 않는다
-  requestAnimationFrame(function () {
-    document.querySelectorAll('.hero .rise').forEach(function (el) {
-      el.classList.add('in');
-    });
-  });
-})();
-</script>
+<script src="site.js"></script>
 
 </body>
 </html>
