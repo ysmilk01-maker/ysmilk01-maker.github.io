@@ -13,8 +13,47 @@
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="style.css">
+<script>
+/*
+ * 첫 화면 로고 연출을 켤지 여기서 정한다.
+ *
+ * 본문 끝의 스크립트에서 정하면 히어로가 한 번 번쩍인 뒤에 덮개가 씌워진다.
+ * head 에서 클래스만 미리 붙여 두면 그런 깜빡임이 없다.
+ *
+ * 세 가지 경우에 건너뛴다. 움직임을 줄여 달라고 한 사람, 이번 방문에 이미
+ * 본 사람, 그리고 자바스크립트가 막힌 사람. 마지막 경우에는 클래스가 안
+ * 붙으므로 덮개가 아예 뜨지 않는다 — 걷어낼 수 없는 덮개를 남기지 않는다.
+ */
+(function () {
+  try {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (sessionStorage.getItem('n2s-boot') === '1') return
+    document.documentElement.className += ' boot-on'
+  } catch (e) {
+    /* 저장소가 막혀 있으면 그냥 연출 없이 간다 */
+  }
+})()
+</script>
 </head>
 <body>
+
+<!--
+  로고 등장.
+
+  검은 바탕에서 빛이 번지고, 마크가 왼쪽부터 닦여 나오고, 그 위로 광택이
+  한 번 지나간다. 링이 한 번 퍼지고 전체가 걷히면 첫 화면이 올라온다.
+-->
+<div class="boot" id="boot" aria-hidden="true">
+  <div class="boot-stage">
+    <span class="boot-glow"></span>
+    <span class="boot-ring"></span>
+    <span class="boot-ring boot-ring-2"></span>
+    <div class="boot-logo">
+      <img src="img/logo.png" width="501" height="78" alt="" fetchpriority="high">
+    </div>
+    <span class="boot-shine"></span>
+  </div>
+</div>
 
 <nav class="nav">
   <a class="mark" href="#top" aria-label="나인투식스랩 홈">

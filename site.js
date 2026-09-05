@@ -29,10 +29,58 @@
     io.observe(el);
   });
 
-  // 첫 화면은 스크롤을 기다리지 않는다
-  requestAnimationFrame(function () {
-    document.querySelectorAll('.hero .rise').forEach(function (el) {
-      el.classList.add('in');
-    });
+  /*
+   * 첫 화면은 스크롤을 기다리지 않는다.
+   *
+   * 다만 로고 연출이 도는 동안에는 미룬다. 덮개 뒤에서 제목이 이미 다
+   * 올라와 있으면, 덮개가 걷혔을 때 아무 일도 안 일어난 정지 화면이 된다.
+   * 연출이 끝나는 순간에 맞춰 올려야 두 장면이 이어진다.
+   */
+  var boot = document.getElementById('boot');
+  var booting = document.documentElement.classList.contains('boot-on') && boot;
+
+  /*
+   * 다음 프레임에 올린다. 지금 바로 클래스를 붙이면 시작 상태가 한 번도
+   * 그려지지 않아 전환이 생략되고 그냥 켜진 것처럼 보인다.
+   *
+   * 다만 배경 탭에서는 requestAnimationFrame 이 오지 않는 경우가 있어
+   * 타이머로 한 번 더 건다. 두 번 붙어도 같은 클래스라 문제가 없다.
+   */
+  function raiseHero() {
+    var go = function () {
+      document.querySelectorAll('.hero .rise').forEach(function (el) {
+        el.classList.add('in');
+      });
+    };
+    requestAnimationFrame(go);
+    setTimeout(go, 250);
+  }
+
+  if (!booting) {
+    raiseHero();
+    return;
+  }
+
+  var done = false;
+  function endBoot() {
+    if (done) return;
+    done = true;
+    document.documentElement.classList.remove('boot-on');
+    document.documentElement.classList.add('boot-done');
+    if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
+    try {
+      sessionStorage.setItem('n2s-boot', '1');
+    } catch (e) {
+      /* 저장 못 하면 다음 화면에서 한 번 더 볼 뿐이다 */
+    }
+    raiseHero();
+  }
+
+  boot.addEventListener('animationend', function (e) {
+    // 덮개 자신의 사라지는 동작이 끝났을 때만 — 안쪽 조각들의 끝은 무시한다
+    if (e.target === boot) endBoot();
   });
+
+  /* 애니메이션 이벤트를 못 받는 경우가 있어 시간으로도 한 번 더 건다 */
+  setTimeout(endBoot, 2600);
 })();

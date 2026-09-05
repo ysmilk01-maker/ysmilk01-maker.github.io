@@ -172,7 +172,138 @@ h2 {
   text-wrap: balance;
 }
 
+
+/* ---------- 로고 등장 ---------- */
+
+/*
+ * 덮개는 boot-on 이 붙었을 때만 존재한다. 자바스크립트가 막힌 브라우저에는
+ * 클래스가 안 붙으므로 아래 규칙이 하나도 걸리지 않고, 덮개는 화면에 없다.
+ */
+.boot { display: none; }
+
+html.boot-on .boot {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--black);
+  animation: boot-out 0.62s cubic-bezier(0.5, 0, 0.75, 0) 1.62s forwards;
+}
+
+/* 연출이 도는 동안은 페이지가 스크롤되지 않게 잡아 둔다 */
+html.boot-on body { overflow: hidden; }
+html.boot-done body { overflow: visible; }
+
+.boot-stage {
+  position: relative;
+  width: min(320px, 62vw);
+  aspect-ratio: 501 / 78;
+}
+
+/* 뒤에서 번지는 빛 — 마크가 닦이기 직전에 가장 밝다 */
+.boot-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 220%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(0.4);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(72, 92, 255, 0.5), rgba(120, 60, 240, 0.18) 45%, transparent 72%);
+  filter: blur(12px);
+  opacity: 0;
+  animation: boot-glow 1.5s ease-out 0.05s forwards;
+}
+
+/* 한 번 퍼지고 사라지는 링 */
+.boot-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46%;
+  aspect-ratio: 1;
+  margin: 0;
+  transform: translate(-50%, -50%) scale(0.3);
+  border: 1.5px solid rgba(120, 130, 255, 0.55);
+  border-radius: 50%;
+  opacity: 0;
+  animation: boot-ring 1.15s cubic-bezier(0.2, 0.7, 0.3, 1) 0.42s forwards;
+}
+
+.boot-ring-2 { animation-delay: 0.6s; border-color: rgba(150, 110, 255, 0.4); }
+
+/*
+ * 마크는 왼쪽부터 닦여 나온다.
+ *
+ * clip-path 로 잘라 두고 오른쪽 여백을 0 으로 줄인다. 투명도만 올리면
+ * 그냥 켜지는 느낌인데, 닦이면 글자가 하나씩 드러나는 순서가 생긴다.
+ */
+.boot-logo {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 100% 0 0);
+  transform: scale(0.94);
+  animation:
+    boot-wipe 0.82s cubic-bezier(0.22, 0.9, 0.24, 1) 0.22s forwards,
+    boot-pop 1.05s cubic-bezier(0.16, 1, 0.3, 1) 0.22s forwards;
+}
+
+.boot-logo img { width: 100%; height: auto; }
+
+/*
+ * 광택.
+ *
+ * 로고 그림을 마스크로 써서 글자 안쪽에서만 빛이 지나가게 한다. 마스크가
+ * 없으면 사각형 띠가 배경 위를 지나가 촌스럽다.
+ */
+.boot-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 42%, rgba(255, 255, 255, 0.9) 50%, transparent 58%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  -webkit-mask: url('img/logo.png') center / contain no-repeat;
+  mask: url('img/logo.png') center / contain no-repeat;
+  opacity: 0;
+  animation: boot-shine 0.9s ease-in-out 0.72s forwards;
+}
+
+@keyframes boot-wipe {
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes boot-pop {
+  to { transform: scale(1); }
+}
+
+@keyframes boot-glow {
+  30% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
+}
+
+@keyframes boot-ring {
+  10% { opacity: 0.9; }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
+}
+
+@keyframes boot-shine {
+  from { opacity: 1; background-position: 170% 0; }
+  to { opacity: 1; background-position: -70% 0; }
+}
+
+@keyframes boot-out {
+  to { opacity: 0; transform: scale(1.06); visibility: hidden; }
+}
+
+/* 움직임을 줄여 달라고 했으면 덮개 자체를 만들지 않는다(head 스크립트) */
+@media (prefers-reduced-motion: reduce) {
+  html.boot-on .boot { display: none; }
+}
+
 /* ---------- 첫 화면 ---------- */
+
 
 .hero { background: var(--black); }
 
