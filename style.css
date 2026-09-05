@@ -93,12 +93,21 @@ a { color: inherit; }
 .nav a { text-decoration: none; color: var(--muted-dark); transition: color 0.2s; }
 .nav a:hover, .nav a:focus-visible { color: var(--ink-on-dark); }
 
+/*
+ * 로고.
+ *
+ * 원본 워드마크가 검정이라 이 검은 페이지에서는 글자가 사라진다. 글자만 흰색으로
+ * 바꾼 판을 따로 떠서(img/logo.png) 화면에 쓰고, 원본 색 판(img/logo-dark.png)은
+ * 흰 바탕에 얹히는 공유 미리보기용으로 남겼다. 기호의 파랑·보라 그라디언트는
+ * 두 판 모두 그대로다.
+ */
 .nav .mark {
-  color: var(--ink-on-dark);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  flex: none;
 }
+
+.nav .mark img { height: 19px; width: auto; }
 
 .nav ul {
   display: flex;
@@ -111,6 +120,7 @@ a { color: inherit; }
 @media (max-width: 520px) {
   .nav ul { gap: 15px; }
   .nav { font-size: 12.5px; }
+  .nav .mark img { height: 17px; }
 }
 
 /* ---------- 공통 무대 ---------- */
@@ -207,7 +217,7 @@ h2 {
   width: 78vmax;
   height: 78vmax;
   transform: translate(-50%, -50%);
-  background: radial-gradient(closest-side, rgba(118, 128, 168, 0.22), transparent 70%);
+  background: radial-gradient(closest-side, rgba(96, 106, 205, 0.20), transparent 70%);
   filter: blur(8px);
 }
 
@@ -691,6 +701,8 @@ h2 {
 }
 
 .foot .inner { max-width: 860px; }
+
+.foot-mark { height: 26px; width: auto; margin: 0 0 26px; }
 
 .biz {
   margin: 0 0 28px;
