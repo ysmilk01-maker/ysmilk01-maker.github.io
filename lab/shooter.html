@@ -1,0 +1,1392 @@
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>편대 슈팅 프로토타입 · 1단계</title>
+
+<!--
+  편대 종스크롤 슈팅 프로토타입
+
+  편대
+    세 대가 함께 난다. 가운데가 메인으로 화력 100%, 좌우 윙맨이 50%.
+    세 자리에 각각 다른 기체를 넣을 수 있어서, 조합이 곧 전략이 된다.
+
+  기체 30기
+    무기 열 종류 × 세 등급이다. 등급은 숫자만 올리는 게 아니라 탄이
+    늘거나 성질이 붙는다 — 같은 유도탄이라도 전설은 두 발이 갈라진다.
+
+  해금
+    기본 3기는 무료, 12기는 점수로 열리고, 15기는 유료다.
+    **결제는 아직 안 붙였다.** 등급분류가 나오기 전이고 인앱결제는 심사가
+    따로 무겁다. 지금은 자리만 비워 두고 개발용 스위치로 열어 본다.
+
+    유료 기체는 확률형(가챠)이 아니라 지정 구매다. 확률형이면 게임산업법상
+    확률 표시 의무가 붙고 등급분류에서 사행성을 따로 본다. 그 줄을 넘지
+    않으려고 처음부터 이렇게 짰다.
+
+  그림
+    지금은 전부 코드로 그린 도형이다. ART 에 주소를 넣으면 그림으로 바뀐다.
+-->
+
+<style>
+  :root {
+    --bg: #070b14; --panel: #0e1421; --line: #1e293b;
+    --ink: #e8edf7; --muted: #8496b0; --dim: #5a6b85;
+    --accent: #4fd1ff; --gold: #ffc44d; --warn: #ff5470; --ok: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+    overflow: hidden; overscroll-behavior: none;
+  }
+  #wrap { position: fixed; inset: 0; display: grid; place-items: center; }
+  canvas {
+    display: block; touch-action: none; background: #050810;
+    box-shadow: 0 0 0 1px #1b2436, 0 24px 80px rgba(0,0,0,.6); border-radius: 10px;
+  }
+
+  .screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; padding: 18px;
+  }
+  .screen[hidden] { display: none !important; }
+
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  h2 { margin: 0 0 4px; font-size: 19px; }
+  .sub { margin: 0 0 14px; font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+  b { color: var(--accent); }
+
+  button {
+    border: 0; border-radius: 11px; font-family: inherit; cursor: pointer;
+    background: var(--accent); color: #04121a; font-size: 15px; font-weight: 800;
+    padding: 13px 24px;
+  }
+  button:active { transform: translateY(1px); }
+  button.ghost { background: transparent; color: var(--muted); font-weight: 600; }
+  button.small { padding: 9px 14px; font-size: 13px; }
+
+  /* 편대 슬롯 */
+  .slots { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .slot {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 13px;
+    padding: 10px 8px; text-align: center; cursor: pointer; min-height: 96px;
+  }
+  .slot.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .slot .role { font-size: 10.5px; color: var(--dim); letter-spacing: .04em; }
+  .slot .nm { font-size: 13px; font-weight: 700; margin-top: 5px; }
+  .slot .wp { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .slot .pw { font-size: 10.5px; color: var(--gold); margin-top: 4px; font-weight: 700; }
+
+  /* 기체 목록 */
+  .list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 11px; cursor: pointer; position: relative;
+  }
+  .card.locked { opacity: .5; }
+  .card.picked { border-color: var(--accent); }
+  .card .nm { font-size: 13.5px; font-weight: 700; }
+  .card .wp { font-size: 11px; color: var(--accent); margin-top: 3px; }
+  .card .de { font-size: 10.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .card .tag {
+    position: absolute; top: 9px; right: 10px; font-size: 9.5px; font-weight: 800;
+    padding: 2px 6px; border-radius: 5px;
+  }
+  .t-common { background: #1e293b; color: #94a3b8; }
+  .t-rare { background: #1e3a5f; color: #7dd3fc; }
+  .t-legend { background: #4a3410; color: var(--gold); }
+  .card .lock { font-size: 10.5px; color: var(--gold); margin-top: 5px; font-weight: 700; }
+
+  .bar { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+  .bar .grow { flex: 1; }
+  .hint { font-size: 11px; color: var(--dim); }
+
+  .panel {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    background: rgba(5,8,16,.88); text-align: center; padding: 24px;
+  }
+  .panel[hidden] { display: none !important; }
+</style>
+
+<div id="wrap"><canvas id="c"></canvas></div>
+
+<!-- 격납고 -->
+<div class="screen" id="hangar">
+  <h1>격납고</h1>
+  <p class="sub">
+    세 대가 함께 출격합니다. <b>가운데가 화력 100%</b>, 좌우 윙맨은 50%입니다.<br>
+    슬롯을 고르고 아래에서 기체를 누르세요.
+  </p>
+
+  <div class="slots" id="slots"></div>
+
+  <div class="list"><div class="grid" id="planes"></div></div>
+
+  <div class="bar">
+    <span class="hint" id="wallet"></span>
+    <span class="grow"></span>
+    <button class="ghost small" id="devUnlock">개발용 전체 해금</button>
+    <button id="launch">출격</button>
+  </div>
+</div>
+
+<!-- 결과 -->
+<div class="panel" id="over" hidden>
+  <div>
+    <h2 id="overTitle">격추됨</h2>
+    <p class="sub" id="overBody"></p>
+    <button id="again">격납고로</button>
+  </div>
+</div>
+
+<script>
+'use strict'
+
+/* ================================================================
+ * 그림 슬롯 — 비우면 코드로 그린 도형이 나온다
+ * ================================================================ */
+const ART = { planes: {}, enemySmall: '', enemyMid: '', boss: '' }
+const IMG = {}
+function img(src) {
+  if (!src) return null
+  if (!IMG[src]) { const i = new Image(); i.src = src; IMG[src] = i }
+  const i = IMG[src]
+  return i.complete && i.naturalWidth ? i : null
+}
+
+/* ================================================================
+ * 무기 열 가지
+ *
+ * 등급은 숫자만 올리지 않는다. 탄이 갈라지거나 성질이 하나 붙는다 —
+ * 그래야 상위 기체를 얻었을 때 "달라졌다"가 손에 잡힌다.
+ * ================================================================ */
+const WEAPONS = {
+  rapid:   { name: '연발탄', desc: '빠르게 곧게 나갑니다' },
+  spread:  { name: '산탄',   desc: '부채꼴로 넓게 퍼집니다' },
+  laser:   { name: '레이저', desc: '얇게 이어져 뚫고 지나갑니다' },
+  homing:  { name: '유도탄', desc: '가까운 적을 쫓아갑니다' },
+  pierce:  { name: '관통탄', desc: '적을 뚫고 계속 갑니다' },
+  wave:    { name: '파동탄', desc: '좌우로 흔들리며 나아갑니다' },
+  orb:     { name: '궤도구슬', desc: '기체 둘레를 돌며 부딪칩니다' },
+  mine:    { name: '기뢰',   desc: '멈춰 있다가 터집니다' },
+  beam:    { name: '집속포', desc: '굵고 느리게, 크게 터집니다' },
+  boomer:  { name: '부메랑', desc: '나갔다가 되돌아옵니다' },
+}
+
+const TIERS = { common: '일반', rare: '희귀', legend: '전설' }
+
+/* ================================================================
+ * 탄 개조 — 그 판에서만
+ *
+ * 격납고에서 고르는 기체는 판을 넘어 남지만 이건 판이 끝나면 사라진다.
+ * 그래야 같은 편대로 나가도 매번 다른 판이 된다. 뭐가 떨어질지 모르니
+ * 주운 것에 맞춰 굴리게 된다.
+ *
+ * 저장하지 않는다. state 에만 들어가고 start() 마다 비워진다.
+ *
+ * 셋까지만 쌓인다. 상한이 없으면 운 좋은 판에서 화면이 탄으로 덮여
+ * 정작 적이 안 보인다.
+ * ================================================================ */
+const MOD_MAX = 3
+const MODS = {
+  pierce: { ko: '관', name: '관통',   color: '#ffe08a', desc: '적을 하나 더 뚫습니다' },
+  split:  { ko: '분', name: '분열',   color: '#ff9ecb', desc: '맞히면 파편이 갈라집니다' },
+  extra:  { ko: '증', name: '증편',   color: '#9fe8ff', desc: '한 발 더 나갑니다' },
+  seek:   { ko: '유', name: '유도',   color: '#c9a8ff', desc: '탄이 적을 약하게 쫓습니다' },
+  rate:   { ko: '속', name: '속사',   color: '#7dffd4', desc: '사격 간격이 줄어듭니다' },
+  big:    { ko: '대', name: '대구경', color: '#ffc44d', desc: '탄이 커지고 세집니다' },
+  bounce: { ko: '반', name: '반사',   color: '#8fd8ff', desc: '옆 벽에 튕깁니다' },
+  speed:  { ko: '가', name: '가속',   color: '#a8ffb0', desc: '탄이 빨라집니다' },
+}
+const MOD_KEYS = Object.keys(MODS)
+
+/** 이미 셋을 다 채운 것은 빼고 고른다. 꽉 찬 걸 또 주면 주운 보람이 없다. */
+function rollMod(mods) {
+  const pool = MOD_KEYS.filter((k) => (mods[k] || 0) < MOD_MAX)
+  if (!pool.length) return null
+  return pool[(Math.random() * pool.length) | 0]
+}
+
+/*
+ * 기체 30기 = 무기 10종 × 등급 3.
+ *
+ * unlock 은 세 가지다.
+ *   free        처음부터
+ *   score:N     누적 점수 N 점
+ *   paid:원     유료 (결제는 아직 안 붙었다)
+ */
+const PLANES = []
+{
+  const NAMES = {
+    rapid:  ['참새', '매', '번개매'],
+    spread: ['부채', '나팔', '폭풍나팔'],
+    laser:  ['바늘', '실', '광선실'],
+    homing: ['사냥개', '늑대', '유령늑대'],
+    pierce: ['송곳', '창', '벼락창'],
+    wave:   ['물결', '해일', '심연해일'],
+    orb:    ['팽이', '위성', '쌍성'],
+    mine:   ['씨앗', '지뢰', '검은씨앗'],
+    beam:   ['망치', '대포', '천둥대포'],
+    boomer: ['회귀', '부메랑', '쌍회귀'],
+  }
+  const TIER_LIST = ['common', 'rare', 'legend']
+  const UNLOCK = {
+    // 각 무기의 일반형 중 셋만 무료, 나머지 일반형은 점수, 희귀는 점수, 전설은 유료
+    common: (i) => (i < 3 ? { kind: 'free' } : { kind: 'score', v: 2000 + i * 1500 }),
+    rare:   (i) => ({ kind: 'score', v: 12000 + i * 4000 }),
+    legend: (i) => ({ kind: 'paid', v: 1200 + i * 300 }),
+  }
+  Object.keys(WEAPONS).forEach((w, i) => {
+    TIER_LIST.forEach((t, ti) => {
+      PLANES.push({
+        id: w + '-' + t,
+        name: NAMES[w][ti],
+        weapon: w,
+        tier: t,
+        power: [1, 1.35, 1.8][ti],       // 화력 배수
+        rate: [1, 0.88, 0.74][ti],       // 사격 간격 배수 (작을수록 빠름)
+        unlock: UNLOCK[t](i),
+      })
+    })
+  })
+}
+
+/* ================================================================
+ * 저장 — 해금과 누적 점수
+ * ================================================================ */
+const SAVE_KEY = 'shooter-proto-v2'
+function load() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY)
+    if (raw) return { total: 0, owned: [], squad: null, ...JSON.parse(raw) }
+  } catch { /* 저장이 막힌 환경이어도 게임은 돌아야 한다 */ }
+  return { total: 0, owned: [], squad: null }
+}
+function save() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(prog)) } catch { /* 무시 */ }
+}
+let prog = load()
+
+function unlocked(p) {
+  if (p.unlock.kind === 'free') return true
+  if (prog.owned.includes(p.id)) return true
+  if (p.unlock.kind === 'score') return prog.total >= p.unlock.v
+  return false
+}
+function unlockLabel(p) {
+  if (p.unlock.kind === 'free') return ''
+  if (prog.owned.includes(p.id)) return ''
+  if (p.unlock.kind === 'score') return `누적 ${p.unlock.v.toLocaleString('ko-KR')}점`
+  return `${p.unlock.v.toLocaleString('ko-KR')}원`
+}
+
+/* 기본 편대 */
+if (!prog.squad) prog.squad = ['rapid-common', 'spread-common', 'laser-common']
+
+/* ================================================================
+ * 화면 크기
+ * ================================================================ */
+const W = 420, H = 720
+const PLAYER_R = 8
+const canvas = document.getElementById('c')
+const g = canvas.getContext('2d')
+
+function fit() {
+  const s = Math.min((innerWidth - 16) / W, (innerHeight - 16) / H)
+  const dpr = Math.min(devicePixelRatio || 1, 2)
+  canvas.width = W * dpr; canvas.height = H * dpr
+  canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px'
+  g.setTransform(dpr, 0, 0, dpr, 0, 0)
+}
+addEventListener('resize', fit); fit()
+
+/* ================================================================
+ * 격납고 화면
+ * ================================================================ */
+const SLOT_META = [
+  { role: '좌 윙맨', mul: 0.5 },
+  { role: '메인', mul: 1.0 },
+  { role: '우 윙맨', mul: 0.5 },
+]
+let activeSlot = 1
+const elSlots = document.getElementById('slots')
+const elPlanes = document.getElementById('planes')
+const elWallet = document.getElementById('wallet')
+
+function planeById(id) { return PLANES.find((p) => p.id === id) }
+
+function renderHangar() {
+  elSlots.innerHTML = ''
+  SLOT_META.forEach((m, i) => {
+    const p = planeById(prog.squad[i])
+    const d = document.createElement('div')
+    d.className = 'slot' + (i === activeSlot ? ' on' : '')
+    d.innerHTML =
+      `<div class="role">${m.role}</div>` +
+      `<div class="nm">${p ? p.name : '비었음'}</div>` +
+      `<div class="wp">${p ? WEAPONS[p.weapon].name : '-'}</div>` +
+      `<div class="pw">화력 ${Math.round(m.mul * 100)}%</div>`
+    d.onclick = () => { activeSlot = i; renderHangar() }
+    elSlots.appendChild(d)
+  })
+
+  elPlanes.innerHTML = ''
+  for (const p of PLANES) {
+    const ok = unlocked(p)
+    const picked = prog.squad[activeSlot] === p.id
+    const c = document.createElement('div')
+    c.className = 'card' + (ok ? '' : ' locked') + (picked ? ' picked' : '')
+    const lab = unlockLabel(p)
+    c.innerHTML =
+      `<span class="tag t-${p.tier}">${TIERS[p.tier]}</span>` +
+      `<div class="nm">${p.name}</div>` +
+      `<div class="wp">${WEAPONS[p.weapon].name}</div>` +
+      `<div class="de">${WEAPONS[p.weapon].desc}</div>` +
+      (lab ? `<div class="lock">${p.unlock.kind === 'paid' ? '🔒 ' : ''}${lab}</div>` : '')
+    c.onclick = () => {
+      if (!ok) {
+        alert(p.unlock.kind === 'paid'
+          ? `유료 기체입니다. 결제는 아직 붙지 않았습니다.\n(${lab})`
+          : `아직 잠겨 있습니다.\n${lab} 필요 · 지금 ${prog.total.toLocaleString('ko-KR')}점`)
+        return
+      }
+      // 같은 기체를 두 자리에 넣지 않는다 — 자리를 맞바꾼다
+      const dup = prog.squad.indexOf(p.id)
+      if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
+      prog.squad[activeSlot] = p.id
+      save(); renderHangar()
+    }
+    elPlanes.appendChild(c)
+  }
+
+  elWallet.textContent = `누적 ${prog.total.toLocaleString('ko-KR')}점 · 보유 ${PLANES.filter(unlocked).length}/30기`
+}
+
+document.getElementById('devUnlock').onclick = () => {
+  prog.owned = PLANES.map((p) => p.id)
+  save(); renderHangar()
+}
+
+/* ================================================================
+ * 게임 상태
+ * ================================================================ */
+let state = null, keys = {}
+
+function newState() {
+  const squad = prog.squad.map((id, i) => {
+    const p = planeById(id)
+    return { plane: p, mul: SLOT_META[i].mul, cd: Math.random() * 0.2, orbA: (i * Math.PI * 2) / 3 }
+  })
+  return {
+    t: 0, running: false,
+    player: { x: W / 2, y: H - 120, lv: 1, inv: 0 },
+    squad, lives: 3, score: 0,
+    bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [],
+    grounds: [], slabs: [], beams: [],
+    /* 이 판에서만 사는 개조. 저장하지 않는다. */
+    mods: Object.fromEntries(MOD_KEYS.map((k) => [k, 0])),
+    boss: null, waveIdx: 0, banner: null, bannerT: 0, cleared: false,
+  }
+}
+/* 땅. 슬래브가 흘러가야 지상 유닛이 떠 있지 않고 붙어 보인다. */
+function seedGround(s) {
+  for (let i = 0; i < 16; i++) {
+    s.slabs.push({ x: Math.random() * W, y: Math.random() * H,
+                   w: 30 + Math.random() * 70, h: 18 + Math.random() * 40 })
+  }
+}
+function seedStars(s) {
+  for (let i = 0; i < 90; i++) s.stars.push({ x: Math.random() * W, y: Math.random() * H, z: Math.random() * .7 + .3 })
+}
+
+/* ================================================================
+ * 입력
+ * ================================================================ */
+let drag = null
+function toLocal(e) {
+  const r = canvas.getBoundingClientRect()
+  const p = e.touches ? e.touches[0] : e
+  return { x: (p.clientX - r.left) / r.width * W, y: (p.clientY - r.top) / r.height * H }
+}
+canvas.addEventListener('pointerdown', (e) => { drag = toLocal(e); e.preventDefault() })
+addEventListener('pointermove', (e) => {
+  if (!drag || !state || !state.running) return
+  const p = toLocal(e), pl = state.player
+  pl.x += p.x - drag.x; pl.y += p.y - drag.y; drag = p; e.preventDefault()
+}, { passive: false })
+addEventListener('pointerup', () => { drag = null })
+addEventListener('keydown', (e) => { keys[e.key] = true })
+addEventListener('keyup', (e) => { keys[e.key] = false })
+
+/* ================================================================
+ * 편대 자리
+ *
+ * 윙맨은 메인을 곧바로 따라가지 않고 조금 늦게 붙는다. 셋이 한 몸처럼
+ * 움직이면 편대로 안 보인다.
+ * ================================================================ */
+/*
+ * 편대 자리.
+ *
+ * 가운데(1번)가 메인이고 오프셋이 0 이다. 즉 state.player 가 곧 메인의
+ * 자리이고, 피격 판정도 그 한 점만 쓴다 — **윙맨은 맞지 않는다.**
+ * 세 대가 다 맞으면 화면 폭의 절반이 판정이 돼서 피할 수가 없다.
+ *
+ * 이 규칙은 오프셋이 0 이라는 데 기대고 있다. 가운데 자리를 옮기려면
+ * collide() 의 판정도 같이 손봐야 한다.
+ */
+const SLOT_OFFSET = [{ x: -38, y: 20 }, { x: 0, y: 0 }, { x: 38, y: 20 }]
+const MAIN_SLOT = 1
+function slotPos(i) {
+  const pl = state.player, o = SLOT_OFFSET[i]
+  return { x: pl.x + o.x, y: pl.y + o.y }
+}
+
+/* ================================================================
+ * 사격
+ * ================================================================ */
+const LV = [null,
+  { mult: 1.00, extra: 0 },
+  { mult: 1.15, extra: 0 },
+  { mult: 1.30, extra: 1 },
+  { mult: 1.45, extra: 1 },
+  { mult: 1.65, extra: 2 },
+]
+
+function baseRate(w) {
+  return { rapid: .10, spread: .30, laser: .05, homing: .38, pierce: .26,
+           wave: .22, orb: 1.2, mine: .70, beam: .85, boomer: .55 }[w]
+}
+
+function nearestEnemy(x, y) {
+  let best = null, bd = 1e9
+  const list = state.enemies.concat(state.boss ? [state.boss] : [])
+  for (const e of list) {
+    const d = (e.x - x) ** 2 + (e.y - y) ** 2
+    if (d < bd) { bd = d; best = e }
+  }
+  return best
+}
+
+function shoot(u, i, dt) {
+  const p = u.plane
+  if (!p) return
+  u.cd -= dt
+  const lv = LV[state.player.lv]
+  const rate = baseRate(p.weapon) * p.rate / (0.85 + lv.mult * 0.15) * (1 - state.mods.rate * 0.18)
+  if (u.cd > 0) return
+  u.cd = rate
+
+  const pos = slotPos(i)
+  const dmg = p.power * u.mul * lv.mult
+  const tier = p.tier === 'legend' ? 2 : p.tier === 'rare' ? 1 : 0
+  const B = state.bullets
+  const M = state.mods
+
+  /*
+   * 개조는 여기 한 곳에서만 얹는다. 무기마다 따로 처리하면 새 무기를
+   * 넣을 때마다 여덟 가지를 다시 붙여야 하고, 한 군데 빠뜨리면
+   * "이 기체만 개조가 안 먹는다"가 된다.
+   */
+  const add = (o) => {
+    const b = { x: pos.x, y: pos.y - 10, r: 3, dmg, pierce: 0, life: 3, age: 0, kind: 'normal', ...o }
+    b.pierce += M.pierce
+    b.dmg *= 1 + M.big * 0.25
+    b.r *= 1 + M.big * 0.18
+    if (M.speed) { b.vx *= 1 + M.speed * 0.25; b.vy *= 1 + M.speed * 0.25 }
+    if (M.bounce) b.bounce = M.bounce
+    if (M.split) b.split = M.split
+    // 유도는 직진탄에만 붙인다. 이미 궤도를 가진 탄에 얹으면 성질이 뭉개진다
+    if (M.seek && (b.kind === 'normal' || b.kind === 'pierce')) {
+      b.kind = 'homing'; b.turn = 1.1 * M.seek
+    }
+    B.push(b)
+  }
+
+  switch (p.weapon) {
+    case 'rapid': {
+      const n = 1 + tier + lv.extra + state.mods.extra
+      for (let k = 0; k < n; k++) add({ x: pos.x + (k - (n - 1) / 2) * 7, vx: 0, vy: -620 })
+      break
+    }
+    case 'spread': {
+      const n = 3 + tier * 2 + lv.extra + state.mods.extra
+      for (let k = 0; k < n; k++) {
+        const a = -Math.PI / 2 + (k - (n - 1) / 2) * 0.17
+        add({ vx: Math.cos(a) * 430, vy: Math.sin(a) * 430, r: 2.6 })
+      }
+      break
+    }
+    case 'laser':
+      // 굵은 빔 하나 대신 얇은 관통탄을 아주 빠르게 쏜다. 보기엔 이어진
+      // 선이고, 충돌 판정은 기존 코드를 그대로 쓴다.
+      add({ vx: 0, vy: -1100, r: 1.8, pierce: 2 + tier, kind: 'laser', dmg: dmg * 0.42 })
+      break
+    case 'homing': {
+      const n = 1 + tier + state.mods.extra
+      for (let k = 0; k < n; k++)
+        add({ vx: (k - (n - 1) / 2) * 90, vy: -300, kind: 'homing',
+              turn: PLAYER_HOMING_TURN + tier, r: 4 })
+      break
+    }
+    case 'pierce':
+      add({ vx: 0, vy: -700, r: 4.5, pierce: 2 + tier * 2, kind: 'pierce', dmg: dmg * 1.3 })
+      break
+    case 'wave': {
+      const n = 1 + tier
+      for (let k = 0; k < n; k++)
+        add({ vx: 0, vy: -420, kind: 'wave', amp: 70 + tier * 25, ph: k * Math.PI, x0: pos.x, r: 4 })
+      break
+    }
+    case 'orb': {
+      const n = 2 + tier
+      for (let k = 0; k < n; k++)
+        B.push({ kind: 'orb', owner: i, a: (k / n) * Math.PI * 2, rad: 40 + tier * 8,
+                 x: pos.x, y: pos.y, r: 6, dmg: dmg * 0.5, pierce: 99, life: 2.4, age: 0 })
+      break
+    }
+    case 'mine':
+      add({ vx: 0, vy: -180, kind: 'mine', fuse: 1.1, r: 6, dmg: dmg * 1.6 })
+      break
+    case 'beam':
+      add({ vx: 0, vy: -300, kind: 'beam', r: 11 + tier * 3, pierce: 4 + tier * 2, dmg: dmg * 2.2 })
+      break
+    case 'boomer': {
+      const n = 1 + tier
+      for (let k = 0; k < n; k++)
+        add({ vx: (k - (n - 1) / 2) * 140, vy: -520, kind: 'boomer', t0: 0,
+              pierce: 99, r: 5, dmg: dmg * 0.7, home: i })
+      break
+    }
+  }
+}
+
+/* ================================================================
+ * 1단계
+ * ================================================================ */
+/*
+ * 지상 위협은 공중 편대와 시간을 어긋나게 배치한다. 겹치면 화면이
+ * 뭐가 뭔지 모르게 되고, 어긋나면 "이번엔 아래를 봐야 한다"가 생긴다.
+ */
+const WAVES = [
+  { at: 0.8,  f: () => line(3, 'small') },
+  { at: 3.0,  f: () => ground('turret', 90) },
+  { at: 4.5,  f: () => line(5, 'small') },
+  { at: 6.5,  f: () => { ground('turret', W - 80); ground('turret', 70) } },
+  { at: 9.0,  f: () => diagonal('small', -1) },
+  { at: 11.0, f: () => ground('flak', W / 2) },
+  { at: 12.5, f: () => diagonal('small', 1) },
+  { at: 15.0, f: () => ground('radar', 84) },
+  { at: 16.0, f: () => line(2, 'mid') },
+  { at: 19.0, f: () => ground('laser', W - 90) },
+  { at: 21.0, f: () => line(6, 'small') },
+  { at: 23.0, f: () => { ground('flak', 70); ground('flak', W - 70) } },
+  { at: 25.0, f: () => line(3, 'mid') },
+  { at: 27.0, f: () => { ground('radar', W - 84); ground('turret', W / 2) } },
+  { at: 31.0, f: () => spawnBoss() },
+]
+function line(n, kind) {
+  const gap = W / (n + 1)
+  for (let i = 0; i < n; i++) state.enemies.push(mkEnemy(kind, gap * (i + 1), -40 - i * 12, 0))
+}
+function diagonal(kind, dir) {
+  for (let i = 0; i < 5; i++)
+    state.enemies.push(mkEnemy(kind, dir > 0 ? 40 : W - 40, -40 - i * 46, dir))
+}
+function mkEnemy(kind, x, y, drift) {
+  const b = kind === 'mid'
+    ? { hp: 11, r: 20, sp: 52, score: 220, fire: 1.5, w: 44, h: 40 }
+    : { hp: 4, r: 13, sp: 78, score: 90, fire: 2.4, w: 28, h: 26 }
+  return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()), ...b }
+}
+/* ================================================================
+ * 지상 위협
+ *
+ * 하늘에서 내려오는 적만 있으면 위협이 한 방향뿐이라 금방 읽힌다.
+ * 땅에 붙은 것들은 지형 속도로 천천히 올라오면서 다른 방식으로 압박한다.
+ *
+ *   대공포   조준 3연발. 가깝고 잦다
+ *   채프포   위로 쏘아 올려 정해진 높이에서 파편으로 터진다
+ *   방공레이저 겨냥선을 먼저 보여주고 굵은 빔을 쏜다 — 피할 시간을 준다
+ *   레이더   원 안에 머무르면 유도탄이 날아온다. 원이 보이니 피할 수 있다
+ *
+ * 넷 다 예고가 있다. 예고 없는 즉사는 어렵게 만드는 게 아니라 억울하게
+ * 만든다.
+ * ================================================================ */
+const TERRAIN_SPEED = 62
+
+function mkGround(kind, x, y) {
+  const b = {
+    turret: { hp: 9,  r: 16, cd: 1.8, score: 150 },
+    flak:   { hp: 11, r: 17, cd: 3.0, score: 210 },
+    laser:  { hp: 16, r: 18, cd: 3.4, score: 340 },
+    radar:  { hp: 13, r: 18, cd: 0,   score: 300 },
+  }[kind]
+  return { kind, x, y, t: Math.random() * 2, phase: 'idle', ph: 0, lock: 0, aimX: 0, flash: 0, ...b }
+}
+/*
+ * 화면 위에서 생겨 아래로 흐른다. 비행기가 앞으로 나아가니 땅은
+ * 다가와서 지나가는 게 맞다.
+ */
+function ground(kind, x) { state.grounds.push(mkGround(kind, x, -40)) }
+
+/** 레이더 감지 반경. 그려서 보여주므로 숨기지 않는다. */
+const RADAR_R = 118
+
+/**
+ * 적 유도탄의 선회 속도.
+ *
+ * 사용자 유도탄(일반형)이 5 다. 그 20% 로 둔다. 같은 성능이면 절대 못
+ * 피하고, 그러면 유도탄이 아니라 사형선고가 된다. 이 정도면 옆으로 크게
+ * 꺾어서 흘려보낼 수 있고, 가만히 있으면 맞는다.
+ */
+const PLAYER_HOMING_TURN = 5
+const ENEMY_HOMING_TURN = PLAYER_HOMING_TURN * 0.2
+
+function spawnBoss() {
+  state.boss = { x: W / 2, y: -120, hp: 320, maxHp: 320, r: 46, t: 0, cd: 1.2, entering: true }
+  banner('보스')
+}
+function banner(t) { state.banner = t; state.bannerT = 1.6 }
+
+/**
+ * 무엇을 떨굴지 고른다.
+ *
+ * 화력(P)만 떨어지면 판마다 똑같아지고, 개조만 떨어지면 화력이 안 올라
+ * 후반이 버겁다. 섞되 화력을 조금 더 자주 준다.
+ */
+function dropItem(x, y, richer) {
+  const s = state
+  const wantMod = Math.random() < (richer ? .55 : .35)
+  const key = wantMod ? rollMod(s.mods) : null
+  s.items.push({ x, y, t: 0, r: 11, mod: key })   // mod 가 null 이면 화력 아이템
+}
+
+function boom(x, y, n, color) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 180
+    state.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                       life: .3 + Math.random() * .5, age: 0, color })
+  }
+}
+
+function levelUp() {
+  const pl = state.player
+  if (pl.lv < 5) { pl.lv++; banner('편대 강화 ' + pl.lv) } else state.score += 500
+}
+function hitPlayer() {
+  const pl = state.player
+  if (pl.inv > 0) return
+  boom(pl.x, pl.y, 26, '#7fd6ff')
+  if (pl.lv > 1) { pl.lv--; pl.inv = 1.6; banner('강화 하락') }
+  else {
+    state.lives--; pl.inv = 2.2; pl.x = W / 2; pl.y = H - 120
+    if (state.lives <= 0) end(false)
+  }
+}
+
+/* ================================================================
+ * 갱신
+ * ================================================================ */
+function update(dt) {
+  const s = state
+  s.t += dt
+
+  for (const st of s.stars) { st.y += (30 + st.z * 120) * dt; if (st.y > H) { st.y = -2; st.x = Math.random() * W } }
+
+  const pl = s.player
+  const kv = 280 * dt
+  if (keys.ArrowLeft) pl.x -= kv
+  if (keys.ArrowRight) pl.x += kv
+  if (keys.ArrowUp) pl.y -= kv
+  if (keys.ArrowDown) pl.y += kv
+  pl.x = Math.max(48, Math.min(W - 48, pl.x))
+  pl.y = Math.max(70, Math.min(H - 34, pl.y))
+  if (pl.inv > 0) pl.inv -= dt
+
+  s.squad.forEach((u, i) => shoot(u, i, dt))
+
+  while (s.waveIdx < WAVES.length && s.t >= WAVES[s.waveIdx].at) { WAVES[s.waveIdx].f(); s.waveIdx++ }
+
+  /* 내 탄 — 종류마다 다르게 움직인다 */
+  for (const b of s.bullets) {
+    b.age += dt
+    switch (b.kind) {
+      case 'homing': {
+        const tgt = nearestEnemy(b.x, b.y)
+        if (tgt) {
+          const want = Math.atan2(tgt.y - b.y, tgt.x - b.x)
+          const cur = Math.atan2(b.vy, b.vx)
+          let d = want - cur
+          while (d > Math.PI) d -= Math.PI * 2
+          while (d < -Math.PI) d += Math.PI * 2
+          const na = cur + Math.max(-b.turn * dt, Math.min(b.turn * dt, d))
+          const sp = Math.hypot(b.vx, b.vy)
+          b.vx = Math.cos(na) * sp; b.vy = Math.sin(na) * sp
+        }
+        break
+      }
+      case 'wave':
+        b.x = b.x0 + Math.sin(b.age * 7 + b.ph) * b.amp * Math.min(1, b.age * 3)
+        break
+      case 'orb': {
+        const p = slotPos(b.owner)
+        b.a += dt * 4.5
+        b.x = p.x + Math.cos(b.a) * b.rad
+        b.y = p.y + Math.sin(b.a) * b.rad
+        break
+      }
+      case 'mine':
+        b.vy *= 1 - Math.min(1, dt * 5)
+        b.fuse -= dt
+        if (b.fuse <= 0) {
+          b.dead = true
+          boom(b.x, b.y, 18, '#ffd166')
+          for (const e of s.enemies) {
+            if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 < 62 * 62) { e.hp -= b.dmg; e.flash = .1 }
+          }
+          for (const u of s.grounds) {
+            if ((u.x - b.x) ** 2 + (u.y - b.y) ** 2 < 62 * 62) { u.hp -= b.dmg; u.flash = .1 }
+          }
+          if (s.boss && (s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < 70 * 70) s.boss.hp -= b.dmg
+        }
+        break
+      case 'boomer':
+        b.vy += 900 * dt
+        if (b.age > 1.6) b.dead = true
+        break
+    }
+    if (b.kind !== 'orb') { b.x += b.vx * dt; b.y += b.vy * dt }
+    /* 반사 — 옆 벽에서만 튕긴다. 위아래로도 튕기면 탄이 화면에 갇힌다 */
+    if (b.bounce > 0) {
+      if (b.x < 6 && b.vx < 0) { b.vx = -b.vx; b.bounce-- }
+      else if (b.x > W - 6 && b.vx > 0) { b.vx = -b.vx; b.bounce-- }
+    }
+    if (b.age > b.life) b.dead = true
+  }
+  s.bullets = s.bullets.filter((b) => !b.dead && b.y > -60 && b.y < H + 80 && b.x > -60 && b.x < W + 60)
+
+  for (const e of s.enemies) {
+    e.t += dt; e.y += e.sp * dt
+    e.x += (e.drift ? e.drift * 46 : Math.sin(e.t * 1.6) * 34) * dt
+    e.x = Math.max(18, Math.min(W - 18, e.x))
+    if (e.flash > 0) e.flash -= dt
+    e.cd -= dt
+    if (e.cd <= 0 && e.y > 0 && e.y < H * .72) {
+      e.cd = e.fire
+      const a = Math.atan2(pl.y - e.y, pl.x - e.x), sp = e.kind === 'mid' ? 190 : 160
+      s.ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 4 })
+    }
+  }
+  s.enemies = s.enemies.filter((e) => e.y < H + 60)
+
+  const bs = s.boss
+  if (bs) {
+    bs.t += dt
+    if (bs.entering) { bs.y += 60 * dt; if (bs.y >= 130) { bs.y = 130; bs.entering = false } }
+    else {
+      bs.x = W / 2 + Math.sin(bs.t * .7) * (W / 2 - 70)
+      bs.cd -= dt
+      if (bs.cd <= 0) {
+        const h = bs.hp / bs.maxHp
+        if (h > .6) {
+          bs.cd = 1.1
+          for (let i = -3; i <= 3; i++) {
+            const a = Math.PI / 2 + i * .17
+            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 4 })
+          }
+        } else if (h > .3) {
+          bs.cd = .75
+          const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+          for (const d of [-.12, 0, .12])
+            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * 210, vy: Math.sin(a + d) * 210, r: 4 })
+        } else {
+          bs.cd = 1.35
+          for (let i = 0; i < 18; i++) {
+            const a = (i / 18) * Math.PI * 2 + bs.t
+            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 130, vy: Math.sin(a) * 130, r: 4 })
+          }
+        }
+      }
+    }
+  }
+
+  /* 땅과 지상 위협 */
+  for (const sl of s.slabs) {
+    sl.y += TERRAIN_SPEED * dt
+    if (sl.y > H + 40) { sl.y = -60; sl.x = Math.random() * W; sl.w = 30 + Math.random() * 70 }
+  }
+  for (const u of s.grounds) {
+    u.y += TERRAIN_SPEED * dt
+    u.t += dt
+    if (u.flash > 0) u.flash -= dt
+    if (u.y < 10 || u.y > H + 20) continue            // 화면에 보일 때만 쏜다
+    updateGround(u, dt)
+  }
+  s.grounds = s.grounds.filter((u) => u.y < H + 80 && !u.dead)
+
+  /* 방공 빔 */
+  for (const bm of s.beams) {
+    bm.age += dt
+    if (bm.age > bm.life) bm.dead = true
+    else if (bm.age > bm.warn && Math.abs(pl.x - bm.x) < bm.w / 2 + PLAYER_R && pl.y < bm.y) hitPlayer()
+  }
+  s.beams = s.beams.filter((b) => !b.dead)
+
+  /* 적 탄 — 유도탄과 채프탄이 섞여 있다 */
+  for (const b of s.ebullets) {
+    b.age = (b.age || 0) + dt
+    if (b.kind === 'missile') {
+      /*
+       * 선회 속도를 사용자 유도탄의 20% 로 둔다. 같은 성능이면 절대
+       * 못 피하고, 그러면 유도탄이 아니라 사형선고가 된다.
+       */
+      const want = Math.atan2(pl.y - b.y, pl.x - b.x)
+      const cur = Math.atan2(b.vy, b.vx)
+      let d = want - cur
+      while (d > Math.PI) d -= Math.PI * 2
+      while (d < -Math.PI) d += Math.PI * 2
+      const na = cur + Math.max(-b.turn * dt, Math.min(b.turn * dt, d))
+      const sp = Math.hypot(b.vx, b.vy)
+      b.vx = Math.cos(na) * sp; b.vy = Math.sin(na) * sp
+      if (b.age > 6) b.dead = true
+    } else if (b.kind === 'flakshell' && b.y <= b.burstY) {
+      /* 정해진 높이에서 파편으로 터진다 */
+      b.dead = true
+      boom(b.x, b.y, 10, '#ffd166')
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2
+        s.ebullets.push({ x: b.x, y: b.y, vx: Math.cos(a) * 135, vy: Math.sin(a) * 135, r: 3.4, age: 0 })
+      }
+    }
+    b.x += b.vx * dt; b.y += b.vy * dt
+  }
+  s.ebullets = s.ebullets.filter((b) => !b.dead && b.y > -60 && b.y < H + 40 && b.x > -40 && b.x < W + 40)
+
+  for (const it of s.items) { it.y += 90 * dt; it.t += dt }
+  s.items = s.items.filter((it) => it.y < H + 30)
+
+  for (const p of s.parts) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .94; p.vy *= .94 }
+  s.parts = s.parts.filter((p) => p.age < p.life)
+
+  collide()
+  if (s.bannerT > 0) s.bannerT -= dt
+}
+
+/* 지상 위협 하나하나의 행동 */
+function updateGround(u, dt) {
+  const s = state, pl = s.player
+  switch (u.kind) {
+    case 'turret': {
+      u.cd -= dt
+      if (u.cd <= 0) {
+        u.cd = 1.8
+        const a = Math.atan2(pl.y - u.y, pl.x - u.x)
+        for (let k = -1; k <= 1; k++)
+          s.ebullets.push({ x: u.x, y: u.y - 8, vx: Math.cos(a + k * .09) * 205,
+                            vy: Math.sin(a + k * .09) * 205, r: 4, age: 0 })
+      }
+      break
+    }
+    case 'flak': {
+      u.cd -= dt
+      if (u.cd <= 0) {
+        u.cd = 3.0
+        // 사용자 높이보다 살짝 위에서 터뜨려야 파편이 내려오며 압박한다
+        s.ebullets.push({ x: u.x, y: u.y - 10, vx: (pl.x - u.x) * .35, vy: -300,
+                          r: 5, kind: 'flakshell', burstY: Math.max(60, pl.y - 40), age: 0 })
+      }
+      break
+    }
+    case 'laser': {
+      u.cd -= dt
+      if (u.phase === 'idle' && u.cd <= 0) { u.phase = 'aim'; u.ph = 0.9; u.aimX = pl.x }
+      else if (u.phase === 'aim') {
+        u.ph -= dt
+        if (u.ph <= 0) {
+          u.phase = 'idle'; u.cd = 3.4
+          s.beams.push({ x: u.aimX, y: u.y, w: 20, age: 0, warn: 0, life: 0.55 })
+        }
+      }
+      break
+    }
+    case 'radar': {
+      const d = Math.hypot(pl.x - u.x, pl.y - u.y)
+      if (d < RADAR_R) {
+        u.lock += dt
+        if (u.lock >= 1.5) {
+          u.lock = 0
+          banner('미사일')
+          for (const k of [-1, 1]) {
+            s.ebullets.push({ x: u.x + k * 12, y: u.y - 8, vx: k * 90, vy: -160,
+                              r: 5, kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0 })
+          }
+        }
+      } else u.lock = Math.max(0, u.lock - dt * 1.5)
+      break
+    }
+  }
+}
+
+/**
+ * 맞은 자리에서 파편을 옆으로 흩는다.
+ *
+ * 파편은 다시 갈라지지 않는다(split 을 물려주지 않는다). 안 그러면 적이
+ * 몰린 곳에서 탄이 기하급수로 늘어 프레임이 주저앉는다.
+ */
+function splitBullet(b) {
+  for (const dir of [-1, 1]) {
+    state.bullets.push({
+      x: b.x, y: b.y, vx: dir * (140 + b.split * 40), vy: -260,
+      r: Math.max(2, b.r * .6), dmg: b.dmg * .45, pierce: 0,
+      life: .8, age: 0, kind: 'normal',
+    })
+  }
+}
+
+function near(a, b, r) { return (a.x - b.x) ** 2 + (a.y - b.y) ** 2 < r * r }
+
+function collide() {
+  const s = state, pl = s.player
+
+  for (const b of s.bullets) {
+    if (b.dead || b.kind === 'mine') continue
+    for (const e of s.enemies) {
+      if (e.dead || b.dead) continue
+      if (b.hitList && b.hitList.includes(e)) continue
+      if (near(b, e, e.r + b.r)) {
+        e.hp -= b.dmg; e.flash = .1
+        if (b.split > 0) splitBullet(b)
+        if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || []).push(e) }
+        else b.dead = true
+        if (e.hp <= 0) {
+          e.dead = true; s.score += e.score
+          boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
+          if (Math.random() < (e.kind === 'mid' ? 1 : .14)) dropItem(e.x, e.y, e.kind === 'mid')
+        }
+      }
+    }
+    /* 지상 위협도 쏴서 없앨 수 있다. 피할 수만 있고 못 없애면 답답하다. */
+    for (const u of s.grounds) {
+      if (u.dead || b.dead || u.y < -20) continue
+      if (b.hitList && b.hitList.includes(u)) continue
+      if (near(b, u, u.r + b.r)) {
+        u.hp -= b.dmg; u.flash = .1
+        if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || []).push(u) }
+        else b.dead = true
+        if (u.hp <= 0) {
+          u.dead = true; s.score += u.score
+          boom(u.x, u.y, 24, '#ffcf7a')
+          // 지상 위협은 피하기 까다로우니 개조가 더 자주 나온다
+          if (Math.random() < .6) dropItem(u.x, u.y, true)
+        }
+      }
+    }
+
+    const bs = s.boss
+    if (bs && !b.dead && !bs.entering && near(b, bs, bs.r + b.r)) {
+      bs.hp -= b.dmg
+      if (b.pierce > 0) b.pierce--; else b.dead = true
+      boom(b.x, b.y, 2, '#9fe8ff')
+      if (bs.hp <= 0) {
+        boom(bs.x, bs.y, 70, '#ffd27a'); s.score += 4000; s.boss = null; s.cleared = true
+        setTimeout(() => end(true), 900)
+      }
+    }
+  }
+  s.bullets = s.bullets.filter((b) => !b.dead)
+  s.enemies = s.enemies.filter((e) => !e.dead)
+
+  /* 판정은 메인 한 대뿐이다. 윙맨은 그림만 있고 맞지 않는다. */
+  for (const b of s.ebullets) if (near(b, pl, b.r + PLAYER_R)) { b.dead = true; hitPlayer() }
+  s.ebullets = s.ebullets.filter((b) => !b.dead)
+
+  for (const e of s.enemies) if (near(e, pl, e.r + PLAYER_R)) { e.dead = true; boom(e.x, e.y, 14, '#ffb45c'); hitPlayer() }
+  s.enemies = s.enemies.filter((e) => !e.dead)
+
+  for (const it of s.items) {
+    if (!near(it, pl, it.r + 18)) continue
+    it.dead = true
+    s.score += 60
+    if (it.mod) {
+      s.mods[it.mod] = Math.min(MOD_MAX, s.mods[it.mod] + 1)
+      banner(MODS[it.mod].name + ' ' + s.mods[it.mod])
+    } else {
+      levelUp()
+    }
+  }
+  s.items = s.items.filter((it) => !it.dead)
+}
+
+/* ================================================================
+ * 그리기
+ * ================================================================ */
+const TIER_COLOR = { common: '#dbe7f5', rare: '#8fd8ff', legend: '#ffd27a' }
+
+/**
+ * 기체를 그린다.
+ *
+ * 강화 레벨과 개조가 겉으로 드러나야 한다. 숫자만 오르고 그림이 그대로면
+ * "세졌다"가 손에 안 잡히고, 다음 아이템을 주우러 갈 이유가 약해진다.
+ *
+ * 레벨은 뼈대를 키운다 — 날개가 넓어지고, 앞날개가 붙고, 엔진이 늘고,
+ * 마지막에 꼬리날개가 선다. 개조는 그 위에 부품을 얹는다. 둘을 나눠 둬야
+ * "레벨이 올랐나 개조를 주웠나"가 구분된다.
+ */
+function drawShip(x, y, u, isMain) {
+  const p = u.plane
+  const lv = state.player.lv
+  const M = state.mods
+  const body = p ? TIER_COLOR[p.tier] : '#dbe7f5'
+  const scale = isMain ? 1 : 0.58     // 윙맨은 확실히 작아야 메인이 어디인지 헷갈리지 않는다
+  const span = (13 + lv * 2.6) * scale       // 레벨이 곧 날개 폭
+  const nose = (18 + lv * 1.4) * scale
+
+  g.save(); g.translate(x, y); g.scale(scale, scale)
+
+  /* ---- 엔진. 레벨 4 에서 둘, 5 에서 셋이 된다 ---- */
+  const noz = lv >= 5 ? [-8, 0, 8] : lv >= 4 ? [-6, 6] : [0]
+  const flick = .6 + Math.random() * .5
+  const len = (18 + lv * 2) * (1 + M.speed * .35)   // 가속을 주우면 불꽃이 길어진다
+  for (const nx of noz) {
+    const grd = g.createLinearGradient(0, 8, 0, 8 + len * flick)
+    grd.addColorStop(0, 'rgba(120,220,255,.95)')
+    grd.addColorStop(1, 'rgba(80,140,255,0)')
+    g.fillStyle = grd
+    g.beginPath(); g.moveTo(nx - 3, 8); g.lineTo(nx + 3, 8)
+    g.lineTo(nx, 8 + len * flick); g.closePath(); g.fill()
+  }
+
+  /* ---- 주익 ---- */
+  g.fillStyle = '#2f6fa8'
+  g.beginPath()
+  g.moveTo(0, -5); g.lineTo(span, 7); g.lineTo(span * .55, 11)
+  g.lineTo(0, 5); g.lineTo(-span * .55, 11); g.lineTo(-span, 7)
+  g.closePath(); g.fill()
+
+  /* ---- 앞날개. 레벨 3 부터 ---- */
+  if (lv >= 3) {
+    g.fillStyle = '#3d84c4'
+    for (const sgn of [-1, 1]) {
+      g.beginPath()
+      g.moveTo(sgn * 3, -nose * .45)
+      g.lineTo(sgn * (span * .58), -nose * .1)
+      g.lineTo(sgn * 3, -nose * .05)
+      g.closePath(); g.fill()
+    }
+  }
+
+  /* ---- 꼬리날개. 레벨 5 ---- */
+  if (lv >= 5) {
+    g.fillStyle = '#24568a'
+    g.beginPath(); g.moveTo(0, 4); g.lineTo(7, 13); g.lineTo(-7, 13); g.closePath(); g.fill()
+  }
+
+  /* ---- 동체 ---- */
+  g.fillStyle = body
+  g.beginPath()
+  g.moveTo(0, -nose); g.lineTo(6, 4); g.lineTo(3, 11)
+  g.lineTo(-3, 11); g.lineTo(-6, 4)
+  g.closePath(); g.fill()
+
+  /* 전설 기체는 동체에 옅은 테두리가 돈다 */
+  if (p && p.tier === 'legend') {
+    g.strokeStyle = 'rgba(255,210,122,.85)'; g.lineWidth = 1.2; g.stroke()
+  }
+
+  /* ---- 캐노피. 레벨이 오르면 커진다 ---- */
+  g.fillStyle = '#4fd1ff'
+  g.beginPath(); g.ellipse(0, -3, 2.4 + lv * .18, 4.5 + lv * .5, 0, 0, Math.PI * 2); g.fill()
+
+  /* ================================================================
+   * 개조 부품 — 주운 게 기체에 붙는다
+   * ================================================================ */
+
+  /* 관통: 기수 끝에 창이 돋는다 */
+  if (M.pierce) {
+    g.fillStyle = '#ffe08a'
+    g.beginPath(); g.moveTo(0, -nose - 4 - M.pierce * 2.5)
+    g.lineTo(2.2, -nose + 1); g.lineTo(-2.2, -nose + 1); g.closePath(); g.fill()
+  }
+  /* 대구경: 날개 안쪽에 굵은 포구 */
+  if (M.big) {
+    g.fillStyle = '#ffc44d'
+    for (const sgn of [-1, 1])
+      g.fillRect(sgn * (span * .42) - 2.5, -6, 5 + M.big * .8, 9)
+  }
+  /* 속사: 날개 아래 보조 총열 */
+  if (M.rate) {
+    g.fillStyle = '#7dffd4'
+    for (const sgn of [-1, 1])
+      for (let k = 0; k < M.rate; k++)
+        g.fillRect(sgn * (span * .68) - 1 + k * sgn * 3, 0, 2, 8)
+  }
+  /* 증편: 날개 끝 파일런 */
+  if (M.extra) {
+    g.fillStyle = '#9fe8ff'
+    for (const sgn of [-1, 1])
+      g.beginPath(), g.ellipse(sgn * (span + 3 + M.extra), 5, 2.6, 6, 0, 0, Math.PI * 2), g.fill()
+  }
+  /* 분열: 동체 옆 분리 포드 */
+  if (M.split) {
+    g.fillStyle = '#ff9ecb'
+    for (const sgn of [-1, 1])
+      g.beginPath(), g.arc(sgn * 8, 2, 2.2 + M.split * .5, 0, Math.PI * 2), g.fill()
+  }
+  /* 유도: 등에 선 안테나 */
+  if (M.seek) {
+    g.strokeStyle = '#c9a8ff'; g.lineWidth = 1.4
+    g.beginPath(); g.moveTo(0, -2); g.lineTo(0, -nose * .55 - M.seek * 3); g.stroke()
+    g.fillStyle = '#c9a8ff'
+    g.beginPath(); g.arc(0, -nose * .55 - M.seek * 3, 1.8, 0, Math.PI * 2); g.fill()
+  }
+  /* 반사: 기체를 도는 옅은 고리 */
+  if (M.bounce) {
+    g.strokeStyle = 'rgba(143,216,255,' + (.28 + M.bounce * .14) + ')'
+    g.lineWidth = 1.6
+    g.beginPath(); g.arc(0, 0, span + 6, 0, Math.PI * 2); g.stroke()
+  }
+
+  g.restore()
+}
+
+function drawEnemy(e) {
+  g.save(); g.translate(e.x, e.y); g.rotate(Math.PI)
+  const big = e.kind === 'mid'
+  g.fillStyle = e.flash > 0 ? '#ffffff' : (big ? '#8c4a6b' : '#5c6b8a')
+  g.beginPath()
+  g.moveTo(0, -e.r * .9); g.lineTo(e.r, e.r * .5); g.lineTo(0, e.r * .15); g.lineTo(-e.r, e.r * .5)
+  g.closePath(); g.fill()
+  g.fillStyle = big ? '#e0708f' : '#93a6c9'
+  g.beginPath(); g.moveTo(0, -e.r * .75); g.lineTo(e.r * .34, e.r * .4); g.lineTo(-e.r * .34, e.r * .4)
+  g.closePath(); g.fill()
+  g.restore()
+}
+
+function drawBoss(bs) {
+  g.save(); g.translate(bs.x, bs.y)
+  g.fillStyle = '#3b2b52'
+  g.beginPath()
+  g.moveTo(0, bs.r * .75); g.lineTo(bs.r * 1.25, -bs.r * .15); g.lineTo(bs.r * .6, -bs.r * .7)
+  g.lineTo(-bs.r * .6, -bs.r * .7); g.lineTo(-bs.r * 1.25, -bs.r * .15)
+  g.closePath(); g.fill()
+  g.fillStyle = '#7a5cab'
+  g.beginPath(); g.moveTo(0, bs.r * .5); g.lineTo(bs.r * .42, -bs.r * .5); g.lineTo(-bs.r * .42, -bs.r * .5)
+  g.closePath(); g.fill()
+  g.fillStyle = '#ff5470'
+  g.beginPath(); g.ellipse(0, -bs.r * .1, 7, 5, 0, 0, Math.PI * 2); g.fill()
+  g.restore()
+  const w = W - 60
+  g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(30, 16, w, 6)
+  g.fillStyle = '#ff5470'; g.fillRect(30, 16, w * Math.max(0, bs.hp / bs.maxHp), 6)
+}
+
+function drawBullet(b) {
+  switch (b.kind) {
+    case 'laser':
+      g.fillStyle = '#bff4ff'; g.fillRect(b.x - 1.4, b.y - 16, 2.8, 22); break
+    case 'homing':
+      g.fillStyle = '#ffa8d6'
+      g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill()
+      g.globalAlpha = .35; g.beginPath(); g.arc(b.x - b.vx * .012, b.y - b.vy * .012, b.r * .7, 0, Math.PI * 2); g.fill()
+      g.globalAlpha = 1; break
+    case 'orb':
+      g.fillStyle = '#c9a8ff'
+      g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill(); break
+    case 'mine':
+      g.fillStyle = b.fuse < .35 && Math.floor(b.fuse * 20) % 2 ? '#ffffff' : '#ffd166'
+      g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill(); break
+    case 'beam': {
+      const gr = g.createRadialGradient(b.x, b.y, 1, b.x, b.y, b.r)
+      gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, 'rgba(120,200,255,.15)')
+      g.fillStyle = gr; g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill(); break
+    }
+    case 'boomer':
+      g.strokeStyle = '#9fffcf'; g.lineWidth = 3
+      g.beginPath(); g.arc(b.x, b.y, b.r, b.age * 12, b.age * 12 + 4.2); g.stroke(); break
+    case 'pierce':
+      g.fillStyle = '#ffe08a'; g.fillRect(b.x - b.r / 2, b.y - 12, b.r, 18); break
+    case 'wave':
+      g.fillStyle = '#7dffd4'; g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill(); break
+    default:
+      g.fillStyle = '#9fe8ff'; g.fillRect(b.x - b.r / 2, b.y - 7, b.r, 11)
+  }
+}
+
+/* 지상 위협 그리기. 예고는 크게, 본체는 작게 — 눈이 예고를 먼저 잡아야 한다. */
+function drawGround(u) {
+  const base = u.flash > 0 ? '#ffffff' : '#4a5568'
+  g.save(); g.translate(u.x, u.y)
+
+  if (u.kind === 'radar') {
+    /* 감지 원을 먼저 그린다. 숨기면 피할 수가 없다. */
+    const on = u.lock > 0
+    g.strokeStyle = on ? 'rgba(255,84,112,' + (.3 + u.lock * .4) + ')' : 'rgba(255,180,90,.18)'
+    g.lineWidth = on ? 2 : 1
+    g.setLineDash([6, 6]); g.beginPath(); g.arc(0, 0, RADAR_R, 0, Math.PI * 2); g.stroke()
+    g.setLineDash([])
+    if (on) {
+      g.strokeStyle = '#ff5470'; g.lineWidth = 3
+      g.beginPath(); g.arc(0, 0, RADAR_R, -Math.PI / 2, -Math.PI / 2 + (u.lock / 1.5) * Math.PI * 2); g.stroke()
+    }
+  }
+
+  if (u.kind === 'laser' && u.phase === 'aim') {
+    /* 겨냥선. 굵기가 자라면서 "곧 온다"를 알린다. */
+    const k = 1 - u.ph / 0.9
+    g.strokeStyle = 'rgba(255,84,112,' + (.35 + k * .5) + ')'
+    g.lineWidth = 1 + k * 4
+    g.beginPath(); g.moveTo(u.aimX - u.x, -H); g.lineTo(u.aimX - u.x, 0); g.stroke()
+  }
+
+  g.fillStyle = base
+  g.beginPath(); g.roundRect(-u.r, -u.r * .55, u.r * 2, u.r * 1.25, 4); g.fill()
+
+  const top = { turret: '#93a6c9', flak: '#ffd166', laser: '#ff8fa3', radar: '#7dffd4' }[u.kind]
+  g.fillStyle = u.flash > 0 ? '#ffffff' : top
+  if (u.kind === 'turret') { g.fillRect(-2.5, -u.r - 6, 5, 12) }
+  else if (u.kind === 'flak') { g.beginPath(); g.moveTo(0, -u.r - 8); g.lineTo(6, -2); g.lineTo(-6, -2); g.closePath(); g.fill() }
+  else if (u.kind === 'laser') { g.beginPath(); g.arc(0, -u.r * .4, 5, 0, Math.PI * 2); g.fill() }
+  else { g.beginPath(); g.ellipse(0, -u.r * .5, 9, 4, -0.5, 0, Math.PI * 2); g.fill() }
+  g.restore()
+}
+
+function draw() {
+  const s = state
+  g.clearRect(0, 0, W, H)
+  for (const st of s.stars) {
+    g.fillStyle = 'rgba(190,220,255,' + (.15 + st.z * .5) + ')'
+    g.fillRect(st.x, st.y, 1.4, 1.4 + st.z * 2)
+  }
+  /* 땅 — 별보다 앞, 적보다 뒤 */
+  g.fillStyle = 'rgba(28,38,56,.55)'
+  for (const sl of s.slabs) g.fillRect(sl.x, sl.y, sl.w, sl.h)
+  for (const u of s.grounds) drawGround(u)
+  /* 방공 빔 */
+  for (const bm of s.beams) {
+    const a = 1 - bm.age / bm.life
+    g.fillStyle = 'rgba(255,120,150,' + (.35 + a * .5) + ')'
+    g.fillRect(bm.x - bm.w / 2, 0, bm.w, bm.y)
+    g.fillStyle = 'rgba(255,255,255,' + (a * .8) + ')'
+    g.fillRect(bm.x - 3, 0, 6, bm.y)
+  }
+  for (const it of s.items) {
+    const k = 1 + Math.sin(it.t * 8) * .12
+    const m = it.mod ? MODS[it.mod] : null
+    g.save(); g.translate(it.x, it.y); g.scale(k, k)
+    g.fillStyle = m ? m.color : '#ffd166'
+    g.beginPath(); g.arc(0, 0, it.r, 0, Math.PI * 2); g.fill()
+    // 개조는 테두리를 하나 둘러서 화력 아이템과 멀리서도 구분되게 한다
+    if (m) { g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.6
+             g.beginPath(); g.arc(0, 0, it.r + 3, 0, Math.PI * 2); g.stroke() }
+    g.fillStyle = '#1a1206'
+    g.font = 'bold ' + (m ? 12 : 13) + 'px system-ui'
+    g.textAlign = 'center'; g.textBaseline = 'middle'
+    g.fillText(m ? m.ko : 'P', 0, .5)
+    g.restore()
+  }
+  for (const e of s.enemies) drawEnemy(e)
+  if (s.boss) drawBoss(s.boss)
+  for (const b of s.bullets) drawBullet(b)
+  for (const b of s.ebullets) {
+    if (b.kind === 'missile') {
+      g.fillStyle = '#ff5470'
+      g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill()
+      g.globalAlpha = .3
+      g.beginPath(); g.arc(b.x - b.vx * .015, b.y - b.vy * .015, b.r * .8, 0, Math.PI * 2); g.fill()
+      g.globalAlpha = 1
+    } else if (b.kind === 'flakshell') {
+      g.fillStyle = '#ffd166'
+      g.fillRect(b.x - 2.5, b.y - 7, 5, 13)
+    } else {
+      g.fillStyle = '#ff8fa3'
+      g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill()
+    }
+  }
+
+  if (!(s.player.inv > 0 && Math.floor(s.player.inv * 12) % 2 === 0)) {
+    s.squad.forEach((u, i) => { const p = slotPos(i); drawShip(p.x, p.y, u, i === 1) })
+  }
+
+  for (const p of s.parts) {
+    g.globalAlpha = 1 - p.age / p.life; g.fillStyle = p.color
+    g.fillRect(p.x - 1.5, p.y - 1.5, 3, 3)
+  }
+  g.globalAlpha = 1
+
+  g.fillStyle = '#e8edf7'; g.font = 'bold 15px system-ui'
+  g.textAlign = 'left'; g.textBaseline = 'top'
+  g.fillText(String(s.score).padStart(6, '0'), 14, 30)
+  g.textAlign = 'right'; g.fillStyle = '#4fd1ff'
+  g.fillText('강화 ' + s.player.lv, W - 14, 30)
+  for (let i = 0; i < s.lives; i++) {
+    g.fillStyle = '#ff5470'
+    const x = W - 16 - i * 16, y = 56
+    g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 5, y + 4); g.lineTo(x - 5, y + 4); g.closePath(); g.fill()
+  }
+  /* 지금 붙은 개조. 왼쪽 위에 작게 쌓는다 */
+  {
+    let cx = 14, cy = 52
+    for (const key of MOD_KEYS) {
+      const n = s.mods[key]
+      if (!n) continue
+      const m = MODS[key]
+      g.fillStyle = m.color
+      g.beginPath(); g.roundRect(cx, cy, 30, 17, 5); g.fill()
+      g.fillStyle = '#12161f'; g.font = 'bold 11px system-ui'
+      g.textAlign = 'left'; g.textBaseline = 'middle'
+      g.fillText(m.ko + n, cx + 6, cy + 9)
+      cx += 34
+      if (cx > W - 120) { cx = 14; cy += 21 }
+    }
+  }
+
+  if (s.bannerT > 0) {
+    g.globalAlpha = Math.min(1, s.bannerT * 1.6)
+    g.fillStyle = '#fff'; g.font = 'bold 26px system-ui'
+    g.textAlign = 'center'; g.textBaseline = 'middle'
+    g.fillText(s.banner, W / 2, H * .34)
+    g.globalAlpha = 1
+  }
+}
+
+/* ================================================================
+ * 루프
+ * ================================================================ */
+let last = 0
+function frame(now) {
+  requestAnimationFrame(frame)
+  if (!state || !state.running) return
+  const dt = Math.min((now - last) / 1000, .05)
+  last = now
+  update(dt); draw()
+}
+requestAnimationFrame(frame)
+
+/* ================================================================
+ * 화면 전환
+ * ================================================================ */
+const scHangar = document.getElementById('hangar')
+const scOver = document.getElementById('over')
+
+function start() {
+  state = newState(); seedStars(state); seedGround(state); state.running = true
+  last = performance.now()
+  scHangar.hidden = true; scOver.hidden = true
+}
+function end(win) {
+  state.running = false
+  prog.total += state.score
+  save()
+  document.getElementById('overTitle').textContent = win ? '1단계 클리어' : '격추됨'
+  document.getElementById('overBody').innerHTML =
+    '이번 점수 <b>' + state.score.toLocaleString('ko-KR') + '</b><br>' +
+    '누적 <b>' + prog.total.toLocaleString('ko-KR') + '</b>점'
+  scOver.hidden = false
+}
+
+document.getElementById('launch').onclick = start
+document.getElementById('again').onclick = () => { scOver.hidden = true; scHangar.hidden = false; renderHangar() }
+
+renderHangar()
+</script>
