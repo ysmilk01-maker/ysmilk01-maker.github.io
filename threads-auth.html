@@ -1,0 +1,42 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Threads 인증 코드</title>
+<meta name="robots" content="noindex">
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;
+       background:#f7f5f0;color:#241a13;
+       font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif}
+  .box{width:min(680px,92vw);padding:32px;background:#fff;border-radius:16px;
+       border:1px solid #ded7cb}
+  h1{margin:0 0 6px;font-size:19px}
+  p{margin:0 0 18px;font-size:13.5px;color:#8a7a6d;line-height:1.7}
+  code{display:block;padding:16px;background:#f0ece4;border-radius:10px;
+       font-family:ui-monospace,Consolas,monospace;font-size:13px;
+       word-break:break-all;line-height:1.6;user-select:all}
+  button{margin-top:14px;padding:11px 20px;border:0;border-radius:10px;
+         background:#22386b;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+  .err{color:#c9503f}
+</style>
+<div class="box">
+  <h1>Threads 인증 코드</h1>
+  <p>아래 값을 복사해서 넘겨주세요. 이 코드는 한 번만 쓰이고 몇 분 뒤에 만료됩니다.</p>
+  <code id="out">…</code>
+  <button id="copy" hidden>복사</button>
+</div>
+<script>
+  const q = new URLSearchParams(location.search)
+  const out = document.getElementById('out')
+  const code = q.get('code')
+  const err = q.get('error_description') || q.get('error')
+  if (code) {
+    out.textContent = code
+    const b = document.getElementById('copy')
+    b.hidden = false
+    b.onclick = () => { navigator.clipboard.writeText(code); b.textContent = '복사했습니다' }
+  } else if (err) {
+    out.className = 'err'
+    out.textContent = err
+  } else {
+    out.textContent = '코드가 없습니다. 인증 주소로 다시 들어와 주세요.'
+  }
+</script>
