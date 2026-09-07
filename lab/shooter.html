@@ -7,7 +7,7 @@
   편대 종스크롤 슈팅 프로토타입
 
   편대
-    세 대가 함께 난다. 가운데가 메인으로 화력 100%, 좌우 윙맨이 50%.
+    세 대가 함께 난다. 가운데가 메인으로 화력 100%, 좌우 윙맨이 30%.
     세 자리에 각각 다른 기체를 넣을 수 있어서, 조합이 곧 전략이 된다.
 
   기체 30기
@@ -97,6 +97,22 @@
   .t-rare { background: #1e3a5f; color: #7dd3fc; }
   .t-legend { background: #4a3410; color: var(--gold); }
   .card .lock { font-size: 10.5px; color: var(--gold); margin-top: 5px; font-weight: 700; }
+  .card .pv {
+    display: block; width: 100%; height: 74px; margin: 2px 0 6px;
+    background: radial-gradient(ellipse at 50% 60%, #16243a 0%, #0d1522 72%);
+    border-radius: 9px;
+  }
+  .card .up {
+    display: flex; align-items: center; gap: 6px; margin-top: 7px;
+    padding-top: 7px; border-top: 1px solid var(--line);
+  }
+  .card .up .lvl { font-size: 10.5px; color: var(--muted); font-weight: 700; }
+  .card .up button {
+    margin-left: auto; padding: 4px 9px; font-size: 10.5px; border-radius: 7px;
+    background: #24406b; color: #cfe6ff; font-weight: 700; border: 0;
+  }
+  .card .up button[disabled] { background: #1a2536; color: #5b6a80; }
+  .slot .pv { display: block; width: 100%; height: 52px; margin: 2px 0 1px; }
 
   .bar { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
   .bar .grow { flex: 1; }
@@ -115,7 +131,7 @@
 <div class="screen" id="hangar">
   <h1>격납고</h1>
   <p class="sub">
-    세 대가 함께 출격합니다. <b>가운데가 화력 100%</b>, 좌우 윙맨은 50%입니다.<br>
+    세 대가 함께 출격합니다. <b>가운데가 화력 100%</b>, 좌우 윙맨은 30%입니다.<br>
     슬롯을 고르고 아래에서 기체를 누르세요.
   </p>
 
@@ -175,6 +191,12 @@ const WEAPONS = {
 }
 
 const TIERS = { common: '일반', rare: '희귀', legend: '전설' }
+
+/* 기체 그림에 쓰는 무기 색. 그 무기가 쏘는 탄 색을 그대로 가져왔다 */
+const WEAPON_COLOR = {
+  rapid: '#cfe3ff', spread: '#ffd9a8', laser: '#bff4ff', homing: '#ffa8d6', pierce: '#ffe08a',
+  wave: '#8fd8ff', orb: '#c9a8ff', mine: '#ffd166', beam: '#e6f4ff', boomer: '#9fffcf',
+}
 
 /* ================================================================
  * 탄 개조 — 그 판에서만
@@ -257,12 +279,35 @@ const PLANES = []
  * ================================================================ */
 const SAVE_KEY = 'shooter-proto-v2'
 function load() {
+  const base = { total: 0, owned: [], squad: null, parts: 0, upg: {} }
   try {
     const raw = localStorage.getItem(SAVE_KEY)
-    if (raw) return { total: 0, owned: [], squad: null, ...JSON.parse(raw) }
+    if (raw) return { ...base, ...JSON.parse(raw) }
   } catch { /* 저장이 막힌 환경이어도 게임은 돌아야 한다 */ }
-  return { total: 0, owned: [], squad: null }
+  return base
 }
+
+/* ================================================================
+ * 부품 — 게임 안에서 버는 재화
+ *
+ * 판을 돌면 점수에 비례해 쌓이고, 격납고에서 기체별 무기를 올린다.
+ * 개조(그 판에서만)와 다르게 이건 남는다.
+ *
+ * 돈으로 사는 전설 기체와도 별개다. 전설을 안 사도 일반 기체를 끝까지
+ * 올리면 따라갈 수 있어야 한다 — 그래야 "돈 없으면 못 한다"가 안 된다.
+ * ================================================================ */
+const UPG_MAX = 5
+/** 판이 끝나면 점수의 5% 를 부품으로 준다 */
+function partsEarned(score) { return Math.max(1, Math.round(score / 20)) }
+/** 다음 단계 비용. 등급이 높을수록 비싸다 */
+function upgCost(p, lv) {
+  const t = { common: 1, rare: 1.6, legend: 2.4 }[p.tier]
+  return Math.round((40 + lv * 55) * t)
+}
+function upgOf(id) { return prog.upg[id] || 0 }
+/** 강화 단계가 화력과 연사에 얹히는 몫 */
+function upgPower(id) { return 1 + upgOf(id) * 0.12 }
+function upgRate(id) { return 1 - upgOf(id) * 0.04 }
 function save() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(prog)) } catch { /* 무시 */ }
 }
@@ -304,12 +349,20 @@ addEventListener('resize', fit); fit()
 /* ================================================================
  * 격납고 화면
  * ================================================================ */
+/*
+ * 화력 배분.
+ *
+ * 윙맨을 50% 로 뒀더니 셋을 합쳐 200% 라 메인을 뭘 태우든 비슷했다.
+ * 30% 로 낮추면 합계 160% 가 되고, 메인 자리가 전체의 63% 를 쥔다 —
+ * "메인에 뭘 태울까"가 실제 선택이 된다.
+ */
 const SLOT_META = [
-  { role: '좌 윙맨', mul: 0.5 },
+  { role: '좌 윙맨', mul: 0.3 },
   { role: '메인', mul: 1.0 },
-  { role: '우 윙맨', mul: 0.5 },
+  { role: '우 윙맨', mul: 0.3 },
 ]
 let activeSlot = 1
+const NO_MODS = { pierce: 0, split: 0, extra: 0, seek: 0, rate: 0, big: 0, bounce: 0, speed: 0 }
 const elSlots = document.getElementById('slots')
 const elPlanes = document.getElementById('planes')
 const elWallet = document.getElementById('wallet')
@@ -324,11 +377,13 @@ function renderHangar() {
     d.className = 'slot' + (i === activeSlot ? ' on' : '')
     d.innerHTML =
       `<div class="role">${m.role}</div>` +
+      `<canvas class="pv" width="120" height="120"></canvas>` +
       `<div class="nm">${p ? p.name : '비었음'}</div>` +
       `<div class="wp">${p ? WEAPONS[p.weapon].name : '-'}</div>` +
       `<div class="pw">화력 ${Math.round(m.mul * 100)}%</div>`
     d.onclick = () => { activeSlot = i; renderHangar() }
     elSlots.appendChild(d)
+    if (p) paintPlane(d.querySelector('.pv'), p, i === 1 ? 1 : 0.75)
   })
 
   elPlanes.innerHTML = ''
@@ -338,17 +393,42 @@ function renderHangar() {
     const c = document.createElement('div')
     c.className = 'card' + (ok ? '' : ' locked') + (picked ? ' picked' : '')
     const lab = unlockLabel(p)
+    const lv = upgOf(p.id)
+    const cost = upgCost(p, lv)
     c.innerHTML =
       `<span class="tag t-${p.tier}">${TIERS[p.tier]}</span>` +
+      `<canvas class="pv" width="220" height="150"></canvas>` +
       `<div class="nm">${p.name}</div>` +
       `<div class="wp">${WEAPONS[p.weapon].name}</div>` +
       `<div class="de">${WEAPONS[p.weapon].desc}</div>` +
-      (lab ? `<div class="lock">${p.unlock.kind === 'paid' ? '🔒 ' : ''}${lab}</div>` : '')
+      (lab ? `<div class="lock">${p.unlock.kind === 'paid' ? '🔒 ' : ''}${lab}</div>` : '') +
+      (ok
+        ? `<div class="up"><span class="lvl">강화 ${lv}/${UPG_MAX}` +
+          (lv ? ` · 화력 +${Math.round((upgPower(p.id) - 1) * 100)}%` : '') + `</span>` +
+          (lv >= UPG_MAX
+            ? `<button disabled>최대</button>`
+            : `<button ${prog.parts < cost ? 'disabled' : ''}>부품 ${cost}</button>`) +
+          `</div>`
+        : '')
+
+    const btn = c.querySelector('.up button')
+    if (btn && !btn.disabled) {
+      btn.onclick = (ev) => {
+        ev.stopPropagation()
+        if (prog.parts < cost) return
+        prog.parts -= cost
+        prog.upg[p.id] = lv + 1
+        save(); renderHangar()
+      }
+    }
+
     c.onclick = () => {
       if (!ok) {
         alert(p.unlock.kind === 'paid'
-          ? `유료 기체입니다. 결제는 아직 붙지 않았습니다.\n(${lab})`
-          : `아직 잠겨 있습니다.\n${lab} 필요 · 지금 ${prog.total.toLocaleString('ko-KR')}점`)
+          ? `유료 기체입니다. 결제는 아직 붙지 않았습니다.
+(${lab})`
+          : `아직 잠겨 있습니다.
+${lab} 필요 · 지금 ${prog.total.toLocaleString('ko-KR')}점`)
         return
       }
       // 같은 기체를 두 자리에 넣지 않는다 — 자리를 맞바꾼다
@@ -358,9 +438,33 @@ function renderHangar() {
       save(); renderHangar()
     }
     elPlanes.appendChild(c)
+    paintPlane(c.querySelector('.pv'), p, 1.1)
   }
 
-  elWallet.textContent = `누적 ${prog.total.toLocaleString('ko-KR')}점 · 보유 ${PLANES.filter(unlocked).length}/30기`
+  elWallet.textContent =
+    `부품 ${prog.parts.toLocaleString('ko-KR')}개 · 누적 ${prog.total.toLocaleString('ko-KR')}점` +
+    ` · 보유 ${PLANES.filter(unlocked).length}/30기`
+}
+
+/**
+ * 카드 안에 기체를 그린다.
+ *
+ * 게임에서 쓰는 그림을 그대로 부른다. 카드용으로 따로 그리면 격납고에서 고른
+ * 모습과 실제로 나는 모습이 어긋난다. 강화 단계를 기체 레벨로 넘겨서, 강화한
+ * 기체는 카드에서도 날개가 넓어진다.
+ */
+function paintPlane(cv, p, zoom) {
+  if (!cv) return
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  const w = cv.clientWidth || 130, h = cv.clientHeight || 62
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr)
+  const c = cv.getContext('2d')
+  c.setTransform(dpr, 0, 0, dpr, 0, 0)
+  c.clearRect(0, 0, w, h)
+  const lv = 1 + Math.min(4, upgOf(p.id))
+  /* 기수 침과 엔진 불꽃까지 다 들어가야 한다. 세로 66 이 기체 한 대의 키다 */
+  const scale = Math.min(w / 54, h / 66) * (zoom || 1)
+  drawShipOn(c, w / 2, h * 0.5, { plane: p, lv, mods: NO_MODS, scale, flame: false })
 }
 
 document.getElementById('devUnlock').onclick = () => {
@@ -473,12 +577,12 @@ function shoot(u, i, dt) {
   if (!p) return
   u.cd -= dt
   const lv = LV[state.player.lv]
-  const rate = baseRate(p.weapon) * p.rate / (0.85 + lv.mult * 0.15) * (1 - state.mods.rate * 0.18)
+  const rate = baseRate(p.weapon) * p.rate * upgRate(p.id) / (0.85 + lv.mult * 0.15) * (1 - state.mods.rate * 0.18)
   if (u.cd > 0) return
   u.cd = rate
 
   const pos = slotPos(i)
-  const dmg = p.power * u.mul * lv.mult
+  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult
   const tier = p.tier === 'legend' ? 2 : p.tier === 'rare' ? 1 : 0
   const B = state.bullets
   const M = state.mods
@@ -643,8 +747,26 @@ const RADAR_R = 118
 const PLAYER_HOMING_TURN = 5
 const ENEMY_HOMING_TURN = PLAYER_HOMING_TURN * 0.2
 
+/*
+ * 보스.
+ *
+ * 320 은 너무 물렀다. 편대 셋에 개조까지 붙으면 순식간에 녹아서
+ * 「보스가 나왔다」가 아니라 「덩치 큰 적이 지나갔다」가 됐다.
+ *
+ * 체력만 올리면 지루해지므로 구조를 준다 —
+ *   · 양옆에 부술 수 있는 포탑 둘. 살아 있으면 보스가 더 자주 쏜다
+ *   · 체력 구간마다 패턴이 바뀌고, 중반부터 부하를 부른다
+ *   · 마지막 25% 에서는 돌진한다. 예고선을 먼저 보여주고 내려온다
+ */
 function spawnBoss() {
-  state.boss = { x: W / 2, y: -120, hp: 320, maxHp: 320, r: 46, t: 0, cd: 1.2, entering: true }
+  state.boss = {
+    x: W / 2, y: -120, hp: 1100, maxHp: 1100, r: 46, t: 0, cd: 1.2, entering: true,
+    turrets: [
+      { dx: -36, hp: 90, maxHp: 90, alive: true, cd: 1.0, flash: 0 },
+      { dx: 36,  hp: 90, maxHp: 90, alive: true, cd: 1.7, flash: 0 },
+    ],
+    summonCd: 7, dashPh: 0, dashX: 0, phase: 1, flash: 0,
+  }
   banner('보스')
 }
 function banner(t) { state.banner = t; state.bannerT = 1.6 }
@@ -783,29 +905,87 @@ function update(dt) {
   const bs = s.boss
   if (bs) {
     bs.t += dt
-    if (bs.entering) { bs.y += 60 * dt; if (bs.y >= 130) { bs.y = 130; bs.entering = false } }
-    else {
-      bs.x = W / 2 + Math.sin(bs.t * .7) * (W / 2 - 70)
+    if (bs.flash > 0) bs.flash -= dt
+    for (const tr of bs.turrets) if (tr.flash > 0) tr.flash -= dt
+
+    if (bs.entering) {
+      bs.y += 60 * dt
+      if (bs.y >= 130) { bs.y = 130; bs.entering = false }
+    } else {
+      const h = bs.hp / bs.maxHp
+      bs.phase = h > .75 ? 1 : h > .5 ? 2 : h > .25 ? 3 : 4
+
+      /* ---- 마지막 구간: 돌진 ---- */
+      if (bs.phase === 4 && bs.dashPh <= 0 && Math.random() < dt * 0.35) {
+        bs.dashPh = 2.2; bs.dashX = pl.x
+      }
+      if (bs.dashPh > 0) {
+        bs.dashPh -= dt
+        if (bs.dashPh > 1.5) {
+          // 예고. 자리를 잡고 기다린다
+          bs.x += (bs.dashX - bs.x) * Math.min(1, dt * 4)
+        } else if (bs.dashPh > 0.7) {
+          bs.y += 620 * dt                     // 내리꽂는다
+        } else {
+          bs.y += (130 - bs.y) * Math.min(1, dt * 3)   // 제자리로
+        }
+        if (near(bs, pl, bs.r + PLAYER_R)) hitPlayer()
+      } else {
+        bs.x = W / 2 + Math.sin(bs.t * .7) * (W / 2 - 70)
+      }
+
+      /* ---- 포탑. 살아 있으면 따로 쏜다 ---- */
+      for (const tr of bs.turrets) {
+        if (!tr.alive) continue
+        tr.cd -= dt
+        if (tr.cd <= 0) {
+          tr.cd = 1.3
+          const tx = bs.x + tr.dx, ty = bs.y + 10
+          const a = Math.atan2(pl.y - ty, pl.x - tx)
+          s.ebullets.push({ x: tx, y: ty, vx: Math.cos(a) * 195, vy: Math.sin(a) * 195, r: 4, age: 0 })
+        }
+      }
+      const aliveTurrets = bs.turrets.filter((t) => t.alive).length
+
+      /* ---- 부하 소환. 2 구간부터 ---- */
+      if (bs.phase >= 2) {
+        bs.summonCd -= dt
+        if (bs.summonCd <= 0) {
+          bs.summonCd = bs.phase >= 3 ? 5 : 7
+          for (const sx of [70, W - 70]) s.enemies.push(mkEnemy('small', sx, -30, 0))
+        }
+      }
+
+      /* ---- 본체 사격. 포탑이 살아 있으면 더 자주 ---- */
       bs.cd -= dt
-      if (bs.cd <= 0) {
-        const h = bs.hp / bs.maxHp
-        if (h > .6) {
-          bs.cd = 1.1
+      if (bs.cd <= 0 && bs.dashPh <= 0) {
+        const haste = 1 - aliveTurrets * 0.12
+        if (bs.phase === 1) {
+          bs.cd = 1.1 * haste
           for (let i = -3; i <= 3; i++) {
             const a = Math.PI / 2 + i * .17
-            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 4 })
+            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 4, age: 0 })
           }
-        } else if (h > .3) {
-          bs.cd = .75
+        } else if (bs.phase === 2) {
+          bs.cd = .78 * haste
           const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
           for (const d of [-.12, 0, .12])
-            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * 210, vy: Math.sin(a + d) * 210, r: 4 })
-        } else {
-          bs.cd = 1.35
-          for (let i = 0; i < 18; i++) {
-            const a = (i / 18) * Math.PI * 2 + bs.t
-            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 130, vy: Math.sin(a) * 130, r: 4 })
+            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * 210, vy: Math.sin(a + d) * 210, r: 4, age: 0 })
+        } else if (bs.phase === 3) {
+          bs.cd = 1.25 * haste
+          for (let i = 0; i < 20; i++) {
+            const a = (i / 20) * Math.PI * 2 + bs.t
+            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 135, vy: Math.sin(a) * 135, r: 4, age: 0 })
           }
+        } else {
+          /* 마지막: 원형 탄막 + 조준 유도탄 하나 */
+          bs.cd = 1.5 * haste
+          for (let i = 0; i < 14; i++) {
+            const a = (i / 14) * Math.PI * 2 - bs.t * .6
+            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160, r: 4, age: 0 })
+          }
+          s.ebullets.push({ x: bs.x, y: bs.y + 20, vx: 0, vy: 130, r: 5,
+                            kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0 })
         }
       }
     }
@@ -984,8 +1164,23 @@ function collide() {
     }
 
     const bs = s.boss
+    /* 포탑이 앞에 붙어 있다. 본체보다 먼저 맞는다 */
+    if (bs && !b.dead && !bs.entering) {
+      for (const tr of bs.turrets) {
+        if (!tr.alive) continue
+        const tx = bs.x + tr.dx, ty = bs.y + 10
+        if ((tx - b.x) ** 2 + (ty - b.y) ** 2 < (15 + b.r) ** 2) {
+          tr.hp -= b.dmg; tr.flash = .1
+          if (b.pierce > 0) b.pierce--; else b.dead = true
+          boom(b.x, b.y, 2, '#ffd27a')
+          if (tr.hp <= 0) { tr.alive = false; boom(tx, ty, 26, '#ffd27a'); s.score += 300 }
+          break
+        }
+      }
+    }
     if (bs && !b.dead && !bs.entering && near(b, bs, bs.r + b.r)) {
       bs.hp -= b.dmg
+      bs.flash = .08
       if (b.pierce > 0) b.pierce--; else b.dead = true
       boom(b.x, b.y, 2, '#9fe8ff')
       if (bs.hp <= 0) {
@@ -1033,22 +1228,30 @@ const TIER_COLOR = { common: '#dbe7f5', rare: '#8fd8ff', legend: '#ffd27a' }
  * 마지막에 꼬리날개가 선다. 개조는 그 위에 부품을 얹는다. 둘을 나눠 둬야
  * "레벨이 올랐나 개조를 주웠나"가 구분된다.
  */
+/* 격납고 카드도 같은 그림을 써야 한다. 그래서 캔버스를 밖에서 받는다. */
 function drawShip(x, y, u, isMain) {
-  const p = u.plane
-  const lv = state.player.lv
-  const M = state.mods
+  drawShipOn(g, x, y, {
+    plane: u.plane, lv: state.player.lv, mods: state.mods, scale: isMain ? 1 : 0.58,
+  })
+}
+
+function drawShipOn(g, x, y, opt) {
+  const p = opt.plane
+  const lv = opt.lv
+  const M = opt.mods || NO_MODS
   const body = p ? TIER_COLOR[p.tier] : '#dbe7f5'
-  const scale = isMain ? 1 : 0.58     // 윙맨은 확실히 작아야 메인이 어디인지 헷갈리지 않는다
+  const scale = opt.scale
   const span = (13 + lv * 2.6) * scale       // 레벨이 곧 날개 폭
   const nose = (18 + lv * 1.4) * scale
+  const flame = opt.flame !== false
 
   g.save(); g.translate(x, y); g.scale(scale, scale)
 
   /* ---- 엔진. 레벨 4 에서 둘, 5 에서 셋이 된다 ---- */
   const noz = lv >= 5 ? [-8, 0, 8] : lv >= 4 ? [-6, 6] : [0]
-  const flick = .6 + Math.random() * .5
+  const flick = flame ? .6 + Math.random() * .5 : .8
   const len = (18 + lv * 2) * (1 + M.speed * .35)   // 가속을 주우면 불꽃이 길어진다
-  for (const nx of noz) {
+  for (const nx of (flame ? noz : noz)) {
     const grd = g.createLinearGradient(0, 8, 0, 8 + len * flick)
     grd.addColorStop(0, 'rgba(120,220,255,.95)')
     grd.addColorStop(1, 'rgba(80,140,255,0)')
@@ -1097,6 +1300,85 @@ function drawShip(x, y, u, isMain) {
   /* ---- 캐노피. 레벨이 오르면 커진다 ---- */
   g.fillStyle = '#4fd1ff'
   g.beginPath(); g.ellipse(0, -3, 2.4 + lv * .18, 4.5 + lv * .5, 0, 0, Math.PI * 2); g.fill()
+
+  /* ================================================================
+   * 무기별 생김새 — 30기가 다 같은 모양이면 고를 이유가 없다
+   *
+   * 무기 열 종류를 실루엣으로 구분한다. 격납고 카드에서도 이 그림을 그대로
+   * 쓰기 때문에, 고를 때 본 모습이 날 때 그대로 나온다.
+   * ================================================================ */
+  if (p) {
+    /* 색은 그 무기의 탄 색을 쓴다. 카드에서 본 색이 날 때 그대로 나온다 */
+    const acc = WEAPON_COLOR[p.weapon] || '#9fb4cc'
+    g.fillStyle = acc
+    g.strokeStyle = acc
+    switch (p.weapon) {
+      case 'rapid':               // 총열 두 개
+        for (const sgn of [-1, 1]) g.fillRect(sgn * (span * .5) - 1.4, -nose * .5, 2.8, 13)
+        break
+      case 'spread':              // 날개 끝이 부채처럼 벌어진다
+        for (const sgn of [-1, 1]) {
+          g.beginPath()
+          g.moveTo(sgn * span * .8, 6); g.lineTo(sgn * (span + 9), 0)
+          g.lineTo(sgn * (span + 6), 11); g.closePath(); g.fill()
+        }
+        break
+      case 'laser':               // 기수 위로 긴 침이 솟는다
+        g.fillRect(-1.8, -nose - 13, 3.6, 15)
+        g.beginPath(); g.arc(0, -nose - 13, 2.6, 0, Math.PI * 2); g.fill()
+        break
+      case 'homing':              // 날개 밑 미사일 두 발
+        for (const sgn of [-1, 1]) {
+          g.beginPath(); g.ellipse(sgn * span * .6, 3, 2.6, 7, 0, 0, Math.PI * 2); g.fill()
+        }
+        break
+      case 'pierce':              // 기수가 창처럼 길게 뻗는다
+        g.beginPath(); g.moveTo(0, -nose - 12); g.lineTo(3.6, -nose + 3); g.lineTo(-3.6, -nose + 3)
+        g.closePath(); g.fill()
+        break
+      case 'wave':                // 날개에 물결 세 겹
+        g.lineWidth = 1.8
+        for (let k = 0; k < 3; k++) {
+          const yy = -1 + k * 4.5
+          g.beginPath()
+          g.moveTo(-span * .8, yy)
+          g.quadraticCurveTo(-span * .4, yy - 3.2, 0, yy)
+          g.quadraticCurveTo(span * .4, yy + 3.2, span * .8, yy)
+          g.stroke()
+        }
+        break
+      case 'orb':                 // 기체를 도는 구슬
+        g.globalAlpha = .35; g.lineWidth = 1.2
+        g.beginPath(); g.arc(0, 0, span * .82, 0, Math.PI * 2); g.stroke()
+        g.globalAlpha = 1
+        for (const sgn of [-1, 1]) {
+          g.beginPath(); g.arc(sgn * (span * .82), -1, 3.2, 0, Math.PI * 2); g.fill()
+        }
+        break
+      case 'mine':                // 배 밑에 매단 둥근 폭뢰
+        for (const sgn of [-1, 1]) {
+          g.beginPath(); g.arc(sgn * 5.5, 9, 3.4, 0, Math.PI * 2); g.fill()
+        }
+        g.fillRect(-7, 6.5, 14, 1.6)
+        break
+      case 'beam':                // 기수 밑 굵은 포신
+        g.fillRect(-4, -nose * .8, 8, 15)
+        g.globalAlpha = .4
+        g.beginPath(); g.arc(0, -nose * .8, 7, Math.PI, 0); g.fill()
+        g.globalAlpha = 1
+        break
+      case 'boomer':              // 날개 끝이 뒤로 휜다
+        g.lineWidth = 2.4
+        for (const sgn of [-1, 1]) {
+          g.beginPath()
+          g.moveTo(sgn * span * .88, 5)
+          g.quadraticCurveTo(sgn * (span + 10), 8, sgn * (span + 4), 17)
+          g.stroke()
+        }
+        break
+    }
+    g.lineWidth = 1
+  }
 
   /* ================================================================
    * 개조 부품 — 주운 게 기체에 붙는다
@@ -1164,8 +1446,34 @@ function drawEnemy(e) {
 }
 
 function drawBoss(bs) {
+  /* 돌진 예고 — 아래로 붉은 길이 깔린다 */
+  if (bs.dashPh > 1.5) {
+    g.fillStyle = 'rgba(255,84,112,' + (.10 + Math.sin(bs.t * 30) * .06) + ')'
+    g.fillRect(bs.x - bs.r, bs.y, bs.r * 2, H - bs.y)
+  }
+
   g.save(); g.translate(bs.x, bs.y)
-  g.fillStyle = '#3b2b52'
+
+  /* 포탑 */
+  for (const tr of bs.turrets) {
+    g.save(); g.translate(tr.dx, 10)
+    if (tr.alive) {
+      g.fillStyle = tr.flash > 0 ? '#ffffff' : '#584078'
+      g.beginPath(); g.arc(0, 0, 13, 0, Math.PI * 2); g.fill()
+      g.fillStyle = '#2a1f3d'; g.fillRect(-3, 4, 6, 16)
+      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-11, -19, 22, 4)
+      g.fillStyle = '#ffb45c'; g.fillRect(-11, -19, 22 * Math.max(0, tr.hp / tr.maxHp), 4)
+    } else {
+      g.fillStyle = '#241a33'
+      g.beginPath(); g.arc(0, 0, 11, 0, Math.PI * 2); g.fill()
+      g.strokeStyle = 'rgba(255,140,90,.5)'; g.lineWidth = 2
+      g.beginPath(); g.moveTo(-6, -6); g.lineTo(6, 6); g.moveTo(6, -6); g.lineTo(-6, 6); g.stroke()
+    }
+    g.restore()
+  }
+
+  /* 본체 */
+  g.fillStyle = bs.flash > 0 ? '#8f7ab5' : '#3b2b52'
   g.beginPath()
   g.moveTo(0, bs.r * .75); g.lineTo(bs.r * 1.25, -bs.r * .15); g.lineTo(bs.r * .6, -bs.r * .7)
   g.lineTo(-bs.r * .6, -bs.r * .7); g.lineTo(-bs.r * 1.25, -bs.r * .15)
@@ -1173,12 +1481,21 @@ function drawBoss(bs) {
   g.fillStyle = '#7a5cab'
   g.beginPath(); g.moveTo(0, bs.r * .5); g.lineTo(bs.r * .42, -bs.r * .5); g.lineTo(-bs.r * .42, -bs.r * .5)
   g.closePath(); g.fill()
-  g.fillStyle = '#ff5470'
-  g.beginPath(); g.ellipse(0, -bs.r * .1, 7, 5, 0, 0, Math.PI * 2); g.fill()
+
+  /* 구간이 올라갈수록 눈이 밝아진다 */
+  const eye = ['#ff5470', '#ff7a4a', '#ffb43a', '#ffffff'][bs.phase - 1] || '#ff5470'
+  g.fillStyle = eye
+  g.beginPath(); g.ellipse(0, -bs.r * .1, 7 + bs.phase, 5, 0, 0, Math.PI * 2); g.fill()
   g.restore()
+
+  /* 체력 막대. 구간 경계에 눈금을 넣는다 */
   const w = W - 60
   g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(30, 16, w, 6)
   g.fillStyle = '#ff5470'; g.fillRect(30, 16, w * Math.max(0, bs.hp / bs.maxHp), 6)
+  g.fillStyle = 'rgba(0,0,0,.45)'
+  for (const q of [.25, .5, .75]) g.fillRect(30 + w * q, 16, 1.5, 6)
+  g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '10px system-ui'
+  g.fillText('보스 · ' + bs.phase + '단계', 30, 34)
 }
 
 function drawBullet(b) {
@@ -1376,11 +1693,14 @@ function start() {
 }
 function end(win) {
   state.running = false
+  const earned = partsEarned(state.score)
   prog.total += state.score
+  prog.parts += earned
   save()
   document.getElementById('overTitle').textContent = win ? '1단계 클리어' : '격추됨'
   document.getElementById('overBody').innerHTML =
     '이번 점수 <b>' + state.score.toLocaleString('ko-KR') + '</b><br>' +
+    '부품 <b>+' + earned.toLocaleString('ko-KR') + '</b> (보유 ' + prog.parts.toLocaleString('ko-KR') + ')<br>' +
     '누적 <b>' + prog.total.toLocaleString('ko-KR') + '</b>점'
   scOver.hidden = false
 }
