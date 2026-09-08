@@ -551,6 +551,8 @@ const GACHA = {
     jackpot: 0.5,        // 조각이 아니라 파일럿이 통째로 나올 확률(%)
   },
 }
+/** 완성품이 이미 가진 것에 걸렸을 때 대신 주는 조각 */
+const JACK_SHARD = 10
 /* 천장. 안 나오는 사람이 끝없이 안 나오는 일을 막는다 */
 const PITY = { plane: { at: 40, tier: 'legend' }, pilot: { at: 60, tier: 'high' } }
 
@@ -586,9 +588,9 @@ function pull(kind) {
       save()
       return { kind, tier, n: 1, name: GRADES[tier].name + ' 파일럿', got: true, jack: true }
     }
-    /* 이미 가진 등급에 걸리면 조각을 세 배로 준다. 아니면 그냥 꽝이 된다 */
+    /* 이미 가진 등급에 걸리면 조각 열 개로 바꿔 준다. 아니면 그냥 꽝이 된다 */
     let big = false
-    if (jack) { n *= 3; big = true }
+    if (jack) { n = JACK_SHARD; big = true }
     prog.shardG[tier] = shardG(tier) + n
     const got = fresh && prog.shardG[tier] >= GRADE_NEED[tier]
     if (got) { prog.pilotOwned[tier] = true; prog.shardG[tier] -= GRADE_NEED[tier] }
@@ -609,7 +611,7 @@ function pull(kind) {
     return { kind, tier, n: 1, name: pick.name, plane: pick, got: true, jack: true }
   }
   let big = false
-  if (jack) { n *= 3; big = true }
+  if (jack) { n = JACK_SHARD; big = true }
   prog.shardP[pick.id] = shardOf(pick.id) + n
   const got = fresh && prog.shardP[pick.id] >= shardNeed(pick)
   if (got) { prog.owned.push(pick.id); prog.shardP[pick.id] -= shardNeed(pick) }
@@ -1106,7 +1108,7 @@ function paintGacha(res) {
     return
   }
 
-  const label = res.jack ? '완성품!' : res.big ? `조각 ${res.n}개 (세 배!)` : `조각 ${res.n}개`
+  const label = res.jack ? '완성품!' : res.big ? `조각 ${res.n}개 (완성품 대체)` : `조각 ${res.n}개`
   body.innerHTML = head +
     `<div class="got">` +
     `<span class="tag ${GRADES[res.tier] ? GRADES[res.tier].tag : 't-' + res.tier}" style="position:static">` +
@@ -1129,7 +1131,7 @@ function paintRates() {
   body.innerHTML =
     `<div class="lab">등급별 확률</div>${rows}` +
     `<div class="rate"><span>완성품 (조각 대신 통째로)</span><span class="v">${g.jackpot}%</span></div>` +
-    `<div class="rate"><span>이미 가진 것에 걸리면 조각 세 배</span><span class="v">-</span></div>` +
+    `<div class="rate"><span>완성품이 이미 가진 것이면</span><span class="v">조각 ${JACK_SHARD}개</span></div>` +
     `<div class="empty">${pity.at}번마다 ` +
     `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.<br>` +
     `값은 부품으로만 치릅니다. 부품은 판을 돌아야 생기고 돈으로 살 수 없습니다.</div>`
