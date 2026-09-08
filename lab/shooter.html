@@ -229,7 +229,8 @@
   .gcard .rt { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--gold); }
 
   /* 접속 보상 */
-  .days { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 14px 0; }
+  .days { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 14px 0; }
+  .days .day:nth-child(5) { grid-column: 1 / 2; }
   .day {
     background: #0a1220; border: 1px solid var(--line); border-radius: 10px;
     padding: 9px 4px; text-align: center;
@@ -503,16 +504,18 @@ const PLANES = []
  * 넷째 날과 이렛날에 가챠권을 둔다. 부품만 주면 며칠째인지 체감이 안 되고,
  * 매일 가챠권을 주면 판을 돌 이유가 없어진다.
  * ================================================================ */
-const LOGIN_REWARD = [
-  { kind: 'parts',  n: 300 },
-  { kind: 'energy', n: 1 },
-  { kind: 'parts',  n: 600 },
-  { kind: 'ticket', n: 1 },
-  { kind: 'parts',  n: 900 },
-  { kind: 'energy', n: 2 },
-  { kind: 'ticket', n: 2 },
+const LOGIN_WEEK = [
+  { day: '일', kind: 'ticket', n: 3 },
+  { day: '월', kind: 'ticket', n: 3 },
+  { day: '화', kind: 'xp',     n: 3000 },
+  { day: '수', kind: 'parts',  n: 1500 },
+  { day: '목', kind: 'ticket', n: 3 },
+  { day: '금', kind: 'energy', n: 5 },
+  { day: '토', kind: 'energy', n: 5 },
 ]
-const REWARD_NAME = { parts: '부품', energy: '출격권', ticket: '가챠권' }
+const REWARD_NAME = {
+  parts: '부품', energy: '출격권', ticket: '가챠권', xp: '파일럿 경험치',
+}
 
 function dayKey(d) {
   const x = d || new Date()
@@ -527,13 +530,16 @@ function claimDaily() {
   const y = new Date(); y.setDate(y.getDate() - 1)
   prog.login.streak = prog.login.last === dayKey(y) ? prog.login.streak + 1 : 1
   prog.login.last = today
-  const idx = (prog.login.streak - 1) % LOGIN_REWARD.length
-  const r = LOGIN_REWARD[idx]
+
+  const idx = new Date().getDay()          // 0 이 일요일
+  const r = LOGIN_WEEK[idx]
+  let up = 0
   if (r.kind === 'parts') prog.parts += r.n
   else if (r.kind === 'ticket') prog.ticket += r.n
-  else if (r.kind === 'energy') { prog.energy.n = Math.min(EN_MAX, energy() + r.n) }
+  else if (r.kind === 'energy') prog.energy.n = energy() + r.n
+  else if (r.kind === 'xp') up = addXpRaw(r.n)
   save()
-  return { ...r, idx, streak: prog.login.streak }
+  return { ...r, idx, up, streak: prog.login.streak }
 }
 
 const STAR_FAIL = 1
@@ -728,7 +734,8 @@ if (!prog.energy.t) { prog.energy.t = Date.now(); prog.energy.n = EN_MAX }
  */
 function energy() {
   const e = prog.energy
-  if (e.n >= EN_MAX) { e.t = Date.now(); return EN_MAX }
+  // 보상으로 받은 것은 상한 위로 쌓인다. 저절로 차는 것만 다섯에서 멈춘다
+  if (e.n >= EN_MAX) { e.t = Date.now(); return e.n }
   const got = Math.floor((Date.now() - e.t) / EN_REGEN)
   if (got > 0) {
     e.n = Math.min(EN_MAX, e.n + got)
@@ -845,6 +852,19 @@ function pilotPow()  { return grade().base * (1 + prog.pilot.st.pow * 0.025) }
 function pilotRate() { return 1 - prog.pilot.st.rate * 0.015 }
 function pilotRng()  { return 1 + prog.pilot.st.rng * 0.02 }
 function pilotHp()   { return Math.round(PLAYER_HP * (grade().base - 1)) + prog.pilot.st.hp * 6 }
+
+/** 경험치를 그대로 넣는다. 포션처럼 점수를 거치지 않는 것이 쓴다 */
+function addXpRaw(n) {
+  const pt = prog.pilot
+  if (pt.lv >= PILOT_MAX) return 0
+  pt.xp += n
+  let up = 0
+  while (pt.lv < PILOT_MAX && pt.xp >= xpNeed(pt.lv)) {
+    pt.xp -= xpNeed(pt.lv); pt.lv++; up++
+  }
+  if (pt.lv >= PILOT_MAX) pt.xp = 0
+  return up
+}
 
 /** 판이 끝나면 부른다. 오른 레벨 수를 돌려준다 */
 function addXp(score) {
@@ -1056,8 +1076,10 @@ function paintEnergy() {
   const el = document.getElementById('enRow')
   if (!el) return
   const n = energy()
-  const hearts = Array.from({ length: EN_MAX },
-    (_, i) => `<span class="${i < n ? 'on' : 'off'}">♥</span>`).join('')
+  const hearts = n > EN_MAX
+    ? `<span class="on">♥</span> ${n}`
+    : Array.from({ length: EN_MAX },
+        (_, i) => `<span class="${i < n ? 'on' : 'off'}">♥</span>`).join('')
   const wait = energyWait()
   el.innerHTML =
     `<span class="k">출격권</span>` +
@@ -1162,13 +1184,21 @@ function renderPlanes() {
 
 /* ── 접속 보상 ─────────────────────────────────────────────────── */
 function showDaily(got) {
+  const unit = { parts: '', ticket: '장', energy: '장', xp: '' }
   document.getElementById('dailySub').innerHTML =
-    `<b>${got.streak}일째</b> 이어서 왔습니다. 하루 거르면 첫날로 돌아갑니다.`
-  document.getElementById('dailyDays').innerHTML = LOGIN_REWARD.map((r, i) =>
-    `<div class="day${i < got.idx ? ' done' : ''}${i === got.idx ? ' now' : ''}">` +
-    `<div class="d">${i + 1}일</div>` +
-    `<div class="r">${REWARD_NAME[r.kind]}</div>` +
-    `<div class="n">${r.n}${r.kind === 'parts' ? '' : '개'}</div></div>`).join('')
+    `${LOGIN_WEEK[got.idx].day}요일 몫 <b>${REWARD_NAME[got.kind]} ` +
+    `${got.n.toLocaleString('ko-KR')}${unit[got.kind]}</b>` +
+    (got.up ? ` · <b>파일럿 레벨 ${prog.pilot.lv}</b>` : '') +
+    `<br>연속 ${got.streak}일째입니다.`
+  // 일요일부터 그리면 달력과 순서가 어긋난다. 월요일부터 늘어놓는다
+  const order = [1, 2, 3, 4, 5, 6, 0]
+  document.getElementById('dailyDays').innerHTML = order.map((i) => {
+    const r = LOGIN_WEEK[i]
+    return `<div class="day${i === got.idx ? ' now' : ''}">` +
+      `<div class="d">${r.day}</div>` +
+      `<div class="r">${REWARD_NAME[r.kind]}</div>` +
+      `<div class="n">${r.n.toLocaleString('ko-KR')}${unit[r.kind]}</div></div>`
+  }).join('')
   document.getElementById('daily').hidden = false
 }
 document.getElementById('dailyOk').onclick = () => {
