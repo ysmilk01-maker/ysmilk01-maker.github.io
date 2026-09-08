@@ -1999,14 +1999,16 @@ const WAVES = [
   { at: 17.5, f: () => line(2, 'gunner') },
   { at: 19.0, f: () => ground('laser', W - 90) },
   { at: 20.0, f: () => dive(2) },
-  { at: 21.0, f: () => line(6, 'small') },
+  { at: 21.0, f: () => wing('small', 5) },
+  { at: 22.5, f: () => side('small', 3, 1) },
   { at: 23.0, f: () => { ground('flak', 70); ground('flak', W - 70) } },
   { at: 24.0, f: () => line(1, 'tank') },
   { at: 25.0, f: () => line(3, 'mid') },
   { at: 26.0, f: () => line(2, 'gunner') },
   { at: 27.0, f: () => { ground('radar', W - 84); ground('turret', W / 2) } },
   { at: 29.0, f: () => dive(3) },
-  { at: 31.0, f: () => spawnBoss() },
+  { at: 30.0, f: () => rise('small', 2) },
+  { at: 32.0, f: () => spawnBoss() },
 ]
 
 /* 사막 - 지상이 촘촘하다. 공중은 산탄기 위주로 정면을 못 잡게 한다 */
@@ -2025,7 +2027,8 @@ const WAVES_SAND = [
   { at: 17.6, f: () => line(6, 'small') },
   { at: 19.0, f: () => { ground('turret', 90); ground('turret', W - 90); ground('radar', W / 2) } },
   { at: 21.0, f: () => line(1, 'tank') },
-  { at: 22.6, f: () => diagonal('gunner', -1) },
+  { at: 22.6, f: () => wing('gunner', 3) },
+  { at: 23.8, f: () => side('small', 4, -1) },
   { at: 24.0, f: () => ground('laser', 80) },
   { at: 25.4, f: () => line(3, 'mid') },
   { at: 27.0, f: () => dive(4) },
@@ -2033,9 +2036,10 @@ const WAVES_SAND = [
   { at: 30.0, f: () => line(2, 'tank') },
   { at: 32.0, f: () => line(4, 'gunner') },
   { at: 34.0, f: () => { ground('laser', W - 80); ground('radar', 84) } },
-  { at: 36.0, f: () => line(7, 'small') },
-  { at: 38.0, f: () => dive(4) },
-  { at: 40.0, f: () => spawnBoss() },
+  { at: 35.5, f: () => line(1, 'lancer') },
+  { at: 37.0, f: () => rise('gunner', 2) },
+  { at: 38.5, f: () => wing('small', 5) },
+  { at: 41.0, f: () => spawnBoss() },
 ]
 
 /* 극야 - 돌진기와 맷집. 한자리에 서 있으면 못 버틴다 */
@@ -2056,7 +2060,8 @@ const WAVES_SNOW = [
   { at: 20.6, f: () => dive(4) },
   { at: 22.0, f: () => line(4, 'mid') },
   { at: 23.6, f: () => { ground('radar', 84); ground('laser', W - 84) } },
-  { at: 25.0, f: () => line(8, 'small') },
+  { at: 24.6, f: () => line(2, 'lancer') },
+  { at: 26.0, f: () => wing('mid', 3) },
   { at: 26.6, f: () => line(2, 'tank') },
   { at: 28.4, f: () => dive(5) },
   { at: 30.0, f: () => diagonal('small', 1) },
@@ -2065,10 +2070,12 @@ const WAVES_SNOW = [
   { at: 35.0, f: () => line(3, 'tank') },
   { at: 37.0, f: () => dive(5) },
   { at: 39.0, f: () => { ground('laser', 80); ground('laser', W - 80) } },
-  { at: 41.0, f: () => line(6, 'mid') },
-  { at: 43.0, f: () => dive(6) },
-  { at: 45.0, f: () => line(3, 'tank') },
-  { at: 47.0, f: () => spawnBoss() },
+  { at: 41.0, f: () => side('gunner', 3, 1) },
+  { at: 42.4, f: () => side('gunner', 3, -1) },
+  { at: 44.0, f: () => rise('mid', 3) },
+  { at: 45.6, f: () => line(2, 'lancer') },
+  { at: 47.0, f: () => line(3, 'tank') },
+  { at: 49.0, f: () => spawnBoss() },
 ]
 
 const STAGES = [
@@ -2087,6 +2094,47 @@ function dive(n) {
     state.enemies.push(mkEnemy('dive', 60 + Math.random() * (W - 120), -40 - i * 70, 0))
   }
 }
+/*
+ * V 자 편대.
+ *
+ * 한 줄로 내려오는 것만 있으면 화면 위쪽만 보면 된다. 대열을 이뤄 내려와
+ * 잠시 머물면 "저 뭉치를 어떻게 뚫을까"가 생긴다.
+ */
+function wing(kind, n) {
+  const cx = 90 + Math.random() * (W - 180)
+  const top = 110 + Math.random() * 80
+  for (let i = 0; i < n; i++) {
+    const off = i - (n - 1) / 2
+    const e = mkEnemy(kind, cx + off * 42, -50 - Math.abs(off) * 36, 0)
+    e.mode = 'wing'
+    e.holdY = top + Math.abs(off) * 18
+    e.baseX = e.x
+    e.hold = 2.8
+    state.enemies.push(e)
+  }
+}
+
+/** 옆에서 들어와 화면을 가로지른다. 위만 보고 있으면 못 본다 */
+function side(kind, n, dir) {
+  for (let i = 0; i < n; i++) {
+    const e = mkEnemy(kind, dir > 0 ? -40 - i * 48 : W + 40 + i * 48, 90 + i * 34, 0)
+    e.mode = 'side'
+    e.vx = dir * 155
+    state.enemies.push(e)
+  }
+}
+
+/** 지상에서 솟구친다. 아래에서 올라오므로 뒤를 비워 두면 맞는다 */
+function rise(kind, n) {
+  for (let i = 0; i < n; i++) {
+    const e = mkEnemy(kind, 60 + Math.random() * (W - 120), H + 24, 0)
+    e.mode = 'rise'
+    e.riseT = 1.5 + i * .35
+    e.riseSp = 215
+    state.enemies.push(e)
+  }
+}
+
 function line(n, kind) {
   const gap = W / (n + 1)
   for (let i = 0; i < n; i++) state.enemies.push(mkEnemy(kind, gap * (i + 1), -40 - i * 12, 0))
@@ -2112,12 +2160,21 @@ function mkEnemy(kind, x, y, drift) {
     gunner: { hp: 8,  r: 18, sp: 44, score: 200, fire: 2.0, art: 42, sway: 92 },
     /* 느리고 단단하다. 지나가길 기다리지 말고 화력을 모아 떨궈야 한다 */
     tank:   { hp: 26, r: 24, sp: 30, score: 420, fire: 2.6, art: 54 },
+    /*
+     * 자리를 잡고 아래로 굵은 빔을 쏜다.
+     *
+     * 예고가 1.1초다. 그 동안 빔이 지나갈 길이 보이므로 옆으로 비키면 된다.
+     * 대신 안 비키면 제일 아프다 - 피할 수 있는 것일수록 세게 때린다는
+     * 원칙을 여기서도 지킨다.
+     */
+    lancer: { hp: 16, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
   }
   const b = B[kind] || B.small
   // 뒤 스테이지일수록 더 단단하고 빠르다. 점수는 그대로 둔다 - 뒤 판을
   // 돌면 점수가 저절로 불어나면 앞 판이 의미를 잃는다
   const SG = state.stage || STAGES[0]
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
+           beamPh: 0, holdY: 0, mode: null,
            ...b, hp: Math.round(b.hp * SG.hpMul), sp: Math.round(b.sp * SG.spMul) }
 }
 
@@ -2803,10 +2860,46 @@ function update(dt) {
       continue
     }
 
-    e.y += e.sp * dt
-    const wobble = e.sway ? Math.sin(e.t * 1.1) * e.sway : Math.sin(e.t * 1.6) * 34
-    e.x += (e.drift ? e.drift * 46 : wobble) * dt
-    e.x = Math.max(18, Math.min(W - 18, e.x))
+    if (e.mode === 'wing') {
+      /* 대열을 이뤄 내려와 잠시 멈춘다 */
+      if (e.y < e.holdY) e.y += e.sp * 1.7 * dt
+      else if (e.hold > 0) { e.hold -= dt; e.x = e.baseX + Math.sin(e.t * 1.5) * 13 }
+      else e.y += e.sp * dt
+    } else if (e.mode === 'side') {
+      e.x += e.vx * dt
+      e.y += e.sp * .35 * dt
+    } else if (e.mode === 'rise') {
+      if (e.riseT > 0) { e.riseT -= dt; e.y -= e.riseSp * dt }
+      else e.y += e.sp * .8 * dt
+    } else {
+      e.y += e.sp * dt
+      const wobble = e.sway ? Math.sin(e.t * 1.1) * e.sway : Math.sin(e.t * 1.6) * 34
+      e.x += (e.drift ? e.drift * 46 : wobble) * dt
+    }
+    // 옆에서 들어오는 것만 화면 밖을 허용한다. 나머지는 가둔다
+    if (e.mode !== 'side') e.x = Math.max(18, Math.min(W - 18, e.x))
+
+    /*
+     * 레이저기. 자리를 잡으면 예고하고 쏜다.
+     *
+     * 다른 적과 달리 조준탄을 안 쓴다. 대신 빔이 지나갈 길을 먼저 보여주고
+     * 1.1초 뒤에 쏜다. 그 안에 옆으로 비키면 된다.
+     */
+    if (e.lance) {
+      if (e.beamPh > 0) {
+        e.beamPh -= dt
+        if (e.beamPh <= .35 && Math.abs(pl.x - e.x) < 15 + PLAYER_R && pl.y > e.y) {
+          hitPlayer(DMG.beam)
+        }
+      } else {
+        e.cd -= dt
+        if (e.cd <= 0 && e.y > 40 && e.y < H * .55) {
+          e.cd = e.fire * fireScale()
+          e.beamPh = 1.45
+        }
+      }
+      continue
+    }
     e.cd -= dt
     if (e.cd <= 0 && e.y > 0 && e.y < H * .72) {
       e.cd = e.fire * fireScale()
@@ -2833,7 +2926,7 @@ function update(dt) {
        * 전부 직선탄이면 옆으로 한 걸음씩만 밟으면 다 피해진다. 따라오는 탄이
        * 섞여야 자리를 옮기게 된다.
        */
-      if (e.kind === 'mid' && Math.random() < .35) {
+      if ((e.kind === 'mid' || e.kind === 'tank') && Math.random() < .45) {
         s.ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120,
                           r: 5, kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
       } else {
@@ -2842,7 +2935,9 @@ function update(dt) {
       }
     }
   }
-  s.enemies = s.enemies.filter((e) => e.y < H + 60)
+  s.enemies = s.enemies.filter((e) =>
+    (e.mode === 'rise' && e.riseT > 0) ||
+    (e.y < H + 60 && e.x > -90 && e.x < W + 90))
 
   const bs = s.boss
   if (bs) {
@@ -3262,7 +3357,11 @@ for (const k in ENEMY_B64) {
   im.src = 'data:image/webp;base64,' + ENEMY_B64[k]
   ENEMY_IMG[k] = im
 }
+/* 레이저기는 아직 제 그림이 없다. 날개가 넓은 산탄기 것을 빌려 쓴다 */
+const ENEMY_ART_ALIAS = { lancer: 'gunner' }
+
 function enemyArt(kind) {
+  kind = ENEMY_ART_ALIAS[kind] || kind
   const im = ENEMY_IMG[kind]
   return im && im.complete && im.naturalWidth ? im : null
 }
@@ -3632,6 +3731,21 @@ function drawShipOn(g, x, y, opt) {
   g.restore()
 }
 
+/** 레이저기의 예고와 빔. 적기보다 먼저 깔아야 기체가 위에 온다 */
+function drawEnemyBeam(e) {
+  const firing = e.beamPh <= .35
+  const half = firing ? 15 : 15 + ((e.beamPh - .35) / 1.1) * 16
+  if (firing) {
+    g.fillStyle = 'rgba(255,120,150,.8)'
+    g.fillRect(e.x - half, e.y, half * 2, H - e.y)
+    g.fillStyle = 'rgba(255,255,255,.9)'
+    g.fillRect(e.x - half * .4, e.y, half * .8, H - e.y)
+  } else {
+    g.fillStyle = 'rgba(255,110,140,' + (.10 + Math.sin(e.t * 24) * .05) + ')'
+    g.fillRect(e.x - half, e.y, half * 2, H - e.y)
+  }
+}
+
 function drawEnemy(e) {
   const big = e.kind === 'mid'
   /* 어두운 바다 위라 예전 색은 묻혔다. 한 단계씩 밝혔다 */
@@ -3951,6 +4065,7 @@ function draw() {
     g.fillText(it.tk ? '권' : m ? m.ko : 'P', 0, .5)
     g.restore()
   }
+  for (const e of s.enemies) if (e.lance && e.beamPh > 0) drawEnemyBeam(e)
   for (const e of s.enemies) drawEnemy(e)
   if (s.boss) drawBoss(s.boss)
 
