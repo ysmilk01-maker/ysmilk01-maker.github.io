@@ -2576,6 +2576,23 @@ function auTrim(b) {
   let a = 0, z = n - 1
   while (a < n && Math.abs(d[a]) < th) a++
   while (z > a && Math.abs(d[z]) < th) z--
+
+  /*
+   * 자를 때 파형은 이어 놓았지만, 압축을 풀고 나면 첫 칸과 끝 칸의 값이 조금
+   * 어긋나 있다 - 코덱이 남긴 오차다. 그 한 칸 차이가 '틱' 소리로 들린다.
+   * 끝에서 30ms 안쪽을 훑어 첫 칸과 값도 기울기도 가장 잘 맞는 자리를 찾아
+   * 거기서 끊는다. 음악에서 30ms 는 귀에 걸리지 않는다.
+   */
+  const win = Math.min(Math.floor(b.sampleRate * 0.03), z - a - 1)
+  if (win > 8) {
+    const v = d[a], slope = d[a + 1] - d[a]
+    let best = z, score = Infinity
+    for (let k = z - win; k <= z; k++) {
+      const e = Math.abs(d[k] - v) + Math.abs((d[k] - d[k - 1]) - slope)
+      if (e < score) { score = e; best = k }
+    }
+    z = best
+  }
   return { buf: b, start: a / b.sampleRate, end: (z + 1) / b.sampleRate }
 }
 
