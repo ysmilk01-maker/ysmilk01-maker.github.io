@@ -3712,7 +3712,35 @@ function drawBoss(bs) {
 
   g.save(); g.translate(bs.x, bs.y)
 
-  /* 부위 */
+  /* 본체 */
+  const bart = bossArt()
+  if (bart) {
+    const sz = bs.r * 3.2
+    if (bs.flash > 0) g.globalAlpha = .6
+    g.drawImage(bart, -sz / 2, -sz / 2, sz, sz)
+    if (bs.flash > 0) {
+      g.globalCompositeOperation = 'lighter'
+      g.drawImage(bart, -sz / 2, -sz / 2, sz, sz)
+      g.globalCompositeOperation = 'source-over'
+      g.globalAlpha = 1
+    }
+  } else {
+    g.fillStyle = bs.flash > 0 ? '#8f7ab5' : '#3b2b52'
+    g.beginPath()
+    g.moveTo(0, bs.r * .75); g.lineTo(bs.r * 1.25, -bs.r * .15); g.lineTo(bs.r * .6, -bs.r * .7)
+    g.lineTo(-bs.r * .6, -bs.r * .7); g.lineTo(-bs.r * 1.25, -bs.r * .15)
+    g.closePath(); g.fill()
+    g.fillStyle = '#7a5cab'
+    g.beginPath(); g.moveTo(0, bs.r * .5); g.lineTo(bs.r * .42, -bs.r * .5); g.lineTo(-bs.r * .42, -bs.r * .5)
+    g.closePath(); g.fill()
+  }
+
+  /*
+   * 부위는 본체 위에 그린다.
+   *
+   * 밑에 깔았더니 본체 그림에 통째로 가려서 어디를 쏴야 하는지 보이지 않았다.
+   * 타격지점은 보여야 지점이다.
+   */
   for (const p of bs.parts) {
     g.save(); g.translate(p.dx, p.dy)
     if (p.alive) {
@@ -3746,28 +3774,6 @@ function drawBoss(bs) {
     g.beginPath(); g.arc(0, 0, bs.r * .55, 0, Math.PI * 2); g.stroke()
   }
 
-  /* 본체 */
-  const bart = bossArt()
-  if (bart) {
-    const sz = bs.r * 3.2
-    if (bs.flash > 0) g.globalAlpha = .6
-    g.drawImage(bart, -sz / 2, -sz / 2, sz, sz)
-    if (bs.flash > 0) {
-      g.globalCompositeOperation = 'lighter'
-      g.drawImage(bart, -sz / 2, -sz / 2, sz, sz)
-      g.globalCompositeOperation = 'source-over'
-      g.globalAlpha = 1
-    }
-  } else {
-    g.fillStyle = bs.flash > 0 ? '#8f7ab5' : '#3b2b52'
-    g.beginPath()
-    g.moveTo(0, bs.r * .75); g.lineTo(bs.r * 1.25, -bs.r * .15); g.lineTo(bs.r * .6, -bs.r * .7)
-    g.lineTo(-bs.r * .6, -bs.r * .7); g.lineTo(-bs.r * 1.25, -bs.r * .15)
-    g.closePath(); g.fill()
-    g.fillStyle = '#7a5cab'
-    g.beginPath(); g.moveTo(0, bs.r * .5); g.lineTo(bs.r * .42, -bs.r * .5); g.lineTo(-bs.r * .42, -bs.r * .5)
-    g.closePath(); g.fill()
-  }
 
   /* 구간이 올라갈수록 눈이 밝아진다 */
   const eye = ['#ff5470', '#ff7a4a', '#ffb43a', '#ffffff'][bs.phase - 1] || '#ff5470'
