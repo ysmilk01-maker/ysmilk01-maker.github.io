@@ -905,7 +905,9 @@ function dropItem(x, y, richer) {
 }
 
 function boom(x, y, n, color) {
-  sfx('boom', n / 40)
+  // 알갱이 몇 개짜리는 총알이 박히는 불똥이지 폭발이 아니다. 소리까지 내면
+  // 맞는 소리와 겹쳐서 탁해진다
+  if (n >= 6) sfx('boom', n / 40)
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 180
     state.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
