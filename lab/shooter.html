@@ -200,6 +200,33 @@
   .hearts { letter-spacing: 2px; font-size: 13px; }
   .hearts .on { color: var(--warn); }
   .hearts .off { color: #2a3547; }
+
+  /* 뽑기 */
+  .gbox {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px 18px; width: min(420px, 100%); max-height: 86vh; overflow-y: auto;
+  }
+  .gbox h2 { margin-bottom: 12px; }
+  .got {
+    display: grid; place-items: center; gap: 6px; padding: 22px 10px;
+    background: #0a1220; border: 1px solid var(--line); border-radius: 13px; margin-bottom: 14px;
+  }
+  .got .big { font-size: 20px; font-weight: 800; }
+  .got .cnt { font-size: 13px; color: var(--gold); font-weight: 800; }
+  .got .msg { font-size: 12px; color: var(--muted); }
+  .rate { display: flex; font-size: 12.5px; padding: 7px 2px; border-bottom: 1px solid var(--line); }
+  .rate .v { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .shard { font-size: 10.5px; color: var(--accent); margin-top: 4px; font-weight: 700; }
+  .grades { display: grid; gap: 7px; }
+  .gcard {
+    display: flex; align-items: center; gap: 9px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; cursor: pointer;
+  }
+  .gcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .gcard.no { opacity: .5; }
+  .gcard .nm { font-size: 13px; font-weight: 800; }
+  .gcard .de { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .gcard .rt { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--gold); }
 </style>
 
 <div id="wrap"><canvas id="c"></canvas></div>
@@ -246,6 +273,18 @@
   <h1>파일럿</h1>
   <p class="sub" id="pilotSub"></p>
   <div class="body" id="pilotBody"></div>
+</div>
+
+<div class="panel" id="gacha" hidden>
+  <div class="gbox">
+    <h2 id="gTitle">뽑기</h2>
+    <div id="gBody"></div>
+    <div class="bar" style="justify-content:center">
+      <button class="ghost small" id="gRates">확률 보기</button>
+      <button id="gPull">뽑기</button>
+      <button class="ghost small" id="gClose">닫기</button>
+    </div>
+  </div>
 </div>
 
 <nav class="tabs" id="tabs">
@@ -437,7 +476,12 @@ const OLD_KEY = 'shooter-proto-v2'
 function load() {
   const base = {
     total: 0, owned: [], squad: null, parts: 0, upg: {},
-    pilot: { name: '', mark: 0, xp: 0, lv: 1, st: { pow: 0, rate: 0, rng: 0, hp: 0 } },
+    pilot: { name: '', mark: 0, xp: 0, lv: 1, grade: 'normal',
+             st: { pow: 0, rate: 0, rng: 0, hp: 0 } },
+    pilotOwned: { normal: true },   // 가진 파일럿 등급
+    shardP: {},                     // 기체 조각. 기체 id -> 개수
+    shardG: {},                     // 파일럿 조각. 등급 -> 개수
+    pull: { plane: 0, pilot: 0 },   // 뽑은 횟수. 천장 계산용
     stats: { runs: 0, kills: 0, best: 0, clears: 0 },
     scores: [],
     stage: 0,                       // 지금 고른 스테이지
@@ -454,6 +498,10 @@ function load() {
       return {
         ...base, ...got,
         pilot: { ...base.pilot, ...(got.pilot || {}), st: { ...base.pilot.st, ...((got.pilot || {}).st || {}) } },
+        pilotOwned: { ...base.pilotOwned, ...(got.pilotOwned || {}) },
+        shardP: got.shardP || {},
+        shardG: got.shardG || {},
+        pull: { ...base.pull, ...(got.pull || {}) },
         stats: { ...base.stats, ...(got.stats || {}) },
         scores: got.scores || [],
         stageClear: got.stageClear || [],
@@ -475,6 +523,92 @@ function load() {
  * 돈으로 사는 전설 기체와도 별개다. 전설을 안 사도 일반 기체를 끝까지
  * 올리면 따라갈 수 있어야 한다 — 그래야 "돈 없으면 못 한다"가 안 된다.
  * ================================================================ */
+/* ================================================================
+ * 조각과 뽑기
+ *
+ * 뽑기는 기체를 통째로 주지 않고 조각을 준다. 통째로 주면 이미 가진 게
+ * 또 나왔을 때 허탕이 되는데, 조각이면 어떤 것이 나와도 쌓인다.
+ *
+ * 값은 부품으로만 치른다. 부품은 판을 돌아야만 생기는 무상 재화다 -
+ * 게임산업법의 확률형 아이템은 유상으로 사는 것이 대상이라 여기 걸리지
+ * 않는다. 그래도 확률은 화면에 적어 둔다. 앱인토스 게임 출시 항목에
+ * "확률 정보를 사용자가 확인할 수 있어요" 가 있고, 무엇보다 안 적으면
+ * 뽑는 사람이 손해를 본다.
+ * ================================================================ */
+const SHARD_NEED = { common: 20, rare: 40, legend: 80 }      // 기체 해금
+const SHARD_UPG = { common: 6, rare: 10, legend: 15 }        // 강화 한 단계
+const GACHA = {
+  plane: {
+    name: '기체 뽑기', cost: 250,
+    rates: [['legend', 7], ['rare', 33], ['common', 60]],
+    amount: { legend: [3, 6], rare: [5, 9], common: [8, 14] },
+    jackpot: 1.0,        // 조각이 아니라 기체가 통째로 나올 확률(%)
+  },
+  pilot: {
+    name: '파일럿 뽑기', cost: 400,
+    rates: [['legend', 1], ['high', 7], ['mid', 22], ['normal', 70]],
+    amount: { legend: [2, 4], high: [3, 6], mid: [6, 11], normal: [10, 18] },
+    jackpot: 0.5,        // 조각이 아니라 파일럿이 통째로 나올 확률(%)
+  },
+}
+/* 천장. 안 나오는 사람이 끝없이 안 나오는 일을 막는다 */
+const PITY = { plane: { at: 40, tier: 'legend' }, pilot: { at: 60, tier: 'high' } }
+
+function shardOf(id) { return prog.shardP[id] || 0 }
+function shardG(k) { return prog.shardG[k] || 0 }
+function shardNeed(p) { return SHARD_NEED[p.tier] }
+function shardUpg(p) { return SHARD_UPG[p.tier] }
+
+function rollTier(kind) {
+  const g = GACHA[kind]
+  const n = prog.pull[kind] + 1
+  const pity = PITY[kind]
+  if (pity && n % pity.at === 0) return pity.tier      // 천장
+  let r = Math.random() * 100
+  for (const [t, w] of g.rates) { if (r < w) return t; r -= w }
+  return g.rates[g.rates.length - 1][0]
+}
+
+function pull(kind) {
+  const g = GACHA[kind]
+  if (prog.parts < g.cost) return null
+  prog.parts -= g.cost
+  prog.pull[kind]++
+  const tier = rollTier(kind)
+  const [lo, hi] = g.amount[tier]
+  const n = lo + Math.floor(Math.random() * (hi - lo + 1))
+  /* 아주 가끔 조각을 건너뛰고 통째로 나온다. 이미 가진 것이면 조각으로 돌아간다 */
+  const jack = Math.random() * 100 < g.jackpot
+
+  if (kind === 'pilot') {
+    if (jack && GRADE_NEED[tier] > 0 && !hasGrade(tier)) {
+      prog.pilotOwned[tier] = true
+      save()
+      return { kind, tier, n: 1, name: GRADES[tier].name + ' 파일럿', got: true, jack: true }
+    }
+    prog.shardG[tier] = shardG(tier) + n
+    const got = GRADE_NEED[tier] > 0 && !hasGrade(tier) && prog.shardG[tier] >= GRADE_NEED[tier]
+    if (got) { prog.pilotOwned[tier] = true; prog.shardG[tier] -= GRADE_NEED[tier] }
+    save()
+    return { kind, tier, n, name: GRADES[tier].name + ' 파일럿 조각', got }
+  }
+
+  // 그 등급 중에서 아직 안 연 기체를 고른다. 다 열었으면 아무거나 - 강화에 쓴다
+  const pool = PLANES.filter((p) => p.tier === tier)
+  const locked = pool.filter((p) => !unlocked(p))
+  const pick = (locked.length ? locked : pool)[Math.floor(Math.random() * (locked.length || pool.length))]
+  if (jack && !unlocked(pick)) {
+    prog.owned.push(pick.id)
+    save()
+    return { kind, tier, n: 1, name: pick.name, plane: pick, got: true, jack: true }
+  }
+  prog.shardP[pick.id] = shardOf(pick.id) + n
+  const got = !unlocked(pick) && prog.shardP[pick.id] >= shardNeed(pick)
+  if (got) { prog.owned.push(pick.id); prog.shardP[pick.id] -= shardNeed(pick) }
+  save()
+  return { kind, tier, n, name: pick.name + ' 조각', plane: pick, got }
+}
+
 const UPG_MAX = 5
 /** 판이 끝나면 점수의 5% 를 부품으로 준다 */
 function partsEarned(score) { return Math.max(1, Math.round(score / 20)) }
@@ -556,6 +690,22 @@ function unlockLabel(p) {
  * +65% 인데 파일럿까지 큰 몫을 가지면 셋 다 밋밋해진다. 파일럿은 최대
  * +25% 다 - 있으면 확실히 다르지만 다른 둘을 밀어내지 않는다.
  * ================================================================ */
+/*
+ * 파일럿 등급.
+ *
+ * 레전드가 스탯은 제일 낮지만 자리를 하나 더 준다. 상급을 위로 두면 등급이
+ * 그냥 사다리가 되는데, 이렇게 두면 "화력이냐 자리냐"를 고르게 된다.
+ */
+const GRADES = {
+  normal: { name: '일반',   base: 1.00, rear: false, tag: 't-common' },
+  mid:    { name: '중급',   base: 1.10, rear: false, tag: 't-rare' },
+  high:   { name: '상급',   base: 1.20, rear: false, tag: 't-rare' },
+  legend: { name: '레전드', base: 1.00, rear: true,  tag: 't-legend' },
+}
+const GRADE_KEYS = ['normal', 'mid', 'high', 'legend']
+/** 그 등급을 열려면 필요한 조각 */
+const GRADE_NEED = { normal: 0, mid: 40, high: 80, legend: 150 }
+
 const PILOT_MAX = 30
 const ST_MAX = 10
 const STATS = {
@@ -570,6 +720,9 @@ const ST_KEYS = Object.keys(STATS)
    만렙 30 까지는 쉰 판 남짓 - 오래 붙잡을 목표로 이 정도가 맞다 */
 function xpNeed(lv) { return 700 + 180 * (lv - 1) }
 function xpFromScore(score) { return Math.round(score / 10) }
+
+function grade() { return GRADES[prog.pilot.grade] || GRADES.normal }
+function hasGrade(k) { return k === 'normal' || !!prog.pilotOwned[k] }
 
 function pilotSpent() { return ST_KEYS.reduce((a, k) => a + (prog.pilot.st[k] || 0), 0) }
 /** 레벨 1 에서 시작해 오를 때마다 하나씩. 만렙이면 29 점 */
@@ -586,13 +739,19 @@ function pilotRank() {
  * 걸리니, 3,000원은 그 쉰 판을 아끼는 값이다.
  */
 const LEGEND_PILOT = { id: 'pilot-legend', price: 3000 }
-function boughtLegend() { return prog.owned.includes(LEGEND_PILOT.id) }
+function boughtLegend() { return prog.owned.includes(LEGEND_PILOT.id) || hasGrade('legend') }
 function isLegend() { return prog.pilot.lv >= PILOT_MAX || boughtLegend() }
 
-function pilotPow()  { return 1 + prog.pilot.st.pow * 0.025 }
+/*
+ * 등급 배수는 화력과 체력에만 얹는다.
+ *
+ * 연사와 탄폭에까지 곱하면 상급 파일럿 하나로 모든 축이 한꺼번에 올라
+ * 스탯 투자가 의미를 잃는다. 두 축은 투자로만 오른다.
+ */
+function pilotPow()  { return grade().base * (1 + prog.pilot.st.pow * 0.025) }
 function pilotRate() { return 1 - prog.pilot.st.rate * 0.015 }
 function pilotRng()  { return 1 + prog.pilot.st.rng * 0.02 }
-function pilotHp()   { return prog.pilot.st.hp * 6 }
+function pilotHp()   { return Math.round(PLAYER_HP * (grade().base - 1)) + prog.pilot.st.hp * 6 }
 
 /** 판이 끝나면 부른다. 오른 레벨 수를 돌려준다 */
 function addXp(score) {
@@ -640,10 +799,16 @@ addEventListener('resize', fit); fit()
  * 30% 로 낮추면 합계 160% 가 되고, 메인 자리가 전체의 63% 를 쥔다 —
  * "메인에 뭘 태울까"가 실제 선택이 된다.
  */
+/*
+ * 처음에는 혼자 난다.
+ *
+ * 첫 판부터 세 대가 붙어 있으면 편대가 늘어나는 맛이 없다. 레벨 2 에서 한 대,
+ * 5 에서 한 대가 붙는다 - 두어 판이면 닿는 거리다.
+ */
 const SLOT_META = [
-  { role: '좌 윙맨', mul: 0.3 },
+  { role: '좌 윙맨', mul: 0.3, lv: 2 },
   { role: '메인', mul: 1.0 },
-  { role: '우 윙맨', mul: 0.3 },
+  { role: '우 윙맨', mul: 0.3, lv: 5 },
   /*
    * 후방은 전설 파일럿만 쓴다.
    *
@@ -662,6 +827,19 @@ const SLOT_META = [
  */
 const REAR_BOUGHT = 0.2
 const REAR_EARNED = 0.1
+/** 그 자리를 쓸 수 있나 */
+function slotOpen(i) {
+  const m = SLOT_META[i]
+  if (m.legend) return isLegend()
+  if (m.lv) return prog.pilot.lv >= m.lv
+  return true
+}
+function slotWhy(i) {
+  const m = SLOT_META[i]
+  if (m.legend) return '레전드 파일럿'
+  if (m.lv) return '파일럿 Lv.' + m.lv
+  return ''
+}
 function slotMul(i) {
   const m = SLOT_META[i]
   if (!m.legend) return m.mul
@@ -723,13 +901,16 @@ function row(k, v, gold) {
 function renderSquad() {
   const legend = isLegend()
   document.getElementById('squadSub').innerHTML =
-    `메인이 <b>화력 100%</b>, 좌우 윙맨이 30%` +
+    `메인이 <b>화력 100%</b>` +
+    (slotOpen(0) || slotOpen(2) ? ', 윙맨이 각 30%' : '') +
     (legend ? `, 후방이 ${Math.round(slotMul(3) * 100)}%` : '') + `입니다.<br>` +
-    `자리를 누르면 기체 화면으로 갑니다.`
+    (slotOpen(0) && slotOpen(2)
+      ? `자리를 누르면 기체 화면으로 갑니다.`
+      : `파일럿 레벨이 오르면 자리가 하나씩 열립니다.`)
 
   elSlots.innerHTML = ''
   SLOT_META.forEach((m, i) => {
-    const usable = !m.legend || legend
+    const usable = slotOpen(i)
     const p = usable ? planeById(prog.squad[i]) : null
     const d = document.createElement('div')
     d.className = 'slot' + (i === activeSlot && usable ? ' on' : '') + (usable ? '' : ' locked-slot')
@@ -742,17 +923,15 @@ function renderSquad() {
         `<div class="wp">${p ? WEAPONS[p.weapon].name : '-'}</div>` +
         `<div class="pw">화력 ${Math.round(slotMul(i) * 100)}%</div>`
       : `<div class="role">${m.role}</div>` +
-        `<div class="nm" style="margin-top:12px">전설 파일럿 전용</div>` +
-        `<div class="wp">${LEGEND_PILOT.price.toLocaleString('ko-KR')}원</div>`
+        `<div class="nm" style="margin-top:12px">아직 잠김</div>` +
+        `<div class="wp">${slotWhy(i)}</div>`
     d.onclick = () => { if (usable) { activeSlot = i; go('planes') } else go('pilot') }
     elSlots.appendChild(d)
     if (p) paintPlane(d.querySelector('.pv'), p, i === MAIN_SLOT ? 1 : 0.75)
   })
 
-  const sum = SLOT_META.reduce((a, m, i) => {
-    const usable = !m.legend || legend
-    return a + (usable && prog.squad[i] ? slotMul(i) : 0)
-  }, 0)
+  const sum = SLOT_META.reduce((a, m, i) =>
+    a + (slotOpen(i) && prog.squad[i] ? slotMul(i) : 0), 0)
   const st = prog.pilot.st
   const boost = [
     st.pow ? `화력 +${(st.pow * STATS.pow.per).toFixed(1)}%` : '',
@@ -765,7 +944,7 @@ function renderSquad() {
     `<div class="row" id="enRow"></div>` +
     row('출격지', `${curStage().id}. ${curStage().name}`) +
     row('편대 화력 합계', Math.round(sum * 100) + '%', true) +
-    row('파일럿', `${pilotName()} · ${pilotRank()} Lv.${prog.pilot.lv}`) +
+    row('파일럿', `${pilotName()} · ${grade().name} Lv.${prog.pilot.lv}`) +
     row('파일럿 보정', boost || '아직 없음') +
     row('누적 점수', prog.total.toLocaleString('ko-KR') + '점')
   paintEnergy()
@@ -802,6 +981,11 @@ function renderPlanes() {
 
   const ef = document.getElementById('planeFilters')
   ef.innerHTML = ''
+  const gb = document.createElement('button')
+  gb.textContent = `기체 뽑기 · 부품 ${GACHA.plane.cost}`
+  gb.style.cssText = 'background:#24406b;color:#cfe6ff'
+  gb.onclick = () => openGacha('plane')
+  ef.appendChild(gb)
   for (const [k, label] of FILTERS) {
     const b = document.createElement('button')
     b.textContent = label
@@ -838,11 +1022,15 @@ function renderPlanes() {
       `<div class="de">${WEAPONS[p.weapon].desc}</div>` +
       (lab ? `<div class="lock">${p.unlock.kind === 'paid' ? '🔒 ' : ''}${lab}</div>` : '') +
       (ok
+        ? (shardOf(p.id) ? `<div class="shard">조각 ${shardOf(p.id)}개</div>` : '')
+        : `<div class="shard">조각 ${shardOf(p.id)} / ${shardNeed(p)}</div>`) +
+      (ok
         ? `<div class="up"><span class="lvl">강화 ${lv}/${UPG_MAX}` +
           (lv ? ` · 화력 +${Math.round((upgPower(p.id) - 1) * 100)}%` : '') + `</span>` +
           (lv >= UPG_MAX
             ? `<button disabled>최대</button>`
-            : `<button ${prog.parts < cost ? 'disabled' : ''}>부품 ${cost}</button>`) +
+            : `<button ${prog.parts < cost || shardOf(p.id) < shardUpg(p) ? 'disabled' : ''}>` +
+              `부품 ${cost} · 조각 ${shardUpg(p)}</button>`) +
           `</div>`
         : '')
 
@@ -850,8 +1038,9 @@ function renderPlanes() {
     if (btn && !btn.disabled) {
       btn.onclick = (ev) => {
         ev.stopPropagation()
-        if (prog.parts < cost) return
+        if (prog.parts < cost || shardOf(p.id) < shardUpg(p)) return
         prog.parts -= cost
+        prog.shardP[p.id] = shardOf(p.id) - shardUpg(p)
         prog.upg[p.id] = lv + 1
         save(); renderPlanes(); renderWallet()
       }
@@ -874,6 +1063,78 @@ function renderPlanes() {
     paintPlane(c.querySelector('.pv'), p, 1.1)
   }
 }
+
+/* ── 뽑기 ───────────────────────────────────────────────────────── */
+const elGacha = document.getElementById('gacha')
+let gKind = 'plane'
+
+function openGacha(kind) {
+  gKind = kind
+  document.getElementById('gTitle').textContent = GACHA[kind].name
+  elGacha.hidden = false
+  paintGacha(null)
+}
+
+function paintGacha(res) {
+  const g = GACHA[gKind]
+  const body = document.getElementById('gBody')
+  const btn = document.getElementById('gPull')
+  const enough = prog.parts >= g.cost
+  btn.disabled = !enough
+  btn.textContent = enough ? `뽑기 · 부품 ${g.cost}` : `부품이 ${g.cost - prog.parts}개 모자랍니다`
+
+  const head = `<div class="row"><span class="k">부품</span>` +
+    `<span class="v">${prog.parts.toLocaleString('ko-KR')}</span></div>`
+
+  if (!res) {
+    const pity = PITY[gKind]
+    const left = pity.at - (prog.pull[gKind] % pity.at)
+    body.innerHTML = head +
+      `<div class="empty">${gKind === 'plane'
+        ? '기체 조각이 나옵니다. 조각을 모으면 기체가 열리고, 남는 조각은 강화에 씁니다.'
+        : '파일럿 조각이 나옵니다. 조각을 모으면 그 등급 파일럿이 열립니다.'}<br>` +
+      `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.<br>` +
+      `<b>${left}번</b> 안에 ${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.</div>`
+    return
+  }
+
+  const label = res.jack ? '완성품!' : `조각 ${res.n}개`
+  body.innerHTML = head +
+    `<div class="got">` +
+    `<span class="tag ${GRADES[res.tier] ? GRADES[res.tier].tag : 't-' + res.tier}" style="position:static">` +
+    `${GRADES[res.tier] ? GRADES[res.tier].name : TIERS[res.tier]}</span>` +
+    `<span class="big">${res.name}</span>` +
+    `<span class="cnt">${label}</span>` +
+    (res.got ? `<span class="msg">${res.jack ? '바로 열렸습니다' : '조각이 다 모여 열렸습니다'}</span>` : '') +
+    `</div>`
+}
+
+function paintRates() {
+  const g = GACHA[gKind]
+  const body = document.getElementById('gBody')
+  const rows = g.rates.map(([t, w]) => {
+    const nm = GRADES[t] ? GRADES[t].name : TIERS[t]
+    const [lo, hi] = g.amount[t]
+    return `<div class="rate"><span>${nm}</span><span class="v">${w}% · 조각 ${lo}~${hi}</span></div>`
+  }).join('')
+  const pity = PITY[gKind]
+  body.innerHTML =
+    `<div class="lab">등급별 확률</div>${rows}` +
+    `<div class="rate"><span>완성품 (조각 대신 통째로)</span><span class="v">${g.jackpot}%</span></div>` +
+    `<div class="empty">${pity.at}번마다 ` +
+    `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.<br>` +
+    `값은 부품으로만 치릅니다. 부품은 판을 돌아야 생기고 돈으로 살 수 없습니다.</div>`
+}
+
+document.getElementById('gPull').onclick = () => {
+  const res = pull(gKind)
+  if (!res) return
+  sfx(res.got ? 'ready' : 'pick')
+  paintGacha(res)
+  renderWallet()
+}
+document.getElementById('gRates').onclick = paintRates
+document.getElementById('gClose').onclick = () => { elGacha.hidden = true; render() }
 
 /* ── 스테이지 ───────────────────────────────────────────────────── */
 /** 카드에 그 판의 색을 그대로 보여 준다. 이름만으로는 어떤 곳인지 모른다 */
@@ -904,6 +1165,24 @@ function paintStage(cv, sg) {
     c.fillStyle = TH.cap
     c.beginPath(); c.ellipse(x - rx * .08, y - ry * .1, rx * .72, ry * .68, 0, 0, 6.284); c.fill()
   }
+}
+
+/*
+ * 토스 게임센터 리더보드.
+ *
+ * 동시에 접속해 있을 필요가 없다 - 서로 점수만 겨룬다. 우리 서버가 필요
+ * 없는 유일한 겨루기 방식이고, 그래서 이걸 골랐다.
+ *
+ * 다만 게임 카테고리로 등록된 미니앱에서만 열린다. 지금은 훅만 있다.
+ */
+function openTossRank() {
+  const fn = (window.AppsInToss && window.AppsInToss.openGameCenterLeaderboard) ||
+             window.openGameCenterLeaderboard
+  if (typeof fn !== 'function') {
+    alert('토스 앱 안에서, 게임으로 등록된 뒤에 열립니다.\n지금은 아래 내 기록만 봅니다.')
+    return
+  }
+  try { fn() } catch (e) { /* 옛 버전이면 조용히 넘어간다 */ }
 }
 
 function renderStage() {
@@ -953,6 +1232,7 @@ function renderRank() {
       row('클리어', st.clears.toLocaleString('ko-KR') + '회') +
       row('총 격추', st.kills.toLocaleString('ko-KR')) +
     '</div>' +
+    '<div class="bar"><button class="ghost small" id="tossRank">토스 랭킹 열기</button></div>' +
     '<div class="lab">내 기록 상위 20</div>' +
     (list.length
       ? list.map((r, i) =>
@@ -962,6 +1242,8 @@ function renderRank() {
           `<span class="k">${r.w ? '클리어' : ''}</span>` +
           `<span class="dt">${when(r.t)}</span></div>`).join('')
       : '<div class="empty">아직 기록이 없습니다.<br>한 판 하고 오세요.</div>')
+  const tr = document.getElementById('tossRank')
+  if (tr) tr.onclick = openTossRank
 }
 
 /* ── 파일럿 ─────────────────────────────────────────────────────── */
@@ -1038,6 +1320,20 @@ function renderPilot() {
       `</div>`
   }).join('')
 
+  const gradeBox = GRADE_KEYS.map((k) => {
+    const G = GRADES[k]
+    const have = hasGrade(k)
+    const on = prog.pilot.grade === k
+    const eff = k === 'legend'
+      ? '스탯 100% · 후방 자리'
+      : `스탯 ${Math.round(G.base * 100)}%`
+    return `<div class="gcard${on ? ' on' : ''}${have ? '' : ' no'}" data-g="${k}">` +
+      `<span class="tag ${G.tag}" style="position:static">${G.name}</span>` +
+      `<div><div class="nm">${G.name} 파일럿</div><div class="de">${eff}</div></div>` +
+      `<span class="rt">${have ? (on ? '사용 중' : '보유') :
+        `조각 ${shardG(k)}/${GRADE_NEED[k]}`}</span></div>`
+  }).join('')
+
   const legendBox = boughtLegend()
     ? row('전설 파일럿', `후방 편대 ${Math.round(REAR_BOUGHT * 100)}%`, true)
     : `<div class="stat">` +
@@ -1071,6 +1367,12 @@ function renderPilot() {
     `</div>` +
 
     `<div class="lab">스탯</div><div class="sum">${statHtml}</div>` +
+
+    `<div class="lab">파일럿 등급</div>` +
+    `<div class="grades">${gradeBox}</div>` +
+    `<div class="bar"><button class="ghost small" id="pilotGacha">` +
+    `파일럿 뽑기 · 부품 ${GACHA.pilot.cost}</button></div>` +
+
     `<div class="lab">편대</div><div class="sum">${legendBox}</div>` +
 
     `<div class="lab">소리</div>` +
@@ -1101,6 +1403,16 @@ function renderPilot() {
       save(); sfx('pick'); renderPilot()
     }
   })
+
+  document.querySelectorAll('.gcard[data-g]').forEach((el) => {
+    const k = el.dataset.g
+    el.onclick = () => {
+      if (!hasGrade(k)) { alert(`${GRADES[k].name} 파일럿은 조각 ${GRADE_NEED[k]}개가 필요합니다.\n지금 ${shardG(k)}개.`); return }
+      prog.pilot.grade = k
+      save(); sfx('pick'); renderPilot()
+    }
+  })
+  document.getElementById('pilotGacha').onclick = () => openGacha('pilot')
 
   const buy = document.getElementById('buyLegend')
   if (buy) buy.onclick = () => {
@@ -1154,7 +1466,7 @@ let state = null, keys = {}
 function newState() {
   // 자리 수를 그대로 둔다. 넷째만 비워 놓으면 메인 자리 번호가 안 흔들린다
   const squad = SLOT_META.map((m, i) => {
-    const usable = !m.legend || isLegend()
+    const usable = slotOpen(i)
     const p = usable ? planeById(prog.squad[i]) : null
     return { plane: p, mul: slotMul(i), cd: Math.random() * 0.2, orbA: (i * Math.PI * 2) / 3 }
   })
