@@ -464,7 +464,7 @@ function paintPlane(cv, p, zoom) {
   const lv = 1 + Math.min(4, upgOf(p.id))
   /* 기수 침과 엔진 불꽃까지 다 들어가야 한다. 세로 66 이 기체 한 대의 키다 */
   const scale = Math.min(w / 54, h / 66) * (zoom || 1)
-  drawShipOn(c, w / 2, h * 0.5, { plane: p, lv, mods: NO_MODS, scale, flame: false })
+  drawShipOn(c, w / 2, h * 0.5, { plane: p, lv, mods: NO_MODS, scale, flame: false, shadow: false })
 }
 
 document.getElementById('devUnlock').onclick = () => {
@@ -494,14 +494,29 @@ function newState() {
   }
 }
 /* 땅. 슬래브가 흘러가야 지상 유닛이 떠 있지 않고 붙어 보인다. */
+/**
+ * 바다에 뜬 섬을 뿌린다.
+ *
+ * 사각형이던 걸 타원으로 바꿨다. 바다 위에 직사각형이 떠 있으면 그게 무엇인지
+ * 알 수 없어서 배경이 배경으로 안 읽힌다. seed 는 섬마다 다른 울퉁불퉁함을
+ * 주려고 넣었다 - 매 프레임 난수를 쓰면 섬이 부들부들 떤다.
+ */
 function seedGround(s) {
-  for (let i = 0; i < 16; i++) {
-    s.slabs.push({ x: Math.random() * W, y: Math.random() * H,
-                   w: 30 + Math.random() * 70, h: 18 + Math.random() * 40 })
+  for (let i = 0; i < 7; i++) {
+    s.slabs.push({
+      x: Math.random() * W, y: Math.random() * H,
+      w: 34 + Math.random() * 54, h: 20 + Math.random() * 32,
+      seed: Math.random() * 6.28, kind: Math.random() < .3 ? 'reef' : 'isle',
+    })
   }
 }
+
+/** 윤슬 - 물결에 햇빛이 튀는 점들. 예전 별을 그대로 물 위로 옮겼다 */
 function seedStars(s) {
-  for (let i = 0; i < 90; i++) s.stars.push({ x: Math.random() * W, y: Math.random() * H, z: Math.random() * .7 + .3 })
+  for (let i = 0; i < 70; i++) {
+    s.stars.push({ x: Math.random() * W, y: Math.random() * H,
+                   z: Math.random() * .7 + .3, ph: Math.random() * 6.28 })
+  }
 }
 
 /* ================================================================
@@ -1219,6 +1234,50 @@ function collide() {
 const TIER_COLOR = { common: '#dbe7f5', rare: '#8fd8ff', legend: '#ffd27a' }
 
 /**
+ * 색을 밝히거나(양수) 어둡게(음수) 한다.
+ *
+ * 입체감은 결국 같은 색의 밝기 차이다. 명암마다 색을 따로 정해 두면 기체
+ * 색을 바꿀 때 전부 다시 골라야 해서, 하나에서 파생시킨다.
+ */
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255, gr = (n >> 8) & 255, b = n & 255
+  const f = (v) => Math.max(0, Math.min(255, Math.round(amt >= 0 ? v + (255 - v) * amt : v * (1 + amt))))
+  return 'rgb(' + f(r) + ',' + f(gr) + ',' + f(b) + ')'
+}
+
+/**
+ * 바다에 뜬 섬 하나를 그린다.
+ *
+ * 물거품 - 모래 - 풀 - 볕 순으로 겹친다. 가장자리에 물거품을 깔아야 섬이
+ * 물 위에 얹힌 것처럼 보인다. 없으면 그냥 배경에 뚫린 구멍으로 보인다.
+ */
+function drawIsle(sl) {
+  const cx = sl.x + sl.w / 2, cy = sl.y + sl.h / 2
+  if (cy < -90 || cy > H + 90) return
+  const rx = sl.w / 2, ry = sl.h / 2
+  g.save(); g.translate(cx, cy); g.rotate(sl.seed * .25)
+  /*
+   * 섬은 배경이다. 눈에 띄면 안 된다.
+   *
+   * 처음엔 모래색과 풀색을 그대로 썼더니 섬이 주인공이 되고 적기가 안 보였다.
+   * 채도를 낮추고 알파를 걸어 물속에 잠긴 것처럼 만들었다.
+   */
+  g.fillStyle = 'rgba(170,215,245,.09)'
+  g.beginPath(); g.ellipse(0, 0, rx + 7, ry + 6, 0, 0, Math.PI * 2); g.fill()
+  if (sl.kind === 'reef') {
+    g.fillStyle = 'rgba(20,52,74,.5)'
+    g.beginPath(); g.ellipse(0, 0, rx * .72, ry * .72, 0, 0, Math.PI * 2); g.fill()
+  } else {
+    g.fillStyle = 'rgba(120,110,80,.5)'
+    g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); g.fill()
+    g.fillStyle = 'rgba(48,84,58,.55)'
+    g.beginPath(); g.ellipse(-rx * .07, -ry * .09, rx * .74, ry * .7, 0, 0, Math.PI * 2); g.fill()
+  }
+  g.restore()
+}
+
+/**
  * 기체를 그린다.
  *
  * 강화 레벨과 개조가 겉으로 드러나야 한다. 숫자만 오르고 그림이 그대로면
@@ -1245,6 +1304,20 @@ function drawShipOn(g, x, y, opt) {
   const nose = (18 + lv * 1.4) * scale
   const flame = opt.flame !== false
 
+  /*
+   * 바다에 지는 그림자.
+   *
+   * 이거 하나로 기체가 배경 위에 얹힌 게 아니라 그 위를 나는 것처럼 보인다.
+   * 오른쪽 아래로 밀어야 햇빛이 왼쪽 위에서 오는 다른 음영과 맞는다.
+   */
+  if (opt.shadow !== false) {
+    g.save()
+    g.translate(x + 11 * scale, y + 15 * scale)
+    g.fillStyle = 'rgba(0,12,28,.26)'
+    g.beginPath(); g.ellipse(0, 0, span * .95, nose * .5, 0, 0, Math.PI * 2); g.fill()
+    g.restore()
+  }
+
   g.save(); g.translate(x, y); g.scale(scale, scale)
 
   /* ---- 엔진. 레벨 4 에서 둘, 5 에서 셋이 된다 ---- */
@@ -1260,12 +1333,19 @@ function drawShipOn(g, x, y, opt) {
     g.lineTo(nx, 8 + len * flick); g.closePath(); g.fill()
   }
 
-  /* ---- 주익 ---- */
-  g.fillStyle = '#2f6fa8'
+  /* ---- 주익. 위가 밝고 아래가 어두워야 두께가 보인다 ---- */
+  const wg = g.createLinearGradient(0, -6, 0, 12)
+  wg.addColorStop(0, '#4b8fce')
+  wg.addColorStop(.55, '#2f6fa8')
+  wg.addColorStop(1, '#1d4a76')
+  g.fillStyle = wg
   g.beginPath()
   g.moveTo(0, -5); g.lineTo(span, 7); g.lineTo(span * .55, 11)
   g.lineTo(0, 5); g.lineTo(-span * .55, 11); g.lineTo(-span, 7)
   g.closePath(); g.fill()
+  /* 날개 앞전에 빛이 걸린다 */
+  g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = 1
+  g.beginPath(); g.moveTo(-span, 7); g.lineTo(0, -5); g.lineTo(span, 7); g.stroke()
 
   /* ---- 앞날개. 레벨 3 부터 ---- */
   if (lv >= 3) {
@@ -1285,8 +1365,13 @@ function drawShipOn(g, x, y, opt) {
     g.beginPath(); g.moveTo(0, 4); g.lineTo(7, 13); g.lineTo(-7, 13); g.closePath(); g.fill()
   }
 
-  /* ---- 동체 ---- */
-  g.fillStyle = body
+  /* ---- 동체. 가로 그라디언트로 둥글게 보이게 한다 ---- */
+  const bg2 = g.createLinearGradient(-7, 0, 7, 0)
+  bg2.addColorStop(0, shade(body, -.42))
+  bg2.addColorStop(.38, body)
+  bg2.addColorStop(.58, shade(body, .3))
+  bg2.addColorStop(1, shade(body, -.28))
+  g.fillStyle = bg2
   g.beginPath()
   g.moveTo(0, -nose); g.lineTo(6, 4); g.lineTo(3, 11)
   g.lineTo(-3, 11); g.lineTo(-6, 4)
@@ -1298,8 +1383,16 @@ function drawShipOn(g, x, y, opt) {
   }
 
   /* ---- 캐노피. 레벨이 오르면 커진다 ---- */
-  g.fillStyle = '#4fd1ff'
-  g.beginPath(); g.ellipse(0, -3, 2.4 + lv * .18, 4.5 + lv * .5, 0, 0, Math.PI * 2); g.fill()
+  const cw = 2.4 + lv * .18, ch = 4.5 + lv * .5
+  const cg = g.createLinearGradient(-cw, -3 - ch, cw, -3 + ch)
+  cg.addColorStop(0, '#bff0ff')
+  cg.addColorStop(.45, '#4fd1ff')
+  cg.addColorStop(1, '#1a6f9c')
+  g.fillStyle = cg
+  g.beginPath(); g.ellipse(0, -3, cw, ch, 0, 0, Math.PI * 2); g.fill()
+  /* 유리에 하늘이 비친다 */
+  g.fillStyle = 'rgba(255,255,255,.5)'
+  g.beginPath(); g.ellipse(-cw * .3, -3 - ch * .35, cw * .34, ch * .26, 0, 0, Math.PI * 2); g.fill()
 
   /* ================================================================
    * 무기별 생김새 — 30기가 다 같은 모양이면 고를 이유가 없다
@@ -1433,15 +1526,55 @@ function drawShipOn(g, x, y, opt) {
 }
 
 function drawEnemy(e) {
-  g.save(); g.translate(e.x, e.y); g.rotate(Math.PI)
   const big = e.kind === 'mid'
-  g.fillStyle = e.flash > 0 ? '#ffffff' : (big ? '#8c4a6b' : '#5c6b8a')
+  /* 어두운 바다 위라 예전 색은 묻혔다. 한 단계씩 밝혔다 */
+  const wing = big ? '#b05a80' : '#7d8fb5'
+  const body = big ? '#ff8fae' : '#c3d3ef'
+
+  /* 바다에 지는 그림자. 아군과 같은 방향이어야 빛이 하나로 읽힌다 */
+  g.save()
+  g.translate(e.x + e.r * .55, e.y + e.r * .75)
+  g.fillStyle = 'rgba(0,12,28,.24)'
+  g.beginPath(); g.ellipse(0, 0, e.r * .95, e.r * .5, 0, 0, Math.PI * 2); g.fill()
+  g.restore()
+
+  g.save(); g.translate(e.x, e.y); g.rotate(Math.PI)
+
+  /* 주익 */
+  if (e.flash > 0) {
+    g.fillStyle = '#ffffff'
+  } else {
+    const wg = g.createLinearGradient(0, -e.r, 0, e.r * .6)
+    wg.addColorStop(0, shade(wing, .3))
+    wg.addColorStop(.6, wing)
+    wg.addColorStop(1, shade(wing, -.35))
+    g.fillStyle = wg
+  }
   g.beginPath()
   g.moveTo(0, -e.r * .9); g.lineTo(e.r, e.r * .5); g.lineTo(0, e.r * .15); g.lineTo(-e.r, e.r * .5)
   g.closePath(); g.fill()
-  g.fillStyle = big ? '#e0708f' : '#93a6c9'
+
+  /* 동체 - 가로 그라디언트로 둥글게 */
+  if (e.flash > 0) {
+    g.fillStyle = '#ffffff'
+  } else {
+    const bg2 = g.createLinearGradient(-e.r * .34, 0, e.r * .34, 0)
+    bg2.addColorStop(0, shade(body, -.4))
+    bg2.addColorStop(.4, body)
+    bg2.addColorStop(.6, shade(body, .28))
+    bg2.addColorStop(1, shade(body, -.26))
+    g.fillStyle = bg2
+  }
   g.beginPath(); g.moveTo(0, -e.r * .75); g.lineTo(e.r * .34, e.r * .4); g.lineTo(-e.r * .34, e.r * .4)
   g.closePath(); g.fill()
+
+  /* 캐노피 - 작지만 있으면 비행기로 읽힌다 */
+  if (e.flash <= 0) {
+    g.fillStyle = 'rgba(30,50,80,.85)'
+    g.beginPath(); g.ellipse(0, -e.r * .3, e.r * .16, e.r * .24, 0, 0, Math.PI * 2); g.fill()
+    g.fillStyle = 'rgba(255,255,255,.35)'
+    g.beginPath(); g.ellipse(-e.r * .05, -e.r * .36, e.r * .07, e.r * .1, 0, 0, Math.PI * 2); g.fill()
+  }
   g.restore()
 }
 
@@ -1570,14 +1703,38 @@ function drawGround(u) {
 
 function draw() {
   const s = state
+  const now = performance.now() / 1000
   g.clearRect(0, 0, W, H)
-  for (const st of s.stars) {
-    g.fillStyle = 'rgba(190,220,255,' + (.15 + st.z * .5) + ')'
-    g.fillRect(st.x, st.y, 1.4, 1.4 + st.z * 2)
+
+  /* 바다 - 위가 깊고 아래가 얕다 */
+  const sea = g.createLinearGradient(0, 0, 0, H)
+  sea.addColorStop(0, '#06182b')
+  sea.addColorStop(.45, '#0b2e4c')
+  sea.addColorStop(1, '#12496e')
+  g.fillStyle = sea
+  g.fillRect(0, 0, W, H)
+
+  /* 물결 - 땅과 같은 속도로 흘러야 같이 나는 것처럼 보인다 */
+  const scroll = now * TERRAIN_SPEED
+  g.lineWidth = 1.4
+  for (let i = 0; i < 16; i++) {
+    const wy = ((i * 48 + scroll) % (H + 70)) - 35
+    g.strokeStyle = 'rgba(150,210,255,' + (.05 + .05 * Math.sin(i * 1.7)) + ')'
+    g.beginPath()
+    for (let x = 0; x <= W; x += 18) {
+      const yy = wy + Math.sin(x * .035 + i + now) * 3.5
+      if (x) g.lineTo(x, yy); else g.moveTo(x, yy)
+    }
+    g.stroke()
   }
-  /* 땅 — 별보다 앞, 적보다 뒤 */
-  g.fillStyle = 'rgba(28,38,56,.55)'
-  for (const sl of s.slabs) g.fillRect(sl.x, sl.y, sl.w, sl.h)
+
+  /* 윤슬 - 물결에 햇빛이 튄다 */
+  for (const st of s.stars) {
+    g.fillStyle = 'rgba(200,235,255,' + (.2 + Math.abs(Math.sin(st.ph + now * 3)) * .5) * st.z + ')'
+    g.fillRect(st.x, st.y, 1.6 + st.z, 1.2)
+  }
+
+  for (const sl of s.slabs) drawIsle(sl)
   for (const u of s.grounds) drawGround(u)
   /* 방공 빔 */
   for (const bm of s.beams) {
