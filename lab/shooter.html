@@ -127,7 +127,7 @@
   /* 하단 탭 — 화면을 넷으로 나눴으니 오가는 길이 늘 보여야 한다 */
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;
     background: #0b111c; border-top: 1px solid var(--line);
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   }
@@ -193,6 +193,13 @@
   .filters button { padding: 7px 12px; font-size: 12px; border-radius: 8px;
                     background: #141c2c; color: var(--muted); font-weight: 700; }
   .filters button.on { background: var(--accent); color: #04121a; }
+
+  /* 스테이지 */
+  .stages { display: grid; gap: 9px; }
+  .card.stg .pv { height: 92px; background: none; }
+  .hearts { letter-spacing: 2px; font-size: 13px; }
+  .hearts .on { color: var(--warn); }
+  .hearts .off { color: #2a3547; }
 </style>
 
 <div id="wrap"><canvas id="c"></canvas></div>
@@ -220,6 +227,13 @@
   <div class="body"><div class="grid" id="planes"></div></div>
 </div>
 
+<!-- 스테이지 -->
+<div class="screen" id="scStage" hidden>
+  <h1>스테이지</h1>
+  <p class="sub">앞 단계를 깨야 다음이 열립니다. 고른 곳으로 출격합니다.</p>
+  <div class="body"><div class="stages" id="stageBody"></div></div>
+</div>
+
 <!-- 랭킹 -->
 <div class="screen" id="scRank" hidden>
   <h1>랭킹</h1>
@@ -237,6 +251,7 @@
 <nav class="tabs" id="tabs">
   <button data-go="squad" class="on">편대</button>
   <button data-go="planes">기체</button>
+  <button data-go="stage">스테이지</button>
   <button data-go="rank">랭킹</button>
   <button data-go="pilot">파일럿</button>
 </nav>
@@ -403,6 +418,20 @@ const PLANES = []
 /* ================================================================
  * 저장 — 해금과 누적 점수
  * ================================================================ */
+/* ================================================================
+ * 출격권
+ *
+ * 다섯 판을 들고 시작하고 30분에 하나씩 찬다. 다 쓰면 광고를 보고 한 판.
+ *
+ * 조심할 것이 하나 있다. 이 게임의 목적은 오래 하게 만드는 것인데 출격권은
+ * 그 반대로 작동한다 - 처음 온 사람이 15분 만에 벽을 만나면 다시 안 온다.
+ * 그래서 상한을 다섯으로 넉넉히 두고, 비어 있을 때 광고 한 번이면 바로
+ * 이어서 할 수 있게 했다. 기다리라고만 하면 그냥 나간다.
+ * ================================================================ */
+const EN_MAX = 5
+const EN_REGEN = 30 * 60 * 1000        // 30분에 하나
+const AD_ENERGY_DAY = 10               // 하루에 광고로 채울 수 있는 횟수
+
 const SAVE_KEY = 'shooter-proto-v3'
 const OLD_KEY = 'shooter-proto-v2'
 function load() {
@@ -411,6 +440,11 @@ function load() {
     pilot: { name: '', mark: 0, xp: 0, lv: 1, st: { pow: 0, rate: 0, rng: 0, hp: 0 } },
     stats: { runs: 0, kills: 0, best: 0, clears: 0 },
     scores: [],
+    stage: 0,                       // 지금 고른 스테이지
+    stageClear: [],                 // 깬 스테이지 번호
+    stageBest: {},                  // 스테이지별 최고 점수
+    energy: { n: EN_MAX, t: 0 },    // 출격권과 마지막 정산 시각
+    adDay: { d: '', n: 0 },         // 오늘 광고로 채운 횟수
   }
   try {
     // 구조가 바뀌었다. 새 칸이 없으면 예전 저장을 그대로 옮겨 온다
@@ -422,6 +456,10 @@ function load() {
         pilot: { ...base.pilot, ...(got.pilot || {}), st: { ...base.pilot.st, ...((got.pilot || {}).st || {}) } },
         stats: { ...base.stats, ...(got.stats || {}) },
         scores: got.scores || [],
+        stageClear: got.stageClear || [],
+        stageBest: got.stageBest || {},
+        energy: { ...base.energy, ...(got.energy || {}) },
+        adDay: { ...base.adDay, ...(got.adDay || {}) },
       }
     }
   } catch { /* 저장이 막힌 환경이어도 게임은 돌아야 한다 */ }
@@ -453,6 +491,47 @@ function save() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(prog)) } catch { /* 무시 */ }
 }
 let prog = load()
+if (!prog.energy.t) { prog.energy.t = Date.now(); prog.energy.n = EN_MAX }
+
+/**
+ * 지금 남은 출격권. 부를 때마다 그동안 찬 만큼을 정산한다.
+ *
+ * 타이머를 돌리지 않고 시각 차이로 계산한다. 앱을 꺼 둔 동안에도 차야 하고,
+ * 타이머는 화면이 꺼지면 브라우저가 멈춰 세우기 때문이다.
+ */
+function energy() {
+  const e = prog.energy
+  if (e.n >= EN_MAX) { e.t = Date.now(); return EN_MAX }
+  const got = Math.floor((Date.now() - e.t) / EN_REGEN)
+  if (got > 0) {
+    e.n = Math.min(EN_MAX, e.n + got)
+    e.t = e.n >= EN_MAX ? Date.now() : e.t + got * EN_REGEN
+    save()
+  }
+  return e.n
+}
+/** 다음 한 장까지 남은 밀리초. 꽉 찼으면 0 */
+function energyWait() {
+  if (energy() >= EN_MAX) return 0
+  return Math.max(0, EN_REGEN - (Date.now() - prog.energy.t))
+}
+function energySpend() {
+  const e = prog.energy
+  if (energy() <= 0) return false
+  if (e.n >= EN_MAX) e.t = Date.now()    // 꽉 찬 상태에서 처음 쓰면 그때부터 잰다
+  e.n--
+  save()
+  return true
+}
+function adDayLeft() {
+  const key = new Date().toISOString().slice(0, 10)
+  if (prog.adDay.d !== key) { prog.adDay = { d: key, n: 0 }; save() }
+  return AD_ENERGY_DAY - prog.adDay.n
+}
+function mmss(ms) {
+  const t = Math.max(0, Math.ceil(ms / 1000))
+  return String((t / 60) | 0).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0')
+}
 
 function unlocked(p) {
   if (p.unlock.kind === 'free') return true
@@ -574,6 +653,20 @@ const SLOT_META = [
    */
   { role: '후방', mul: 0.2, legend: true },
 ]
+
+/*
+ * 후방 자리의 화력은 어떻게 열었느냐로 갈린다.
+ *
+ * 산 사람은 20%, 만렙으로 연 사람은 10%. 만렙까지 쉰 판을 도는 값이
+ * 절반이라도 남아 있어야 "돈 없으면 못 한다"가 안 된다.
+ */
+const REAR_BOUGHT = 0.2
+const REAR_EARNED = 0.1
+function slotMul(i) {
+  const m = SLOT_META[i]
+  if (!m.legend) return m.mul
+  return boughtLegend() ? REAR_BOUGHT : REAR_EARNED
+}
 let activeSlot = 1
 const NO_MODS = { pierce: 0, split: 0, extra: 0, seek: 0, rate: 0, big: 0, bounce: 0, speed: 0 }
 const elSlots = document.getElementById('slots')
@@ -591,7 +684,8 @@ function planeById(id) { return PLANES.find((p) => p.id === id) }
  * 자리를 누르면 기체 화면으로 넘어가고, 기체를 고르면 편대로 돌아온다.
  * 나누기 전과 같은 두 번의 손짓이다 - 화면만 넓어졌다.
  * ================================================================ */
-const SCREENS = { squad: 'scSquad', planes: 'scPlanes', rank: 'scRank', pilot: 'scPilot' }
+const SCREENS = { squad: 'scSquad', planes: 'scPlanes', stage: 'scStage',
+                  rank: 'scRank', pilot: 'scPilot' }
 const elTabs = document.getElementById('tabs')
 let curScreen = 'squad'
 let planeFilter = 'all'
@@ -611,6 +705,7 @@ function render() {
   renderWallet()
   if (curScreen === 'squad') renderSquad()
   else if (curScreen === 'planes') renderPlanes()
+  else if (curScreen === 'stage') renderStage()
   else if (curScreen === 'rank') renderRank()
   else renderPilot()
 }
@@ -628,7 +723,8 @@ function row(k, v, gold) {
 function renderSquad() {
   const legend = isLegend()
   document.getElementById('squadSub').innerHTML =
-    `메인이 <b>화력 100%</b>, 좌우 윙맨이 30%` + (legend ? ', 후방이 20%' : '') + `입니다.<br>` +
+    `메인이 <b>화력 100%</b>, 좌우 윙맨이 30%` +
+    (legend ? `, 후방이 ${Math.round(slotMul(3) * 100)}%` : '') + `입니다.<br>` +
     `자리를 누르면 기체 화면으로 갑니다.`
 
   elSlots.innerHTML = ''
@@ -644,10 +740,10 @@ function renderSquad() {
         `<canvas class="pv" width="120" height="120"></canvas>` +
         `<div class="nm">${p ? p.name : '비었음'}</div>` +
         `<div class="wp">${p ? WEAPONS[p.weapon].name : '-'}</div>` +
-        `<div class="pw">화력 ${Math.round(m.mul * 100)}%</div>`
+        `<div class="pw">화력 ${Math.round(slotMul(i) * 100)}%</div>`
       : `<div class="role">${m.role}</div>` +
         `<div class="nm" style="margin-top:12px">전설 파일럿 전용</div>` +
-        `<div class="wp">만렙 30 또는 ${LEGEND_PILOT.price.toLocaleString('ko-KR')}원</div>`
+        `<div class="wp">${LEGEND_PILOT.price.toLocaleString('ko-KR')}원</div>`
     d.onclick = () => { if (usable) { activeSlot = i; go('planes') } else go('pilot') }
     elSlots.appendChild(d)
     if (p) paintPlane(d.querySelector('.pv'), p, i === MAIN_SLOT ? 1 : 0.75)
@@ -655,7 +751,7 @@ function renderSquad() {
 
   const sum = SLOT_META.reduce((a, m, i) => {
     const usable = !m.legend || legend
-    return a + (usable && prog.squad[i] ? m.mul : 0)
+    return a + (usable && prog.squad[i] ? slotMul(i) : 0)
   }, 0)
   const st = prog.pilot.st
   const boost = [
@@ -666,11 +762,36 @@ function renderSquad() {
   ].filter(Boolean).join(' · ')
 
   document.getElementById('squadSum').innerHTML =
+    `<div class="row" id="enRow"></div>` +
+    row('출격지', `${curStage().id}. ${curStage().name}`) +
     row('편대 화력 합계', Math.round(sum * 100) + '%', true) +
     row('파일럿', `${pilotName()} · ${pilotRank()} Lv.${prog.pilot.lv}`) +
     row('파일럿 보정', boost || '아직 없음') +
     row('누적 점수', prog.total.toLocaleString('ko-KR') + '점')
+  paintEnergy()
 }
+
+/*
+ * 출격권만 따로 다시 그린다.
+ *
+ * 초 단위로 줄어드는 시계가 있어서 화면 전체를 다시 그리면 기체 그림
+ * 네 장을 매초 새로 그리게 된다. 바뀌는 줄만 갈아 끼운다.
+ */
+function paintEnergy() {
+  const el = document.getElementById('enRow')
+  if (!el) return
+  const n = energy()
+  const hearts = Array.from({ length: EN_MAX },
+    (_, i) => `<span class="${i < n ? 'on' : 'off'}">♥</span>`).join('')
+  const wait = energyWait()
+  el.innerHTML =
+    `<span class="k">출격권</span>` +
+    `<span class="hearts" style="margin-left:8px">${hearts}</span>` +
+    `<span class="v">${n < EN_MAX ? mmss(wait) : '가득'}</span>`
+  const btn = document.getElementById('launch')
+  if (btn) btn.textContent = n > 0 ? '출격' : '광고 보고 출격'
+}
+setInterval(() => { if (curScreen === 'squad' && !elTabs.hidden) paintEnergy() }, 1000)
 
 /* ── 기체 ───────────────────────────────────────────────────────── */
 const FILTERS = [['all', '전체'], ['own', '보유'], ['lock', '잠김'], ['legend', '전설']]
@@ -752,6 +873,69 @@ function renderPlanes() {
     elPlanes.appendChild(c)
     paintPlane(c.querySelector('.pv'), p, 1.1)
   }
+}
+
+/* ── 스테이지 ───────────────────────────────────────────────────── */
+/** 카드에 그 판의 색을 그대로 보여 준다. 이름만으로는 어떤 곳인지 모른다 */
+function paintStage(cv, sg) {
+  if (!cv) return
+  const TH = THEMES[sg.theme]
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  const w = cv.clientWidth || 260, h = cv.clientHeight || 92
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr)
+  const c = cv.getContext('2d')
+  c.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const gr = c.createLinearGradient(0, 0, 0, h)
+  gr.addColorStop(0, TH.sky[0]); gr.addColorStop(.45, TH.sky[1]); gr.addColorStop(1, TH.sky[2])
+  c.fillStyle = gr; c.fillRect(0, 0, w, h)
+  c.lineWidth = 1.2
+  for (let i = 0; i < 5; i++) {
+    c.strokeStyle = 'rgba(' + TH.line + ',.10)'
+    c.beginPath()
+    for (let x = 0; x <= w; x += 14) c.lineTo(x, 14 + i * 17 + Math.sin(x * .05 + i) * 2.5)
+    c.stroke()
+  }
+  const isles = [[w * .22, h * .62, 26, 13], [w * .68, h * .34, 20, 10], [w * .84, h * .76, 15, 8]]
+  for (const [x, y, rx, ry] of isles) {
+    c.fillStyle = TH.halo
+    c.beginPath(); c.ellipse(x, y, rx + 5, ry + 4, 0, 0, 6.284); c.fill()
+    c.fillStyle = TH.body
+    c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 6.284); c.fill()
+    c.fillStyle = TH.cap
+    c.beginPath(); c.ellipse(x - rx * .08, y - ry * .1, rx * .72, ry * .68, 0, 0, 6.284); c.fill()
+  }
+}
+
+function renderStage() {
+  const el = document.getElementById('stageBody')
+  el.innerHTML = STAGES.map((sg, i) => {
+    const open = stageOpen(i)
+    const pick = (prog.stage || 0) === i
+    const done = prog.stageClear.includes(sg.id)
+    const best = prog.stageBest[sg.id] || 0
+    return `<div class="card stg${pick && open ? ' picked' : ''}${open ? '' : ' locked'}" data-i="${i}">` +
+      `<span class="tag ${done ? 't-legend' : open ? 't-rare' : 't-common'}">` +
+      `${done ? '클리어' : open ? (pick ? '선택' : '열림') : '잠김'}</span>` +
+      `<canvas class="pv" width="520" height="184"></canvas>` +
+      `<div class="nm">${sg.id}. ${sg.name}</div>` +
+      `<div class="de">${sg.sub}</div>` +
+      `<div class="up"><span class="lvl">` +
+      (open
+        ? `적 체력 ×${sg.hpMul} · 보스 ${sg.bossHp.toLocaleString('ko-KR')}` +
+          (best ? ` · 최고 ${best.toLocaleString('ko-KR')}점` : '')
+        : `${STAGES[i - 1].name} 을 깨면 열립니다`) +
+      `</span></div></div>`
+  }).join('')
+
+  el.querySelectorAll('.card.stg').forEach((c) => {
+    const i = +c.dataset.i
+    paintStage(c.querySelector('.pv'), STAGES[i])
+    c.onclick = () => {
+      if (!stageOpen(i)) { alert(`${STAGES[i - 1].name} 을 먼저 깨야 합니다.`); return }
+      prog.stage = i
+      save(); go('squad')
+    }
+  })
 }
 
 /* ── 랭킹 ───────────────────────────────────────────────────────── */
@@ -854,14 +1038,14 @@ function renderPilot() {
       `</div>`
   }).join('')
 
-  const legendBox = isLegend()
-    ? row('전설 파일럿', boughtLegend() && pt.lv < PILOT_MAX ? '구매함 · 후방 자리 열림' : '만렙 달성 · 후방 자리 열림', true)
+  const legendBox = boughtLegend()
+    ? row('전설 파일럿', `후방 편대 ${Math.round(REAR_BOUGHT * 100)}%`, true)
     : `<div class="stat">` +
       `<div class="hd"><span class="nm">전설 파일럿</span>` +
-      `<span class="ef">후방 편대 +20%</span></div>` +
-      `<div class="de">네 번째 자리가 열립니다. 만렙 30 을 찍거나 사면 됩니다.</div>` +
-      `<div class="pips"><span class="k" style="font-size:11px;color:var(--muted)">` +
-      `앞으로 ${PILOT_MAX - pt.lv}레벨</span>` +
+      `<span class="ef">후방 편대 ${Math.round(REAR_BOUGHT * 100)}%</span></div>` +
+      `<div class="de">네 번째 자리가 열립니다.` +
+      (isLegend() ? ` 지금은 ${Math.round(REAR_EARNED * 100)}% 로 쓰고 있습니다.` : '') + `</div>` +
+      `<div class="pips">` +
       `<button id="buyLegend">${LEGEND_PILOT.price.toLocaleString('ko-KR')}원</button></div></div>`
 
   document.getElementById('pilotBody').innerHTML =
@@ -921,8 +1105,7 @@ function renderPilot() {
   const buy = document.getElementById('buyLegend')
   if (buy) buy.onclick = () => {
     alert(`전설 파일럿 ${LEGEND_PILOT.price.toLocaleString('ko-KR')}원\n\n` +
-          `결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.\n` +
-          `지금은 파일럿 레벨 ${PILOT_MAX} 을 찍으면 같은 자리가 열립니다.`)
+          `결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.`)
   }
 
   document.getElementById('stReset').onclick = () => {
@@ -973,7 +1156,7 @@ function newState() {
   const squad = SLOT_META.map((m, i) => {
     const usable = !m.legend || isLegend()
     const p = usable ? planeById(prog.squad[i]) : null
-    return { plane: p, mul: m.mul, cd: Math.random() * 0.2, orbA: (i * Math.PI * 2) / 3 }
+    return { plane: p, mul: slotMul(i), cd: Math.random() * 0.2, orbA: (i * Math.PI * 2) / 3 }
   })
   return {
     t: 0, running: false,
@@ -987,6 +1170,7 @@ function newState() {
     /* 이 판에서만 사는 개조. 저장하지 않는다. */
     mods: Object.fromEntries(MOD_KEYS.map((k) => [k, 0])),
     boss: null, waveIdx: 0, banner: null, bannerT: 0, cleared: false,
+    stage: curStage(), theme: THEMES[curStage().theme],
   }
 }
 /* 땅. 슬래브가 흘러가야 지상 유닛이 떠 있지 않고 붙어 보인다. */
@@ -1206,6 +1390,38 @@ function shoot(u, i, dt) {
  * 지상 위협은 공중 편대와 시간을 어긋나게 배치한다. 겹치면 화면이
  * 뭐가 뭔지 모르게 되고, 어긋나면 "이번엔 아래를 봐야 한다"가 생긴다.
  */
+/* ================================================================
+ * 스테이지
+ *
+ * 배경색과 지형만 갈아 끼우는 게 아니라 적 구성이 달라야 다른 판이 된다.
+ *   해협   - 잡졸이 많고 지상은 드문드문. 익히는 판이다
+ *   사막   - 지상 위협이 촘촘하다. 아래를 계속 봐야 한다
+ *   극야   - 돌진기와 맷집이 몰려온다. 자리를 계속 옮겨야 한다
+ *
+ * 앞 단계를 깨야 다음이 열린다. 한 판에 다 보여 주면 세 번째 판까지
+ * 갈 이유가 없다.
+ * ================================================================ */
+const THEMES = {
+  sea: {
+    sky: ['#06182b', '#0b2e4c', '#12496e'],
+    line: '150,210,255', glint: '200,235,255',
+    halo: 'rgba(170,215,245,.09)', body: 'rgba(120,110,80,.5)',
+    cap: 'rgba(48,84,58,.55)', dark: 'rgba(20,52,74,.5)',
+  },
+  sand: {
+    sky: ['#2b1809', '#4d2d12', '#7a4d21'],
+    line: '255,205,140', glint: '255,238,205',
+    halo: 'rgba(255,220,170,.08)', body: 'rgba(150,110,60,.55)',
+    cap: 'rgba(110,78,42,.6)', dark: 'rgba(70,44,20,.55)',
+  },
+  snow: {
+    sky: ['#04070f', '#0a1428', '#16233f'],
+    line: '165,200,255', glint: '225,240,255',
+    halo: 'rgba(200,225,255,.10)', body: 'rgba(200,215,235,.5)',
+    cap: 'rgba(235,245,255,.55)', dark: 'rgba(40,62,96,.5)',
+  },
+}
+
 const WAVES = [
   { at: 0.8,  f: () => line(3, 'small') },
   { at: 3.0,  f: () => ground('turret', 90) },
@@ -1228,6 +1444,79 @@ const WAVES = [
   { at: 29.0, f: () => dive(3) },
   { at: 31.0, f: () => spawnBoss() },
 ]
+
+/* 사막 - 지상이 촘촘하다. 공중은 산탄기 위주로 정면을 못 잡게 한다 */
+const WAVES_SAND = [
+  { at: 0.8,  f: () => line(4, 'small') },
+  { at: 2.4,  f: () => { ground('turret', 70); ground('turret', W - 70) } },
+  { at: 4.0,  f: () => line(2, 'gunner') },
+  { at: 5.6,  f: () => ground('flak', W / 2) },
+  { at: 7.0,  f: () => diagonal('small', 1) },
+  { at: 8.6,  f: () => { ground('turret', W / 2); ground('radar', 80) } },
+  { at: 10.0, f: () => line(3, 'mid') },
+  { at: 11.6, f: () => ground('laser', W - 86) },
+  { at: 13.0, f: () => line(3, 'gunner') },
+  { at: 14.6, f: () => { ground('flak', 66); ground('flak', W - 66) } },
+  { at: 16.0, f: () => dive(3) },
+  { at: 17.6, f: () => line(6, 'small') },
+  { at: 19.0, f: () => { ground('turret', 90); ground('turret', W - 90); ground('radar', W / 2) } },
+  { at: 21.0, f: () => line(1, 'tank') },
+  { at: 22.6, f: () => diagonal('gunner', -1) },
+  { at: 24.0, f: () => ground('laser', 80) },
+  { at: 25.4, f: () => line(3, 'mid') },
+  { at: 27.0, f: () => dive(4) },
+  { at: 28.6, f: () => { ground('flak', W / 2); ground('turret', 70) } },
+  { at: 30.0, f: () => line(2, 'tank') },
+  { at: 32.0, f: () => line(4, 'gunner') },
+  { at: 34.0, f: () => { ground('laser', W - 80); ground('radar', 84) } },
+  { at: 36.0, f: () => line(7, 'small') },
+  { at: 38.0, f: () => dive(4) },
+  { at: 40.0, f: () => spawnBoss() },
+]
+
+/* 극야 - 돌진기와 맷집. 한자리에 서 있으면 못 버틴다 */
+const WAVES_SNOW = [
+  { at: 0.8,  f: () => line(5, 'small') },
+  { at: 2.4,  f: () => dive(2) },
+  { at: 4.0,  f: () => line(2, 'tank') },
+  { at: 5.6,  f: () => { ground('turret', 74); ground('turret', W - 74) } },
+  { at: 7.0,  f: () => diagonal('small', -1) },
+  { at: 8.4,  f: () => dive(3) },
+  { at: 10.0, f: () => line(3, 'mid') },
+  { at: 11.6, f: () => ground('laser', W / 2) },
+  { at: 13.0, f: () => line(3, 'gunner') },
+  { at: 14.4, f: () => dive(4) },
+  { at: 16.0, f: () => line(2, 'tank') },
+  { at: 17.6, f: () => { ground('flak', 70); ground('flak', W - 70) } },
+  { at: 19.0, f: () => diagonal('gunner', 1) },
+  { at: 20.6, f: () => dive(4) },
+  { at: 22.0, f: () => line(4, 'mid') },
+  { at: 23.6, f: () => { ground('radar', 84); ground('laser', W - 84) } },
+  { at: 25.0, f: () => line(8, 'small') },
+  { at: 26.6, f: () => line(2, 'tank') },
+  { at: 28.4, f: () => dive(5) },
+  { at: 30.0, f: () => diagonal('small', 1) },
+  { at: 31.6, f: () => { ground('turret', W / 2); ground('flak', 66) } },
+  { at: 33.0, f: () => line(4, 'gunner') },
+  { at: 35.0, f: () => line(3, 'tank') },
+  { at: 37.0, f: () => dive(5) },
+  { at: 39.0, f: () => { ground('laser', 80); ground('laser', W - 80) } },
+  { at: 41.0, f: () => line(6, 'mid') },
+  { at: 43.0, f: () => dive(6) },
+  { at: 45.0, f: () => line(3, 'tank') },
+  { at: 47.0, f: () => spawnBoss() },
+]
+
+const STAGES = [
+  { id: 1, name: '해협',      sub: '적 보급로가 지나는 바다',
+    theme: 'sea',  waves: WAVES,       bossHp: 880,  hpMul: 1.0,  spMul: 1.0 },
+  { id: 2, name: '사막 회랑',  sub: '대공포가 늘어선 붉은 협곡',
+    theme: 'sand', waves: WAVES_SAND,  bossHp: 1150, hpMul: 1.25, spMul: 1.08 },
+  { id: 3, name: '극야 전선',  sub: '해가 뜨지 않는 마지막 방어선',
+    theme: 'snow', waves: WAVES_SNOW,  bossHp: 1500, hpMul: 1.55, spMul: 1.16 },
+]
+function curStage() { return STAGES[Math.min(prog.stage || 0, STAGES.length - 1)] }
+function stageOpen(i) { return i === 0 || prog.stageClear.includes(STAGES[i - 1].id) }
 /** 돌진기를 위에서 흩뿌린다. 같은 자리에 겹치면 한 번에 다 맞는다 */
 function dive(n) {
   for (let i = 0; i < n; i++) {
@@ -1261,7 +1550,11 @@ function mkEnemy(kind, x, y, drift) {
     tank:   { hp: 26, r: 24, sp: 30, score: 420, fire: 2.6, art: 54 },
   }
   const b = B[kind] || B.small
-  return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()), ...b }
+  // 뒤 스테이지일수록 더 단단하고 빠르다. 점수는 그대로 둔다 - 뒤 판을
+  // 돌면 점수가 저절로 불어나면 앞 판이 의미를 잃는다
+  const SG = state.stage || STAGES[0]
+  return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
+           ...b, hp: Math.round(b.hp * SG.hpMul), sp: Math.round(b.sp * SG.spMul) }
 }
 
 /* ================================================================
@@ -1339,7 +1632,8 @@ const ENEMY_HOMING_TURN = PLAYER_HOMING_TURN * 0.2
  */
 function spawnBoss() {
   state.boss = {
-    x: W / 2, y: -120, hp: 880, maxHp: 880, r: 46, t: 0, cd: 1.2, entering: true,
+    x: W / 2, y: -120, hp: state.stage.bossHp, maxHp: state.stage.bossHp,
+    r: 46, t: 0, cd: 1.2, entering: true,
     turrets: [
       { dx: -36, hp: 90, maxHp: 90, alive: true, cd: 1.0, flash: 0 },
       { dx: 36,  hp: 90, maxHp: 90, alive: true, cd: 1.7, flash: 0 },
@@ -1687,7 +1981,8 @@ function update(dt) {
   s.squad.forEach((u, i) => shoot(u, i, dt))
 
   updateUlt(dt)
-  while (s.waveIdx < WAVES.length && s.t >= WAVES[s.waveIdx].at) { WAVES[s.waveIdx].f(); s.waveIdx++ }
+  const wv = s.stage.waves
+  while (s.waveIdx < wv.length && s.t >= wv[s.waveIdx].at) { wv[s.waveIdx].f(); s.waveIdx++ }
 
   /* 내 탄 — 종류마다 다르게 움직인다 */
   for (const b of s.bullets) {
@@ -2285,15 +2580,16 @@ function drawIsle(sl) {
    * 처음엔 모래색과 풀색을 그대로 썼더니 섬이 주인공이 되고 적기가 안 보였다.
    * 채도를 낮추고 알파를 걸어 물속에 잠긴 것처럼 만들었다.
    */
-  g.fillStyle = 'rgba(170,215,245,.09)'
+  const TH = (state && state.theme) || THEMES.sea
+  g.fillStyle = TH.halo
   g.beginPath(); g.ellipse(0, 0, rx + 7, ry + 6, 0, 0, Math.PI * 2); g.fill()
   if (sl.kind === 'reef') {
-    g.fillStyle = 'rgba(20,52,74,.5)'
+    g.fillStyle = TH.dark
     g.beginPath(); g.ellipse(0, 0, rx * .72, ry * .72, 0, 0, Math.PI * 2); g.fill()
   } else {
-    g.fillStyle = 'rgba(120,110,80,.5)'
+    g.fillStyle = TH.body
     g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); g.fill()
-    g.fillStyle = 'rgba(48,84,58,.55)'
+    g.fillStyle = TH.cap
     g.beginPath(); g.ellipse(-rx * .07, -ry * .09, rx * .74, ry * .7, 0, 0, Math.PI * 2); g.fill()
   }
   g.restore()
@@ -2768,11 +3064,12 @@ function draw() {
   const now = performance.now() / 1000
   g.clearRect(0, 0, W, H)
 
-  /* 바다 - 위가 깊고 아래가 얕다 */
+  /* 지면 - 위가 멀고 아래가 가깝다. 색은 스테이지가 정한다 */
+  const TH = s.theme || THEMES.sea
   const sea = g.createLinearGradient(0, 0, 0, H)
-  sea.addColorStop(0, '#06182b')
-  sea.addColorStop(.45, '#0b2e4c')
-  sea.addColorStop(1, '#12496e')
+  sea.addColorStop(0, TH.sky[0])
+  sea.addColorStop(.45, TH.sky[1])
+  sea.addColorStop(1, TH.sky[2])
   g.fillStyle = sea
   g.fillRect(0, 0, W, H)
 
@@ -2781,7 +3078,7 @@ function draw() {
   g.lineWidth = 1.4
   for (let i = 0; i < 16; i++) {
     const wy = ((i * 48 + scroll) % (H + 70)) - 35
-    g.strokeStyle = 'rgba(150,210,255,' + (.05 + .05 * Math.sin(i * 1.7)) + ')'
+    g.strokeStyle = 'rgba(' + TH.line + ',' + (.05 + .05 * Math.sin(i * 1.7)) + ')'
     g.beginPath()
     for (let x = 0; x <= W; x += 18) {
       const yy = wy + Math.sin(x * .035 + i + now) * 3.5
@@ -2792,7 +3089,7 @@ function draw() {
 
   /* 윤슬 - 물결에 햇빛이 튄다 */
   for (const st of s.stars) {
-    g.fillStyle = 'rgba(200,235,255,' + (.2 + Math.abs(Math.sin(st.ph + now * 3)) * .5) * st.z + ')'
+    g.fillStyle = 'rgba(' + TH.glint + ',' + (.2 + Math.abs(Math.sin(st.ph + now * 3)) * .5) * st.z + ')'
     g.fillRect(st.x, st.y, 1.6 + st.z, 1.2)
   }
 
@@ -3249,6 +3546,10 @@ function end(win) {
   prog.total += state.score
   prog.parts += earned
 
+  const sg = state.stage
+  if (win && !prog.stageClear.includes(sg.id)) prog.stageClear.push(sg.id)
+  if (state.score > (prog.stageBest[sg.id] || 0)) prog.stageBest[sg.id] = state.score
+
   const st = prog.stats
   st.kills += state.kills
   if (win) st.clears++
@@ -3261,7 +3562,8 @@ function end(win) {
   const up = addXp(state.score)
   save()
 
-  document.getElementById('overTitle').textContent = win ? '1단계 클리어' : '격추됨'
+  document.getElementById('overTitle').textContent =
+    win ? `${sg.name} 클리어` : '격추됨'
   document.getElementById('overBody').innerHTML =
     '이번 점수 <b>' + state.score.toLocaleString('ko-KR') + '</b>' +
     (state.score >= st.best ? ' · <b>최고 기록</b>' : '') + '<br>' +
@@ -3270,14 +3572,24 @@ function end(win) {
     (up ? ' · <b>레벨 ' + prog.pilot.lv + ' 달성</b>' +
           (prog.pilot.lv >= PILOT_MAX ? '<br><b>전설 파일럿 · 후방 자리가 열렸습니다</b>' : '')
         : '') + '<br>' +
-    '누적 <b>' + prog.total.toLocaleString('ko-KR') + '</b>점'
+    '누적 <b>' + prog.total.toLocaleString('ko-KR') + '</b>점' +
+    (win && STAGES[prog.stage + 1] && !prog.stageClear.includes(STAGES[prog.stage + 1].id)
+      ? '<br><b>' + STAGES[prog.stage + 1].name + '</b> 이 열렸습니다'
+      : '')
   const rv = document.getElementById('revive')
   rv.hidden = win || state.adUsed.revive >= AD_LIMIT.revive
   scOver.hidden = false
   sfx(win ? 'clear' : 'down')
 }
 
-document.getElementById('launch').onclick = start
+document.getElementById('launch').onclick = () => {
+  if (energy() > 0) { energySpend(); start(); return }
+  if (adDayLeft() <= 0) {
+    alert('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.')
+    return
+  }
+  showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
+}
 document.getElementById('again').onclick = () => { scOver.hidden = true; go('squad'); music('hangar') }
 elTabs.querySelectorAll('button').forEach((b) => { b.onclick = () => go(b.dataset.go) })
 document.getElementById('revive').onclick = reviveByAd
