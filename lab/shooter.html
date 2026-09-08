@@ -2719,12 +2719,12 @@ function sfx(kind, arg) {
     case 'shot': {
       if (!auGate('shot', 0.045)) return
       const base = [500, 640, 760][arg | 0] || 500
-      auTone('square', base, base * 0.42, 0.075, 0.055)
+      auTone('square', base, base * 0.42, 0.075, 0.08)
       break
     }
     case 'hit':
       if (!auGate('hit', 0.028)) return
-      auHiss(2600, 1400, 0.05, 0.06, 'bandpass')
+      auHiss(2600, 1400, 0.05, 0.085, 'bandpass')
       break
     case 'boom': {
       if (!auGate('boom', 0.045)) return
