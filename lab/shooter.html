@@ -1849,8 +1849,13 @@ function shoot(u, i, dt) {
   const lv = LV[state.player.lv]
   let rate = baseRate(p.weapon) * p.rate * upgRate(p.id) * pilotRate()
     / (0.85 + lv.mult * 0.15) * (1 - state.mods.rate * 0.18)
-  // 난사 중에는 간격이 3분의 1
-  if (state.ultKind === 'rapid' && state.ultT > 0) rate /= 3
+  /*
+   * 난사 중에는 간격이 절반.
+   *
+   * 3분의 1 이었을 때 재 보니 6초에 880 이 들어갔다 - 보스 체력 전부다.
+   * 다른 궁은 같은 조건에서 0~514 였다. 하나만 튀면 나머지 아홉이 장식이 된다.
+   */
+  if (state.ultKind === 'rapid' && state.ultT > 0) rate /= 2
   if (u.cd > 0) return
   u.cd = rate
   sfx('shot', p.tier === 'legend' ? 2 : p.tier === 'rare' ? 1 : 0)
@@ -2138,14 +2143,24 @@ function mkEnemy(kind, x, y, drift) {
  */
 const PLAYER_HP = 100
 const DMG = {
-  bullet: 8,       // 적기 일반탄
-  flak: 12,        // 지상 대공포탄
-  missile: 18,     // 유도탄
-  beam: 26,        // 방공 레이저
-  ram: 16,         // 적기와 충돌
-  dive: 30,        // 돌진기와 충돌
-  boss: 15,        // 보스 탄
-  bossDash: 38,    // 보스 돌진
+  bullet: 12,      // 적기 일반탄
+  flak: 16,        // 지상 대공포탄
+  missile: 24,     // 유도탄
+  beam: 34,        // 방공 레이저
+  ram: 20,         // 적기와 충돌
+  dive: 38,        // 돌진기와 충돌
+  boss: 20,        // 보스 탄
+  bossDash: 50,    // 보스 돌진
+  /*
+   * 즉사 광선.
+   *
+   * 한 방에 기체 하나가 날아간다. 대신 예고가 길다 - 붉은 길이 1.5초 깔린
+   * 뒤에야 쏜다. 폭도 좁아서 옆으로 한 뼘만 비키면 산다.
+   *
+   * 예고 없는 즉사는 억울하게 만들지만, 예고 있는 즉사는 '봤는데 안 피했다'
+   * 가 된다. 그건 어려운 것이고 억울한 것이 아니다.
+   */
+  lance: 9999,
 }
 
 const TERRAIN_SPEED = 62
@@ -2189,20 +2204,115 @@ const ENEMY_HOMING_TURN = PLAYER_HOMING_TURN * 0.2
  *   · 체력 구간마다 패턴이 바뀌고, 중반부터 부하를 부른다
  *   · 마지막 25% 에서는 돌진한다. 예고선을 먼저 보여주고 내려온다
  */
+/*
+ * 보스.
+ *
+ * 예전엔 덩어리 하나에 체력 한 줄이었다. 그래서 난사 궁 한 번이면 끝났고,
+ * 어디를 쏘든 똑같아서 조준할 이유가 없었다.
+ *
+ * 이제 부위가 넷이다. 포탑 둘과 엔진을 먼저 부숴야 코어가 열린다. 코어가
+ * 닫혀 있는 동안에는 아무리 때려도 본체 체력이 안 깎인다 - 맞는 자리가
+ * 어디냐가 실제로 중요해진다.
+ *
+ * 코어가 열리면 2 페이즈다. 보스는 더 이상 자리를 지키지 않고 돌진하고,
+ * 즉사 광선을 쏜다. 부위를 다 부순 대가로 사나워지는 셈이다.
+ */
 function spawnBoss() {
+  const base = state.stage.bossHp
+  const mk = (key, name, dx, dy, r, mul, cd) => ({
+    key, name, dx, dy, r, cd, flash: 0, alive: true,
+    hp: Math.round(base * mul), maxHp: Math.round(base * mul),
+  })
   state.boss = {
-    x: W / 2, y: -120, hp: state.stage.bossHp, maxHp: state.stage.bossHp,
-    r: 46, t: 0, cd: 1.2, entering: true,
-    turrets: [
-      { dx: -36, hp: 90, maxHp: 90, alive: true, cd: 1.0, flash: 0 },
-      { dx: 36,  hp: 90, maxHp: 90, alive: true, cd: 1.7, flash: 0 },
+    x: W / 2, y: -120, r: 46, t: 0, cd: 1.2, entering: true,
+    phase: 1, flash: 0, summonCd: 7, dashPh: 0, dashX: 0,
+    lancePh: 0, lanceX: 0, lanceCd: 4,
+    parts: [
+      mk('lt', '좌 포탑', -40, 8, 17, 0.26, 1.0),
+      mk('rt', '우 포탑', 40, 8, 17, 0.26, 1.7),
+      mk('en', '엔진', 0, 34, 20, 0.40, 2.4),
     ],
-    summonCd: 7, dashPh: 0, dashX: 0, phase: 1, flash: 0,
+    core: { hp: base, maxHp: base, open: false },
   }
   banner('보스')
   sfx('alarm')
   music('boss')
 }
+
+/** 부위를 다 부쉈다. 코어가 열리고 보스가 사나워진다 */
+function openCore(bs) {
+  bs.core.open = true
+  bs.phase = 2
+  bs.lanceCd = 2.5
+  banner('코어 노출')
+  sfx('alarm')
+  boom(bs.x, bs.y, 30, '#ffd27a')
+}
+
+function killBoss(bs) {
+  const s = state
+  boom(bs.x, bs.y, 70, '#ffd27a')
+  s.score += 4000
+  s.boss = null
+  s.cleared = true
+  setTimeout(() => end(true), 900)
+}
+
+/*
+ * 어디를 맞았는가.
+ *
+ * 살아 있는 부위에 닿으면 그 부위가 깎인다. 부위를 다 부순 뒤에만 코어가
+ * 깎인다. 그 전에 본체를 때리면 튕긴다 - 'block' 을 돌려주고 부르는 쪽이
+ * 불꽃만 튀긴다.
+ */
+function bossHit(bs, x, y, dmg) {
+  const s = state
+  for (const p of bs.parts) {
+    if (!p.alive) continue
+    const px = bs.x + p.dx, py = bs.y + p.dy
+    if ((px - x) ** 2 + (py - y) ** 2 < (p.r + 7) ** 2) {
+      p.hp -= dmg
+      p.flash = .1
+      if (p.hp <= 0) {
+        p.alive = false
+        boom(px, py, 26, '#ffd27a')
+        s.score += 400
+        if (bs.parts.every((q) => !q.alive)) openCore(bs)
+      }
+      return 'part'
+    }
+  }
+  if (bs.core.open) {
+    bs.core.hp -= dmg
+    bs.flash = .08
+    if (bs.core.hp <= 0) killBoss(bs)
+    return 'core'
+  }
+  return 'block'
+}
+
+/** 범위 공격. 자리를 못 고르는 대신 살아 있는 부위를 한꺼번에 친다 */
+function bossArea(bs, dmg) {
+  let any = false
+  for (const p of bs.parts) {
+    if (!p.alive) continue
+    any = true
+    p.hp -= dmg
+    p.flash = .08
+    if (p.hp <= 0) {
+      p.alive = false
+      boom(bs.x + p.dx, bs.y + p.dy, 26, '#ffd27a')
+      state.score += 400
+      if (bs.parts.every((q) => !q.alive)) openCore(bs)
+    }
+  }
+  if (!any && bs.core.open) {
+    bs.core.hp -= dmg
+    bs.flash = .06
+    if (bs.core.hp <= 0) killBoss(bs)
+  }
+}
+
 function banner(t) { state.banner = t; state.bannerT = 1.6 }
 
 /**
@@ -2400,7 +2510,7 @@ function fireUlt() {
 
   const pl = s.player
   switch (k) {
-    case 'rapid':  s.ultT = 5; break
+    case 'rapid':  s.ultT = 3.5; break
     case 'laser':  s.ultT = 3; break
     case 'spread': s.ultT = 2.5; break
     case 'orb':    s.ultT = 6; break
@@ -2475,7 +2585,7 @@ function updateUlt(dt) {
       for (const u of s.grounds) {
         if (Math.abs(u.x - cx) < half + 14 && u.y < pl.y) { u.hp -= 40 * dt; u.flash = .08 }
       }
-      if (s.boss && Math.abs(s.boss.x - cx) < half + s.boss.r) s.boss.hp -= 70 * dt
+      if (s.boss && Math.abs(s.boss.x - cx) < half + s.boss.r) bossArea(s.boss, 70 * dt)
     } else if (k === 'pierce') {
       /* 무적으로 위로 뚫는다. 닿는 것은 부순다 */
       pl.y -= 620 * dt
@@ -2483,7 +2593,7 @@ function updateUlt(dt) {
       for (const e of s.enemies) {
         if (near(e, pl, e.r + 26)) { e.hp -= 90; e.flash = .1; boom(e.x, e.y, 8, '#ffe08a') }
       }
-      if (s.boss && near(s.boss, pl, s.boss.r + 26)) s.boss.hp -= 160 * dt
+      if (s.boss && near(s.boss, pl, s.boss.r + 26)) bossArea(s.boss, 160 * dt)
     } else if (k === 'orb') {
       /* 도는 구슬이 적탄을 지운다 */
       const n = 8
@@ -2533,7 +2643,7 @@ function updateUlt(dt) {
       for (const u of s.grounds) {
         if ((u.x - sh.x) ** 2 + (u.y - sh.y) ** 2 < sh.r * sh.r) { u.hp -= dmg * dt * 6; u.flash = .1 }
       }
-      if (s.boss && (s.boss.x - sh.x) ** 2 + (s.boss.y - sh.y) ** 2 < sh.r * sh.r) s.boss.hp -= dmg * dt * 5
+      if (s.boss && (s.boss.x - sh.x) ** 2 + (s.boss.y - sh.y) ** 2 < sh.r * sh.r) bossArea(s.boss, dmg * dt * 5)
       if (sh.r > (sh.kind === 'shell' ? 130 : 76)) { sh.done = true; boom(sh.x, sh.y, 16, '#ffd27a') }
     }
   }
@@ -2659,7 +2769,7 @@ function update(dt) {
           for (const u of s.grounds) {
             if ((u.x - b.x) ** 2 + (u.y - b.y) ** 2 < 62 * 62) { u.hp -= b.dmg; u.flash = .1 }
           }
-          if (s.boss && (s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < 70 * 70) s.boss.hp -= b.dmg
+          if (s.boss && (s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < 70 * 70) bossArea(s.boss, b.dmg)
         }
         break
       case 'boomer':
@@ -2738,17 +2848,16 @@ function update(dt) {
   if (bs) {
     bs.t += dt
     if (bs.flash > 0) bs.flash -= dt
-    for (const tr of bs.turrets) if (tr.flash > 0) tr.flash -= dt
+    for (const p of bs.parts) if (p.flash > 0) p.flash -= dt
 
     if (bs.entering) {
       bs.y += 60 * dt
       if (bs.y >= 130) { bs.y = 130; bs.entering = false }
     } else {
-      const h = bs.hp / bs.maxHp
-      bs.phase = h > .75 ? 1 : h > .5 ? 2 : h > .25 ? 3 : 4
+      const alive = bs.parts.filter((p) => p.alive).length
 
-      /* ---- 마지막 구간: 돌진 ---- */
-      if (bs.phase === 4 && bs.dashPh <= 0 && Math.random() < dt * 0.35) {
+      /* ---- 2 페이즈: 돌진 ---- */
+      if (bs.phase === 2 && bs.dashPh <= 0 && bs.lancePh <= 0 && Math.random() < dt * 0.4) {
         bs.dashPh = 2.2; bs.dashX = pl.x
       }
       if (bs.dashPh > 0) {
@@ -2766,58 +2875,89 @@ function update(dt) {
         bs.x = W / 2 + Math.sin(bs.t * .7) * (W / 2 - 70)
       }
 
-      /* ---- 포탑. 살아 있으면 따로 쏜다 ---- */
-      for (const tr of bs.turrets) {
-        if (!tr.alive) continue
-        tr.cd -= dt
-        if (tr.cd <= 0) {
-          tr.cd = 1.3
-          const tx = bs.x + tr.dx, ty = bs.y + 10
+      /*
+       * ---- 2 페이즈: 즉사 광선 ----
+       *
+       * 예고 1.5초, 발사 0.45초. 예고 동안 붉은 길이 깔리고 폭이 좁아진다.
+       * 폭 44 라 화면 420 에서 옆으로 한 뼘만 비키면 산다.
+       */
+      if (bs.phase === 2 && bs.dashPh <= 0) {
+        bs.lanceCd -= dt
+        if (bs.lancePh <= 0 && bs.lanceCd <= 0) {
+          bs.lancePh = 1.95
+          bs.lanceX = pl.x
+          bs.lanceCd = 7.5
+          sfx('alarm')
+        }
+      }
+      if (bs.lancePh > 0) {
+        bs.lancePh -= dt
+        if (bs.lancePh <= 0.45 && Math.abs(pl.x - bs.lanceX) < 22 + PLAYER_R) {
+          hitPlayer(DMG.lance)
+        }
+      }
+
+      /* ---- 부위 사격. 살아 있는 것만 쏜다 ---- */
+      for (const p of bs.parts) {
+        if (!p.alive || p.key === 'en') continue
+        p.cd -= dt
+        if (p.cd <= 0) {
+          p.cd = 1.3
+          const tx = bs.x + p.dx, ty = bs.y + p.dy
           const a = Math.atan2(pl.y - ty, pl.x - tx)
-          s.ebullets.push({ x: tx, y: ty, vx: Math.cos(a) * 195, vy: Math.sin(a) * 195, r: 4, age: 0, dmg: DMG.boss })
-        }
-      }
-      const aliveTurrets = bs.turrets.filter((t) => t.alive).length
-
-      /* ---- 부하 소환. 2 구간부터 ---- */
-      if (bs.phase >= 2) {
-        bs.summonCd -= dt
-        if (bs.summonCd <= 0) {
-          bs.summonCd = bs.phase >= 3 ? 5 : 7
-          for (const sx of [70, W - 70]) s.enemies.push(mkEnemy('small', sx, -30, 0))
+          s.ebullets.push({ x: tx, y: ty, vx: Math.cos(a) * 195, vy: Math.sin(a) * 195,
+                            r: 4, age: 0, dmg: DMG.boss })
         }
       }
 
-      /* ---- 본체 사격. 포탑이 살아 있으면 더 자주 ---- */
+      /* ---- 부하 소환 ---- */
+      bs.summonCd -= dt
+      if (bs.summonCd <= 0) {
+        bs.summonCd = bs.phase === 2 ? 4.5 : 7
+        for (const sx of [70, W - 70]) s.enemies.push(mkEnemy('small', sx, -30, 0))
+      }
+
+      /*
+       * ---- 본체 사격 ----
+       *
+       * 엔진이 살아 있으면 느리다. 엔진을 먼저 부수면 탄이 성겨지므로
+       * "어디부터 부술까"가 실제 선택이 된다.
+       */
       bs.cd -= dt
-      if (bs.cd <= 0 && bs.dashPh <= 0) {
-        const haste = 1 - aliveTurrets * 0.12
+      if (bs.cd <= 0 && bs.dashPh <= 0 && bs.lancePh <= 0) {
+        const engine = bs.parts.find((p) => p.key === 'en')
+        const slow = engine && engine.alive ? 1.35 : 1
+        const haste = 1 - alive * 0.06
         if (bs.phase === 1) {
-          bs.cd = 1.1 * haste
+          bs.cd = 1.05 * slow * haste
           for (let i = -3; i <= 3; i++) {
             const a = Math.PI / 2 + i * .17
-            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 4, age: 0, dmg: DMG.boss })
+            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150,
+                              r: 4, age: 0, dmg: DMG.boss })
           }
-        } else if (bs.phase === 2) {
-          bs.cd = .78 * haste
-          const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
-          for (const d of [-.12, 0, .12])
-            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * 210, vy: Math.sin(a + d) * 210, r: 4, age: 0, dmg: DMG.boss })
-        } else if (bs.phase === 3) {
-          bs.cd = 1.25 * haste
-          for (let i = 0; i < 20; i++) {
-            const a = (i / 20) * Math.PI * 2 + bs.t
-            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 135, vy: Math.sin(a) * 135, r: 4, age: 0, dmg: DMG.boss })
+          /* 조준 유도탄 하나. 가만히 서 있지 못하게 한다 */
+          if (Math.random() < .45) {
+            s.ebullets.push({ x: bs.x, y: bs.y + 20, vx: 0, vy: 130, r: 5,
+                              kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
           }
         } else {
-          /* 마지막: 원형 탄막 + 조준 유도탄 하나 */
-          bs.cd = 1.5 * haste
-          for (let i = 0; i < 14; i++) {
-            const a = (i / 14) * Math.PI * 2 - bs.t * .6
-            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160, r: 4, age: 0, dmg: DMG.boss })
+          /* 코어가 열리면 원형 탄막 + 조준 3연발을 번갈아 */
+          bs.cd = 1.15
+          if (Math.floor(bs.t) % 2 === 0) {
+            for (let i = 0; i < 18; i++) {
+              const a = (i / 18) * Math.PI * 2 - bs.t * .6
+              s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160,
+                                r: 4, age: 0, dmg: DMG.boss })
+            }
+          } else {
+            const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+            for (const d of [-.14, 0, .14]) {
+              s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * 225, vy: Math.sin(a + d) * 225,
+                                r: 4, age: 0, dmg: DMG.boss })
+            }
+            s.ebullets.push({ x: bs.x, y: bs.y + 20, vx: 0, vy: 140, r: 5,
+                              kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
           }
-          s.ebullets.push({ x: bs.x, y: bs.y + 20, vx: 0, vy: 130, r: 5,
-                            kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
         }
       }
     }
@@ -2979,10 +3119,12 @@ function collide() {
         if (e.hp <= 0) {
           e.dead = true; s.score += e.score; s.kills++
           boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
-          if (Math.random() < (e.kind === 'mid' ? 1 : .14)) dropItem(e.x, e.y, e.kind === 'mid')
+          // 중형이 죽을 때마다 뭔가 떨어지니 화면이 아이템으로 덮였다
+          if (Math.random() < (e.kind === 'mid' ? .55 : .08)) dropItem(e.x, e.y, e.kind === 'mid')
           // 큰 적일수록 많이 찬다. 열댓 마리 잡으면 한 번 쓴다
           const before = s.ult
-          s.ult = Math.min(ULT_MAX, s.ult + (e.kind === 'small' ? 6 : e.kind === 'tank' ? 22 : 12))
+          // 예전엔 잡졸 열일곱만 잡으면 궁이 찼다. 판이 궁으로만 굴러갔다
+          s.ult = Math.min(ULT_MAX, s.ult + (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6))
           if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
         }
       }
@@ -2999,35 +3141,23 @@ function collide() {
           u.dead = true; s.score += u.score; s.kills++
           boom(u.x, u.y, 24, '#ffcf7a')
           // 지상 위협은 피하기 까다로우니 개조가 더 자주 나온다
-          if (Math.random() < .6) dropItem(u.x, u.y, true)
+          if (Math.random() < .35) dropItem(u.x, u.y, true)
         }
       }
     }
 
     const bs = s.boss
-    /* 포탑이 앞에 붙어 있다. 본체보다 먼저 맞는다 */
-    if (bs && !b.dead && !bs.entering) {
-      for (const tr of bs.turrets) {
-        if (!tr.alive) continue
-        const tx = bs.x + tr.dx, ty = bs.y + 10
-        if ((tx - b.x) ** 2 + (ty - b.y) ** 2 < (15 + b.r) ** 2) {
-          tr.hp -= b.dmg; tr.flash = .1
-          if (b.pierce > 0) b.pierce--; else b.dead = true
-          boom(b.x, b.y, 2, '#ffd27a')
-          if (tr.hp <= 0) { tr.alive = false; boom(tx, ty, 26, '#ffd27a'); s.score += 300 }
-          break
-        }
-      }
-    }
-    if (bs && !b.dead && !bs.entering && near(b, bs, bs.r + b.r)) {
-      bs.hp -= b.dmg
-      bs.flash = .08
-      sfx('hit')
-      if (b.pierce > 0) b.pierce--; else b.dead = true
-      boom(b.x, b.y, 2, '#9fe8ff')
-      if (bs.hp <= 0) {
-        boom(bs.x, bs.y, 70, '#ffd27a'); s.score += 4000; s.boss = null; s.cleared = true
-        setTimeout(() => end(true), 900)
+    /* 부위가 먼저 맞는다. 부위를 다 부수기 전에는 코어가 안 깎인다 */
+    if (bs && !b.dead && !bs.entering && near(b, bs, bs.r + b.r + 24)) {
+      const r = bossHit(bs, b.x, b.y, b.dmg)
+      if (r !== 'block') {
+        sfx('hit')
+        boom(b.x, b.y, 2, r === 'core' ? '#9fe8ff' : '#ffd27a')
+        if (b.pierce > 0) b.pierce--; else b.dead = true
+      } else if (near(b, bs, bs.r + b.r)) {
+        /* 코어가 닫혀 있다. 튕긴다 - 여기를 쏴도 소용없다는 걸 보여준다 */
+        b.dead = true
+        boom(b.x, b.y, 2, '#8aa0c0')
       }
     }
   }
@@ -3562,24 +3692,58 @@ function drawBoss(bs) {
     g.fillRect(bs.x - bs.r, bs.y, bs.r * 2, H - bs.y)
   }
 
+  /* 즉사 광선. 예고 동안 길이 좁아지고, 발사 순간 하얗게 터진다 */
+  if (bs.lancePh > 0) {
+    const firing = bs.lancePh <= 0.45
+    const warn = Math.max(0, (bs.lancePh - 0.45) / 1.5)
+    const halfW = firing ? 22 : 22 + warn * 26
+    if (firing) {
+      g.fillStyle = 'rgba(255,90,120,.85)'
+      g.fillRect(bs.lanceX - halfW, bs.y, halfW * 2, H - bs.y)
+      g.fillStyle = 'rgba(255,255,255,.95)'
+      g.fillRect(bs.lanceX - halfW * .42, bs.y, halfW * .84, H - bs.y)
+    } else {
+      g.fillStyle = 'rgba(255,84,112,' + (.12 + Math.sin(bs.t * 26) * .07) + ')'
+      g.fillRect(bs.lanceX - halfW, bs.y, halfW * 2, H - bs.y)
+      g.strokeStyle = 'rgba(255,140,160,.8)'; g.lineWidth = 1.4
+      g.strokeRect(bs.lanceX - halfW, bs.y, halfW * 2, H - bs.y)
+    }
+  }
+
   g.save(); g.translate(bs.x, bs.y)
 
-  /* 포탑 */
-  for (const tr of bs.turrets) {
-    g.save(); g.translate(tr.dx, 10)
-    if (tr.alive) {
-      g.fillStyle = tr.flash > 0 ? '#ffffff' : '#584078'
-      g.beginPath(); g.arc(0, 0, 13, 0, Math.PI * 2); g.fill()
-      g.fillStyle = '#2a1f3d'; g.fillRect(-3, 4, 6, 16)
-      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-11, -19, 22, 4)
-      g.fillStyle = '#ffb45c'; g.fillRect(-11, -19, 22 * Math.max(0, tr.hp / tr.maxHp), 4)
+  /* 부위 */
+  for (const p of bs.parts) {
+    g.save(); g.translate(p.dx, p.dy)
+    if (p.alive) {
+      g.fillStyle = p.flash > 0 ? '#ffffff' : p.key === 'en' ? '#3d5a78' : '#584078'
+      g.beginPath(); g.arc(0, 0, p.r * .78, 0, Math.PI * 2); g.fill()
+      if (p.key === 'en') {
+        g.fillStyle = '#7fd6ff'
+        g.beginPath(); g.arc(0, 0, p.r * .38, 0, Math.PI * 2); g.fill()
+      } else {
+        g.fillStyle = '#2a1f3d'; g.fillRect(-3, 4, 6, 16)
+      }
+      const bw = p.r * 1.3
+      g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(-bw / 2, -p.r - 6, bw, 4)
+      g.fillStyle = '#ffb45c'
+      g.fillRect(-bw / 2, -p.r - 6, bw * Math.max(0, p.hp / p.maxHp), 4)
     } else {
       g.fillStyle = '#241a33'
-      g.beginPath(); g.arc(0, 0, 11, 0, Math.PI * 2); g.fill()
+      g.beginPath(); g.arc(0, 0, p.r * .62, 0, Math.PI * 2); g.fill()
       g.strokeStyle = 'rgba(255,140,90,.5)'; g.lineWidth = 2
       g.beginPath(); g.moveTo(-6, -6); g.lineTo(6, 6); g.moveTo(6, -6); g.lineTo(-6, 6); g.stroke()
     }
     g.restore()
+  }
+
+  /* 코어가 열리면 가운데가 벌겋게 뛴다 - 여기를 쏘라는 표시다 */
+  if (bs.core.open) {
+    const k = .55 + Math.sin(bs.t * 7) * .25
+    g.fillStyle = 'rgba(255,90,120,' + k + ')'
+    g.beginPath(); g.arc(0, 0, bs.r * .42, 0, Math.PI * 2); g.fill()
+    g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 2
+    g.beginPath(); g.arc(0, 0, bs.r * .55, 0, Math.PI * 2); g.stroke()
   }
 
   /* 본체 */
@@ -3613,12 +3777,25 @@ function drawBoss(bs) {
 
   /* 체력 막대. 구간 경계에 눈금을 넣는다 */
   const w = W - 60
+  const partHp = bs.parts.reduce((a, p) => a + Math.max(0, p.hp), 0)
+  const partMax = bs.parts.reduce((a, p) => a + p.maxHp, 0)
+  const ratio = bs.core.open ? bs.core.hp / bs.core.maxHp : partHp / partMax
   g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(30, 16, w, 6)
-  g.fillStyle = '#ff5470'; g.fillRect(30, 16, w * Math.max(0, bs.hp / bs.maxHp), 6)
-  g.fillStyle = 'rgba(0,0,0,.45)'
-  for (const q of [.25, .5, .75]) g.fillRect(30 + w * q, 16, 1.5, 6)
+  g.fillStyle = bs.core.open ? '#ff5470' : '#ffb45c'
+  g.fillRect(30, 16, w * Math.max(0, ratio), 6)
+  /* 부위 경계. 남은 부위 수가 눈금으로 보인다 */
+  if (!bs.core.open) {
+    g.fillStyle = 'rgba(0,0,0,.45)'
+    let acc = 0
+    for (const p of bs.parts.slice(0, -1)) {
+      acc += p.maxHp / partMax
+      g.fillRect(30 + w * acc, 16, 1.5, 6)
+    }
+  }
   g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '10px system-ui'
-  g.fillText('보스 · ' + bs.phase + '단계', 30, 34)
+  g.fillText(bs.core.open
+    ? '보스 · 코어 노출'
+    : '보스 · 부위 ' + bs.parts.filter((p) => p.alive).length + '개 남음', 30, 34)
 }
 
 function drawBullet(b) {
