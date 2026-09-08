@@ -2747,6 +2747,7 @@ function fireUlt() {
   s.ultKind = k
   banner(ULT[k].name)
   sfx('ult')
+  haptic('ult')
 
   const pl = s.player
   switch (k) {
@@ -2919,10 +2920,12 @@ function hitPlayer(dmg) {
   pl.hp -= dmg || DMG.bullet
   boom(pl.x, pl.y, dmg >= 20 ? 22 : 10, '#7fd6ff')
   pl.shake = Math.min(1, (dmg || 8) / 22)
-  haptic(dmg >= 20 ? 'hard' : 'soft')
+  sfx('hurt', dmg >= 24 ? 1 : 0)
+  haptic(dmg >= 24 ? 'hard' : 'soft')
   if (pl.hp > 0) return
 
   boom(pl.x, pl.y, 34, '#ffd27a')
+  haptic('down')
   state.lives--
   pl.hp = pl.maxHp
   pl.inv = 2.2
@@ -2940,8 +2943,26 @@ function hitPlayer(dmg) {
 }
 
 /** 손끝으로 알려준다. 못 하는 기기면 조용히 넘어간다 */
+/*
+ * 손끝으로 알려준다.
+ *
+ * 스도쿠에서 배운 것이 하나 있다 - 세기가 비슷하면 무슨 일인지 구분이 안
+ * 된다. 정답 12ms 와 오답 [10,55,10] 을 썼다가 둘이 같게 느껴져서 오답을
+ * [45,70,45] 로 벌렸다. 여기서도 상황마다 확실히 벌려 둔다.
+ *
+ * 격추에는 진동을 넣지 않는다. 초당 몇 대씩 떨어지는데 그때마다 떨면
+ * 폰이 계속 우는 것이고, 정작 중요한 '내가 맞았다'가 묻힌다.
+ */
+const HAPTIC = {
+  soft: 14,                 // 스친 정도
+  hard: [30, 45, 30],       // 크게 맞았다
+  down: [70, 90, 70],       // 기체를 하나 잃었다
+  ult: [22, 30, 22],        // 필살기
+}
 function haptic(kind) {
-  try { navigator.vibrate?.(kind === 'hard' ? [18, 40, 18] : 10) } catch { /* 없으면 그만 */ }
+  const p = HAPTIC[kind]
+  if (p == null) return
+  try { navigator.vibrate?.(p) } catch { /* 없으면 그만 */ }
 }
 
 /* ================================================================
@@ -4645,12 +4666,45 @@ function sfx(kind, arg) {
       if (!auGate('hit', 0.028)) return
       auHiss(2600, 1400, 0.05, 0.085, 'bandpass')
       break
+    /*
+     * 내가 맞았을 때.
+     *
+     * 적이 터지는 소리와 반대로 간다 - 밝지 않고 둔탁하다. 소리만 듣고도
+     * 내가 맞았는지 적이 터졌는지 알아야 한다.
+     */
+    case 'hurt': {
+      if (!auGate('hurt', 0.06)) return
+      const big = arg > 0.5
+      auTone('sine', 190, 60, 0.24, 0.2)
+      auHiss(500, 90, 0.2, big ? 0.16 : 0.1, 'lowpass')
+      if (big) auTone('sawtooth', 110, 42, 0.3, 0.12)
+      break
+    }
+    /*
+     * 격추음.
+     *
+     * 노이즈 한 겹만 쓰면 '치익' 하는 바람 소리가 된다. 실제로 뭔가 터지는
+     * 소리는 세 겹이다.
+     *
+     *   어택  아주 짧은 고역. 금속이 깨지는 첫 순간
+     *   바디  밴드패스 노이즈. 찢어지는 중역
+     *   저음  사인이 아래로 미끄러진다. 배를 울리는 몫
+     *
+     * 겹마다 길이를 다르게 둔다. 같이 시작해서 따로 끝나야 한 덩어리로
+     * 들리면서도 두툼하다.
+     */
     case 'boom': {
-      if (!auGate('boom', 0.045)) return
+      if (!auGate('boom', 0.04)) return
       const sz = arg == null ? 0.5 : Math.min(1, arg)
-      auHiss(1600 + sz * 2000, 160, 0.28 + sz * 0.5, 0.11 + sz * 0.16)
-      // 큰 폭발엔 배를 울리는 저음을 한 겹 더 얹는다
-      if (sz > 0.55) auTone('sine', 95, 38, 0.42, 0.22)
+      const c = AU.ctx, t0 = c.currentTime
+      // 어택 - 깨지는 첫 순간
+      auHiss(9000, 3000, 0.045, 0.10 + sz * 0.08, 'highpass')
+      // 바디 - 찢어지는 소리
+      auHiss(1400 + sz * 1400, 220, 0.22 + sz * 0.34, 0.10 + sz * 0.15, 'bandpass')
+      // 꼬리 - 흩어지는 파편
+      auHiss(700, 110, 0.34 + sz * 0.5, 0.05 + sz * 0.07, 'lowpass')
+      // 저음 - 배를 울리는 몫. 작은 폭발엔 얕게만
+      auTone('sine', 130 - sz * 35, 34, 0.3 + sz * 0.28, 0.10 + sz * 0.18, t0 + 0.01)
       break
     }
     case 'pick':
