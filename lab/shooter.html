@@ -304,6 +304,7 @@
     <div class="bar" style="justify-content:center">
       <button class="ghost small" id="gRates">확률 보기</button>
       <button id="gPull">뽑기</button>
+      <button class="ghost small" id="gShop">가챠권 사기</button>
       <button class="ghost small" id="gClose">닫기</button>
     </div>
   </div>
@@ -367,6 +368,7 @@ const WEAPONS = {
   mine:    { name: '기뢰',   desc: '멈춰 있다가 터집니다' },
   beam:    { name: '집속포', desc: '굵고 느리게, 크게 터집니다' },
   boomer:  { name: '부메랑', desc: '나갔다가 되돌아옵니다' },
+  chain:   { name: '연쇄뇌격', desc: '맞은 적에서 번개가 옆으로 튑니다' },
 }
 
 const TIERS = { common: '일반', rare: '희귀', legend: '전설' }
@@ -391,6 +393,7 @@ const ULT = {
   mine:   { name: '융단 폭격', desc: '옆으로 빠지며 화면 전체에 폭탄을 떨굽니다' },
   beam:   { name: '거포 사격', desc: '큰 포격이 세 번 떨어집니다' },
   boomer: { name: '호위 편대', desc: '아군 넷이 6초간 함께 쏩니다' },
+  chain:  { name: '뇌우', desc: '화면의 적을 번개가 차례로 물고 갑니다' },
 }
 const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는지는 처치 쪽에 있다
 
@@ -398,6 +401,7 @@ const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는
 const WEAPON_COLOR = {
   rapid: '#cfe3ff', spread: '#ffd9a8', laser: '#bff4ff', homing: '#ffa8d6', pierce: '#ffe08a',
   wave: '#8fd8ff', orb: '#c9a8ff', mine: '#ffd166', beam: '#e6f4ff', boomer: '#9fffcf',
+  chain: '#a8e8ff',
 }
 
 /* ================================================================
@@ -461,7 +465,8 @@ const PLANES = []
     rare:   (i) => ({ kind: 'score', v: 12000 + i * 4000 }),
     legend: (i) => ({ kind: 'paid', v: 1200 + i * 300 }),
   }
-  Object.keys(WEAPONS).forEach((w, i) => {
+  // 연쇄뇌격은 전설만 있다. 격자에 넣으면 일반형·희귀형 빈칸이 생긴다
+  Object.keys(WEAPONS).filter((w) => w !== 'chain').forEach((w, i) => {
     TIER_LIST.forEach((t, ti) => {
       PLANES.push({
         id: w + '-' + t,
@@ -473,6 +478,17 @@ const PLANES = []
         unlock: UNLOCK[t](i),
       })
     })
+  })
+
+  /*
+   * 격자 밖에 있는 한 대.
+   *
+   * 열 무기 × 세 등급 밖에 따로 둔다. 일반형·희귀형이 없어서 격자에 넣으면
+   * 빈칸이 생긴다. 점수로는 안 열리고 뽑기와 결제로만 나온다.
+   */
+  PLANES.push({
+    id: 'chain-legend', name: '뇌신', weapon: 'chain', tier: 'legend',
+    power: 1.5, rate: 0.9, unlock: { kind: 'paid', v: 4500 },
   })
 }
 
@@ -627,7 +643,7 @@ function load() {
  * 부품은 강화에만 쓴다. 재화 둘이 하는 일이 갈라져 있어야 어느 쪽을
  * 모아야 하는지가 분명해진다.
  * ================================================================ */
-const SHARD_NEED = { common: 20, rare: 40, legend: 60 }      // 기체 해금
+const SHARD_NEED = { common: 20, rare: 40, legend: 80 }      // 기체 해금
 /* 강화 1~5단계에 드는 조각. 뒤로 갈수록 가파르다 */
 const SHARD_UPG = [10, 20, 30, 50, 100]
 const GACHA = {
@@ -640,12 +656,25 @@ const GACHA = {
   pilot: {
     name: '파일럿 뽑기', cost: 1,
     rates: [['legend', 1], ['high', 7], ['mid', 22], ['normal', 70]],
-    amount: { legend: [12, 20], high: [3, 6], mid: [6, 11], normal: [10, 18] },
+    amount: { legend: [2, 4], high: [3, 6], mid: [6, 11], normal: [10, 18] },
     jackpot: 0.5,        // 조각이 아니라 파일럿이 통째로 나올 확률(%)
   },
 }
 /** 완성품이 이미 가진 것에 걸렸을 때 대신 주는 조각 */
 const JACK_SHARD = 10
+/*
+ * 가챠권 판매.
+ *
+ * 결제가 붙으면 뽑기가 '간접적으로 유상'이 되어 게임산업법의 확률형 아이템
+ * 대상이 된다. 연평균 매출 1억원 이하는 표시 의무가 면제지만, 우리는 어차피
+ * 확률을 적고 있으니 달라질 게 없다.
+ */
+const SHOP = [
+  { n: 10, won: 1000 },
+  { n: 20, won: 1500 },
+  { n: 50, won: 3000 },
+]
+
 /* 천장. 안 나오는 사람이 끝없이 안 나오는 일을 막는다 */
 const PITY = { plane: { at: 40, tier: 'legend' }, pilot: { at: 60, tier: 'high' } }
 
@@ -822,7 +851,7 @@ const GRADES = {
 }
 const GRADE_KEYS = ['normal', 'mid', 'high', 'legend']
 /** 그 등급을 열려면 필요한 조각 */
-const GRADE_NEED = { normal: 0, mid: 40, high: 50, legend: 60 }
+const GRADE_NEED = { normal: 0, mid: 40, high: 80, legend: 150 }
 
 const PILOT_MAX = 30
 const ST_MAX = 10
@@ -1273,13 +1302,33 @@ function paintGacha(res) {
     `</div>`
 }
 
+/*
+ * 하나 여는 데 평균 몇 번이 드는지.
+ *
+ * 확률만 적어 두면 "전설 3%" 가 서른 번에 한 대처럼 읽힌다. 실제로는
+ * 조각을 여든 개 모아야 하니 육백 번이다. 그 숫자를 같이 적는다.
+ */
+function pullsFor(kind, tier) {
+  const g = GACHA[kind]
+  const w = (g.rates.find(([t]) => t === tier) || [0, 0])[1] / 100
+  const [lo, hi] = g.amount[tier]
+  const per = w * ((lo + hi) / 2)
+  const need = kind === 'plane' ? SHARD_NEED[tier] : GRADE_NEED[tier]
+  if (!per || !need) return 0
+  return Math.round(need / per)
+}
+
 function paintRates() {
   const g = GACHA[gKind]
   const body = document.getElementById('gBody')
   const rows = g.rates.map(([t, w]) => {
     const nm = GRADES[t] ? GRADES[t].name : TIERS[t]
     const [lo, hi] = g.amount[t]
-    return `<div class="rate"><span>${nm}</span><span class="v">${w}% · 조각 ${lo}~${hi}</span></div>`
+    const need = pullsFor(gKind, t)
+    return `<div class="rate"><span>${nm}</span>` +
+      `<span class="v">${w}% · 조각 ${lo}~${hi}` +
+      (need ? ` · 하나 열기까지 평균 ${need.toLocaleString('ko-KR')}번` : '') +
+      `</span></div>`
   }).join('')
   const pity = PITY[gKind]
   body.innerHTML =
@@ -1299,7 +1348,26 @@ document.getElementById('gPull').onclick = () => {
   paintGacha(res)
   renderWallet()
 }
+function paintShop() {
+  const body = document.getElementById('gBody')
+  body.innerHTML =
+    `<div class="lab">가챠권 사기</div>` +
+    SHOP.map((it, i) =>
+      `<div class="gcard" data-shop="${i}">` +
+      `<div><div class="nm">가챠권 ${it.n}장</div>` +
+      `<div class="de">장당 ${Math.round(it.won / it.n)}원</div></div>` +
+      `<span class="rt">${it.won.toLocaleString('ko-KR')}원</span></div>`).join('') +
+    `<div class="empty">결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.</div>`
+  body.querySelectorAll('[data-shop]').forEach((el) => {
+    const it = SHOP[+el.dataset.shop]
+    el.onclick = () => alert(
+      `가챠권 ${it.n}장 · ${it.won.toLocaleString('ko-KR')}원\n\n` +
+      `결제는 아직 붙지 않았습니다.`)
+  })
+}
+
 document.getElementById('gRates').onclick = paintRates
+document.getElementById('gShop').onclick = paintShop
 document.getElementById('gClose').onclick = () => { elGacha.hidden = true; render() }
 
 /* ── 스테이지 ───────────────────────────────────────────────────── */
@@ -1644,7 +1712,7 @@ function newState() {
     adUsed: { revive: 0, charge: 0 },
     squad, lives: 3, score: 0, kills: 0,
     bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [],
-    grounds: [], slabs: [], beams: [],
+    grounds: [], slabs: [], beams: [], arcs: [],
     /* 이 판에서만 사는 개조. 저장하지 않는다. */
     mods: Object.fromEntries(MOD_KEYS.map((k) => [k, 0])),
     boss: null, waveIdx: 0, banner: null, bannerT: 0, cleared: false,
@@ -1751,7 +1819,7 @@ const LV = [null,
 
 function baseRate(w) {
   return { rapid: .10, spread: .30, laser: .05, homing: .38, pierce: .26,
-           wave: .22, orb: 1.2, mine: .70, beam: .85, boomer: .55 }[w]
+           wave: .22, orb: 1.2, mine: .70, beam: .85, boomer: .55, chain: .34 }[w]
 }
 
 function nearestEnemy(x, y) {
@@ -1850,6 +1918,9 @@ function shoot(u, i, dt) {
       break
     case 'beam':
       add({ vx: 0, vy: -300, kind: 'beam', r: 11 + tier * 3, pierce: 4 + tier * 2, dmg: dmg * 2.2 })
+      break
+    case 'chain':
+      add({ vx: 0, vy: -560, r: 4.5, kind: 'chain', dmg: dmg * 0.9, jumps: 3 })
       break
     case 'boomer': {
       const n = 1 + tier
@@ -2130,11 +2201,58 @@ function banner(t) { state.banner = t; state.bannerT = 1.6 }
  * 화력(P)만 떨어지면 판마다 똑같아지고, 개조만 떨어지면 화력이 안 올라
  * 후반이 버겁다. 섞되 화력을 조금 더 자주 준다.
  */
+/* 아주 가끔 가챠권이 떨어진다. 한 판에 셋 중 하나꼴 */
+const TICKET_DROP = 0.004
+
 function dropItem(x, y, richer) {
   const s = state
+  if (Math.random() < TICKET_DROP) {
+    s.items.push({ x, y, t: 0, r: 12, tk: true })
+    return
+  }
   const wantMod = Math.random() < (richer ? .55 : .35)
   const key = wantMod ? rollMod(s.mods) : null
   s.items.push({ x, y, t: 0, r: 11, mod: key })   // mod 가 null 이면 화력 아이템
+}
+
+/*
+ * 맞은 적에서 번개가 옆으로 튄다.
+ *
+ * 가까운 적을 차례로 물되 한 번 문 적은 다시 물지 않는다. 튈 때마다 힘이
+ * 줄어서 무한히 퍼지지 않는다 - 안 줄이면 적이 몰린 판에서 한 방에 화면이
+ * 비어 버린다.
+ */
+const CHAIN = { range: 135, falloff: 0.62 }
+
+function chainFrom(from, b) {
+  const s = state
+  let cur = from
+  let dmg = b.dmg * CHAIN.falloff
+  const bit = [from]
+  const jumps = b.jumps || 3
+  for (let j = 0; j < jumps; j++) {
+    let best = null, bd = CHAIN.range * CHAIN.range
+    for (const e of s.enemies) {
+      if (e.dead || bit.includes(e)) continue
+      const d = (e.x - cur.x) ** 2 + (e.y - cur.y) ** 2
+      if (d < bd) { bd = d; best = e }
+    }
+    if (!best) break
+    best.hp -= dmg
+    best.flash = .12
+    s.arcs.push({ x1: cur.x, y1: cur.y, x2: best.x, y2: best.y, age: 0, life: .22,
+                  seed: Math.random() * 100 })
+    if (best.hp <= 0 && !best.dead) {
+      best.dead = true
+      s.score += best.score
+      s.kills++
+      boom(best.x, best.y, 12, '#bff0ff')
+      s.ult = Math.min(ULT_MAX, s.ult + 8)
+    }
+    bit.push(best)
+    cur = best
+    dmg *= CHAIN.falloff
+  }
 }
 
 function boom(x, y, n, color) {
@@ -2267,6 +2385,15 @@ function fireUlt() {
     case 'wave':
       s.shards.push({ x: pl.x, y: pl.y, r: 10, kind: 'shock' })
       break
+    case 'chain': {
+      /* 나에게서 시작해 화면 전체를 물고 간다. 거리 제한을 풀어 다 닿게 */
+      const save = CHAIN.range
+      CHAIN.range = 9999
+      chainFrom({ x: pl.x, y: pl.y - 20, dead: true },
+                { dmg: 26, jumps: 14 })
+      CHAIN.range = save
+      break
+    }
     case 'homing':
       for (const e of s.enemies) {
         const a = Math.atan2(e.y - pl.y, e.x - pl.x)
@@ -2724,6 +2851,9 @@ function update(dt) {
   for (const p of s.parts) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .94; p.vy *= .94 }
   s.parts = s.parts.filter((p) => p.age < p.life)
 
+  for (const a of s.arcs) a.age += dt
+  s.arcs = s.arcs.filter((a) => a.age < a.life)
+
   collide()
   if (s.bannerT > 0) s.bannerT -= dt
 }
@@ -2812,6 +2942,7 @@ function collide() {
       if (near(b, e, e.r + b.r)) {
         e.hp -= b.dmg; e.flash = .1
         sfx('hit')
+        if (b.kind === 'chain') chainFrom(e, b)
         if (b.split > 0) splitBullet(b)
         if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || []).push(e) }
         else b.dead = true
@@ -2896,7 +3027,12 @@ function collide() {
     sfx('pick')
     // 무엇을 줍든 조금 아문다. 회복 수단이 아예 없으면 후반이 버티기만 된다
     pl.hp = Math.min(pl.maxHp, pl.hp + 12)
-    if (it.mod) {
+    if (it.tk) {
+      prog.ticket++
+      save()
+      banner('가챠권 +1')
+      sfx('ready')
+    } else if (it.mod) {
       s.mods[it.mod] = Math.min(MOD_MAX, s.mods[it.mod] + 1)
       banner(MODS[it.mod].name + ' ' + s.mods[it.mod])
     } else {
@@ -3021,6 +3157,9 @@ for (const k in SHIP_B64) {
   im.src = 'data:image/webp;base64,' + SHIP_B64[k]
   SHIP_IMG[k] = im
 }
+/* 뇌신은 아직 제 그림이 없다. 결이 맞는 천둥대포 것을 빌려 쓴다 */
+SHIP_IMG['chain-legend'] = SHIP_IMG['beam-legend']
+
 function shipArt(id) {
   const im = SHIP_IMG[id]
   return im && im.complete && im.naturalWidth ? im : null
@@ -3585,19 +3724,45 @@ function draw() {
     const k = 1 + Math.sin(it.t * 8) * .12
     const m = it.mod ? MODS[it.mod] : null
     g.save(); g.translate(it.x, it.y); g.scale(k, k)
-    g.fillStyle = m ? m.color : '#ffd166'
+    g.fillStyle = it.tk ? '#ffe27a' : m ? m.color : '#ffd166'
     g.beginPath(); g.arc(0, 0, it.r, 0, Math.PI * 2); g.fill()
-    // 개조는 테두리를 하나 둘러서 화력 아이템과 멀리서도 구분되게 한다
-    if (m) { g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.6
-             g.beginPath(); g.arc(0, 0, it.r + 3, 0, Math.PI * 2); g.stroke() }
+    // 개조와 가챠권은 테두리를 둘러 화력 아이템과 멀리서도 구분되게 한다
+    if (m || it.tk) {
+      g.strokeStyle = it.tk ? '#fff6c9' : 'rgba(255,255,255,.75)'
+      g.lineWidth = it.tk ? 2.4 : 1.6
+      g.beginPath(); g.arc(0, 0, it.r + 3, 0, Math.PI * 2); g.stroke()
+    }
     g.fillStyle = '#1a1206'
-    g.font = 'bold ' + (m ? 12 : 13) + 'px system-ui'
+    g.font = 'bold ' + (m || it.tk ? 12 : 13) + 'px system-ui'
     g.textAlign = 'center'; g.textBaseline = 'middle'
-    g.fillText(m ? m.ko : 'P', 0, .5)
+    g.fillText(it.tk ? '권' : m ? m.ko : 'P', 0, .5)
     g.restore()
   }
   for (const e of s.enemies) drawEnemy(e)
   if (s.boss) drawBoss(s.boss)
+
+  /* 번개. 곧은 선은 번개로 안 보인다 - 중간을 몇 번 꺾는다 */
+  for (const a of s.arcs) {
+    const k = 1 - a.age / a.life
+    const dx = a.x2 - a.x1, dy = a.y2 - a.y1
+    const seg = 5
+    g.lineCap = 'round'
+    for (let pass = 0; pass < 2; pass++) {
+      g.strokeStyle = pass ? 'rgba(255,255,255,' + k + ')'
+                           : 'rgba(150,225,255,' + (k * .8) + ')'
+      g.lineWidth = pass ? 1.6 : 5
+      g.beginPath()
+      g.moveTo(a.x1, a.y1)
+      for (let i = 1; i < seg; i++) {
+        const t = i / seg
+        const off = Math.sin(a.seed + i * 2.3) * 11 * (1 - Math.abs(t - .5) * 2)
+        g.lineTo(a.x1 + dx * t - dy / Math.hypot(dx, dy) * off,
+                 a.y1 + dy * t + dx / Math.hypot(dx, dy) * off)
+      }
+      g.lineTo(a.x2, a.y2)
+      g.stroke()
+    }
+  }
   for (const b of s.bullets) drawBullet(b)
   for (const b of s.ebullets) {
     if (b.kind === 'missile') {
