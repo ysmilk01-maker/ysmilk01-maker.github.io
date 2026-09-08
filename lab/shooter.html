@@ -536,7 +536,8 @@ function load() {
  * 뽑는 사람이 손해를 본다.
  * ================================================================ */
 const SHARD_NEED = { common: 20, rare: 40, legend: 80 }      // 기체 해금
-const SHARD_UPG = { common: 6, rare: 10, legend: 15 }        // 강화 한 단계
+/* 강화 1~5단계에 드는 조각. 뒤로 갈수록 가파르다 */
+const SHARD_UPG = [10, 20, 30, 50, 100]
 const GACHA = {
   plane: {
     name: '기체 뽑기', cost: 250,
@@ -559,7 +560,7 @@ const PITY = { plane: { at: 40, tier: 'legend' }, pilot: { at: 60, tier: 'high' 
 function shardOf(id) { return prog.shardP[id] || 0 }
 function shardG(k) { return prog.shardG[k] || 0 }
 function shardNeed(p) { return SHARD_NEED[p.tier] }
-function shardUpg(p) { return SHARD_UPG[p.tier] }
+function shardUpg(p, lv) { return SHARD_UPG[lv] || 0 }
 
 function rollTier(kind) {
   const g = GACHA[kind]
@@ -1039,8 +1040,8 @@ function renderPlanes() {
           (lv ? ` · 화력 +${Math.round((upgPower(p.id) - 1) * 100)}%` : '') + `</span>` +
           (lv >= UPG_MAX
             ? `<button disabled>최대</button>`
-            : `<button ${prog.parts < cost || shardOf(p.id) < shardUpg(p) ? 'disabled' : ''}>` +
-              `부품 ${cost} · 조각 ${shardUpg(p)}</button>`) +
+            : `<button ${prog.parts < cost || shardOf(p.id) < shardUpg(p, lv) ? 'disabled' : ''}>` +
+              `부품 ${cost} · 조각 ${shardUpg(p, lv)}</button>`) +
           `</div>`
         : '')
 
@@ -1048,9 +1049,9 @@ function renderPlanes() {
     if (btn && !btn.disabled) {
       btn.onclick = (ev) => {
         ev.stopPropagation()
-        if (prog.parts < cost || shardOf(p.id) < shardUpg(p)) return
+        if (prog.parts < cost || shardOf(p.id) < shardUpg(p, lv)) return
         prog.parts -= cost
-        prog.shardP[p.id] = shardOf(p.id) - shardUpg(p)
+        prog.shardP[p.id] = shardOf(p.id) - shardUpg(p, lv)
         prog.upg[p.id] = lv + 1
         save(); renderPlanes(); renderWallet()
       }
