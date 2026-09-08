@@ -547,6 +547,10 @@ const STAR_CLEAR = 3
 const STAR_TICKET = 3
 
 const EN_MAX = 5
+const EN_MAX_HI = 8              // 파일럿 Lv.10 부터
+const EN_LV = 10
+/** 저절로 차는 상한. 보상으로 받은 것은 이 위로도 쌓인다 */
+function enMax() { return prog.pilot.lv >= EN_LV ? EN_MAX_HI : EN_MAX }
 const EN_REGEN = 30 * 60 * 1000        // 30분에 하나
 const AD_ENERGY_DAY = 10               // 하루에 광고로 채울 수 있는 횟수
 
@@ -735,24 +739,24 @@ if (!prog.energy.t) { prog.energy.t = Date.now(); prog.energy.n = EN_MAX }
 function energy() {
   const e = prog.energy
   // 보상으로 받은 것은 상한 위로 쌓인다. 저절로 차는 것만 다섯에서 멈춘다
-  if (e.n >= EN_MAX) { e.t = Date.now(); return e.n }
+  if (e.n >= enMax()) { e.t = Date.now(); return e.n }
   const got = Math.floor((Date.now() - e.t) / EN_REGEN)
   if (got > 0) {
-    e.n = Math.min(EN_MAX, e.n + got)
-    e.t = e.n >= EN_MAX ? Date.now() : e.t + got * EN_REGEN
+    e.n = Math.min(enMax(), e.n + got)
+    e.t = e.n >= enMax() ? Date.now() : e.t + got * EN_REGEN
     save()
   }
   return e.n
 }
 /** 다음 한 장까지 남은 밀리초. 꽉 찼으면 0 */
 function energyWait() {
-  if (energy() >= EN_MAX) return 0
+  if (energy() >= enMax()) return 0
   return Math.max(0, EN_REGEN - (Date.now() - prog.energy.t))
 }
 function energySpend() {
   const e = prog.energy
   if (energy() <= 0) return false
-  if (e.n >= EN_MAX) e.t = Date.now()    // 꽉 찬 상태에서 처음 쓰면 그때부터 잰다
+  if (e.n >= enMax()) e.t = Date.now()   // 꽉 찬 상태에서 처음 쓰면 그때부터 잰다
   e.n--
   save()
   return true
@@ -1076,15 +1080,16 @@ function paintEnergy() {
   const el = document.getElementById('enRow')
   if (!el) return
   const n = energy()
-  const hearts = n > EN_MAX
+  const M = enMax()
+  const hearts = n > M
     ? `<span class="on">♥</span> ${n}`
-    : Array.from({ length: EN_MAX },
+    : Array.from({ length: M },
         (_, i) => `<span class="${i < n ? 'on' : 'off'}">♥</span>`).join('')
   const wait = energyWait()
   el.innerHTML =
     `<span class="k">출격권</span>` +
     `<span class="hearts" style="margin-left:8px">${hearts}</span>` +
-    `<span class="v">${n < EN_MAX ? mmss(wait) : '가득'}</span>`
+    `<span class="v">${n < M ? mmss(wait) : '가득'}</span>`
   const btn = document.getElementById('launch')
   if (btn) btn.textContent = n > 0 ? '출격' : '광고 보고 출격'
 }
