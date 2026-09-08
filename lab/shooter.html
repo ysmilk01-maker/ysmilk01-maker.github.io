@@ -152,7 +152,16 @@
   <div>
     <h2 id="overTitle">격추됨</h2>
     <p class="sub" id="overBody"></p>
-    <button id="again">격납고로</button>
+    <button id="revive" hidden>광고 보고 이어하기</button>
+    <button id="again" class="ghost">격납고로</button>
+  </div>
+</div>
+
+<div class="panel" id="adv" hidden>
+  <div>
+    <h2 id="advTitle">광고</h2>
+    <p class="sub" id="advBody">여기에 광고가 나옵니다.<br>지금은 자리만 잡아 둔 것입니다.</p>
+    <button id="advSkip" disabled>3</button>
   </div>
 </div>
 
@@ -509,6 +518,7 @@ function newState() {
     t: 0, running: false,
     player: { x: W / 2, y: H - 120, lv: 1, inv: 0, hp: PLAYER_HP, maxHp: PLAYER_HP },
     ult: 0, ultT: 0, ultKind: null, escorts: [], shards: [], sweeps: [],
+    adUsed: { revive: 0, charge: 0 },
     squad, lives: 3, score: 0,
     bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [],
     grounds: [], slabs: [], beams: [],
@@ -556,7 +566,8 @@ canvas.addEventListener('pointerdown', (e) => {
   const p = toLocal(e)
   // 버튼을 눌렀으면 기체를 끌지 않는다
   if (state && state.running && (p.x - ULT_BTN.x) ** 2 + (p.y - ULT_BTN.y) ** 2 < (ULT_BTN.r + 8) ** 2) {
-    fireUlt()
+    if (state.ult >= ULT_MAX) fireUlt()
+    else chargeByAd()
     e.preventDefault()
     return
   }
@@ -903,6 +914,78 @@ function boom(x, y, n, color) {
  * 없었다. 최대 체력을 같이 올리고 오른 만큼 채워 주면 "한 단계 올리고 한 번
  * 더 부딪쳐 본다"가 성립한다.
  */
+/* ================================================================
+ * 보상형 광고
+ *
+ * 강제로 붙이지 않는다. 하던 판을 이어가고 싶은 사람만 누른다 — 이 게임의
+ * 목적이 어렵게 해서 결제를 부르는 게 아니라 오래 하게 만드는 것이라서다.
+ *
+ * 지금은 실제 광고가 없어 3초짜리 대기 화면으로 흉내만 낸다. 토스에 올릴
+ * 때는 showAd 안쪽만 SDK 호출로 갈아 끼우면 된다. 실패하면 보상을 주지
+ * 않고 조용히 돌아온다 — 광고를 못 봤는데 보상이 나가면 그게 사고다.
+ *
+ * 횟수 제한은 판마다 초기화된다. 예전에 스도쿠에서 부활 횟수를 세는 걸
+ * 빠뜨려 무한 부활이 됐던 적이 있어서, 세는 자리를 한 곳에 모았다.
+ * ================================================================ */
+const AD_LIMIT = { revive: 1, charge: 2 }   // 한 판에 몇 번까지
+
+const scAd = document.getElementById('adv')
+
+function showAd(title, onDone) {
+  const btn = document.getElementById('advSkip')
+  document.getElementById('advTitle').textContent = title
+  scAd.hidden = false
+  let left = 3
+  btn.disabled = true
+  btn.textContent = left
+  const iv = setInterval(() => {
+    left--
+    if (left > 0) { btn.textContent = left; return }
+    clearInterval(iv)
+    btn.disabled = false
+    btn.textContent = '보상 받기'
+  }, 1000)
+  btn.onclick = () => {
+    if (btn.disabled) return
+    clearInterval(iv)
+    scAd.hidden = true
+    onDone()
+  }
+}
+
+/** 격추된 자리에서 이어한다 */
+function reviveByAd() {
+  if (!state || state.adUsed.revive >= AD_LIMIT.revive) return
+  showAd('이어하기', () => {
+    state.adUsed.revive++
+    const pl = state.player
+    state.lives = 1
+    pl.hp = pl.maxHp
+    pl.inv = 3
+    pl.x = W / 2
+    pl.y = H - 120
+    state.ebullets.length = 0        // 부활하자마자 맞으면 억울하다
+    state.running = true
+    scOver.hidden = true
+    last = performance.now()
+    banner('이어서 갑니다')
+  })
+}
+
+/** 필살기 게이지를 채운다 */
+function chargeByAd() {
+  if (!state || !state.running) return
+  if (state.adUsed.charge >= AD_LIMIT.charge) { banner('충전은 판당 ' + AD_LIMIT.charge + '번까지'); return }
+  state.running = false                // 광고 보는 동안 판이 흐르면 안 된다
+  showAd('필살기 충전', () => {
+    state.adUsed.charge++
+    state.ult = ULT_MAX
+    state.running = true
+    last = performance.now()
+    banner('필살기 충전됨')
+  })
+}
+
 /** 지금 메인에 태운 기체의 필살기 종류 */
 function ultKind() {
   const u = state.squad[MAIN_SLOT]
@@ -2380,11 +2463,14 @@ function end(win) {
     '이번 점수 <b>' + state.score.toLocaleString('ko-KR') + '</b><br>' +
     '부품 <b>+' + earned.toLocaleString('ko-KR') + '</b> (보유 ' + prog.parts.toLocaleString('ko-KR') + ')<br>' +
     '누적 <b>' + prog.total.toLocaleString('ko-KR') + '</b>점'
+  const rv = document.getElementById('revive')
+  rv.hidden = win || state.adUsed.revive >= AD_LIMIT.revive
   scOver.hidden = false
 }
 
 document.getElementById('launch').onclick = start
 document.getElementById('again').onclick = () => { scOver.hidden = true; scHangar.hidden = false; renderHangar() }
+document.getElementById('revive').onclick = reviveByAd
 
 renderHangar()
 </script>
