@@ -576,37 +576,45 @@ function pull(kind) {
   prog.pull[kind]++
   const tier = rollTier(kind)
   const [lo, hi] = g.amount[tier]
-  const n = lo + Math.floor(Math.random() * (hi - lo + 1))
-  /* 아주 가끔 조각을 건너뛰고 통째로 나온다. 이미 가진 것이면 조각으로 돌아간다 */
+  let n = lo + Math.floor(Math.random() * (hi - lo + 1))
   const jack = Math.random() * 100 < g.jackpot
 
   if (kind === 'pilot') {
-    if (jack && GRADE_NEED[tier] > 0 && !hasGrade(tier)) {
+    const fresh = GRADE_NEED[tier] > 0 && !hasGrade(tier)
+    if (jack && fresh) {
       prog.pilotOwned[tier] = true
       save()
       return { kind, tier, n: 1, name: GRADES[tier].name + ' 파일럿', got: true, jack: true }
     }
+    /* 이미 가진 등급에 걸리면 조각을 세 배로 준다. 아니면 그냥 꽝이 된다 */
+    let big = false
+    if (jack) { n *= 3; big = true }
     prog.shardG[tier] = shardG(tier) + n
-    const got = GRADE_NEED[tier] > 0 && !hasGrade(tier) && prog.shardG[tier] >= GRADE_NEED[tier]
+    const got = fresh && prog.shardG[tier] >= GRADE_NEED[tier]
     if (got) { prog.pilotOwned[tier] = true; prog.shardG[tier] -= GRADE_NEED[tier] }
     save()
-    return { kind, tier, n, name: GRADES[tier].name + ' 파일럿 조각', got }
+    return { kind, tier, n, big, name: GRADES[tier].name + ' 파일럿 조각', got }
   }
 
   // 그 등급 중에서 아직 안 연 기체를 고른다. 다 열었으면 아무거나 - 강화에 쓴다
   const pool = PLANES.filter((p) => p.tier === tier)
   const locked = pool.filter((p) => !unlocked(p))
-  const pick = (locked.length ? locked : pool)[Math.floor(Math.random() * (locked.length || pool.length))]
-  if (jack && !unlocked(pick)) {
+  const from = locked.length ? locked : pool
+  const pick = from[Math.floor(Math.random() * from.length)]
+  const fresh = !unlocked(pick)
+
+  if (jack && fresh) {
     prog.owned.push(pick.id)
     save()
     return { kind, tier, n: 1, name: pick.name, plane: pick, got: true, jack: true }
   }
+  let big = false
+  if (jack) { n *= 3; big = true }
   prog.shardP[pick.id] = shardOf(pick.id) + n
-  const got = !unlocked(pick) && prog.shardP[pick.id] >= shardNeed(pick)
+  const got = fresh && prog.shardP[pick.id] >= shardNeed(pick)
   if (got) { prog.owned.push(pick.id); prog.shardP[pick.id] -= shardNeed(pick) }
   save()
-  return { kind, tier, n, name: pick.name + ' 조각', plane: pick, got }
+  return { kind, tier, n, big, name: pick.name + ' 조각', plane: pick, got }
 }
 
 const UPG_MAX = 5
@@ -1098,7 +1106,7 @@ function paintGacha(res) {
     return
   }
 
-  const label = res.jack ? '완성품!' : `조각 ${res.n}개`
+  const label = res.jack ? '완성품!' : res.big ? `조각 ${res.n}개 (세 배!)` : `조각 ${res.n}개`
   body.innerHTML = head +
     `<div class="got">` +
     `<span class="tag ${GRADES[res.tier] ? GRADES[res.tier].tag : 't-' + res.tier}" style="position:static">` +
@@ -1121,6 +1129,7 @@ function paintRates() {
   body.innerHTML =
     `<div class="lab">등급별 확률</div>${rows}` +
     `<div class="rate"><span>완성품 (조각 대신 통째로)</span><span class="v">${g.jackpot}%</span></div>` +
+    `<div class="rate"><span>이미 가진 것에 걸리면 조각 세 배</span><span class="v">-</span></div>` +
     `<div class="empty">${pity.at}번마다 ` +
     `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.<br>` +
     `값은 부품으로만 치릅니다. 부품은 판을 돌아야 생기고 돈으로 살 수 없습니다.</div>`
