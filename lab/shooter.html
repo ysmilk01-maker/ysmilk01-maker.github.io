@@ -123,31 +123,123 @@
     background: rgba(5,8,16,.88); text-align: center; padding: 24px;
   }
   .panel[hidden] { display: none !important; }
+
+  /* 하단 탭 — 화면을 넷으로 나눴으니 오가는 길이 늘 보여야 한다 */
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    background: #0b111c; border-top: 1px solid var(--line);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  .tabs button {
+    background: transparent; color: var(--dim); font-size: 11.5px;
+    font-weight: 700; padding: 10px 2px; border-radius: 9px;
+  }
+  .tabs button.on { color: var(--accent); background: #12203a; }
+  .tabs[hidden] { display: none !important; }
+  .screen { padding-bottom: 8px; }
+  .body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px 8px; }
+
+  /* 편대 요약 */
+  .sum { display: grid; gap: 7px; margin-top: 14px; }
+  .row {
+    display: flex; align-items: center; gap: 9px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; font-size: 12.5px;
+  }
+  .row .k { color: var(--muted); }
+  .row .v { margin-left: auto; font-weight: 800; }
+  .row .v.gold { color: var(--gold); }
+  .locked-slot { opacity: .45; border-style: dashed; }
+
+  /* 파일럿 */
+  .xpbar { height: 8px; border-radius: 5px; background: #16203200; background-color: #162032; overflow: hidden; }
+  .xpbar i { display: block; height: 100%; background: var(--accent); }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 11px 12px; }
+  .stat .hd { display: flex; align-items: baseline; gap: 8px; }
+  .stat .nm { font-size: 13.5px; font-weight: 800; }
+  .stat .ef { font-size: 11px; color: var(--gold); font-weight: 700; }
+  .stat .de { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+  .stat .pips { display: flex; gap: 3px; margin-top: 8px; align-items: center; }
+  .stat .pip { width: 100%; height: 7px; border-radius: 3px; background: #1a2536; }
+  .stat .pip.on { background: var(--accent); }
+  .stat .pips button {
+    flex: none; margin-left: 8px; padding: 4px 11px; font-size: 12px; border-radius: 7px;
+    background: #24406b; color: #cfe6ff; font-weight: 800;
+  }
+  .stat .pips button[disabled] { background: #1a2536; color: #5b6a80; }
+  .marks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; margin-top: 8px; }
+  .mark {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 5px; cursor: pointer; display: grid; place-items: center;
+  }
+  .mark.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  input.nm {
+    width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    color: var(--ink); font-family: inherit; font-size: 14px; padding: 11px 12px;
+  }
+  input.nm:focus { outline: none; border-color: var(--accent); }
+  .lab { font-size: 11px; color: var(--dim); margin: 14px 0 6px; letter-spacing: .03em; }
+
+  /* 기록 */
+  .rank { display: flex; align-items: center; gap: 10px; padding: 9px 11px;
+          border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  .rank .no { width: 22px; color: var(--dim); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .rank .sc { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .rank .dt { margin-left: auto; color: var(--dim); font-size: 10.5px; }
+  .rank.top .sc { color: var(--gold); }
+  .empty { color: var(--dim); font-size: 12.5px; padding: 22px 2px; line-height: 1.8; }
+
+  .filters { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .filters button { padding: 7px 12px; font-size: 12px; border-radius: 8px;
+                    background: #141c2c; color: var(--muted); font-weight: 700; }
+  .filters button.on { background: var(--accent); color: #04121a; }
 </style>
 
 <div id="wrap"><canvas id="c"></canvas></div>
 
-<!-- 격납고 -->
-<div class="screen" id="hangar">
-  <h1>격납고</h1>
-  <p class="sub">
-    세 대가 함께 출격합니다. <b>가운데가 화력 100%</b>, 좌우 윙맨은 30%입니다.<br>
-    슬롯을 고르고 아래에서 기체를 누르세요.
-  </p>
-
-  <div class="slots" id="slots"></div>
-
-  <div class="list"><div class="grid" id="planes"></div></div>
-
+<!-- 편대 -->
+<div class="screen" id="scSquad">
+  <h1>편대</h1>
+  <p class="sub" id="squadSub"></p>
+  <div class="body">
+    <div class="slots" id="slots"></div>
+    <div class="sum" id="squadSum"></div>
+  </div>
   <div class="bar">
     <span class="hint" id="wallet"></span>
-    <button class="ghost small" id="btnMusic">음악</button>
-    <button class="ghost small" id="btnSfx">효과음</button>
     <span class="grow"></span>
-    <button class="ghost small" id="devUnlock">개발용 전체 해금</button>
     <button id="launch">출격</button>
   </div>
 </div>
+
+<!-- 기체 -->
+<div class="screen" id="scPlanes" hidden>
+  <h1>기체</h1>
+  <p class="sub" id="planesSub"></p>
+  <div class="filters" id="planeFilters"></div>
+  <div class="body"><div class="grid" id="planes"></div></div>
+</div>
+
+<!-- 랭킹 -->
+<div class="screen" id="scRank" hidden>
+  <h1>랭킹</h1>
+  <p class="sub">아직 내 기록만 나옵니다. 다른 사람 순위는 게임 등록 뒤에 붙습니다.</p>
+  <div class="body" id="rankBody"></div>
+</div>
+
+<!-- 파일럿 -->
+<div class="screen" id="scPilot" hidden>
+  <h1>파일럿</h1>
+  <p class="sub" id="pilotSub"></p>
+  <div class="body" id="pilotBody"></div>
+</div>
+
+<nav class="tabs" id="tabs">
+  <button data-go="squad" class="on">편대</button>
+  <button data-go="planes">기체</button>
+  <button data-go="rank">랭킹</button>
+  <button data-go="pilot">파일럿</button>
+</nav>
 
 <!-- 결과 -->
 <div class="panel" id="over" hidden>
@@ -311,12 +403,27 @@ const PLANES = []
 /* ================================================================
  * 저장 — 해금과 누적 점수
  * ================================================================ */
-const SAVE_KEY = 'shooter-proto-v2'
+const SAVE_KEY = 'shooter-proto-v3'
+const OLD_KEY = 'shooter-proto-v2'
 function load() {
-  const base = { total: 0, owned: [], squad: null, parts: 0, upg: {} }
+  const base = {
+    total: 0, owned: [], squad: null, parts: 0, upg: {},
+    pilot: { name: '', mark: 0, xp: 0, lv: 1, st: { pow: 0, rate: 0, rng: 0, hp: 0 } },
+    stats: { runs: 0, kills: 0, best: 0, clears: 0 },
+    scores: [],
+  }
   try {
-    const raw = localStorage.getItem(SAVE_KEY)
-    if (raw) return { ...base, ...JSON.parse(raw) }
+    // 구조가 바뀌었다. 새 칸이 없으면 예전 저장을 그대로 옮겨 온다
+    const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem(OLD_KEY)
+    if (raw) {
+      const got = JSON.parse(raw)
+      return {
+        ...base, ...got,
+        pilot: { ...base.pilot, ...(got.pilot || {}), st: { ...base.pilot.st, ...((got.pilot || {}).st || {}) } },
+        stats: { ...base.stats, ...(got.stats || {}) },
+        scores: got.scores || [],
+      }
+    }
   } catch { /* 저장이 막힌 환경이어도 게임은 돌아야 한다 */ }
   return base
 }
@@ -360,8 +467,72 @@ function unlockLabel(p) {
   return `${p.unlock.v.toLocaleString('ko-KR')}원`
 }
 
-/* 기본 편대 */
-if (!prog.squad) prog.squad = ['rapid-common', 'spread-common', 'laser-common']
+/* ================================================================
+ * 파일럿
+ *
+ * 기체 강화가 "무엇을 타는가"라면 파일럿은 "누가 타는가"다. 기체를 바꿔도
+ * 따라오므로, 새 기체를 열었다고 처음부터 다시 키우는 느낌이 안 든다.
+ *
+ * 몫을 일부러 작게 잡았다. 기체 강화가 화력 +60%, 판 안의 편대 강화가
+ * +65% 인데 파일럿까지 큰 몫을 가지면 셋 다 밋밋해진다. 파일럿은 최대
+ * +25% 다 - 있으면 확실히 다르지만 다른 둘을 밀어내지 않는다.
+ * ================================================================ */
+const PILOT_MAX = 30
+const ST_MAX = 10
+const STATS = {
+  pow:  { name: '화력', per: 2.5, unit: '%', desc: '탄 한 발의 위력이 오릅니다' },
+  rate: { name: '연사', per: 1.5, unit: '%', desc: '사격 간격이 줄어듭니다' },
+  rng:  { name: '탄폭', per: 2.0, unit: '%', desc: '탄이 굵어져 잘 맞습니다' },
+  hp:   { name: '내구', per: 6,   unit: '',  desc: '최대 체력이 늘어납니다' },
+}
+const ST_KEYS = Object.keys(STATS)
+
+/* 한 판이 대략 15,000~20,000 점이니 초반 레벨은 반 판에 하나씩 오른다.
+   만렙 30 까지는 쉰 판 남짓 - 오래 붙잡을 목표로 이 정도가 맞다 */
+function xpNeed(lv) { return 700 + 180 * (lv - 1) }
+function xpFromScore(score) { return Math.round(score / 10) }
+
+function pilotSpent() { return ST_KEYS.reduce((a, k) => a + (prog.pilot.st[k] || 0), 0) }
+/** 레벨 1 에서 시작해 오를 때마다 하나씩. 만렙이면 29 점 */
+function pilotPts() { return (prog.pilot.lv - 1) - pilotSpent() }
+function pilotRank() {
+  const lv = prog.pilot.lv
+  return lv >= 30 ? '전설' : lv >= 20 ? '베테랑' : lv >= 10 ? '정예' : '신참'
+}
+/*
+ * 전설 파일럿 - 후방 자리를 여는 열쇠.
+ *
+ * 사는 길과 키우는 길을 둘 다 둔다. 유료로만 열면 후방 자리는 대체 수단이
+ * 없어서 "돈 없으면 못 한다"가 처음으로 진짜가 된다. 만렙까지 쉰 판쯤
+ * 걸리니, 3,000원은 그 쉰 판을 아끼는 값이다.
+ */
+const LEGEND_PILOT = { id: 'pilot-legend', price: 3000 }
+function boughtLegend() { return prog.owned.includes(LEGEND_PILOT.id) }
+function isLegend() { return prog.pilot.lv >= PILOT_MAX || boughtLegend() }
+
+function pilotPow()  { return 1 + prog.pilot.st.pow * 0.025 }
+function pilotRate() { return 1 - prog.pilot.st.rate * 0.015 }
+function pilotRng()  { return 1 + prog.pilot.st.rng * 0.02 }
+function pilotHp()   { return prog.pilot.st.hp * 6 }
+
+/** 판이 끝나면 부른다. 오른 레벨 수를 돌려준다 */
+function addXp(score) {
+  const pt = prog.pilot
+  if (pt.lv >= PILOT_MAX) return 0
+  pt.xp += xpFromScore(score)
+  let up = 0
+  while (pt.lv < PILOT_MAX && pt.xp >= xpNeed(pt.lv)) {
+    pt.xp -= xpNeed(pt.lv); pt.lv++; up++
+  }
+  if (pt.lv >= PILOT_MAX) pt.xp = 0
+  return up
+}
+
+function pilotName() { return prog.pilot.name || '무명' }
+
+/* 기본 편대. 넷째 자리는 전설이 되기 전까지 비어 있다 */
+if (!prog.squad) prog.squad = ['rapid-common', 'spread-common', 'laser-common', null]
+while (prog.squad.length < 4) prog.squad.push(null)
 
 /* ================================================================
  * 화면 크기
@@ -394,6 +565,14 @@ const SLOT_META = [
   { role: '좌 윙맨', mul: 0.3 },
   { role: '메인', mul: 1.0 },
   { role: '우 윙맨', mul: 0.3 },
+  /*
+   * 후방은 전설 파일럿만 쓴다.
+   *
+   * 뒤에 붙지만 총구는 앞을 본다. 아래로 쏘게도 해 봤는데 잡을 게 없다 -
+   * 지상 위협은 놓쳐도 그냥 화면 밖으로 지나가고, 돌진기는 아래로 빠지면
+   * 위협이 끝난다. 뒤를 지키는 그림보다 화력 한 자리가 실제로 쓸모 있다.
+   */
+  { role: '후방', mul: 0.2, legend: true },
 ]
 let activeSlot = 1
 const NO_MODS = { pierce: 0, split: 0, extra: 0, seek: 0, rate: 0, big: 0, bounce: 0, speed: 0 }
@@ -403,25 +582,126 @@ const elWallet = document.getElementById('wallet')
 
 function planeById(id) { return PLANES.find((p) => p.id === id) }
 
-function renderHangar() {
+/* ================================================================
+ * 화면 넷
+ *
+ * 예전에는 한 화면에 편대·기체·강화·설정이 다 있었다. 기체가 서른이 되고
+ * 파일럿까지 붙으니 스크롤이 끝나지 않아서 넷으로 나눴다.
+ *
+ * 자리를 누르면 기체 화면으로 넘어가고, 기체를 고르면 편대로 돌아온다.
+ * 나누기 전과 같은 두 번의 손짓이다 - 화면만 넓어졌다.
+ * ================================================================ */
+const SCREENS = { squad: 'scSquad', planes: 'scPlanes', rank: 'scRank', pilot: 'scPilot' }
+const elTabs = document.getElementById('tabs')
+let curScreen = 'squad'
+let planeFilter = 'all'
+
+function go(name) {
+  curScreen = name
+  for (const [k, id] of Object.entries(SCREENS)) document.getElementById(id).hidden = k !== name
+  elTabs.hidden = false
+  elTabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.go === name))
+  render()
+}
+function hideMenus() {
+  for (const id of Object.values(SCREENS)) document.getElementById(id).hidden = true
+  elTabs.hidden = true
+}
+function render() {
+  renderWallet()
+  if (curScreen === 'squad') renderSquad()
+  else if (curScreen === 'planes') renderPlanes()
+  else if (curScreen === 'rank') renderRank()
+  else renderPilot()
+}
+
+function renderWallet() {
+  elWallet.textContent =
+    `부품 ${prog.parts.toLocaleString('ko-KR')}개 · 보유 ${PLANES.filter(unlocked).length}/30기`
+}
+
+function row(k, v, gold) {
+  return `<div class="row"><span class="k">${k}</span><span class="v${gold ? ' gold' : ''}">${v}</span></div>`
+}
+
+/* ── 편대 ───────────────────────────────────────────────────────── */
+function renderSquad() {
+  const legend = isLegend()
+  document.getElementById('squadSub').innerHTML =
+    `메인이 <b>화력 100%</b>, 좌우 윙맨이 30%` + (legend ? ', 후방이 20%' : '') + `입니다.<br>` +
+    `자리를 누르면 기체 화면으로 갑니다.`
+
   elSlots.innerHTML = ''
   SLOT_META.forEach((m, i) => {
-    const p = planeById(prog.squad[i])
+    const usable = !m.legend || legend
+    const p = usable ? planeById(prog.squad[i]) : null
     const d = document.createElement('div')
-    d.className = 'slot' + (i === activeSlot ? ' on' : '')
-    d.innerHTML =
-      `<div class="role">${m.role}</div>` +
-      `<canvas class="pv" width="120" height="120"></canvas>` +
-      `<div class="nm">${p ? p.name : '비었음'}</div>` +
-      `<div class="wp">${p ? WEAPONS[p.weapon].name : '-'}</div>` +
-      `<div class="pw">화력 ${Math.round(m.mul * 100)}%</div>`
-    d.onclick = () => { activeSlot = i; renderHangar() }
+    d.className = 'slot' + (i === activeSlot && usable ? ' on' : '') + (usable ? '' : ' locked-slot')
+    // 후방은 한 줄을 통째로 쓴다. 셋은 위, 하나는 아래 - 대형이 그대로 보인다
+    if (m.legend) d.style.gridColumn = '1 / -1'
+    d.innerHTML = usable
+      ? `<div class="role">${m.role}</div>` +
+        `<canvas class="pv" width="120" height="120"></canvas>` +
+        `<div class="nm">${p ? p.name : '비었음'}</div>` +
+        `<div class="wp">${p ? WEAPONS[p.weapon].name : '-'}</div>` +
+        `<div class="pw">화력 ${Math.round(m.mul * 100)}%</div>`
+      : `<div class="role">${m.role}</div>` +
+        `<div class="nm" style="margin-top:12px">전설 파일럿 전용</div>` +
+        `<div class="wp">만렙 30 또는 ${LEGEND_PILOT.price.toLocaleString('ko-KR')}원</div>`
+    d.onclick = () => { if (usable) { activeSlot = i; go('planes') } else go('pilot') }
     elSlots.appendChild(d)
-    if (p) paintPlane(d.querySelector('.pv'), p, i === 1 ? 1 : 0.75)
+    if (p) paintPlane(d.querySelector('.pv'), p, i === MAIN_SLOT ? 1 : 0.75)
   })
 
+  const sum = SLOT_META.reduce((a, m, i) => {
+    const usable = !m.legend || legend
+    return a + (usable && prog.squad[i] ? m.mul : 0)
+  }, 0)
+  const st = prog.pilot.st
+  const boost = [
+    st.pow ? `화력 +${(st.pow * STATS.pow.per).toFixed(1)}%` : '',
+    st.rate ? `연사 +${(st.rate * STATS.rate.per).toFixed(1)}%` : '',
+    st.rng ? `탄폭 +${(st.rng * STATS.rng.per).toFixed(0)}%` : '',
+    st.hp ? `내구 +${st.hp * STATS.hp.per}` : '',
+  ].filter(Boolean).join(' · ')
+
+  document.getElementById('squadSum').innerHTML =
+    row('편대 화력 합계', Math.round(sum * 100) + '%', true) +
+    row('파일럿', `${pilotName()} · ${pilotRank()} Lv.${prog.pilot.lv}`) +
+    row('파일럿 보정', boost || '아직 없음') +
+    row('누적 점수', prog.total.toLocaleString('ko-KR') + '점')
+}
+
+/* ── 기체 ───────────────────────────────────────────────────────── */
+const FILTERS = [['all', '전체'], ['own', '보유'], ['lock', '잠김'], ['legend', '전설']]
+
+function renderPlanes() {
+  document.getElementById('planesSub').innerHTML =
+    `지금 <b>${SLOT_META[activeSlot].role}</b> 자리를 채웁니다. 고르면 편대로 돌아갑니다.`
+
+  const ef = document.getElementById('planeFilters')
+  ef.innerHTML = ''
+  for (const [k, label] of FILTERS) {
+    const b = document.createElement('button')
+    b.textContent = label
+    b.className = planeFilter === k ? 'on' : ''
+    b.onclick = () => { planeFilter = k; renderPlanes() }
+    ef.appendChild(b)
+  }
+
   elPlanes.innerHTML = ''
-  for (const p of PLANES) {
+  const list = PLANES.filter((p) =>
+    planeFilter === 'all' ? true
+    : planeFilter === 'own' ? unlocked(p)
+    : planeFilter === 'lock' ? !unlocked(p)
+    : p.tier === 'legend')
+
+  if (!list.length) {
+    elPlanes.innerHTML = '<div class="empty">여기 해당하는 기체가 없습니다.</div>'
+    return
+  }
+
+  for (const p of list) {
     const ok = unlocked(p)
     const picked = prog.squad[activeSlot] === p.id
     const c = document.createElement('div')
@@ -452,32 +732,214 @@ function renderHangar() {
         if (prog.parts < cost) return
         prog.parts -= cost
         prog.upg[p.id] = lv + 1
-        save(); renderHangar()
+        save(); renderPlanes(); renderWallet()
       }
     }
 
     c.onclick = () => {
       if (!ok) {
         alert(p.unlock.kind === 'paid'
-          ? `유료 기체입니다. 결제는 아직 붙지 않았습니다.
-(${lab})`
-          : `아직 잠겨 있습니다.
-${lab} 필요 · 지금 ${prog.total.toLocaleString('ko-KR')}점`)
+          ? `유료 기체입니다. 결제는 아직 붙지 않았습니다.\n(${lab})`
+          : `아직 잠겨 있습니다.\n${lab} 필요 · 지금 ${prog.total.toLocaleString('ko-KR')}점`)
         return
       }
-      // 같은 기체를 두 자리에 넣지 않는다 — 자리를 맞바꾼다
+      // 같은 기체를 두 자리에 넣지 않는다 - 자리를 맞바꾼다
       const dup = prog.squad.indexOf(p.id)
       if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
       prog.squad[activeSlot] = p.id
-      save(); renderHangar()
+      save(); go('squad')
     }
     elPlanes.appendChild(c)
     paintPlane(c.querySelector('.pv'), p, 1.1)
   }
+}
 
-  elWallet.textContent =
-    `부품 ${prog.parts.toLocaleString('ko-KR')}개 · 누적 ${prog.total.toLocaleString('ko-KR')}점` +
-    ` · 보유 ${PLANES.filter(unlocked).length}/30기`
+/* ── 랭킹 ───────────────────────────────────────────────────────── */
+function renderRank() {
+  const st = prog.stats
+  const list = (prog.scores || []).slice().sort((a, b) => b.s - a.s).slice(0, 20)
+  const when = (t) => {
+    const d = new Date(t)
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+  document.getElementById('rankBody').innerHTML =
+    '<div class="sum">' +
+      row('최고 점수', st.best.toLocaleString('ko-KR'), true) +
+      row('출격', st.runs.toLocaleString('ko-KR') + '판') +
+      row('클리어', st.clears.toLocaleString('ko-KR') + '회') +
+      row('총 격추', st.kills.toLocaleString('ko-KR')) +
+    '</div>' +
+    '<div class="lab">내 기록 상위 20</div>' +
+    (list.length
+      ? list.map((r, i) =>
+          `<div class="rank${i === 0 ? ' top' : ''}">` +
+          `<span class="no">${i + 1}</span>` +
+          `<span class="sc">${r.s.toLocaleString('ko-KR')}</span>` +
+          `<span class="k">${r.w ? '클리어' : ''}</span>` +
+          `<span class="dt">${when(r.t)}</span></div>`).join('')
+      : '<div class="empty">아직 기록이 없습니다.<br>한 판 하고 오세요.</div>')
+}
+
+/* ── 파일럿 ─────────────────────────────────────────────────────── */
+/*
+ * 마크는 그림 파일 없이 캔버스로 그린다. 파일을 여섯 개 더 넣으면 본문이
+ * 그만큼 무거워지는데, 이 정도 도형은 코드가 더 싸다.
+ */
+const MARK_COLOR = ['#4fd1ff', '#ffc44d', '#ff5470', '#4ade80', '#c9a8ff', '#7dffd4']
+function drawMark(cv, idx) {
+  if (!cv) return
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  const w = cv.clientWidth || 40, h = cv.clientHeight || 40
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr)
+  const c = cv.getContext('2d')
+  c.setTransform(dpr, 0, 0, dpr, 0, 0)
+  c.clearRect(0, 0, w, h)
+  c.translate(w / 2, h / 2)
+  const R = Math.min(w, h) * 0.36
+  c.fillStyle = c.strokeStyle = MARK_COLOR[idx % 6]
+  c.lineWidth = 2.2; c.lineJoin = 'round'
+  c.beginPath()
+  switch (idx % 6) {
+    case 0:                                  // 별
+      for (let k = 0; k < 10; k++) {
+        const a = -Math.PI / 2 + (k * Math.PI) / 5
+        const r = k % 2 ? R * 0.45 : R
+        k ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r)
+      }
+      c.closePath(); c.fill(); break
+    case 1:                                  // 번개
+      c.moveTo(R * .25, -R); c.lineTo(-R * .45, R * .12); c.lineTo(-R * .02, R * .12)
+      c.lineTo(-R * .25, R); c.lineTo(R * .5, -R * .18); c.lineTo(R * .06, -R * .18)
+      c.closePath(); c.fill(); break
+    case 2:                                  // 방패
+      c.moveTo(0, -R); c.lineTo(R * .8, -R * .55); c.lineTo(R * .8, R * .2)
+      c.quadraticCurveTo(R * .8, R * .85, 0, R)
+      c.quadraticCurveTo(-R * .8, R * .85, -R * .8, R * .2)
+      c.lineTo(-R * .8, -R * .55); c.closePath(); c.fill(); break
+    case 3:                                  // 화살
+      c.moveTo(0, -R); c.lineTo(R * .7, R * .35); c.lineTo(0, R * .05)
+      c.lineTo(-R * .7, R * .35); c.closePath(); c.fill(); break
+    case 4:                                  // 겹원
+      c.arc(0, 0, R, 0, 6.284); c.stroke()
+      c.beginPath(); c.arc(0, 0, R * .5, 0, 6.284); c.fill(); break
+    case 5:                                  // 십자
+      c.moveTo(-R * .26, -R); c.lineTo(R * .26, -R); c.lineTo(R * .26, -R * .26)
+      c.lineTo(R, -R * .26); c.lineTo(R, R * .26); c.lineTo(R * .26, R * .26)
+      c.lineTo(R * .26, R); c.lineTo(-R * .26, R); c.lineTo(-R * .26, R * .26)
+      c.lineTo(-R, R * .26); c.lineTo(-R, -R * .26); c.lineTo(-R * .26, -R * .26)
+      c.closePath(); c.fill(); break
+  }
+}
+
+function renderPilot() {
+  const pt = prog.pilot
+  const pts = pilotPts()
+  const need = xpNeed(pt.lv)
+  const maxed = pt.lv >= PILOT_MAX
+  document.getElementById('pilotSub').innerHTML =
+    `판이 끝나면 점수의 10분의 1이 경험치가 됩니다. 레벨이 오를 때마다 투자할 점 하나.`
+
+  const statHtml = ST_KEYS.map((k) => {
+    const S = STATS[k], v = pt.st[k]
+    const eff = k === 'hp' ? `+${v * S.per}` : `${k === 'rate' ? '-' : '+'}${(v * S.per).toFixed(1)}%`
+    const pips = Array.from({ length: ST_MAX },
+      (_, i) => `<span class="pip${i < v ? ' on' : ''}"></span>`).join('')
+    const can = pts > 0 && v < ST_MAX
+    return `<div class="stat">` +
+      `<div class="hd"><span class="nm">${S.name}</span>` +
+      `<span class="ef">${v ? eff : ''}</span>` +
+      `<span class="k" style="margin-left:auto;font-size:11px;color:var(--dim)">${v}/${ST_MAX}</span></div>` +
+      `<div class="de">${S.desc}</div>` +
+      `<div class="pips">${pips}<button data-st="${k}" ${can ? '' : 'disabled'}>+</button></div>` +
+      `</div>`
+  }).join('')
+
+  const legendBox = isLegend()
+    ? row('전설 파일럿', boughtLegend() && pt.lv < PILOT_MAX ? '구매함 · 후방 자리 열림' : '만렙 달성 · 후방 자리 열림', true)
+    : `<div class="stat">` +
+      `<div class="hd"><span class="nm">전설 파일럿</span>` +
+      `<span class="ef">후방 편대 +20%</span></div>` +
+      `<div class="de">네 번째 자리가 열립니다. 만렙 30 을 찍거나 사면 됩니다.</div>` +
+      `<div class="pips"><span class="k" style="font-size:11px;color:var(--muted)">` +
+      `앞으로 ${PILOT_MAX - pt.lv}레벨</span>` +
+      `<button id="buyLegend">${LEGEND_PILOT.price.toLocaleString('ko-KR')}원</button></div></div>`
+
+  document.getElementById('pilotBody').innerHTML =
+    `<div class="lab">호출부호</div>` +
+    `<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="${pt.name.replace(/"/g, '&quot;')}">` +
+    `<div class="lab">마크</div>` +
+    `<div class="marks" id="marks">` +
+    MARK_COLOR.map((_, i) =>
+      `<div class="mark${i === pt.mark ? ' on' : ''}" data-mark="${i}">` +
+      `<canvas width="80" height="80" style="width:100%;height:38px"></canvas></div>`).join('') +
+    `</div>` +
+
+    `<div class="lab">계급</div>` +
+    `<div class="sum">` +
+      row('현재', `${pilotRank()} · Lv.${pt.lv}${maxed ? ' (만렙)' : ''}`, maxed) +
+      (maxed ? '' :
+        `<div class="row" style="display:block">` +
+        `<div style="display:flex;font-size:12px"><span class="k">다음 레벨까지</span>` +
+        `<span class="v">${pt.xp.toLocaleString('ko-KR')} / ${need.toLocaleString('ko-KR')}</span></div>` +
+        `<div class="xpbar" style="margin-top:8px"><i style="width:${Math.min(100, (pt.xp / need) * 100).toFixed(1)}%"></i></div>` +
+        `</div>`) +
+      row('남은 투자점', pts + '점', pts > 0) +
+    `</div>` +
+
+    `<div class="lab">스탯</div><div class="sum">${statHtml}</div>` +
+    `<div class="lab">편대</div><div class="sum">${legendBox}</div>` +
+
+    `<div class="lab">소리</div>` +
+    `<div class="bar">` +
+    `<button class="ghost small" id="btnMusic">음악</button>` +
+    `<button class="ghost small" id="btnSfx">효과음</button>` +
+    `</div>` +
+
+    `<div class="lab">그 밖에</div>` +
+    `<div class="bar">` +
+    `<button class="ghost small" id="stReset">스탯 초기화</button>` +
+    `<button class="ghost small" id="devUnlock">개발용 전체 해금</button>` +
+    `</div>`
+
+  document.querySelectorAll('#marks .mark').forEach((el) => {
+    const i = +el.dataset.mark
+    drawMark(el.querySelector('canvas'), i)
+    el.onclick = () => { prog.pilot.mark = i; save(); renderPilot() }
+  })
+  const nm = document.getElementById('pilotNm')
+  nm.oninput = () => { prog.pilot.name = nm.value.trim().slice(0, 12); save() }
+
+  document.querySelectorAll('.stat .pips button[data-st]').forEach((b) => {
+    b.onclick = () => {
+      const k = b.dataset.st
+      if (pilotPts() <= 0 || prog.pilot.st[k] >= ST_MAX) return
+      prog.pilot.st[k]++
+      save(); sfx('pick'); renderPilot()
+    }
+  })
+
+  const buy = document.getElementById('buyLegend')
+  if (buy) buy.onclick = () => {
+    alert(`전설 파일럿 ${LEGEND_PILOT.price.toLocaleString('ko-KR')}원\n\n` +
+          `결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.\n` +
+          `지금은 파일럿 레벨 ${PILOT_MAX} 을 찍으면 같은 자리가 열립니다.`)
+  }
+
+  document.getElementById('stReset').onclick = () => {
+    if (!pilotSpent()) return
+    if (!confirm('찍은 스탯을 모두 되돌립니다. 레벨과 경험치는 그대로입니다.')) return
+    ST_KEYS.forEach((k) => { prog.pilot.st[k] = 0 })
+    save(); renderPilot()
+  }
+  document.getElementById('devUnlock').onclick = () => {
+    prog.owned = PLANES.map((p) => p.id).concat(LEGEND_PILOT.id)
+    prog.pilot.lv = PILOT_MAX
+    prog.pilot.xp = 0
+    save(); renderPilot()
+  }
+  document.getElementById('btnMusic').onclick = () => setMusic(!AU.on.music)
+  document.getElementById('btnSfx').onclick = () => setSfx(!AU.on.sfx)
+  auPaint()
 }
 
 /**
@@ -501,27 +963,25 @@ function paintPlane(cv, p, zoom) {
   drawShipOn(c, w / 2, h * 0.5, { plane: p, lv, mods: NO_MODS, scale, flame: false, shadow: false })
 }
 
-document.getElementById('devUnlock').onclick = () => {
-  prog.owned = PLANES.map((p) => p.id)
-  save(); renderHangar()
-}
-
 /* ================================================================
  * 게임 상태
  * ================================================================ */
 let state = null, keys = {}
 
 function newState() {
-  const squad = prog.squad.map((id, i) => {
-    const p = planeById(id)
-    return { plane: p, mul: SLOT_META[i].mul, cd: Math.random() * 0.2, orbA: (i * Math.PI * 2) / 3 }
+  // 자리 수를 그대로 둔다. 넷째만 비워 놓으면 메인 자리 번호가 안 흔들린다
+  const squad = SLOT_META.map((m, i) => {
+    const usable = !m.legend || isLegend()
+    const p = usable ? planeById(prog.squad[i]) : null
+    return { plane: p, mul: m.mul, cd: Math.random() * 0.2, orbA: (i * Math.PI * 2) / 3 }
   })
   return {
     t: 0, running: false,
-    player: { x: W / 2, y: H - 120, lv: 1, inv: 0, hp: PLAYER_HP, maxHp: PLAYER_HP },
+    player: { x: W / 2, y: H - 120, lv: 1, inv: 0,
+              hp: PLAYER_HP + pilotHp(), maxHp: PLAYER_HP + pilotHp() },
     ult: 0, ultT: 0, ultKind: null, escorts: [], shards: [], sweeps: [],
     adUsed: { revive: 0, charge: 0 },
-    squad, lives: 3, score: 0,
+    squad, lives: 3, score: 0, kills: 0,
     bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [],
     grounds: [], slabs: [], beams: [],
     /* 이 판에서만 사는 개조. 저장하지 않는다. */
@@ -601,7 +1061,7 @@ addEventListener('keyup', (e) => { keys[e.key] = false })
  * 이 규칙은 오프셋이 0 이라는 데 기대고 있다. 가운데 자리를 옮기려면
  * collide() 의 판정도 같이 손봐야 한다.
  */
-const SLOT_OFFSET = [{ x: -38, y: 20 }, { x: 0, y: 0 }, { x: 38, y: 20 }]
+const SLOT_OFFSET = [{ x: -38, y: 20 }, { x: 0, y: 0 }, { x: 38, y: 20 }, { x: 0, y: 46 }]
 const MAIN_SLOT = 1
 
 /*
@@ -647,7 +1107,8 @@ function shoot(u, i, dt) {
   if (!p) return
   u.cd -= dt
   const lv = LV[state.player.lv]
-  let rate = baseRate(p.weapon) * p.rate * upgRate(p.id) / (0.85 + lv.mult * 0.15) * (1 - state.mods.rate * 0.18)
+  let rate = baseRate(p.weapon) * p.rate * upgRate(p.id) * pilotRate()
+    / (0.85 + lv.mult * 0.15) * (1 - state.mods.rate * 0.18)
   // 난사 중에는 간격이 3분의 1
   if (state.ultKind === 'rapid' && state.ultT > 0) rate /= 3
   if (u.cd > 0) return
@@ -655,7 +1116,7 @@ function shoot(u, i, dt) {
   sfx('shot', p.tier === 'legend' ? 2 : p.tier === 'rare' ? 1 : 0)
 
   const pos = slotPos(i)
-  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult
+  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow()
   const tier = p.tier === 'legend' ? 2 : p.tier === 'rare' ? 1 : 0
   const B = state.bullets
   const M = state.mods
@@ -669,7 +1130,7 @@ function shoot(u, i, dt) {
     const b = { x: pos.x, y: pos.y - 10, r: 3, dmg, pierce: 0, life: 3, age: 0, kind: 'normal', ...o }
     b.pierce += M.pierce
     b.dmg *= 1 + M.big * 0.25
-    b.r *= 1 + M.big * 0.18
+    b.r *= (1 + M.big * 0.18) * pilotRng()
     if (M.speed) { b.vx *= 1 + M.speed * 0.25; b.vy *= 1 + M.speed * 0.25 }
     if (M.bounce) b.bounce = M.bounce
     if (M.split) b.split = M.split
@@ -1582,7 +2043,7 @@ function collide() {
         if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || []).push(e) }
         else b.dead = true
         if (e.hp <= 0) {
-          e.dead = true; s.score += e.score
+          e.dead = true; s.score += e.score; s.kills++
           boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
           if (Math.random() < (e.kind === 'mid' ? 1 : .14)) dropItem(e.x, e.y, e.kind === 'mid')
           // 큰 적일수록 많이 찬다. 열댓 마리 잡으면 한 번 쓴다
@@ -1601,7 +2062,7 @@ function collide() {
         if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || []).push(u) }
         else b.dead = true
         if (u.hp <= 0) {
-          u.dead = true; s.score += u.score
+          u.dead = true; s.score += u.score; s.kills++
           boom(u.x, u.y, 24, '#ffcf7a')
           // 지상 위협은 피하기 까다로우니 개조가 더 자주 나온다
           if (Math.random() < .6) dropItem(u.x, u.y, true)
@@ -2414,7 +2875,10 @@ function draw() {
   }
 
   if (!(s.player.inv > 0 && Math.floor(s.player.inv * 12) % 2 === 0)) {
-    s.squad.forEach((u, i) => { const p = slotPos(i); drawShip(p.x, p.y, u, i === 1) })
+    s.squad.forEach((u, i) => {
+      if (!u.plane) return
+      const p = slotPos(i); drawShip(p.x, p.y, u, i === 1)
+    })
   }
 
   for (const p of s.parts) {
@@ -2769,13 +3233,14 @@ function sfx(kind, arg) {
 /* ================================================================
  * 화면 전환
  * ================================================================ */
-const scHangar = document.getElementById('hangar')
 const scOver = document.getElementById('over')
 
 function start() {
   state = newState(); seedStars(state); seedGround(state); state.running = true
   last = performance.now()
-  scHangar.hidden = true; scOver.hidden = true
+  hideMenus(); scOver.hidden = true
+  prog.stats.runs++
+  save()
   music('battle')
 }
 function end(win) {
@@ -2783,11 +3248,28 @@ function end(win) {
   const earned = partsEarned(state.score)
   prog.total += state.score
   prog.parts += earned
+
+  const st = prog.stats
+  st.kills += state.kills
+  if (win) st.clears++
+  if (state.score > st.best) st.best = state.score
+  prog.scores.push({ s: state.score, t: Date.now(), w: !!win })
+  prog.scores.sort((a, b) => b.s - a.s)
+  prog.scores = prog.scores.slice(0, 50)          // 쉰 개면 충분하다
+
+  const gained = xpFromScore(state.score)
+  const up = addXp(state.score)
   save()
+
   document.getElementById('overTitle').textContent = win ? '1단계 클리어' : '격추됨'
   document.getElementById('overBody').innerHTML =
-    '이번 점수 <b>' + state.score.toLocaleString('ko-KR') + '</b><br>' +
+    '이번 점수 <b>' + state.score.toLocaleString('ko-KR') + '</b>' +
+    (state.score >= st.best ? ' · <b>최고 기록</b>' : '') + '<br>' +
     '부품 <b>+' + earned.toLocaleString('ko-KR') + '</b> (보유 ' + prog.parts.toLocaleString('ko-KR') + ')<br>' +
+    '파일럿 경험치 <b>+' + gained.toLocaleString('ko-KR') + '</b>' +
+    (up ? ' · <b>레벨 ' + prog.pilot.lv + ' 달성</b>' +
+          (prog.pilot.lv >= PILOT_MAX ? '<br><b>전설 파일럿 · 후방 자리가 열렸습니다</b>' : '')
+        : '') + '<br>' +
     '누적 <b>' + prog.total.toLocaleString('ko-KR') + '</b>점'
   const rv = document.getElementById('revive')
   rv.hidden = win || state.adUsed.revive >= AD_LIMIT.revive
@@ -2796,14 +3278,11 @@ function end(win) {
 }
 
 document.getElementById('launch').onclick = start
-document.getElementById('again').onclick = () => {
-  scOver.hidden = true; scHangar.hidden = false; renderHangar(); music('hangar')
-}
-document.getElementById('btnMusic').onclick = () => setMusic(!AU.on.music)
-document.getElementById('btnSfx').onclick = () => setSfx(!AU.on.sfx)
+document.getElementById('again').onclick = () => { scOver.hidden = true; go('squad'); music('hangar') }
+elTabs.querySelectorAll('button').forEach((b) => { b.onclick = () => go(b.dataset.go) })
 document.getElementById('revive').onclick = reviveByAd
 
-renderHangar()
+go('squad')
 auPaint()
 music('hangar')
 </script>
