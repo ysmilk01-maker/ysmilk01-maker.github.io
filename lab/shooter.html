@@ -3745,7 +3745,10 @@ function draw() {
   for (const a of s.arcs) {
     const k = 1 - a.age / a.life
     const dx = a.x2 - a.x1, dy = a.y2 - a.y1
-    const seg = 5
+    const len = Math.hypot(dx, dy)
+    // 꺾는 폭과 마디 수를 길이에 맞춘다. 긴 줄기에 같은 폭을 쓰면 그냥 직선이다
+    const amp = Math.max(8, Math.min(34, len * 0.11))
+    const seg = Math.max(5, Math.min(12, Math.round(len / 40)))
     g.lineCap = 'round'
     for (let pass = 0; pass < 2; pass++) {
       g.strokeStyle = pass ? 'rgba(255,255,255,' + k + ')'
@@ -3755,9 +3758,9 @@ function draw() {
       g.moveTo(a.x1, a.y1)
       for (let i = 1; i < seg; i++) {
         const t = i / seg
-        const off = Math.sin(a.seed + i * 2.3) * 11 * (1 - Math.abs(t - .5) * 2)
-        g.lineTo(a.x1 + dx * t - dy / Math.hypot(dx, dy) * off,
-                 a.y1 + dy * t + dx / Math.hypot(dx, dy) * off)
+        const off = Math.sin(a.seed + i * 2.7) * amp * (1 - Math.abs(t - .5) * 1.2)
+        g.lineTo(a.x1 + dx * t - dy / len * off,
+                 a.y1 + dy * t + dx / len * off)
       }
       g.lineTo(a.x2, a.y2)
       g.stroke()
