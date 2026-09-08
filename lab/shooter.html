@@ -227,6 +227,18 @@
   .gcard .nm { font-size: 13px; font-weight: 800; }
   .gcard .de { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .gcard .rt { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--gold); }
+
+  /* 접속 보상 */
+  .days { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 14px 0; }
+  .day {
+    background: #0a1220; border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 4px; text-align: center;
+  }
+  .day.done { opacity: .4; }
+  .day.now { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); background: #1a1408; }
+  .day .d { font-size: 10px; color: var(--dim); }
+  .day .r { font-size: 11.5px; font-weight: 800; margin-top: 3px; }
+  .day .n { font-size: 10.5px; color: var(--gold); font-weight: 800; }
 </style>
 
 <div id="wrap"><canvas id="c"></canvas></div>
@@ -273,6 +285,15 @@
   <h1>파일럿</h1>
   <p class="sub" id="pilotSub"></p>
   <div class="body" id="pilotBody"></div>
+</div>
+
+<div class="panel" id="daily" hidden>
+  <div class="gbox" style="text-align:center">
+    <h2>접속 보상</h2>
+    <p class="sub" id="dailySub"></p>
+    <div class="days" id="dailyDays"></div>
+    <button id="dailyOk">받기</button>
+  </div>
 </div>
 
 <div class="panel" id="gacha" hidden>
@@ -467,6 +488,58 @@ const PLANES = []
  * 그래서 상한을 다섯으로 넉넉히 두고, 비어 있을 때 광고 한 번이면 바로
  * 이어서 할 수 있게 했다. 기다리라고만 하면 그냥 나간다.
  * ================================================================ */
+/* ================================================================
+ * 별과 가챠권
+ *
+ * 판을 돌면 별이 하나, 깨면 셋이 찬다. 셋이 모이면 뽑기 한 장.
+ * 못 깨도 별은 쌓이므로 지고 나가도 손에 남는 게 있다 - 지기만 하다
+ * 아무것도 못 받으면 세 판 만에 그만둔다.
+ * ================================================================ */
+/* ================================================================
+ * 접속 보상
+ *
+ * 이레마다 한 바퀴 돈다. 하루라도 거르면 첫날로 돌아간다.
+ *
+ * 넷째 날과 이렛날에 가챠권을 둔다. 부품만 주면 며칠째인지 체감이 안 되고,
+ * 매일 가챠권을 주면 판을 돌 이유가 없어진다.
+ * ================================================================ */
+const LOGIN_REWARD = [
+  { kind: 'parts',  n: 300 },
+  { kind: 'energy', n: 1 },
+  { kind: 'parts',  n: 600 },
+  { kind: 'ticket', n: 1 },
+  { kind: 'parts',  n: 900 },
+  { kind: 'energy', n: 2 },
+  { kind: 'ticket', n: 2 },
+]
+const REWARD_NAME = { parts: '부품', energy: '출격권', ticket: '가챠권' }
+
+function dayKey(d) {
+  const x = d || new Date()
+  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') +
+         '-' + String(x.getDate()).padStart(2, '0')
+}
+
+/** 오늘 몫을 아직 안 받았으면 주고 무엇을 줬는지 돌려준다 */
+function claimDaily() {
+  const today = dayKey()
+  if (prog.login.last === today) return null
+  const y = new Date(); y.setDate(y.getDate() - 1)
+  prog.login.streak = prog.login.last === dayKey(y) ? prog.login.streak + 1 : 1
+  prog.login.last = today
+  const idx = (prog.login.streak - 1) % LOGIN_REWARD.length
+  const r = LOGIN_REWARD[idx]
+  if (r.kind === 'parts') prog.parts += r.n
+  else if (r.kind === 'ticket') prog.ticket += r.n
+  else if (r.kind === 'energy') { prog.energy.n = Math.min(EN_MAX, energy() + r.n) }
+  save()
+  return { ...r, idx, streak: prog.login.streak }
+}
+
+const STAR_FAIL = 1
+const STAR_CLEAR = 3
+const STAR_TICKET = 3
+
 const EN_MAX = 5
 const EN_REGEN = 30 * 60 * 1000        // 30분에 하나
 const AD_ENERGY_DAY = 10               // 하루에 광고로 채울 수 있는 횟수
@@ -488,6 +561,9 @@ function load() {
     stageClear: [],                 // 깬 스테이지 번호
     stageBest: {},                  // 스테이지별 최고 점수
     energy: { n: EN_MAX, t: 0 },    // 출격권과 마지막 정산 시각
+    login: { last: '', streak: 0 }, // 접속 보상
+    star: 0,                        // 판마다 쌓이는 별
+    ticket: 0,                      // 별 셋이 모이면 한 장
     adDay: { d: '', n: 0 },         // 오늘 광고로 채운 횟수
   }
   try {
@@ -507,6 +583,9 @@ function load() {
         stageClear: got.stageClear || [],
         stageBest: got.stageBest || {},
         energy: { ...base.energy, ...(got.energy || {}) },
+        login: { ...base.login, ...(got.login || {}) },
+        star: got.star || 0,
+        ticket: got.ticket || 0,
         adDay: { ...base.adDay, ...(got.adDay || {}) },
       }
     }
@@ -529,24 +608,27 @@ function load() {
  * 뽑기는 기체를 통째로 주지 않고 조각을 준다. 통째로 주면 이미 가진 게
  * 또 나왔을 때 허탕이 되는데, 조각이면 어떤 것이 나와도 쌓인다.
  *
- * 값은 부품으로만 치른다. 부품은 판을 돌아야만 생기는 무상 재화다 -
+ * 값은 가챠권으로 치른다. 가챠권은 판을 돌아야만 생기고 돈으로 살 수 없다 -
  * 게임산업법의 확률형 아이템은 유상으로 사는 것이 대상이라 여기 걸리지
  * 않는다. 그래도 확률은 화면에 적어 둔다. 앱인토스 게임 출시 항목에
  * "확률 정보를 사용자가 확인할 수 있어요" 가 있고, 무엇보다 안 적으면
  * 뽑는 사람이 손해를 본다.
+ *
+ * 부품은 강화에만 쓴다. 재화 둘이 하는 일이 갈라져 있어야 어느 쪽을
+ * 모아야 하는지가 분명해진다.
  * ================================================================ */
 const SHARD_NEED = { common: 20, rare: 40, legend: 80 }      // 기체 해금
 /* 강화 1~5단계에 드는 조각. 뒤로 갈수록 가파르다 */
 const SHARD_UPG = [10, 20, 30, 50, 100]
 const GACHA = {
   plane: {
-    name: '기체 뽑기', cost: 250,
+    name: '기체 뽑기', cost: 1,
     rates: [['legend', 7], ['rare', 33], ['common', 60]],
     amount: { legend: [3, 6], rare: [5, 9], common: [8, 14] },
     jackpot: 1.0,        // 조각이 아니라 기체가 통째로 나올 확률(%)
   },
   pilot: {
-    name: '파일럿 뽑기', cost: 400,
+    name: '파일럿 뽑기', cost: 1,
     rates: [['legend', 1], ['high', 7], ['mid', 22], ['normal', 70]],
     amount: { legend: [2, 4], high: [3, 6], mid: [6, 11], normal: [10, 18] },
     jackpot: 0.5,        // 조각이 아니라 파일럿이 통째로 나올 확률(%)
@@ -574,8 +656,8 @@ function rollTier(kind) {
 
 function pull(kind) {
   const g = GACHA[kind]
-  if (prog.parts < g.cost) return null
-  prog.parts -= g.cost
+  if (prog.ticket < g.cost) return null
+  prog.ticket -= g.cost
   prog.pull[kind]++
   const tier = rollTier(kind)
   const [lo, hi] = g.amount[tier]
@@ -901,7 +983,8 @@ function render() {
 
 function renderWallet() {
   elWallet.textContent =
-    `부품 ${prog.parts.toLocaleString('ko-KR')}개 · 보유 ${PLANES.filter(unlocked).length}/30기`
+    `부품 ${prog.parts.toLocaleString('ko-KR')}개 · 가챠권 ${prog.ticket}장` +
+    ` · 보유 ${PLANES.filter(unlocked).length}/30기`
 }
 
 function row(k, v, gold) {
@@ -954,6 +1037,8 @@ function renderSquad() {
   document.getElementById('squadSum').innerHTML =
     `<div class="row" id="enRow"></div>` +
     row('출격지', `${curStage().id}. ${curStage().name}`) +
+    row('별', '★'.repeat(prog.star) + '☆'.repeat(STAR_TICKET - prog.star) +
+        `  가챠권 ${prog.ticket}장`, prog.ticket > 0) +
     row('편대 화력 합계', Math.round(sum * 100) + '%', true) +
     row('파일럿', `${pilotName()} · ${grade().name} Lv.${prog.pilot.lv}`) +
     row('파일럿 보정', boost || '아직 없음') +
@@ -993,7 +1078,7 @@ function renderPlanes() {
   const ef = document.getElementById('planeFilters')
   ef.innerHTML = ''
   const gb = document.createElement('button')
-  gb.textContent = `기체 뽑기 · 부품 ${GACHA.plane.cost}`
+  gb.textContent = `기체 뽑기 · 가챠권 ${prog.ticket}장`
   gb.style.cssText = 'background:#24406b;color:#cfe6ff'
   gb.onclick = () => openGacha('plane')
   ef.appendChild(gb)
@@ -1075,6 +1160,23 @@ function renderPlanes() {
   }
 }
 
+/* ── 접속 보상 ─────────────────────────────────────────────────── */
+function showDaily(got) {
+  document.getElementById('dailySub').innerHTML =
+    `<b>${got.streak}일째</b> 이어서 왔습니다. 하루 거르면 첫날로 돌아갑니다.`
+  document.getElementById('dailyDays').innerHTML = LOGIN_REWARD.map((r, i) =>
+    `<div class="day${i < got.idx ? ' done' : ''}${i === got.idx ? ' now' : ''}">` +
+    `<div class="d">${i + 1}일</div>` +
+    `<div class="r">${REWARD_NAME[r.kind]}</div>` +
+    `<div class="n">${r.n}${r.kind === 'parts' ? '' : '개'}</div></div>`).join('')
+  document.getElementById('daily').hidden = false
+}
+document.getElementById('dailyOk').onclick = () => {
+  document.getElementById('daily').hidden = true
+  sfx('ready')
+  render()
+}
+
 /* ── 뽑기 ───────────────────────────────────────────────────────── */
 const elGacha = document.getElementById('gacha')
 let gKind = 'plane'
@@ -1090,12 +1192,14 @@ function paintGacha(res) {
   const g = GACHA[gKind]
   const body = document.getElementById('gBody')
   const btn = document.getElementById('gPull')
-  const enough = prog.parts >= g.cost
+  const enough = prog.ticket >= g.cost
   btn.disabled = !enough
-  btn.textContent = enough ? `뽑기 · 부품 ${g.cost}` : `부품이 ${g.cost - prog.parts}개 모자랍니다`
+  btn.textContent = enough ? '뽑기 · 가챠권 1장' : '가챠권이 없습니다'
 
-  const head = `<div class="row"><span class="k">부품</span>` +
-    `<span class="v">${prog.parts.toLocaleString('ko-KR')}</span></div>`
+  const head = `<div class="row"><span class="k">가챠권</span>` +
+    `<span class="v">${prog.ticket}장</span></div>` +
+    `<div class="row"><span class="k">별</span>` +
+    `<span class="v">${prog.star} / ${STAR_TICKET}</span></div>`
 
   if (!res) {
     const pity = PITY[gKind]
@@ -1135,7 +1239,8 @@ function paintRates() {
     `<div class="rate"><span>완성품이 이미 가진 것이면</span><span class="v">조각 ${JACK_SHARD}개</span></div>` +
     `<div class="empty">${pity.at}번마다 ` +
     `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.<br>` +
-    `값은 부품으로만 치릅니다. 부품은 판을 돌아야 생기고 돈으로 살 수 없습니다.</div>`
+    `가챠권은 별 ${STAR_TICKET}개마다 한 장입니다. 별은 한 판에 ${STAR_FAIL}개, ` +
+    `깨면 ${STAR_CLEAR}개가 찹니다. 돈으로는 살 수 없습니다.</div>`
 }
 
 document.getElementById('gPull').onclick = () => {
@@ -1383,7 +1488,7 @@ function renderPilot() {
     `<div class="lab">파일럿 등급</div>` +
     `<div class="grades">${gradeBox}</div>` +
     `<div class="bar"><button class="ghost small" id="pilotGacha">` +
-    `파일럿 뽑기 · 부품 ${GACHA.pilot.cost}</button></div>` +
+    `파일럿 뽑기 · 가챠권 ${prog.ticket}장</button></div>` +
 
     `<div class="lab">편대</div><div class="sum">${legendBox}</div>` +
 
@@ -2236,7 +2341,7 @@ function levelUp() {
     const gain = 20
     pl.maxHp += gain
     pl.hp = Math.min(pl.maxHp, pl.hp + gain)
-    banner('편대 강화 ' + pl.lv)
+    banner('편대 ' + pl.lv + '단계')
   } else {
     state.score += 500
     pl.hp = Math.min(pl.maxHp, pl.hp + 25)     // 만렙이면 점수와 수리로
@@ -3512,7 +3617,7 @@ function draw() {
   g.textAlign = 'left'; g.textBaseline = 'top'
   g.fillText(String(s.score).padStart(6, '0'), 14, 30)
   g.textAlign = 'right'; g.fillStyle = '#4fd1ff'
-  g.fillText('강화 ' + s.player.lv, W - 14, 30)
+  g.fillText('편대 ' + s.player.lv, W - 14, 30)
   for (let i = 0; i < s.lives; i++) {
     g.fillStyle = '#ff5470'
     const x = W - 16 - i * 16, y = 56
@@ -3874,6 +3979,11 @@ function end(win) {
   if (win && !prog.stageClear.includes(sg.id)) prog.stageClear.push(sg.id)
   if (state.score > (prog.stageBest[sg.id] || 0)) prog.stageBest[sg.id] = state.score
 
+  const stars = win ? STAR_CLEAR : STAR_FAIL
+  prog.star += stars
+  let tickets = 0
+  while (prog.star >= STAR_TICKET) { prog.star -= STAR_TICKET; prog.ticket++; tickets++ }
+
   const st = prog.stats
   st.kills += state.kills
   if (win) st.clears++
@@ -3892,6 +4002,8 @@ function end(win) {
     '이번 점수 <b>' + state.score.toLocaleString('ko-KR') + '</b>' +
     (state.score >= st.best ? ' · <b>최고 기록</b>' : '') + '<br>' +
     '부품 <b>+' + earned.toLocaleString('ko-KR') + '</b> (보유 ' + prog.parts.toLocaleString('ko-KR') + ')<br>' +
+    '별 <b>+' + stars + '</b>' +
+    (tickets ? ' · <b>가챠권 +' + tickets + '</b>' : ' (' + prog.star + '/' + STAR_TICKET + ')') + '<br>' +
     '파일럿 경험치 <b>+' + gained.toLocaleString('ko-KR') + '</b>' +
     (up ? ' · <b>레벨 ' + prog.pilot.lv + ' 달성</b>' +
           (prog.pilot.lv >= PILOT_MAX ? '<br><b>전설 파일럿 · 후방 자리가 열렸습니다</b>' : '')
@@ -3921,4 +4033,6 @@ document.getElementById('revive').onclick = reviveByAd
 go('squad')
 auPaint()
 music('hangar')
+const daily = claimDaily()
+if (daily) showDaily(daily)
 </script>
