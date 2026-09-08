@@ -270,8 +270,13 @@
 <!-- 스테이지 -->
 <div class="screen" id="scStage" hidden>
   <h1>스테이지</h1>
-  <p class="sub">앞 단계를 깨야 다음이 열립니다. 고른 곳으로 출격합니다.</p>
+  <p class="sub">앞 단계를 깨야 다음이 열립니다. 고르면 바로 나갈 수 있습니다.</p>
   <div class="body"><div class="stages" id="stageBody"></div></div>
+  <div class="bar">
+    <span class="hint" id="stageHint"></span>
+    <span class="grow"></span>
+    <button id="launch2">출격</button>
+  </div>
 </div>
 
 <!-- 랭킹 -->
@@ -1446,9 +1451,14 @@ function renderStage() {
     c.onclick = () => {
       if (!stageOpen(i)) { alert(`${STAGES[i - 1].name} 을 먼저 깨야 합니다.`); return }
       prog.stage = i
-      save(); go('squad')
+      save(); renderStage()          // 화면을 안 떠나고 고른 표시만 바꾼다
     }
   })
+
+  const n = energy()
+  document.getElementById('launch2').textContent = n > 0 ? '출격' : '광고 보고 출격'
+  document.getElementById('stageHint').textContent =
+    `${curStage().id}. ${curStage().name} · 출격권 ${n}`
 }
 
 /* ── 랭킹 ───────────────────────────────────────────────────────── */
@@ -2224,6 +2234,26 @@ function dropItem(x, y, richer) {
  */
 const CHAIN = { range: 135, falloff: 0.62 }
 
+/*
+ * 적이 얼마나 자주 쏘는가.
+ *
+ * 두 가지를 본다.
+ *
+ * 하나는 시간. 판이 시작하자마자 제 속도로 쏘면 자리를 잡기도 전에 탄이
+ * 깔린다. 열네 초에 걸쳐 서서히 제 속도가 된다.
+ *
+ * 하나는 편대 크기. 처음 온 사람은 메인 한 대(화력 100%)로 나는데 적
+ * 배치는 세 대(160%) 기준으로 짜여 있었다. 화력이 37% 모자란 만큼 탄이
+ * 안 지워져서 첫 판이 유독 빽빽했다. 자리가 덜 열렸으면 그만큼 덜 쏜다.
+ */
+function fireScale() {
+  const s = state
+  const warm = Math.min(1, s.t / 14)
+  const slots = s.squad.filter((u) => u.plane).length
+  const small = slots <= 1 ? 1.55 : slots === 2 ? 1.22 : 1
+  return (1.9 - 0.9 * warm) * small
+}
+
 function chainFrom(from, b) {
   const s = state
   let cur = from
@@ -2669,7 +2699,7 @@ function update(dt) {
     e.x = Math.max(18, Math.min(W - 18, e.x))
     e.cd -= dt
     if (e.cd <= 0 && e.y > 0 && e.y < H * .72) {
-      e.cd = e.fire
+      e.cd = e.fire * fireScale()
       const a = Math.atan2(pl.y - e.y, pl.x - e.x)
       if (e.kind === 'gunner') {
         /* 부채꼴 다섯 발. 정면이 제일 위험하고 옆이 안전하다 */
@@ -2865,7 +2895,7 @@ function updateGround(u, dt) {
     case 'turret': {
       u.cd -= dt
       if (u.cd <= 0) {
-        u.cd = 1.8
+        u.cd = 1.8 * fireScale()
         const a = Math.atan2(pl.y - u.y, pl.x - u.x)
         for (let k = -1; k <= 1; k++)
           s.ebullets.push({ x: u.x, y: u.y - 8, dmg: DMG.flak, vx: Math.cos(a + k * .09) * 205,
@@ -2876,7 +2906,7 @@ function updateGround(u, dt) {
     case 'flak': {
       u.cd -= dt
       if (u.cd <= 0) {
-        u.cd = 3.0
+        u.cd = 3.0 * fireScale()
         // 사용자 높이보다 살짝 위에서 터뜨려야 파편이 내려오며 압박한다
         s.ebullets.push({ x: u.x, y: u.y - 10, vx: (pl.x - u.x) * .35, vy: -300,
                           r: 5, kind: 'flakshell', burstY: Math.max(60, pl.y - 40), age: 0 })
@@ -2889,7 +2919,7 @@ function updateGround(u, dt) {
       else if (u.phase === 'aim') {
         u.ph -= dt
         if (u.ph <= 0) {
-          u.phase = 'idle'; u.cd = 3.4
+          u.phase = 'idle'; u.cd = 3.4 * fireScale()
           s.beams.push({ x: u.aimX, y: u.y, w: 20, age: 0, warn: 0, life: 0.55 })
         }
       }
@@ -4235,7 +4265,8 @@ function end(win) {
   sfx(win ? 'clear' : 'down')
 }
 
-document.getElementById('launch').onclick = () => {
+/* 출격은 두 화면에서 부를 수 있다. 처리는 한 곳에만 둔다 */
+function doLaunch() {
   if (energy() > 0) { energySpend(); start(); return }
   if (adDayLeft() <= 0) {
     alert('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.')
@@ -4243,6 +4274,8 @@ document.getElementById('launch').onclick = () => {
   }
   showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
 }
+document.getElementById('launch').onclick = doLaunch
+document.getElementById('launch2').onclick = doLaunch
 document.getElementById('again').onclick = () => { scOver.hidden = true; go('squad'); music('hangar') }
 elTabs.querySelectorAll('button').forEach((b) => { b.onclick = () => go(b.dataset.go) })
 document.getElementById('revive').onclick = reviveByAd
