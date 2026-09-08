@@ -484,7 +484,7 @@ function newState() {
   })
   return {
     t: 0, running: false,
-    player: { x: W / 2, y: H - 120, lv: 1, inv: 0 },
+    player: { x: W / 2, y: H - 120, lv: 1, inv: 0, hp: PLAYER_HP, maxHp: PLAYER_HP },
     squad, lives: 3, score: 0,
     bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [],
     grounds: [], slabs: [], beams: [],
@@ -698,12 +698,20 @@ const WAVES = [
   { at: 15.0, f: () => ground('radar', 84) },
   { at: 16.0, f: () => line(2, 'mid') },
   { at: 19.0, f: () => ground('laser', W - 90) },
+  { at: 20.0, f: () => dive(2) },
   { at: 21.0, f: () => line(6, 'small') },
   { at: 23.0, f: () => { ground('flak', 70); ground('flak', W - 70) } },
   { at: 25.0, f: () => line(3, 'mid') },
   { at: 27.0, f: () => { ground('radar', W - 84); ground('turret', W / 2) } },
+  { at: 29.0, f: () => dive(3) },
   { at: 31.0, f: () => spawnBoss() },
 ]
+/** 돌진기를 위에서 흩뿌린다. 같은 자리에 겹치면 한 번에 다 맞는다 */
+function dive(n) {
+  for (let i = 0; i < n; i++) {
+    state.enemies.push(mkEnemy('dive', 60 + Math.random() * (W - 120), -40 - i * 70, 0))
+  }
+}
 function line(n, kind) {
   const gap = W / (n + 1)
   for (let i = 0; i < n; i++) state.enemies.push(mkEnemy(kind, gap * (i + 1), -40 - i * 12, 0))
@@ -715,6 +723,14 @@ function diagonal(kind, dir) {
 function mkEnemy(kind, x, y, drift) {
   const b = kind === 'mid'
     ? { hp: 11, r: 20, sp: 52, score: 220, fire: 1.5, w: 44, h: 40 }
+    : kind === 'dive'
+    /*
+     * 돌진기. 쏘지 않고 몸으로 온다.
+     *
+     * 잠깐 멈춰 조준한 뒤 아래로 꽂힌다. 체력이 얇아서 오기 전에 떨구면
+     * 그만이지만, 놓치면 제일 아프다 — 피할 시간을 주는 대신 값을 세게 매겼다.
+     */
+    ? { hp: 6, r: 15, sp: 40, score: 180, fire: 99, w: 30, h: 30, aim: 0.9, dashSp: 430 }
     : { hp: 4, r: 13, sp: 78, score: 90, fire: 2.4, w: 28, h: 26 }
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()), ...b }
 }
@@ -732,6 +748,24 @@ function mkEnemy(kind, x, y, drift) {
  * 넷 다 예고가 있다. 예고 없는 즉사는 어렵게 만드는 게 아니라 억울하게
  * 만든다.
  * ================================================================ */
+/*
+ * 공격마다 아픈 정도.
+ *
+ * 피하기 쉬운 것일수록 세게 때린다. 방공 레이저는 예고가 뜨고 폭이 좁아
+ * 피할 수 있으니 제일 아프고, 흔한 총알은 스쳐도 살 만하다.
+ */
+const PLAYER_HP = 100
+const DMG = {
+  bullet: 8,       // 적기 일반탄
+  flak: 12,        // 지상 대공포탄
+  missile: 18,     // 유도탄
+  beam: 26,        // 방공 레이저
+  ram: 16,         // 적기와 충돌
+  dive: 30,        // 돌진기와 충돌
+  boss: 15,        // 보스 탄
+  bossDash: 38,    // 보스 돌진
+}
+
 const TERRAIN_SPEED = 62
 
 function mkGround(kind, x, y) {
@@ -807,19 +841,59 @@ function boom(x, y, n, color) {
   }
 }
 
+/**
+ * 강화는 화력만이 아니라 맷집도 올린다.
+ *
+ * 체력제로 바꾸고 나니 강화가 공격 일변도라, 맞으면서 밀고 들어갈 이유가
+ * 없었다. 최대 체력을 같이 올리고 오른 만큼 채워 주면 "한 단계 올리고 한 번
+ * 더 부딪쳐 본다"가 성립한다.
+ */
 function levelUp() {
   const pl = state.player
-  if (pl.lv < 5) { pl.lv++; banner('편대 강화 ' + pl.lv) } else state.score += 500
+  if (pl.lv < 5) {
+    pl.lv++
+    const gain = 20
+    pl.maxHp += gain
+    pl.hp = Math.min(pl.maxHp, pl.hp + gain)
+    banner('편대 강화 ' + pl.lv)
+  } else {
+    state.score += 500
+    pl.hp = Math.min(pl.maxHp, pl.hp + 25)     // 만렙이면 점수와 수리로
+  }
 }
-function hitPlayer() {
+/**
+ * 맞으면 체력이 닳는다.
+ *
+ * 예전엔 한 대 맞을 때마다 강화가 하나씩 날아갔다. 스치기만 해도 화력이
+ * 반토막 나니 다음 판을 아예 못 풀었다. 이제는 체력이 줄고, 다 닳았을 때만
+ * 목숨을 하나 잃는다. 공격마다 아픈 정도가 다르다 — 레이저는 크게, 총알은
+ * 조금. 그래야 무엇을 피해야 하는지가 손에 익는다.
+ *
+ * 무적 시간은 죽었을 때만 준다. 한 대마다 무적이면 탄막 속을 걸어 다닌다.
+ */
+function hitPlayer(dmg) {
   const pl = state.player
   if (pl.inv > 0) return
-  boom(pl.x, pl.y, 26, '#7fd6ff')
-  if (pl.lv > 1) { pl.lv--; pl.inv = 1.6; banner('강화 하락') }
-  else {
-    state.lives--; pl.inv = 2.2; pl.x = W / 2; pl.y = H - 120
-    if (state.lives <= 0) end(false)
-  }
+  pl.hp -= dmg || DMG.bullet
+  boom(pl.x, pl.y, dmg >= 20 ? 22 : 10, '#7fd6ff')
+  pl.shake = Math.min(1, (dmg || 8) / 22)
+  haptic(dmg >= 20 ? 'hard' : 'soft')
+  if (pl.hp > 0) return
+
+  boom(pl.x, pl.y, 34, '#ffd27a')
+  state.lives--
+  pl.hp = pl.maxHp
+  pl.inv = 2.2
+  pl.x = W / 2
+  pl.y = H - 120
+  if (pl.lv > 1) pl.lv--          // 격추될 때만 강화가 하나 빠진다
+  if (state.lives <= 0) end(false)
+  else banner('격추 · 남은 기체 ' + state.lives)
+}
+
+/** 손끝으로 알려준다. 못 하는 기기면 조용히 넘어간다 */
+function haptic(kind) {
+  try { navigator.vibrate?.(kind === 'hard' ? [18, 40, 18] : 10) } catch { /* 없으면 그만 */ }
 }
 
 /* ================================================================
@@ -904,15 +978,41 @@ function update(dt) {
   s.bullets = s.bullets.filter((b) => !b.dead && b.y > -60 && b.y < H + 80 && b.x > -60 && b.x < W + 60)
 
   for (const e of s.enemies) {
-    e.t += dt; e.y += e.sp * dt
+    e.t += dt
+    if (e.flash > 0) e.flash -= dt
+
+    if (e.kind === 'dive') {
+      /* 조준 - 잠깐 따라붙어 겨눈다. 이때 예고선이 보인다 */
+      if (e.aim > 0) {
+        e.aim -= dt
+        e.y += e.sp * dt
+        e.x += (pl.x - e.x) * Math.min(1, dt * 2.4)
+      } else {
+        e.y += e.dashSp * dt                    // 꽂힌다
+      }
+      continue
+    }
+
+    e.y += e.sp * dt
     e.x += (e.drift ? e.drift * 46 : Math.sin(e.t * 1.6) * 34) * dt
     e.x = Math.max(18, Math.min(W - 18, e.x))
-    if (e.flash > 0) e.flash -= dt
     e.cd -= dt
     if (e.cd <= 0 && e.y > 0 && e.y < H * .72) {
       e.cd = e.fire
-      const a = Math.atan2(pl.y - e.y, pl.x - e.x), sp = e.kind === 'mid' ? 190 : 160
-      s.ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 4 })
+      const a = Math.atan2(pl.y - e.y, pl.x - e.x)
+      /*
+       * 중형기는 이따금 유도탄을 쏜다.
+       *
+       * 전부 직선탄이면 옆으로 한 걸음씩만 밟으면 다 피해진다. 따라오는 탄이
+       * 섞여야 자리를 옮기게 된다.
+       */
+      if (e.kind === 'mid' && Math.random() < .35) {
+        s.ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120,
+                          r: 5, kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
+      } else {
+        const sp = e.kind === 'mid' ? 190 : 160
+        s.ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 4, dmg: DMG.bullet })
+      }
     }
   }
   s.enemies = s.enemies.filter((e) => e.y < H + 60)
@@ -944,7 +1044,7 @@ function update(dt) {
         } else {
           bs.y += (130 - bs.y) * Math.min(1, dt * 3)   // 제자리로
         }
-        if (near(bs, pl, bs.r + PLAYER_R)) hitPlayer()
+        if (near(bs, pl, bs.r + PLAYER_R)) hitPlayer(DMG.bossDash)
       } else {
         bs.x = W / 2 + Math.sin(bs.t * .7) * (W / 2 - 70)
       }
@@ -957,7 +1057,7 @@ function update(dt) {
           tr.cd = 1.3
           const tx = bs.x + tr.dx, ty = bs.y + 10
           const a = Math.atan2(pl.y - ty, pl.x - tx)
-          s.ebullets.push({ x: tx, y: ty, vx: Math.cos(a) * 195, vy: Math.sin(a) * 195, r: 4, age: 0 })
+          s.ebullets.push({ x: tx, y: ty, vx: Math.cos(a) * 195, vy: Math.sin(a) * 195, r: 4, age: 0, dmg: DMG.boss })
         }
       }
       const aliveTurrets = bs.turrets.filter((t) => t.alive).length
@@ -979,28 +1079,28 @@ function update(dt) {
           bs.cd = 1.1 * haste
           for (let i = -3; i <= 3; i++) {
             const a = Math.PI / 2 + i * .17
-            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 4, age: 0 })
+            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150, r: 4, age: 0, dmg: DMG.boss })
           }
         } else if (bs.phase === 2) {
           bs.cd = .78 * haste
           const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
           for (const d of [-.12, 0, .12])
-            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * 210, vy: Math.sin(a + d) * 210, r: 4, age: 0 })
+            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * 210, vy: Math.sin(a + d) * 210, r: 4, age: 0, dmg: DMG.boss })
         } else if (bs.phase === 3) {
           bs.cd = 1.25 * haste
           for (let i = 0; i < 20; i++) {
             const a = (i / 20) * Math.PI * 2 + bs.t
-            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 135, vy: Math.sin(a) * 135, r: 4, age: 0 })
+            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 135, vy: Math.sin(a) * 135, r: 4, age: 0, dmg: DMG.boss })
           }
         } else {
           /* 마지막: 원형 탄막 + 조준 유도탄 하나 */
           bs.cd = 1.5 * haste
           for (let i = 0; i < 14; i++) {
             const a = (i / 14) * Math.PI * 2 - bs.t * .6
-            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160, r: 4, age: 0 })
+            s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160, r: 4, age: 0, dmg: DMG.boss })
           }
           s.ebullets.push({ x: bs.x, y: bs.y + 20, vx: 0, vy: 130, r: 5,
-                            kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0 })
+                            kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
         }
       }
     }
@@ -1024,7 +1124,7 @@ function update(dt) {
   for (const bm of s.beams) {
     bm.age += dt
     if (bm.age > bm.life) bm.dead = true
-    else if (bm.age > bm.warn && Math.abs(pl.x - bm.x) < bm.w / 2 + PLAYER_R && pl.y < bm.y) hitPlayer()
+    else if (bm.age > bm.warn && Math.abs(pl.x - bm.x) < bm.w / 2 + PLAYER_R && pl.y < bm.y) hitPlayer(DMG.beam)
   }
   s.beams = s.beams.filter((b) => !b.dead)
 
@@ -1051,7 +1151,7 @@ function update(dt) {
       boom(b.x, b.y, 10, '#ffd166')
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2
-        s.ebullets.push({ x: b.x, y: b.y, vx: Math.cos(a) * 135, vy: Math.sin(a) * 135, r: 3.4, age: 0 })
+        s.ebullets.push({ x: b.x, y: b.y, vx: Math.cos(a) * 135, vy: Math.sin(a) * 135, r: 3.4, age: 0, dmg: DMG.flak })
       }
     }
     b.x += b.vx * dt; b.y += b.vy * dt
@@ -1078,7 +1178,7 @@ function updateGround(u, dt) {
         u.cd = 1.8
         const a = Math.atan2(pl.y - u.y, pl.x - u.x)
         for (let k = -1; k <= 1; k++)
-          s.ebullets.push({ x: u.x, y: u.y - 8, vx: Math.cos(a + k * .09) * 205,
+          s.ebullets.push({ x: u.x, y: u.y - 8, dmg: DMG.flak, vx: Math.cos(a + k * .09) * 205,
                             vy: Math.sin(a + k * .09) * 205, r: 4, age: 0 })
       }
       break
@@ -1208,16 +1308,27 @@ function collide() {
   s.enemies = s.enemies.filter((e) => !e.dead)
 
   /* 판정은 메인 한 대뿐이다. 윙맨은 그림만 있고 맞지 않는다. */
-  for (const b of s.ebullets) if (near(b, pl, b.r + PLAYER_R)) { b.dead = true; hitPlayer() }
+  for (const b of s.ebullets) {
+    if (!near(b, pl, b.r + PLAYER_R)) continue
+    b.dead = true
+    hitPlayer(b.dmg || DMG.bullet)
+  }
   s.ebullets = s.ebullets.filter((b) => !b.dead)
 
-  for (const e of s.enemies) if (near(e, pl, e.r + PLAYER_R)) { e.dead = true; boom(e.x, e.y, 14, '#ffb45c'); hitPlayer() }
+  for (const e of s.enemies) {
+    if (!near(e, pl, e.r + PLAYER_R)) continue
+    e.dead = true
+    boom(e.x, e.y, 14, '#ffb45c')
+    hitPlayer(e.kind === 'dive' ? DMG.dive : DMG.ram)
+  }
   s.enemies = s.enemies.filter((e) => !e.dead)
 
   for (const it of s.items) {
     if (!near(it, pl, it.r + 18)) continue
     it.dead = true
     s.score += 60
+    // 무엇을 줍든 조금 아문다. 회복 수단이 아예 없으면 후반이 버티기만 된다
+    pl.hp = Math.min(pl.maxHp, pl.hp + 12)
     if (it.mod) {
       s.mods[it.mod] = Math.min(MOD_MAX, s.mods[it.mod] + 1)
       banner(MODS[it.mod].name + ' ' + s.mods[it.mod])
@@ -1864,6 +1975,21 @@ function draw() {
     g.fillStyle = '#ff5470'
     const x = W - 16 - i * 16, y = 56
     g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 5, y + 4); g.lineTo(x - 5, y + 4); g.closePath(); g.fill()
+  }
+
+  /*
+   * 체력바.
+   *
+   * 기체 바로 위에 붙인다. 화면 구석에 두면 탄을 보느라 못 본다. 색은 남은
+   * 양에 따라 초록에서 빨강으로 넘어가서, 숫자를 읽지 않아도 위험한 줄 안다.
+   */
+  {
+    const r = Math.max(0, s.player.hp / s.player.maxHp)
+    const bw = 42, bx = s.player.x - bw / 2, by = s.player.y + 26
+    g.fillStyle = 'rgba(0,0,0,.45)'
+    g.fillRect(bx - 1, by - 1, bw + 2, 6)
+    g.fillStyle = r > .55 ? '#5fd48a' : r > .28 ? '#ffcf5c' : '#ff5470'
+    g.fillRect(bx, by, bw * r, 4)
   }
   /* 지금 붙은 개조. 왼쪽 위에 작게 쌓는다 */
   {
