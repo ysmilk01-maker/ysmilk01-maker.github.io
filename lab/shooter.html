@@ -1339,7 +1339,13 @@ const OLD_KEY = 'shooter-proto-v2'
 function load() {
   const base = {
     total: 0, owned: [], squad: null, parts: 0, upg: {},
-    pilot: { name: '', mark: 0, xp: 0, lv: 1, grade: 'normal',
+    /*
+     * xp 는 「쓸 수 있는 경험치」, xpTotal 은 「지금까지 번 경험치」다.
+     *
+     * 스탯은 xp 에서 깎아 쓰고, 레벨은 xpTotal 로만 오른다. 둘을 나누지
+     * 않으면 스탯을 찍을 때마다 레벨이 내려간다.
+     */
+    pilot: { name: '', mark: 0, xp: 0, xpTotal: 0, lv: 1, grade: 'normal',
              st: { pow: 0, rate: 0, rng: 0, hp: 0 } },
     pilotOwned: { normal: true },   // 가진 파일럿 등급
     shardP: {},                     // 기체 조각. 기체 id -> 개수
@@ -1366,6 +1372,7 @@ function load() {
       return {
         ...base, ...got,
         pilot: { ...base.pilot, ...(got.pilot || {}), st: { ...base.pilot.st, ...((got.pilot || {}).st || {}) } },
+        __migPilot: !(got.pilot && got.pilot.xpTotal != null),
         pilotOwned: { ...base.pilotOwned, ...(got.pilotOwned || {}) },
         shardP: got.shardP || {},
         shardG: got.shardG || {},
@@ -2375,7 +2382,7 @@ function anyUpg() { return PLANES.some(canUpg) }
  * 남은 투자점이 있거나, 조각이 다 모여 열 수 있는 등급이 있으면 그렇다.
  */
 function anyPilotUp() {
-  if (pilotPts() > 0) return true
+  if (ST_KEYS.some(canStat)) return true
   return GRADE_KEYS.some((k) => GRADE_NEED[k] > 0 && !hasGrade(k) &&
                                 shardG(k) >= GRADE_NEED[k])
 }
@@ -2488,12 +2495,32 @@ const ST_KEYS = Object.keys(STATS)
 function xpNeed(lv) { return 700 + 180 * (lv - 1) }
 function xpFromScore(score) { return Math.round(score / 10) }
 
+/**
+ * 스탯 한 칸에 드는 경험치.
+ *
+ * 전에는 「레벨이 오르면 투자점 하나, 그걸로 한 칸」이었다. 만렙까지
+ * 29 점이 나오므로 한 점에 평균 3,220 경험치인 셈이었는데, 점이라는
+ * 중간 재화가 하나 더 있어서 얼마가 드는지가 화면에 안 보였다.
+ *
+ * 경험치로 직접 산다. 칸이 오를수록 비싸진다 - 마지막 칸은 첫 칸의
+ * 여덟 배다. 네 축을 다 채우려면 162,000 이 드는데 한 판에 1,500~2,000
+ * 이 들어오니 아흔 판쯤이다. 전보다 비싸졌고, 그게 요청이었다.
+ *
+ * @param n 지금 그 스탯이 몇 칸인가(0부터)
+ */
+function statCost(n) { return 900 + 700 * n }
+
 function grade() { return GRADES[prog.pilot.grade] || GRADES.normal }
 function hasGrade(k) { return k === 'normal' || !!prog.pilotOwned[k] }
 
 function pilotSpent() { return ST_KEYS.reduce((a, k) => a + (prog.pilot.st[k] || 0), 0) }
-/** 레벨 1 에서 시작해 오를 때마다 하나씩. 만렙이면 29 점 */
-function pilotPts() { return (prog.pilot.lv - 1) - pilotSpent() }
+/** 지금 쓸 수 있는 경험치 */
+function pilotXp() { return Math.max(0, prog.pilot.xp || 0) }
+/** 그 스탯을 한 칸 올릴 수 있는가 */
+function canStat(k) {
+  const v = prog.pilot.st[k] || 0
+  return v < ST_MAX && pilotXp() >= statCost(v)
+}
 function pilotRank() {
   const lv = prog.pilot.lv
   return lv >= 30 ? '전설' : lv >= 20 ? '베테랑' : lv >= 10 ? '정예' : '신참'
@@ -2523,28 +2550,67 @@ function pilotHp()   { return Math.round(PLAYER_HP * (grade().base - 1)) + prog.
 /** 경험치를 그대로 넣는다. 포션처럼 점수를 거치지 않는 것이 쓴다 */
 function addXpRaw(n) {
   const pt = prog.pilot
-  if (pt.lv >= PILOT_MAX) return 0
-  pt.xp += n
+  /*
+   * 두 군데에 넣는다.
+   *
+   *   xp       쓸 수 있는 몫. 스탯을 찍으면 여기서 깎인다
+   *   xpTotal  번 몫. 레벨은 이 값으로만 오른다
+   *
+   * 만렙이어도 xp 는 계속 쌓는다 - 레벨이 멈춘 뒤에도 스탯은 남아 있다.
+   * 전에는 만렙에서 경험치를 버렸는데, 그러면 만렙이 되는 순간 판을
+   * 도는 이유가 사라진다.
+   */
+  pt.xp = (pt.xp || 0) + n
+  pt.xpTotal = (pt.xpTotal || 0) + n
   let up = 0
-  while (pt.lv < PILOT_MAX && pt.xp >= xpNeed(pt.lv)) {
-    pt.xp -= xpNeed(pt.lv); pt.lv++; up++
+  let need = 0
+  while (pt.lv < PILOT_MAX) {
+    need += xpNeed(pt.lv)
+    if (pt.xpTotal < need) break
+    pt.lv++; up++
   }
-  if (pt.lv >= PILOT_MAX) pt.xp = 0
   return up
 }
 
 /** 판이 끝나면 부른다. 오른 레벨 수를 돌려준다 */
-function addXp(score) {
+function addXp(score) { return addXpRaw(xpFromScore(score)) }
+
+/**
+ * 지금 레벨에서 다음 레벨까지 얼마나 왔나. [번 것, 필요한 것]
+ *
+ * 필요한 것을 넘지 않게 자른다. 레벨과 누적 경험치가 어긋나면(옛 저장을
+ * 옮기다가, 또는 손으로 값을 넣다가) 「9,620 / 3,760」처럼 분자가 분모를
+ * 넘고 막대가 화면 밖으로 나간다.
+ */
+function lvProgress() {
   const pt = prog.pilot
-  if (pt.lv >= PILOT_MAX) return 0
-  pt.xp += xpFromScore(score)
-  let up = 0
-  while (pt.lv < PILOT_MAX && pt.xp >= xpNeed(pt.lv)) {
-    pt.xp -= xpNeed(pt.lv); pt.lv++; up++
-  }
-  if (pt.lv >= PILOT_MAX) pt.xp = 0
-  return up
+  let base = 0
+  for (let i = 1; i < pt.lv; i++) base += xpNeed(i)
+  const need = xpNeed(pt.lv)
+  return [Math.max(0, Math.min(need, (pt.xpTotal || 0) - base)), need]
 }
+
+/*
+ * 옛 저장을 옮긴다.
+ *
+ * 전에는 xp 가 「이번 레벨에서 모은 것」이었고 xpTotal 이 없었다. 그대로
+ * 두면 레벨 25 인 사람이 레벨 1 로 떨어진다.
+ *
+ * 번 것은 지금 레벨까지의 합 + 남은 xp 로 되짚고, 쓸 수 있는 몫은
+ * 남아 있던 투자점을 경험치로 바꿔 돌려준다 - 안 그러면 안 찍고 아껴
+ * 둔 사람만 손해를 본다.
+ */
+if (prog.__migPilot) {
+  const pt = prog.pilot
+  let base = 0
+  for (let i = 1; i < pt.lv; i++) base += xpNeed(i)
+  const spent = ST_KEYS.reduce((a, k) => a + (pt.st[k] || 0), 0)
+  const leftPts = Math.max(0, (pt.lv - 1) - spent)
+  pt.xpTotal = base + (pt.xp || 0)
+  pt.xp = (pt.xp || 0) + leftPts * 1200
+  save()
+}
+delete prog.__migPilot
 
 function pilotName() { return prog.pilot.name || '무명' }
 
@@ -3768,24 +3834,28 @@ function drawMark(cv, idx) {
 
 function renderPilot() {
   const pt = prog.pilot
-  const pts = pilotPts()
-  const need = xpNeed(pt.lv)
+  const have = pilotXp()
+  const [got, need] = lvProgress()
   const maxed = pt.lv >= PILOT_MAX
   document.getElementById('pilotSub').innerHTML =
-    `판이 끝나면 점수의 10분의 1이 경험치가 됩니다. 레벨이 오를 때마다 투자할 점 하나.`
+    `판이 끝나면 점수의 10분의 1이 경험치가 됩니다. 스탯은 경험치로 직접 올립니다.`
 
   const statHtml = ST_KEYS.map((k) => {
     const S = STATS[k], v = pt.st[k]
     const eff = k === 'hp' ? `+${v * S.per}` : `${k === 'rate' ? '-' : '+'}${(v * S.per).toFixed(1)}%`
     const pips = Array.from({ length: ST_MAX },
       (_, i) => `<span class="pip${i < v ? ' on' : ''}"></span>`).join('')
-    const can = pts > 0 && v < ST_MAX
+    const cost = v < ST_MAX ? statCost(v) : 0
+    const can = canStat(k)
     return `<div class="stat">` +
       `<div class="hd"><span class="nm">${S.name}</span>` +
       `<span class="ef">${v ? eff : ''}</span>` +
       `<span class="k" style="margin-left:auto;font-size:11px;color:var(--dim)">${v}/${ST_MAX}</span></div>` +
       `<div class="de">${S.desc}</div>` +
-      `<div class="pips">${pips}<button data-st="${k}" ${can ? '' : 'disabled'}>+</button></div>` +
+      `<div class="pips">${pips}` +
+      /* 값을 단추에 적는다. 얼마가 드는지 모르고 누르게 두면 안 된다 */
+      `<button data-st="${k}" ${can ? '' : 'disabled'}>` +
+      (v >= ST_MAX ? '최대' : cost.toLocaleString('ko-KR')) + `</button></div>` +
       `</div>`
   }).join('')
 
@@ -3838,10 +3908,10 @@ function renderPilot() {
       (maxed ? '' :
         `<div class="row" style="display:block">` +
         `<div style="display:flex;font-size:12px"><span class="k">다음 레벨까지</span>` +
-        `<span class="v">${pt.xp.toLocaleString('ko-KR')} / ${need.toLocaleString('ko-KR')}</span></div>` +
-        `<div class="xpbar" style="margin-top:8px"><i style="width:${Math.min(100, (pt.xp / need) * 100).toFixed(1)}%"></i></div>` +
+        `<span class="v">${got.toLocaleString('ko-KR')} / ${need.toLocaleString('ko-KR')}</span></div>` +
+        `<div class="xpbar" style="margin-top:8px"><i style="width:${Math.min(100, (got / need) * 100).toFixed(1)}%"></i></div>` +
         `</div>`) +
-      row('남은 투자점', pts + '점', pts > 0) +
+      row('쓸 수 있는 경험치', have.toLocaleString('ko-KR'), have > 0) +
     `</div>` +
 
     `<div class="lab">스탯</div><div class="sum">${statHtml}</div>` +
@@ -3876,7 +3946,8 @@ function renderPilot() {
   document.querySelectorAll('.stat .pips button[data-st]').forEach((b) => {
     b.onclick = () => {
       const k = b.dataset.st
-      if (pilotPts() <= 0 || prog.pilot.st[k] >= ST_MAX) return
+      if (!canStat(k)) return
+      prog.pilot.xp -= statCost(prog.pilot.st[k])
       prog.pilot.st[k]++
       save()
       sfx('ready')
@@ -3912,8 +3983,13 @@ function renderPilot() {
 
   document.getElementById('stReset').onclick = () => {
     if (!pilotSpent()) return
-    if (!confirm('찍은 스탯을 모두 되돌립니다. 레벨과 경험치는 그대로입니다.')) return
+    /* 쓴 경험치를 그대로 돌려준다. 안 돌려주면 되돌리기가 벌이 된다 */
+    let back = 0
+    ST_KEYS.forEach((k) => { for (let i = 0; i < (prog.pilot.st[k] || 0); i++) back += statCost(i) })
+    if (!confirm('찍은 스탯을 모두 되돌립니다. 쓴 경험치 ' +
+                 back.toLocaleString('ko-KR') + ' 을 돌려받습니다.')) return
     ST_KEYS.forEach((k) => { prog.pilot.st[k] = 0 })
+    prog.pilot.xp = (prog.pilot.xp || 0) + back
     save(); renderPilot()
   }
   document.getElementById('devUnlock').onclick = () => {
@@ -9012,7 +9088,7 @@ function end(win) {
           '<span class="t1">' +
             (rankUp ? rankAfter + ' 승급' : '레벨 ' + prog.pilot.lv + ' 달성') +
           '</span><br><span class="t2">' +
-            (rankUp ? 'Lv.' + lvBefore + ' → Lv.' + prog.pilot.lv : rankAfter + ' · 투자점 +' + up) +
+            (rankUp ? 'Lv.' + lvBefore + ' → Lv.' + prog.pilot.lv : rankAfter) +
             (prog.pilot.lv >= PILOT_MAX ? ' · 후방 자리가 열렸습니다' : '') +
           '</span>' +
         '</span>' +
