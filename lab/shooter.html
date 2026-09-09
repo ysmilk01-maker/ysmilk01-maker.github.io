@@ -270,8 +270,18 @@
   .bar .grow { flex: 1; }
   .hint { font-size: 11px; color: var(--dim); }
 
+  /*
+   * 덮개.
+   *
+   * z-index 를 준다. 화면(.screen)도 position:fixed 라, 쌓임 순서가
+   * DOM 순서로 정해진다 - #detail 은 #scPlanes 뒤, #scPilot 앞에 있어서
+   * **기체 화면에서는 뜨고 파일럿 화면에서는 화면 뒤에 깔렸다.** 열려
+   * 있다고 보고하는데 아무것도 안 보였다.
+   *
+   * 탭이 5 이므로 그보다 높게. 덮개는 탭까지 덮는 것이 맞다.
+   */
   .panel {
-    position: fixed; inset: 0; display: grid; place-items: center;
+    position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
     background: rgba(6,7,10,.9); backdrop-filter: blur(4px);
     text-align: center; padding: 24px;
   }
@@ -358,10 +368,16 @@
   .rank.top .sc { color: var(--gold); }
   .empty { color: var(--dim); font-size: 12.5px; padding: 22px 2px; line-height: 1.8; }
 
-  .filters { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .filters { display: flex; gap: 7px; margin-bottom: 10px; flex-wrap: wrap; }
   .filters button { padding: 7px 12px; font-size: 12px; border-radius: 8px;
                     background: #141c2c; color: var(--muted); font-weight: 700; }
   .filters button.on { background: var(--accent); color: #04121a; }
+  /* 축마다 한 줄. 앞에 무엇을 고르는 줄인지 적는다 */
+  .filters .frow { display: flex; gap: 6px; align-items: center; width: 100%; }
+  .filters .frow .fl {
+    flex: none; width: 30px; font-size: 10.5px; font-weight: 800; color: var(--dim);
+  }
+  .filters .frow button { flex: 1; padding: 7px 0; }
 
   /* 스테이지 */
   .stages { display: grid; gap: 9px; }
@@ -516,28 +532,27 @@
    * 켜면 판 전체가 붉게 물든다 - 다른 규칙으로 들어간다는 것이 출격
    * 단추를 누르기 전에 보여야 한다.
    */
-  .hard {
-    display: flex; align-items: center; gap: 10px; margin-top: 10px;
-    padding: 11px 12px; border-radius: 10px;
-    background: rgba(255,84,112,.07); border: 1px solid rgba(255,84,112,.28);
+  /*
+   * 난이도 고르개.
+   *
+   * 셋 중 하나다. 스위치 두 개로 두면 「둘 다 켜면 어떻게 되나」가
+   * 생기는데, 한 대에 죽는 판에서 한 대가 얼마나 아픈지는 아무 뜻이 없다.
+   */
+  .modes {
+    margin-top: 10px; padding: 10px; border-radius: 10px;
+    background: rgba(255,255,255,.035); border: 1px solid var(--line);
   }
-  .hard.off { background: rgba(255,255,255,.035); border-color: var(--line); }
-  .hard.lock { opacity: .5; }
-  .hard .tx { flex: 1; min-width: 0; }
-  .hard .tt { font-size: 12.5px; font-weight: 800; color: #ff8ba3; }
-  .hard.off .tt { color: var(--ink); }
-  .hard .ds { font-size: 10.5px; color: var(--dim); margin-top: 2px; }
-  .hard .sw {
-    flex: none; width: 46px; height: 26px; border-radius: 13px; border: 0;
-    background: #2a3346; position: relative; transition: background .12s;
+  .modes .tabs { display: flex; gap: 6px; }
+  .modes .tabs button {
+    flex: 1; padding: 9px 0; font-size: 12px; font-weight: 800;
+    border-radius: 8px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.03); color: var(--dim);
   }
-  .hard .sw.on { background: #d63a58; }
-  .hard .sw::after {
-    content: ''; position: absolute; top: 3px; left: 3px;
-    width: 20px; height: 20px; border-radius: 10px; background: #e8edf7;
-    transition: transform .12s;
-  }
-  .hard .sw.on::after { transform: translateX(20px); }
+  .modes .tabs button[disabled] { opacity: .4; }
+  .modes .tabs button.on { background: #2b3a55; color: var(--ink); border-color: #3f5680; }
+  .modes .tabs button.on.crazy { background: #4a3413; color: #ffd79a; border-color: #8a6520; }
+  .modes .tabs button.on.hard { background: #40151d; color: #ff9cb2; border-color: #a8324a; }
+  .modes .ds { font-size: 10.5px; color: var(--dim); margin-top: 8px; text-align: center; }
   .rcell .nm { font-size: 11px; color: var(--dim); letter-spacing: .02em; }
   .rcell .vl { font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; }
   .rcell .hv { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; }
@@ -896,6 +911,83 @@
   .gcard .nm { font-size: 13px; font-weight: 800; }
   .gcard .de { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .gcard .rt { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--gold); }
+
+  /*
+   * 파일럿 카드.
+   *
+   * 기체 카드와 같은 격자다. 다른 것은 그림이 가로로 붙는다는 것뿐 -
+   * 초상이 세로로 길어서 위에 얹으면 카드가 너무 높아진다.
+   */
+  .pcards { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .pcard {
+    display: flex; gap: 9px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 11px;
+    overflow: hidden; cursor: pointer; position: relative;
+  }
+  .pcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .pcard.no { opacity: .55; }
+  .pcard.can { animation: upglow 1.8s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .pcard.can { animation: none; border-color: var(--gold); } }
+  .pcard .pf {
+    width: 62px; flex: none; align-self: stretch;
+    background: var(--face) top center/cover no-repeat, #0d1119;
+    border-right: 1px solid var(--line);
+  }
+  .pcard .pf.none { display: flex; align-items: center; justify-content: center; }
+  .pcard .tx { flex: 1; min-width: 0; padding: 9px 10px 10px 0; }
+  .pcard .nm { font-size: 13px; font-weight: 800; }
+  .pcard .gr {
+    display: inline-block; margin-top: 3px; padding: 1px 6px;
+    font-size: 9.5px; font-weight: 800; border-radius: 5px;
+  }
+  .pcard .de { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+  .pcard .stx {
+    font-size: 10px; color: var(--gold); font-weight: 700; margin-top: 5px;
+  }
+  .pcard.no .stx { color: var(--dim); }
+  .pcard .rt {
+    position: absolute; top: 6px; right: 7px; font-size: 9.5px; font-weight: 800;
+    color: #04121a; background: var(--accent); border-radius: 5px; padding: 1px 5px;
+  }
+  .pcard .rt.lk { background: #2a3547; color: var(--dim); }
+
+  /*
+   * 지금 태운 파일럿.
+   *
+   * 카드보다 초상을 넓게 잡고 스탯 네 칸을 표로 낸다 - 여기 있는 값이
+   * 그대로 판에 나간다.
+   */
+  .pnow {
+    display: flex; gap: 12px; background: var(--panel);
+    border: 1px solid var(--accent); border-radius: 12px;
+    overflow: hidden; cursor: pointer; box-shadow: 0 0 0 1px var(--accent);
+  }
+  .pnow .pf {
+    width: 112px; flex: none; align-self: stretch; min-height: 150px;
+    background: var(--face) top center/cover no-repeat, #0d1119;
+    border-right: 1px solid var(--line);
+  }
+  .pnow .pf.none { display: flex; align-items: center; justify-content: center; }
+  .pnow .tx { flex: 1; min-width: 0; padding: 12px 13px 12px 0; text-align: left; }
+  .pnow .nm { font-size: 16px; font-weight: 900; display: flex; align-items: center; gap: 7px; }
+  .pnow .gr { padding: 2px 7px; font-size: 10px; font-weight: 800; border-radius: 6px; }
+  .pnow .de { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+  .pnow .cells {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 9px;
+  }
+  .pnow .cells .c { display: flex; font-size: 11px; }
+  .pnow .cells .c .k { color: var(--dim); }
+  .pnow .cells .c .v { margin-left: auto; color: var(--dim); font-weight: 700; }
+  .pnow .cells .c.on .v { color: var(--gold); }
+  .pnow .go { margin-top: 9px; font-size: 11px; font-weight: 800; color: var(--accent); }
+
+  /* 상세의 큰 초상. 카드의 것과 같은 그림을 크게 쓴다 */
+  .dsheet .pbig {
+    width: 100%; height: 210px; border-radius: 10px; margin-top: 10px;
+    background: var(--face) top center/cover no-repeat, #0d1119;
+    border: 1px solid var(--line);
+  }
+  .dsheet .pbig.none { display: flex; align-items: center; justify-content: center; }
 
   /* 접속 보상 */
   .days { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 14px 0; }
@@ -1478,6 +1570,23 @@ function takeMission(i) {
  * 상태로 처음 만나는 것은 도전이 아니라 벽이다.
  */
 const HARD_TICKET = 3
+/* 하드코어에서 광고로 되살아날 수 있는 횟수. 한 번뿐이다 */
+const HARD_REVIVE = 1
+
+/*
+ * 크레이지.
+ *
+ * 적의 공격이 1.3배 아프다. 하드코어와 달리 체력은 그대로라 「몇 대까지
+ * 버티나」가 줄어드는 방식이다 - 열 대에서 일곱 대쯤으로 준다.
+ *
+ * 하드코어와 같이 켤 수 없다. 한 대에 죽는 판에서는 한 대가 얼마나
+ * 아픈지가 아무 뜻이 없다 - 겹치면 둘 중 하나가 장식이 된다.
+ *
+ * 보상은 첫 클리어에 가챠권 한 장이다. 하드코어(세 장)보다 적은 것은
+ * 판을 되돌릴 여지가 있어서다. 하드코어와 마찬가지로 판별 최초 1회다.
+ */
+const CRAZY_DMG = 1.3
+const CRAZY_TICKET = 1
 const STAR_FAIL = 1
 const STAR_CLEAR = 3
 const STAR_TICKET = 3
@@ -1517,7 +1626,18 @@ function load() {
     pilot: { name: '', mark: 0, xp: 0, xpTotal: 0, lv: 1, grade: 'normal',
              /* 지금 쓰는 사람. 등급마다 둘이라 등급만으로는 안 정해진다 */
              who: 'n1',
-             st: { pow: 0, rate: 0, rng: 0, hp: 0 } },
+             st: { pow: 0, rate: 0, rng: 0, hp: 0 },
+             /*
+              * 스탯은 사람마다 따로 쌓인다.
+              *
+              * 전에는 st 하나를 여덟이 같이 썼다 - 파일럿을 바꿔도 찍은
+              * 것이 그대로 따라와서, 사람을 고르는 일이 특성 하나 바꾸는
+              * 일밖에 안 됐다. 사람마다 따로 두면 「이 사람을 키운다」가
+              * 생긴다. 경험치 주머니는 하나라 어디에 붓느냐가 선택이 된다.
+              *
+              * st 는 옛 저장을 옮기는 데만 쓰고 그 뒤로는 안 쓴다.
+              */
+             sts: {} },
     pilotOwned: { normal: true },   // 가진 파일럿 등급
     shardP: {},                     // 기체 조각. 기체 id -> 개수
     shardG: {},                     // 파일럿 조각. 등급 -> 개수
@@ -1528,6 +1648,7 @@ function load() {
     sub: 1,                         // 지금 고른 단계
     stars: {},                      // '1-3' -> 0~3. 단계 평가, 최고 기록만 남는다
     hard: {},                       // '1-3' -> true. 하드코어로 깬 판. 보상은 여기 없을 때만
+    crazy: {},                      // '1-3' -> true. 크레이지로 깬 판
     stageBest: {},                  // 단계별 최고 점수
     energy: { n: EN_MAX, t: 0 },    // 출격권과 마지막 정산 시각
     login: { last: '', streak: 0 }, // 접속 보상
@@ -1543,7 +1664,9 @@ function load() {
       const got = JSON.parse(raw)
       return {
         ...base, ...got,
-        pilot: { ...base.pilot, ...(got.pilot || {}), st: { ...base.pilot.st, ...((got.pilot || {}).st || {}) } },
+        pilot: { ...base.pilot, ...(got.pilot || {}),
+                 st: { ...base.pilot.st, ...((got.pilot || {}).st || {}) },
+                 sts: { ...((got.pilot || {}).sts || {}) } },
         __migPilot: !(got.pilot && got.pilot.xpTotal != null),
         pilotOwned: { ...base.pilotOwned, ...(got.pilotOwned || {}) },
         shardP: got.shardP || {},
@@ -1553,6 +1676,7 @@ function load() {
         scores: got.scores || [],
         stars: got.stars || {},
         hard: got.hard || {},
+        crazy: got.crazy || {},
         stageBest: got.stageBest || {},
         energy: { ...base.energy, ...(got.energy || {}) },
         login: { ...base.login, ...(got.login || {}) },
@@ -2743,12 +2867,39 @@ function statCost(n) { return 900 + 700 * n }
 function grade() { return GRADES[prog.pilot.grade] || GRADES.normal }
 function hasGrade(k) { return k === 'normal' || !!prog.pilotOwned[k] }
 
-function pilotSpent() { return ST_KEYS.reduce((a, k) => a + (prog.pilot.st[k] || 0), 0) }
+/*
+ * 그 파일럿의 스탯 칸. 없으면 만들어서 돌려준다.
+ *
+ * 옛 저장은 st 하나에 몰려 있다. 처음 열릴 때 그것을 **그때 쓰던
+ * 사람에게** 옮긴다 - 그래야 갱신하고 나서 스탯이 사라진 것처럼 보이지
+ * 않는다. 옮긴 뒤 st 는 비운다.
+ */
+function stOf(id) {
+  const pt = prog.pilot
+  if (!pt.sts) pt.sts = {}
+  if (!pt.sts[id]) {
+    const old = pt.st || {}
+    const moved = id === pt.who && ST_KEYS.some((k) => old[k] > 0)
+    pt.sts[id] = ST_KEYS.reduce((o, k) => (o[k] = moved ? (old[k] || 0) : 0, o), {})
+    if (moved) { ST_KEYS.forEach((k) => { pt.st[k] = 0 }) }
+  }
+  return pt.sts[id]
+}
+/** 지금 쓰는 파일럿의 스탯 */
+function pilotSt() { return stOf(pilotNow().id) }
+/** 그 파일럿에 부은 경험치. 되돌릴 때 얼마를 주는지도 이 값이다 */
+function stSpent(id) {
+  const st = stOf(id)
+  let back = 0
+  ST_KEYS.forEach((k) => { for (let i = 0; i < (st[k] || 0); i++) back += statCost(i) })
+  return back
+}
+function pilotSpent() { const st = pilotSt(); return ST_KEYS.reduce((a, k) => a + (st[k] || 0), 0) }
 /** 지금 쓸 수 있는 경험치 */
 function pilotXp() { return Math.max(0, prog.pilot.xp || 0) }
 /** 그 스탯을 한 칸 올릴 수 있는가 */
-function canStat(k) {
-  const v = prog.pilot.st[k] || 0
+function canStat(k, id) {
+  const v = stOf(id || pilotNow().id)[k] || 0
   return v < ST_MAX && pilotXp() >= statCost(v)
 }
 function pilotRank() {
@@ -2772,11 +2923,11 @@ function isLegend() { return prog.pilot.lv >= PILOT_MAX || boughtLegend() }
  * 연사와 탄폭에까지 곱하면 상급 파일럿 하나로 모든 축이 한꺼번에 올라
  * 스탯 투자가 의미를 잃는다. 두 축은 투자로만 오른다.
  */
-function pilotPow()  { return grade().base * (1 + prog.pilot.st.pow * 0.025) * perk('pow') }
-function pilotRate() { return (1 - prog.pilot.st.rate * 0.015) * perk('rate') }
-function pilotRng()  { return (1 + prog.pilot.st.rng * 0.02) * perk('rng') }
+function pilotPow()  { return grade().base * (1 + pilotSt().pow * 0.025) * perk('pow') }
+function pilotRate() { return (1 - pilotSt().rate * 0.015) * perk('rate') }
+function pilotRng()  { return (1 + pilotSt().rng * 0.02) * perk('rng') }
 function pilotHp()   {
-  return Math.round(PLAYER_HP * (grade().base - 1)) + prog.pilot.st.hp * 6 + perk('hp')
+  return Math.round(PLAYER_HP * (grade().base - 1)) + pilotSt().hp * 6 + perk('hp')
 }
 
 /** 경험치를 그대로 넣는다. 포션처럼 점수를 거치지 않는 것이 쓴다 */
@@ -3213,7 +3364,8 @@ const SCREENS = { squad: 'scSquad', planes: 'scPlanes', stage: 'scStage',
                   gacha: 'scGacha', rank: 'scRank', pilot: 'scPilot' }
 const elTabs = document.getElementById('tabs')
 let curScreen = 'squad'
-let planeFilter = 'all'
+let planeOwn = 'all'
+let planeTier = 'all'
 
 
 /* ================================================================
@@ -3369,7 +3521,8 @@ function renderSquad() {
 
   const sum = SLOT_META.reduce((a, m, i) =>
     a + (slotOpen(i) && prog.squad[i] ? slotMul(i) : 0), 0)
-  const st = prog.pilot.st
+  /* 지금 태운 파일럿의 스탯이다. 사람마다 따로라 여기서도 그 사람 것을 읽는다 */
+  const st = pilotSt()
   const boost = [
     st.pow ? `화력 +${(st.pow * STATS.pow.per).toFixed(1)}%` : '',
     st.rate ? `연사 +${(st.rate * STATS.rate.per).toFixed(1)}%` : '',
@@ -3461,7 +3614,7 @@ function paintEnergy() {
    * 스위치는 스테이지 화면에 있는데 출격은 여기서도 된다. 안 적으면
    * 켜 둔 것을 잊고 눌러서 한 대에 죽는다 - 그건 규칙이 아니라 함정이다.
    */
-  const hd = hardRun && hardOpen() ? '하드코어 ' : ''
+  const hd = runMode !== 'normal' && hardOpen() ? modeDef(runMode)[1] + ' ' : ''
   const btn = document.getElementById('launch')
   if (btn) btn.textContent = n > 0 ? hd + '출격' : '광고 보고 ' + hd + '출격'
 }
@@ -3536,8 +3689,18 @@ document.getElementById('setClose').onclick = () => { elSet.hidden = true; rende
  * 등급 셋을 다 넣는다. 「보유」와 등급은 성격이 다른 축이지만 한 줄에
  * 두는 편이 낫다 - 두 줄로 나누면 화면 위쪽이 거르개로 덮인다.
  */
-const FILTERS = [['all', '전체'], ['own', '보유'], ['lock', '잠김'],
-                 ['common', '일반'], ['rare', '희귀'], ['legend', '전설']]
+/*
+ * 거르개를 둘로 나눈다.
+ *
+ * 전에는 한 줄이었다 - 전체·보유·잠김·일반·희귀·전설. 여섯이 서로를
+ * 밀어내서 **「보유한 전설」을 볼 수가 없었다.** 보유를 누르면 등급이
+ * 풀리고 전설을 누르면 보유가 풀린다.
+ *
+ * 축이 둘이니 줄도 둘이다. 각 줄에서 하나씩 고르고 둘은 같이 걸린다.
+ */
+const OWN_FILTERS  = [['all', '전체'], ['own', '보유'], ['lock', '미보유']]
+const TIER_FILTERS = [['all', '전체'], ['common', '일반'],
+                      ['rare', '희귀'], ['legend', '전설']]
 
 function renderPlanes() {
   /*
@@ -3598,23 +3761,34 @@ function renderPlanes() {
   ef.innerHTML = ''
   const gb = document.createElement('button')
   gb.textContent = `뽑기 · 가챠권 ${prog.ticket}장`
-  gb.style.cssText = 'background:#24406b;color:#cfe6ff'
+  gb.style.cssText = 'background:#24406b;color:#cfe6ff;flex:1 1 100%'
   gb.onclick = () => openGacha()
   ef.appendChild(gb)
-  for (const [k, label] of FILTERS) {
-    const b = document.createElement('button')
-    b.textContent = label
-    b.className = planeFilter === k ? 'on' : ''
-    b.onclick = () => { planeFilter = k; renderPlanes() }
-    ef.appendChild(b)
+  /* 줄마다 무엇을 고르는 줄인지 앞에 적는다. 안 적으면 여섯 개가 한 덩어리로 읽힌다 */
+  const frow = (label, defs, now, set) => {
+    const row = document.createElement('div')
+    row.className = 'frow'
+    const lb = document.createElement('span')
+    lb.className = 'fl'
+    lb.textContent = label
+    row.appendChild(lb)
+    for (const [k, txt] of defs) {
+      const b = document.createElement('button')
+      b.textContent = txt
+      b.className = now === k ? 'on' : ''
+      b.onclick = () => { set(k); renderPlanes() }
+      row.appendChild(b)
+    }
+    ef.appendChild(row)
   }
+  frow('보유', OWN_FILTERS, planeOwn, (k) => { planeOwn = k })
+  frow('등급', TIER_FILTERS, planeTier, (k) => { planeTier = k })
 
   elPlanes.innerHTML = ''
+  /* 두 축을 같이 건다. 하나가 '전체' 면 그 축은 안 거른다 */
   const list = PLANES.filter((p) =>
-    planeFilter === 'all' ? true
-    : planeFilter === 'own' ? unlocked(p)
-    : planeFilter === 'lock' ? !unlocked(p)
-    : p.tier === planeFilter)
+    (planeOwn === 'all' || (planeOwn === 'own' ? unlocked(p) : !unlocked(p))) &&
+    (planeTier === 'all' || p.tier === planeTier))
 
   if (!list.length) {
     elPlanes.innerHTML = '<div class="empty">여기 해당하는 기체가 없습니다.</div>'
@@ -3997,12 +4171,14 @@ function openTossRank() {
 
 let mapCh = null
 
-/** 지금 고른 판을 하드코어로 갈 수 있나 - 일반으로 한 번은 깼어야 한다 */
+/** 지금 고른 판을 어려운 모드로 갈 수 있나 - 일반으로 한 번은 깼어야 한다 */
 function hardOpen() { return starOf(prog.chapter || 0, curSub()) > 0 }
-/** 지금 고른 판을 하드코어로 이미 깼나 */
-function hardDone() { return !!prog.hard[stageKey(prog.chapter || 0, curSub())] }
-/** 하드코어로 깬 판이 몇 개인가 */
-function hardCount() { return Object.keys(prog.hard || {}).length }
+/** 지금 고른 판을 그 모드로 이미 깼나 */
+function modeDone(k) {
+  return k !== 'normal' && !!(prog[k] || {})[stageKey(prog.chapter || 0, curSub())]
+}
+/** 그 모드로 깬 판이 몇 개인가 */
+function modeCount(k) { return Object.keys(prog[k] || {}).length }
 
 /*
  * 스테이지 화면의 하드코어 스위치.
@@ -4012,18 +4188,23 @@ function hardCount() { return Object.keys(prog.hard || {}).length }
  */
 function hardBox() {
   const open = hardOpen()
-  if (!open) hardRun = false
-  const done = hardDone()
-  const on = hardRun && open
-  const ds = !open
+  if (!open) runMode = 'normal'
+  const md = modeDef(runMode)
+  const done = modeDone(runMode)
+  const tabs = MODES.map(([k, nm]) =>
+    `<button data-mode="${k}" class="${k === runMode ? 'on ' + k : ''}"` +
+    `${open || k === 'normal' ? '' : ' disabled'}>${nm}` +
+    `${modeDone(k) ? ' ✓' : ''}</button>`).join('')
+  const ds = !open && runMode !== 'normal'
     ? '일반으로 한 번 깨면 열립니다'
-    : done
-      ? `이미 깬 판입니다 · 가챠권은 처음 깰 때만 (${hardCount()}판 완료)`
-      : `한 대 맞으면 그 판은 끝납니다 · 처음 깨면 가챠권 ${HARD_TICKET}장`
-  return `<div class="hard${on ? '' : ' off'}${open ? '' : ' lock'}">` +
-    `<div class="tx"><div class="tt">하드코어${done ? ' ✓' : ''}</div>` +
-    `<div class="ds">${ds}</div></div>` +
-    `<button class="sw${on ? ' on' : ''}" id="hardSw"></button></div>`
+    : runMode === 'normal'
+      ? (open ? '어려운 모드는 처음 깰 때 가챠권을 줍니다'
+              : '이 판을 깨면 어려운 모드가 열립니다')
+      : done
+        ? `이미 깬 판입니다 · 가챠권은 처음 깰 때만 (${modeCount(runMode)}판 완료)`
+        : `${md[2]} · 처음 깨면 가챠권 ${md[3]}장`
+  return `<div class="modes"><div class="tabs">${tabs}</div>` +
+    `<div class="ds">${ds}</div></div>`
 }
 
 function renderStage() {
@@ -4077,16 +4258,18 @@ function renderStage() {
         `<div class="de">${CHAPTERS[0].name} ${SUBS}단계를 깨면 열립니다.</div></div>`)
 
   paintStage(el.querySelector('.pv'), ch)
-  const hb = document.getElementById('hardSw')
-  if (hb) hb.onclick = (e) => {
-    e.stopPropagation()
-    if (!hardOpen()) {
-      alert('일반으로 한 번 깬 판만 하드코어로 갈 수 있습니다.')
-      return
+  el.querySelectorAll('[data-mode]').forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation()
+      const k = b.dataset.mode
+      if (k !== 'normal' && !hardOpen()) {
+        alert('일반으로 한 번 깬 판만 어려운 모드로 갈 수 있습니다.')
+        return
+      }
+      runMode = k
+      renderStage()
     }
-    hardRun = !hardRun
-    renderStage()
-  }
+  })
   const zg = document.getElementById('zoneGo')
   if (zg) zg.onclick = (e) => { e.stopPropagation(); doLaunch(true) }
 
@@ -4109,7 +4292,7 @@ function renderStage() {
   })
 
   const n = energy()
-  const hd = hardRun && hardOpen() ? '하드코어 ' : ''
+  const hd = runMode !== 'normal' && hardOpen() ? modeDef(runMode)[1] + ' ' : ''
   document.getElementById('launch2').textContent =
     n > 0 ? hd + '출격' : '광고 보고 ' + hd + '출격'
   document.getElementById('stageHint').textContent =
@@ -4196,114 +4379,290 @@ function drawMark(cv, idx) {
   }
 }
 
+/* ================================================================
+ * 파일럿
+ *
+ * 기체와 같은 꼴로 바꾼다 - 카드가 늘어서고, 누르면 상세가 열리고,
+ * 거기서 쓸지 정한다. 전에는 스탯 네 줄이 화면 위에 붙어 있고 그 아래
+ * 파일럿 목록이 따로 있었는데, **그 스탯이 누구 것인지가 안 보였다.**
+ * 실제로도 모두의 것이었다 - 하나를 여덟이 같이 썼다.
+ *
+ * 이제 스탯은 사람마다 따로다. 그러니 스탯도 그 사람 카드 안에 있어야
+ * 한다 - 찍는 자리와 대상이 같은 화면에 있어야 무엇에 붓는지 안다.
+ * ================================================================ */
+
+/** 그 파일럿의 초상 조각(CSS 변수 이름). 없으면 null */
+function pilotFace(pl) {
+  const art = PILOT_ART[pl.grade]
+  return (art && art.face[pl.face]) || null
+}
+
+/** 카드와 상세에 함께 쓰는 스탯 한 줄 요약 */
+function stLine(id) {
+  const st = stOf(id)
+  const on = ST_KEYS.filter((k) => st[k] > 0)
+  if (!on.length) return '스탯 없음'
+  return on.map((k) => STATS[k].name + ' ' + st[k]).join(' · ')
+}
+
+/*
+ * 파일럿 상세.
+ *
+ * 기체 상세와 같은 판(#detail)을 쓴다. 판을 하나 더 만들면 여닫는 규칙이
+ * 두 벌이 되고, 한쪽만 고치는 일이 생긴다.
+ *
+ * @param pl   파일럿
+ * @param list 넘겨보기용 목록
+ */
+function openPilot(pl, list) {
+  const panel = document.getElementById('detail')
+  const body = document.getElementById('detailBody')
+  cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
+
+  const G = GRADES[pl.grade]
+  const have = hasGrade(pl.grade)
+  const on = pilotNow().id === pl.id
+  const face = pilotFace(pl)
+  const st = stOf(pl.id)
+  const back = stSpent(pl.id)
+  const row2 = (k, v) => '<div class="r2"><span>' + k + '</span><span>' + v + '</span></div>'
+
+  /*
+   * 스탯 네 줄.
+   *
+   * 값을 단추에 적는다 - 얼마가 드는지 모르고 누르게 두면 안 된다.
+   * 잠긴 파일럿에도 그대로 보여 준다. 열기 전에 무엇을 키울 수 있는지
+   * 보이는 편이 조각을 모을 이유가 된다. 다만 누르지는 못한다.
+   */
+  const statHtml = ST_KEYS.map((k) => {
+    const S = STATS[k], v = st[k] || 0
+    const eff = k === 'hp' ? '+' + (v * S.per)
+                           : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
+    const pips = Array.from({ length: ST_MAX },
+      (_, i) => '<span class="pip' + (i < v ? ' on' : '') + '"></span>').join('')
+    const cost = v < ST_MAX ? statCost(v) : 0
+    const can = have && canStat(k, pl.id)
+    return '<div class="stat">' +
+      '<div class="hd"><span class="nm">' + S.name + '</span>' +
+      '<span class="ef">' + (v ? eff : '') + '</span>' +
+      '<span class="k" style="margin-left:auto;font-size:11px;color:var(--dim)">' +
+        v + '/' + ST_MAX + '</span></div>' +
+      '<div class="de">' + S.desc + '</div>' +
+      '<div class="pips">' + pips +
+      '<button data-st="' + k + '" ' + (can ? '' : 'disabled') + '>' +
+      (v >= ST_MAX ? '최대' : cost.toLocaleString('ko-KR')) + '</button></div>' +
+      '</div>'
+  }).join('')
+
+  body.innerHTML =
+    '<h3>' + pl.name + '</h3>' +
+    '<div class="sub2">' + G.name +
+      (pl.grade === 'legend' ? ' · 후방 자리'
+                             : ' · 기본 ' + Math.round(G.base * 100) + '%') + '</div>' +
+    (face ? '<div class="pbig" style="--face:var(--gc-' + face + ')"></div>'
+          : '<div class="pbig none"><div class="rk ' + pl.grade + '"></div></div>') +
+    '<div class="cap">' + pl.desc + '</div>' +
+    '<div class="rows">' +
+      row2('등급 배수', '화력·체력 ×' + G.base.toFixed(2)) +
+      row2('경험치', back.toLocaleString('ko-KR')) +
+      row2('보유 경험치', pilotXp().toLocaleString('ko-KR')) +
+    '</div>' +
+    (have ? '' : '<div class="note2">아직 잠겨 있습니다. ' + G.name + ' 조각 ' +
+      shardG(pl.grade) + '/' + GRADE_NEED[pl.grade] + '개. 열면 ' + G.name +
+      ' 둘 다 쓸 수 있습니다.</div>') +
+    '<div class="lab">스탯</div><div class="sum">' + statHtml + '</div>' +
+    '<div class="note2">스탯은 파일럿마다 따로 쌓입니다. ' +
+      '경험치 주머니는 하나라, 누구에게 붓는지가 선택입니다.</div>' +
+    (back
+      ? '<div class="bar"><button class="ghost" id="pReset">' +
+        '스탯 되돌리기 · 경험치 ' + back.toLocaleString('ko-KR') + ' 회수</button></div>'
+      : '') +
+    (list && list.length > 1
+      ? '<div class="bar nav"><button class="ghost" id="dPrev">◀ 이전</button>' +
+        '<span class="pos">' + (list.indexOf(pl) + 1) + ' / ' + list.length + '</span>' +
+        '<button class="ghost" id="dNext">다음 ▶</button></div>'
+      : '') +
+    '<div class="bar">' +
+      (on ? '<button disabled>현재 선택됨</button>'
+          : have ? '<button id="pPick">이 파일럿 쓰기</button>' : '') +
+      '<button class="ghost" id="dClose">닫기</button>' +
+    '</div>'
+
+  const close = () => { panel.hidden = true; panel.onclick = null }
+  panel.hidden = false
+  panel.onclick = (e) => { if (e.target === panel) close() }
+  document.getElementById('dClose').onclick = close
+
+  if (list && list.length > 1) {
+    const at = list.indexOf(pl)
+    const go2 = (d) => openPilot(list[(at + d + list.length) % list.length], list)
+    document.getElementById('dPrev').onclick = () => go2(-1)
+    document.getElementById('dNext').onclick = () => go2(1)
+  }
+
+  body.querySelectorAll('.stat .pips button[data-st]').forEach((b) => {
+    b.onclick = () => {
+      const k = b.dataset.st
+      if (!hasGrade(pl.grade) || !canStat(k, pl.id)) return
+      const cur = stOf(pl.id)
+      prog.pilot.xp -= statCost(cur[k])
+      cur[k]++
+      save(); sfx('ready'); haptic('ult')
+      const pa = PILOT_ART[pl.grade]
+      const img = PC_IMG[pl.grade] || (pa && GC[pa.face[pl.face]]) || (pa && GC[pa.face[0]])
+      upgPlay(img || null, STATS[k].name, cur[k], gTone(pl.grade).main,
+              () => { renderPilot(); openPilot(pl, list) })
+    }
+  })
+
+  const rs = document.getElementById('pReset')
+  if (rs) rs.onclick = () => {
+    /* 쓴 경험치를 그대로 돌려준다. 안 돌려주면 되돌리기가 벌이 된다 */
+    if (!confirm(pl.name + ' 의 스탯을 모두 되돌립니다.' + String.fromCharCode(10) +
+                 '경험치 ' + back.toLocaleString('ko-KR') + ' 을 돌려받습니다.')) return
+    const cur = stOf(pl.id)
+    ST_KEYS.forEach((k) => { cur[k] = 0 })
+    prog.pilot.xp = (prog.pilot.xp || 0) + back
+    save(); sfx('pick'); renderPilot(); openPilot(pl, list)
+  }
+
+  const pk = document.getElementById('pPick')
+  if (pk) pk.onclick = () => {
+    /* 세기는 등급이, 특성은 사람이 정한다. 둘을 같이 옮긴다 */
+    prog.pilot.grade = pl.grade
+    prog.pilot.who = pl.id
+    save(); sfx('pick'); close(); renderPilot()
+  }
+}
+
 function renderPilot() {
   const pt = prog.pilot
   const have = pilotXp()
   const [got, need] = lvProgress()
   const maxed = pt.lv >= PILOT_MAX
   document.getElementById('pilotSub').innerHTML =
-    `판이 끝나면 점수의 10분의 1이 경험치가 됩니다. 스탯은 경험치로 직접 올립니다.`
-
-  const statHtml = ST_KEYS.map((k) => {
-    const S = STATS[k], v = pt.st[k]
-    const eff = k === 'hp' ? `+${v * S.per}` : `${k === 'rate' ? '-' : '+'}${(v * S.per).toFixed(1)}%`
-    const pips = Array.from({ length: ST_MAX },
-      (_, i) => `<span class="pip${i < v ? ' on' : ''}"></span>`).join('')
-    const cost = v < ST_MAX ? statCost(v) : 0
-    const can = canStat(k)
-    return `<div class="stat">` +
-      `<div class="hd"><span class="nm">${S.name}</span>` +
-      `<span class="ef">${v ? eff : ''}</span>` +
-      `<span class="k" style="margin-left:auto;font-size:11px;color:var(--dim)">${v}/${ST_MAX}</span></div>` +
-      `<div class="de">${S.desc}</div>` +
-      `<div class="pips">${pips}` +
-      /* 값을 단추에 적는다. 얼마가 드는지 모르고 누르게 두면 안 된다 */
-      `<button data-st="${k}" ${can ? '' : 'disabled'}>` +
-      (v >= ST_MAX ? '최대' : cost.toLocaleString('ko-KR')) + `</button></div>` +
-      `</div>`
-  }).join('')
+    '판이 끝나면 점수의 10분의 1이 경험치가 됩니다. 스탯은 파일럿마다 따로 올립니다.'
 
   /*
    * 파일럿 여덟 장.
    *
-   * 등급마다 둘이고 세기는 같다 - 다른 것은 특성뿐이다. 등급을 열면
-   * 그 등급의 둘 다 열린다. 조각을 두 배로 모으게 하면 「고를 수 있다」가
-   * 「더 모아라」가 된다.
-   *
-   * 초상은 등급마다 두 장이 이미 들어 있었는데 첫 장만 쓰고 있었다.
-   * 둘째 장을 여기서 꺼내 쓴다.
+   * 등급마다 둘이고 세기는 같다 - 다른 것은 특성과 찍은 스탯뿐이다.
+   * 등급을 열면 그 등급의 둘 다 열린다. 조각을 두 배로 모으게 하면
+   * 「고를 수 있다」가 「더 모아라」가 된다.
    */
-  const gradeBox = PILOTS.map((pl) => {
+  const list = PILOTS.slice()
+  const cards = list.map((pl) => {
     const G = GRADES[pl.grade]
-    const have = hasGrade(pl.grade)
+    const owned = hasGrade(pl.grade)
     const on = pilotNow().id === pl.id
-    const art = PILOT_ART[pl.grade]
-    const face = art && art.face[pl.face]
+    const face = pilotFace(pl)
     const pic = face
-      ? `<div class="pf" style="--face:var(--gc-${face})"></div>`
-      : `<div class="rk ${pl.grade}"></div>`
-    const ready = !have && GRADE_NEED[pl.grade] > 0 && shardG(pl.grade) >= GRADE_NEED[pl.grade]
-    return `<div class="gcard${on ? ' on' : ''}${have ? '' : ' no'}${ready ? ' can' : ''}" data-who="${pl.id}">` +
+      ? '<div class="pf" style="--face:var(--gc-' + face + ')"></div>'
+      : '<div class="pf none"><div class="rk ' + pl.grade + '"></div></div>'
+    const ready = !owned && GRADE_NEED[pl.grade] > 0 && shardG(pl.grade) >= GRADE_NEED[pl.grade]
+    const canAny = owned && ST_KEYS.some((k) => canStat(k, pl.id))
+    return '<div class="pcard' + (on ? ' on' : '') + (owned ? '' : ' no') +
+      (ready || canAny ? ' can' : '') + '" data-who="' + pl.id + '">' +
       pic +
-      `<div><div class="nm">${pl.name} <span style="color:var(--dim);font-size:10.5px">` +
-        `${G.name}${pl.grade === 'legend' ? ' · 후방' : ` ${Math.round(G.base * 100)}%`}</span></div>` +
-      `<div class="de">${pl.desc}</div></div>` +
-      `<span class="rt">${have ? (on ? '사용 중' : '보유') :
-        `조각 ${shardG(pl.grade)}/${GRADE_NEED[pl.grade]}`}</span></div>`
+      '<div class="tx"><div class="nm">' + pl.name + '</div>' +
+      '<div class="gr ' + G.tag + '">' + G.name + '</div>' +
+      '<div class="de">' + pl.desc + '</div>' +
+      '<div class="stx">' + (owned ? stLine(pl.id)
+        : '조각 ' + shardG(pl.grade) + '/' + GRADE_NEED[pl.grade]) + '</div>' +
+      '</div>' +
+      (on ? '<span class="rt">사용 중</span>'
+          : owned ? '' : '<span class="rt lk">잠김</span>') +
+      '</div>'
   }).join('')
 
   const legendBox = boughtLegend()
-    ? row('전설 파일럿', `후방 편대 ${Math.round(REAR_BOUGHT * 100)}%`, true)
-    : `<div class="stat">` +
-      `<div class="hd"><span class="nm">전설 파일럿</span>` +
-      `<span class="ef">후방 편대 ${Math.round(REAR_BOUGHT * 100)}%</span></div>` +
-      `<div class="de">네 번째 자리가 열립니다.` +
-      (isLegend() ? ` 지금은 ${Math.round(REAR_EARNED * 100)}% 로 쓰고 있습니다.` : '') + `</div>` +
-      `<div class="pips">` +
-      `<button id="buyLegend">${LEGEND_PILOT.price.toLocaleString('ko-KR')}원</button></div></div>`
+    ? row('전설 파일럿', '후방 편대 ' + Math.round(REAR_BOUGHT * 100) + '%', true)
+    : '<div class="stat">' +
+      '<div class="hd"><span class="nm">전설 파일럿</span>' +
+      '<span class="ef">후방 편대 ' + Math.round(REAR_BOUGHT * 100) + '%</span></div>' +
+      '<div class="de">네 번째 자리가 열립니다.' +
+      (isLegend() ? ' 지금은 ' + Math.round(REAR_EARNED * 100) + '% 로 쓰고 있습니다.' : '') +
+      '</div><div class="pips">' +
+      '<button id="buyLegend">' + LEGEND_PILOT.price.toLocaleString('ko-KR') +
+      '원</button></div></div>'
+
+  /*
+   * 지금 태운 파일럿을 맨 위에 크게.
+   *
+   * 여덟 장이 늘어서 있으면 그 안의 「사용 중」 딱지 하나로는 누구를
+   * 태웠는지가 안 잡힌다. 기체 화면이 고른 기체를 위에 한 대 크게
+   * 띄우는 것과 같은 이유다 - 지금 상태가 먼저고 고르는 것은 그 다음이다.
+   *
+   * 특성과 찍은 스탯을 같이 낸다. 이 둘이 판에서 실제로 달라지는 값이다.
+   */
+  const nowP = pilotNow()
+  const nowFace = pilotFace(nowP)
+  const nowSt = stOf(nowP.id)
+  const nowStat = ST_KEYS.map((k) => {
+    const v = nowSt[k] || 0
+    const S = STATS[k]
+    const eff = !v ? '-'
+      : k === 'hp' ? '+' + (v * S.per)
+      : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
+    return '<div class="c' + (v ? ' on' : '') + '">' +
+      '<span class="k">' + S.name + '</span><span class="v">' + eff + '</span></div>'
+  }).join('')
+  const nowBox =
+    '<div class="pnow" id="pilotNowCard">' +
+    (nowFace ? '<div class="pf" style="--face:var(--gc-' + nowFace + ')"></div>'
+             : '<div class="pf none"><div class="rk ' + nowP.grade + '"></div></div>') +
+    '<div class="tx">' +
+      '<div class="nm">' + nowP.name +
+        '<span class="gr ' + GRADES[nowP.grade].tag + '">' +
+        GRADES[nowP.grade].name + '</span></div>' +
+      '<div class="de">' + nowP.desc + '</div>' +
+      '<div class="cells">' + nowStat + '</div>' +
+      '<div class="go">상세 보기 ▸</div>' +
+    '</div></div>'
 
   document.getElementById('pilotBody').innerHTML =
-    `<div class="lab">호출부호</div>` +
-    `<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="${pt.name.replace(/"/g, '&quot;')}">` +
-    `<div class="lab">마크</div>` +
-    `<div class="marks" id="marks">` +
-    MARK_COLOR.map((_, i) =>
-      `<div class="mark${i === pt.mark ? ' on' : ''}" data-mark="${i}">` +
-      `<canvas width="80" height="80" style="width:100%;height:38px"></canvas></div>`).join('') +
-    `</div>` +
-
-    `<div class="lab">계급</div>` +
-    `<div class="sum">` +
-      row('현재', `${pilotRank()} · Lv.${pt.lv}${maxed ? ' (만렙)' : ''}`, maxed) +
+    '<div class="lab">지금 태운 파일럿</div>' + nowBox +
+    '<div class="lab">계급</div>' +
+    '<div class="sum">' +
+      row('현재', pilotRank() + ' · Lv.' + pt.lv + (maxed ? ' (만렙)' : ''), maxed) +
       (maxed ? '' :
-        `<div class="row" style="display:block">` +
-        `<div style="display:flex;font-size:12px"><span class="k">다음 레벨까지</span>` +
-        `<span class="v">${got.toLocaleString('ko-KR')} / ${need.toLocaleString('ko-KR')}</span></div>` +
-        `<div class="xpbar" style="margin-top:8px"><i style="width:${Math.min(100, (got / need) * 100).toFixed(1)}%"></i></div>` +
-        `</div>`) +
-      row('쓸 수 있는 경험치', have.toLocaleString('ko-KR'), have > 0) +
-    `</div>` +
+        '<div class="row" style="display:block">' +
+        '<div style="display:flex;font-size:12px"><span class="k">다음 레벨까지</span>' +
+        '<span class="v">' + got.toLocaleString('ko-KR') + ' / ' +
+          need.toLocaleString('ko-KR') + '</span></div>' +
+        '<div class="xpbar" style="margin-top:8px"><i style="width:' +
+          Math.min(100, (got / need) * 100).toFixed(1) + '%"></i></div>' +
+        '</div>') +
+      row('보유 경험치', have.toLocaleString('ko-KR'), have > 0) +
+    '</div>' +
 
-    `<div class="lab">스탯</div><div class="sum">${statHtml}</div>` +
+    '<div class="lab">파일럿</div>' +
+    '<div class="pcards">' + cards + '</div>' +
+    '<div class="bar"><button class="ghost small" id="pilotGacha">' +
+    '뽑기 · 가챠권 ' + prog.ticket + '장</button></div>' +
 
-    `<div class="lab">파일럿 등급</div>` +
-    `<div class="grades">${gradeBox}</div>` +
-    `<div class="bar"><button class="ghost small" id="pilotGacha">` +
-    `뽑기 · 가챠권 ${prog.ticket}장</button></div>` +
+    '<div class="lab">호출부호</div>' +
+    '<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="' +
+      pt.name.replace(/"/g, '&quot;') + '">' +
+    '<div class="lab">마크</div>' +
+    '<div class="marks" id="marks">' +
+    MARK_COLOR.map((_, i) =>
+      '<div class="mark' + (i === pt.mark ? ' on' : '') + '" data-mark="' + i + '">' +
+      '<canvas width="80" height="80" style="width:100%;height:38px"></canvas></div>').join('') +
+    '</div>' +
 
-    `<div class="lab">편대</div><div class="sum">${legendBox}</div>` +
+    '<div class="lab">편대</div><div class="sum">' + legendBox + '</div>' +
 
-    `<div class="lab">소리</div>` +
-    `<div class="bar">` +
-    `<button class="ghost small" id="btnMusic">음악</button>` +
-    `<button class="ghost small" id="btnSfx">효과음</button>` +
-    `</div>` +
+    '<div class="lab">소리</div>' +
+    '<div class="bar">' +
+    '<button class="ghost small" id="btnMusic">음악</button>' +
+    '<button class="ghost small" id="btnSfx">효과음</button>' +
+    '</div>' +
 
-    `<div class="lab">그 밖에</div>` +
-    `<div class="bar">` +
-    `<button class="ghost small" id="stReset">스탯 초기화</button>` +
-    `<button class="ghost small" id="devUnlock">개발용 전체 해금</button>` +
-    `</div>`
+    '<div class="lab">그 밖에</div>' +
+    '<div class="bar">' +
+    '<button class="ghost small" id="devUnlock">개발용 전체 해금</button>' +
+    '</div>'
 
   document.querySelectorAll('#marks .mark').forEach((el) => {
     const i = +el.dataset.mark
@@ -4313,61 +4672,20 @@ function renderPilot() {
   const nm = document.getElementById('pilotNm')
   nm.oninput = () => { prog.pilot.name = nm.value.trim().slice(0, 12); save() }
 
-  document.querySelectorAll('.stat .pips button[data-st]').forEach((b) => {
-    b.onclick = () => {
-      const k = b.dataset.st
-      if (!canStat(k)) return
-      prog.pilot.xp -= statCost(prog.pilot.st[k])
-      prog.pilot.st[k]++
-      save()
-      sfx('ready')
-      haptic('ult')
-      /*
-       * 파일럿은 기체 그림 대신 초상을 띄운다. 올린 것이 무엇인지
-       * (화력·연사·탄폭·내구) 이름으로 적는다.
-       */
-      /* 카드와 같은 반신을 쓴다. 없으면 4차 얼굴로 떨어진다 */
-      const gk = prog.pilot.grade
-      const pa = PILOT_ART[gk]
-      const face = PC_IMG[gk] || (pa && GC[pa.face[0]])
-      upgPlay(face || null, STATS[k].name, prog.pilot.st[k],
-              gTone(prog.pilot.grade).main, () => renderPilot())
-    }
+  /* 카드를 누르면 상세가 열린다. 쓸지 말지는 거기서 정한다 - 기체와 같다 */
+  document.querySelectorAll('.pcard[data-who]').forEach((el) => {
+    el.onclick = () => openPilot(PILOT_BY[el.dataset.who], list)
   })
+  /* 위쪽 큰 초상도 누르면 열린다. 여기가 제일 먼저 눈에 든다 */
+  document.getElementById('pilotNowCard').onclick = () => openPilot(nowP, list)
 
-  document.querySelectorAll('.gcard[data-who]').forEach((el) => {
-    const pl = PILOT_BY[el.dataset.who]
-    el.onclick = () => {
-      const k = pl.grade
-      if (!hasGrade(k)) {
-        alert(GRADES[k].name + ' 파일럿은 조각 ' + GRADE_NEED[k] + '개가 필요합니다.' + String.fromCharCode(10) +
-              '지금 ' + shardG(k) + '개. 열면 ' + GRADES[k].name + ' 둘 다 쓸 수 있습니다.')
-        return
-      }
-      /* 세기는 등급이, 특성은 사람이 정한다. 둘을 같이 옮긴다 */
-      prog.pilot.grade = k
-      prog.pilot.who = pl.id
-      save(); sfx('pick'); renderPilot()
-    }
-  })
   document.getElementById('pilotGacha').onclick = () => openGacha()
 
   const buy = document.getElementById('buyLegend')
   if (buy) buy.onclick = () => {
-    alert(`전설 파일럿 ${LEGEND_PILOT.price.toLocaleString('ko-KR')}원\n\n` +
-          `결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.`)
-  }
-
-  document.getElementById('stReset').onclick = () => {
-    if (!pilotSpent()) return
-    /* 쓴 경험치를 그대로 돌려준다. 안 돌려주면 되돌리기가 벌이 된다 */
-    let back = 0
-    ST_KEYS.forEach((k) => { for (let i = 0; i < (prog.pilot.st[k] || 0); i++) back += statCost(i) })
-    if (!confirm('찍은 스탯을 모두 되돌립니다. 쓴 경험치 ' +
-                 back.toLocaleString('ko-KR') + ' 을 돌려받습니다.')) return
-    ST_KEYS.forEach((k) => { prog.pilot.st[k] = 0 })
-    prog.pilot.xp = (prog.pilot.xp || 0) + back
-    save(); renderPilot()
+    alert('전설 파일럿 ' + LEGEND_PILOT.price.toLocaleString('ko-KR') + '원' +
+          String.fromCharCode(10, 10) +
+          '결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.')
   }
   document.getElementById('devUnlock').onclick = () => {
     prog.owned = PLANES.map((p) => p.id).concat(LEGEND_PILOT.id)
@@ -4616,8 +4934,8 @@ function newState() {
      * 붙이면 「한 대」가 사람마다 달라진다.
      */
     player: { x: W / 2, y: H - 120, lv: 1, inv: 0,
-              hp: hardRun && !zoneRun ? 1 : PLAYER_HP + pilotHp(),
-              maxHp: hardRun && !zoneRun ? 1 : PLAYER_HP + pilotHp() },
+              hp: runMode === 'hard' && !zoneRun ? 1 : PLAYER_HP + pilotHp(),
+              maxHp: runMode === 'hard' && !zoneRun ? 1 : PLAYER_HP + pilotHp() },
     ult: 0, ultT: 0, ultKind: null, escorts: [], shards: [], sweeps: [],
     adUsed: { revive: 0 },
     squad, lives: LIVES, score: 0, kills: 0, ultUsed: 0, hitCount: 0, clearWait: 0,
@@ -4646,7 +4964,8 @@ function newState() {
     muzzles: [], sparks: [],
     /* 끝없는 출격이면 첫 구역, 아니면 고른 판 */
     zone: zoneRun ? 1 : 0,
-    hard: hardRun && !zoneRun,
+    hard: runMode === 'hard' && !zoneRun,
+    crazy: runMode === 'crazy' && !zoneRun,
     stage: zoneRun ? zoneStage(1) : curStage(),
     theme: THEMES[(zoneRun ? zoneStage(1) : curStage()).theme],
   }
@@ -5615,8 +5934,22 @@ function zoneStage(n) {
 
 /** 끝없는 출격으로 들어가는가. start() 가 이걸 보고 첫 구역을 만든다 */
 let zoneRun = false
-/* 이번 출격이 하드코어인가. 끝없는 출격에는 붙지 않는다 */
-let hardRun = false
+/*
+ * 이번 출격의 난이도.
+ *
+ *   normal  기본
+ *   crazy   적 공격 1.3배
+ *   hard    한 대 맞으면 끝
+ *
+ * 하나만 고른다. 끝없는 출격에는 붙지 않는다.
+ */
+let runMode = 'normal'
+const MODES = [
+  ['normal', '일반', '', 0],
+  ['crazy',  '크레이지', `적 공격 ×${CRAZY_DMG}`, CRAZY_TICKET],
+  ['hard',   '하드코어', '한 대 맞으면 끝', HARD_TICKET],
+]
+function modeDef(k) { return MODES.find((m) => m[0] === k) || MODES[0] }
 
 /** 1챕터를 끝까지 깨야 열린다. 규칙을 다 배운 뒤에 오는 자리다 */
 function zoneOpen() { return starOf(0, SUBS) > 0 }
@@ -6713,6 +7046,10 @@ function boom(x, y, n, color) {
  * ================================================================ */
 /* 한 판에 몇 번까지. 시험 중에는 안 센다 */
 const AD_LIMIT = { revive: FREE_PLAY ? 99 : 1 }
+/** 이번 판에서 광고로 되살아날 수 있는 횟수 */
+function reviveLimit() {
+  return state && state.hard ? HARD_REVIVE : AD_LIMIT.revive
+}
 
 const scAd = document.getElementById('adv')
 
@@ -6740,8 +7077,15 @@ function showAd(title, onDone) {
 
 /** 격추된 자리에서 이어한다 */
 function reviveByAd() {
-  /* 하드코어는 되살아나지 않는다. 광고로 규칙을 지우면 규칙이 아니다 */
-  if (!state || state.hard || state.adUsed.revive >= AD_LIMIT.revive) return
+  /*
+   * 하드코어도 광고 부활은 한 번 된다.
+   *
+   * 아예 막았더니 실수 한 번에 이십 분이 날아갔다. 한 번은 열어 두되
+   * FREE_PLAY 로 늘어난 한도(99)는 안 따른다 - 하드코어에서 무제한
+   * 부활은 하드코어가 아니다.
+   */
+  if (!state) return
+  if (state.adUsed.revive >= reviveLimit()) return
   showAd('이어하기', () => {
     state.adUsed.revive++
     const pl = state.player
@@ -7039,7 +7383,13 @@ function hitPlayer(dmg) {
   state.hitCount++
   /* 「철벽」·「백야」는 맞고 나서 더 오래 무적이다 */
   pl.inv = HIT_INV + perk('inv')
-  pl.hp -= dmg || DMG.bullet
+  /*
+   * 크레이지는 여기 한 줄로 끝난다.
+   *
+   * 적 공격이 아픈 길은 전부 hitPlayer 를 지난다 - 탄, 충돌, 빔, 폭격.
+   * 적 쪽에 배수를 뿌리면 새 공격을 만들 때마다 빠뜨릴 자리가 생긴다.
+   */
+  pl.hp -= (dmg || DMG.bullet) * (state.crazy ? CRAZY_DMG : 1)
   boom(pl.x, pl.y, dmg >= 20 ? 22 : 10, '#7fd6ff')
   /*
    * 맞았다는 것이 화면 전체에 나야 한다.
@@ -9780,15 +10130,16 @@ function draw() {
   g.fillStyle = '#e8edf7'; g.font = 'bold 15px system-ui'
   g.textAlign = 'left'; g.textBaseline = 'top'
   g.fillText(String(s.score).padStart(6, '0'), 14, 30)
-  /* 하드코어는 화면에 계속 떠 있어야 한다 - 규칙이 다르다는 걸 잊으면 안 된다 */
-  if (s.hard) {
+  /* 난이도는 화면에 계속 떠 있어야 한다 - 규칙이 다르다는 걸 잊으면 안 된다 */
+  if (s.hard || s.crazy) {
+    const tag = s.hard ? '하드코어' : '크레이지'
     g.save()
     g.font = 'bold 10px system-ui'
-    const tw = g.measureText('하드코어').width + 12
-    g.fillStyle = 'rgba(168,50,74,.9)'
+    const tw = g.measureText(tag).width + 12
+    g.fillStyle = s.hard ? 'rgba(168,50,74,.9)' : 'rgba(176,104,26,.9)'
     g.fillRect(14, 50, tw, 17)
-    g.fillStyle = '#ffc9d4'
-    g.fillText('하드코어', 20, 54)
+    g.fillStyle = s.hard ? '#ffc9d4' : '#ffe0b0'
+    g.fillText(tag, 20, 54)
     g.restore()
   }
   g.textAlign = 'right'; g.fillStyle = '#4fd1ff'
@@ -10376,10 +10727,17 @@ function end(win) {
    * 최선의 수가 되어 버린다.
    */
   let hardGot = 0
-  if (state.hard && win && key && !prog.hard[key]) {
-    prog.hard[key] = true
-    prog.ticket += HARD_TICKET
-    hardGot = HARD_TICKET
+  let modeName = ''
+  if (win && key && (state.hard || state.crazy)) {
+    const mk = state.hard ? 'hard' : 'crazy'
+    const box = prog[mk]
+    const md = modeDef(mk)
+    modeName = md[1]
+    if (!box[key]) {
+      box[key] = true
+      prog.ticket += md[3]
+      hardGot = md[3]
+    }
   }
 
   const st = prog.stats
@@ -10398,7 +10756,7 @@ function end(win) {
   const rankAfter = pilotRank()
   save()
 
-  const hardTag = state.hard ? '하드코어 · ' : ''
+  const hardTag = state.hard ? '하드코어 · ' : state.crazy ? '크레이지 · ' : ''
   document.getElementById('overTitle').textContent =
     zone ? `제 ${zone} 구역에서 격추`
          : win ? `${hardTag}${sg.chapter} ${sg.sub}단계 클리어`
@@ -10433,11 +10791,11 @@ function end(win) {
       : tickets
         ? cell('tk', '가챠권', '+' + tickets, '보유 ' + prog.ticket, true)
         : cell('tk', '가챠권', STAR_TICKET - prog.star + '별 남음', '')) +
-    /* 하드코어 첫 클리어는 따로 한 칸을 준다. 별에 섞이면 뭘로 받았는지 모른다 */
+    /* 난이도 몫은 따로 한 칸을 준다. 별에 섞이면 뭘로 받았는지 모른다 */
     (hardGot
-      ? cell('hard', '하드코어 첫 클리어', '가챠권 +' + hardGot, '', true)
-      : state.hard && win
-        ? cell('hard', '하드코어', '이미 깬 판입니다', '')
+      ? cell('hard', modeName + ' 첫 클리어', '가챠권 +' + hardGot, '', true)
+      : modeName
+        ? cell('hard', modeName, '이미 깬 판입니다', '')
         : '')
 
   /*
@@ -10494,7 +10852,7 @@ function end(win) {
     (!zone && win && nextSub > SUBS && CHAPTERS[(prog.chapter || 0) + 1]
       ? '<div class="rnext"><b>' + CHAPTERS[(prog.chapter || 0) + 1].name + '</b> 이 열렸습니다</div>' : '')
   const rv = document.getElementById('revive')
-  rv.hidden = (win && !zone) || state.hard || state.adUsed.revive >= AD_LIMIT.revive
+  rv.hidden = (win && !zone) || state.adUsed.revive >= reviveLimit()
   scOver.hidden = false
   sfx(win ? 'clear' : 'down')
 
@@ -10538,7 +10896,7 @@ function doLaunch(zoneMode) {
    * 화면 그리는 쪽에서도 끄지만, 출격은 편대 화면의 단추로도 들어오므로
    * 마지막 관문을 여기 둔다.
    */
-  if (zoneRun || !hardOpen()) hardRun = false
+  if (zoneRun || !hardOpen()) runMode = 'normal'
   if (energy() > 0) { energySpend(); start(); return }
   if (adDayLeft() <= 0) {
     alert('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.')
