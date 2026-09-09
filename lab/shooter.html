@@ -3584,7 +3584,6 @@ function renderPlanes() {
       `<div class="nm">${p.name}</div>` +
       `<div class="wp"><i class="wi w-${p.weapon}"></i>${WEAPONS[p.weapon].name}</div>` +
       `<div class="de">${WEAPONS[p.weapon].desc}</div>` +
-      `<button class="more">상세 · 발사 모습 보기 ▸</button>` +
       (lab ? `<div class="lock">${p.unlock.kind === 'paid' ? '🔒 ' : ''}${lab}</div>` : '') +
       (ok
         ? (shardOf(p.id) ? `<div class="shard">조각 ${shardOf(p.id)}개</div>` : '')
@@ -3598,10 +3597,6 @@ function renderPlanes() {
               `부품 ${cost} · 조각 ${shardUpg(p, lv)}</button>`) +
           `</div>`
         : '')
-
-    /* 카드를 누르면 고르고, 정보를 누르면 상세를 연다 - 눌린 자리가 갈려야 한다 */
-    const ib = c.querySelector('.more')
-    if (ib) ib.onclick = (ev) => { ev.stopPropagation(); openDetail(p, list) }
 
     const btn = c.querySelector('.up button')
     if (btn && !btn.disabled) {
@@ -3619,19 +3614,20 @@ function renderPlanes() {
       }
     }
 
-    c.onclick = () => {
-      if (!ok) {
-        alert(p.unlock.kind === 'paid'
-          ? `유료 기체입니다. 결제는 아직 붙지 않았습니다.\n(${lab})`
-          : `아직 잠겨 있습니다.\n${lab} 필요 · 지금 ${prog.total.toLocaleString('ko-KR')}점`)
-        return
-      }
-      // 같은 기체를 두 자리에 넣지 않는다 - 자리를 맞바꾼다
-      const dup = prog.squad.indexOf(p.id)
-      if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
-      prog.squad[activeSlot] = p.id
-      save(); go('squad')
-    }
+    /*
+     * 카드를 누르면 **상세를 연다.** 곧바로 편대에 넣지 않는다.
+     *
+     * 전에는 카드를 누르는 순간 그 기체가 자리에 들어가고 편대 화면으로
+     * 넘어갔다. 그래서 **고르기 전에 볼 방법이 없었다** - 무엇을 넣는지
+     * 보려면 일단 넣어 보는 수밖에 없었다. 상세를 따로 단추로 빼 두었더니
+     * 이번엔 그 단추를 누르는 사람이 없었다.
+     *
+     * 누르는 자리를 하나로 합친다 - 카드를 누르면 발사 모습과 스펙이 뜨고,
+     * 넣을지 말지는 거기서 정한다. 잠긴 기체도 똑같이 열린다. 못 넣는 것을
+     * 못 보게 할 이유가 없다 - 오히려 무엇이 잠겨 있는지 보여야 조각을
+     * 모을 마음이 든다.
+     */
+    c.onclick = () => openDetail(p, list)
     elPlanes.appendChild(c)
     paintPlane(c.querySelector('.pv'), p, 1.1)
   }
@@ -4469,10 +4465,13 @@ function openDetail(p, list) {
 
   const dp = document.getElementById('dPick')
   if (dp) dp.onclick = () => {
+    /* 같은 기체를 두 자리에 넣지 않는다 - 자리를 맞바꾼다 */
     const dup = prog.squad.indexOf(p.id)
     if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
     prog.squad[activeSlot] = p.id
     save(); close(); renderPlanes()
+    /* 편대로 돌려보낸다. 어느 자리에 어떻게 들어갔는지 보여야 고른 것이 끝난다 */
+    go('squad')
   }
 }
 
@@ -8973,10 +8972,23 @@ const EBUL = {
   heavy: { glow: 'rgba(255,90,90,.34)',   body: '#e8503f', core: '#ffd2c9' },
   boss:  { glow: 'rgba(190,140,255,.32)', body: '#b388ff', core: '#efe4ff', },
   lance: { glow: 'rgba(255,255,255,.4)',  body: '#ffffff', core: '#ffffff', long: true },
-  /* 폭격탄. 크고 느리고 요격할 수 있다 */
-  bomb:  { glow: 'rgba(255,150,80,.34)',  body: '#e6e9ef', core: '#ffffff', long: true },
-  /* 직선 미사일. 폭격탄과 반대다 - 빠르고 못 쏘아 떨어뜨린다 */
-  rocket: { glow: 'rgba(255,90,120,.44)', body: '#ffd7de', core: '#ffffff', long: true },
+  /*
+   * 폭격탄. 크고 느리고 요격할 수 있다.
+   *
+   * nose:'down' - 그림이 이미 아래를 향하고 있다는 뜻이다. 눕힐 때
+   * 90도를 어느 쪽으로 돌릴지가 여기서 갈린다. 아래 rocket 참고.
+   */
+  bomb:  { glow: 'rgba(255,150,80,.34)',  body: '#e6e9ef', core: '#ffffff',
+           long: true, nose: 'down' },
+  /*
+   * 직선 미사일. 폭격탄과 반대다 - 빠르고 못 쏘아 떨어뜨린다.
+   *
+   * 이 그림도 꼬리날개가 위, 코가 아래다. 눕히는 식이 위를 향한 그림을
+   * 전제하고 있어서(+90도) 아래로 날아가는 탄이 180도 돌아 **코가 위로
+   * 뒤집혔다.** 두 그림 다 그랬다.
+   */
+  rocket: { glow: 'rgba(255,90,120,.44)', body: '#ffd7de', core: '#ffffff',
+            long: true, nose: 'down' },
 }
 
 /*
@@ -9467,8 +9479,16 @@ function draw() {
         const w = b.r * (b.sh === 'bomb' ? 1.5 : C.long ? 2.4 : 3.6)
         const h = w * (ei.naturalHeight / ei.naturalWidth)
         g.save(); g.translate(b.x, b.y)
-        /* 길쭉한 탄만 눕힌다. 둥근 것은 돌려도 티가 안 나고 값만 든다 */
-        if (C.long) g.rotate(Math.atan2(b.vy, b.vx) + Math.PI / 2)
+        /*
+         * 길쭉한 탄만 눕힌다. 둥근 것은 돌려도 티가 안 나고 값만 든다.
+         *
+         * 돌리는 각은 그림이 원래 어느 쪽을 보고 있느냐에 달렸다.
+         * 위를 향한 그림은 +90도, 아래를 향한 그림(nose:'down')은 -90도다.
+         * 하나로 묶어 두었더니 폭격탄과 미사일이 거꾸로 날았다.
+         */
+        if (C.long) {
+          g.rotate(Math.atan2(b.vy, b.vx) + (C.nose === 'down' ? -Math.PI / 2 : Math.PI / 2))
+        }
         g.drawImage(ei, -w / 2, -h / 2, w, h)
         g.restore()
       } else if (C.long) {
