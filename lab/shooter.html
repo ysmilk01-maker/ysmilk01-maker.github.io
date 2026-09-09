@@ -1203,6 +1203,31 @@ const SHOP = [
 /* 천장. 안 나오는 사람이 끝없이 안 나오는 일을 막는다 */
 const PITY = { plane: { at: 40, tier: 'legend' }, pilot: { at: 60, tier: 'high' } }
 
+/*
+ * 뽑기는 하나다.
+ *
+ * 전에는 기체 뽑기와 파일럿 뽑기가 따로 있었다. 고를 수 있으면 뽑기가
+ * 아니라 구매다 - 뭐가 나올지 이미 알고 누르는 것이라 여는 순간이
+ * 밋밋했고, 파일럿 쪽은 등급 넷을 다 모으고 나면 아무도 안 눌렀다.
+ *
+ * 이제 한 버튼이고, 누른 뒤에 어느 쪽인지 갈린다.
+ *
+ * 기체 쪽이 더 자주 나온다. 기체는 서른 기인데 파일럿은 등급 넷뿐이라
+ * 반반으로 두면 파일럿이 금방 동나고 그 뒤로는 절반이 허탕이 된다.
+ * 파일럿을 다 모았으면 아예 기체만 나온다 - 이미 가진 것을 또 주는 것은
+ * 확률이 아니라 낭비다.
+ */
+const PILOT_CHANCE = 0.3
+
+function pilotLeft() {
+  return GRADE_KEYS.some((t) => GRADE_NEED[t] > 0 && !hasGrade(t))
+}
+
+function rollKind() {
+  if (!pilotLeft()) return 'plane'
+  return Math.random() < PILOT_CHANCE ? 'pilot' : 'plane'
+}
+
 function shardOf(id) { return prog.shardP[id] || 0 }
 function shardG(k) { return prog.shardG[k] || 0 }
 function shardNeed(p) { return SHARD_NEED[p.tier] }
@@ -1728,7 +1753,8 @@ function drawCardInner(c, tone, res, e, w, h) {
  * 격자에서 바로 눈에 띈다. 가챠권이 열 장 있어야 누를 수 있다.
  * ================================================================ */
 function pull10(kind) {
-  const need = GACHA[kind].cost * 10
+  /* 열 장은 갈래가 섞여 나온다. 한 장씩 따로 굴리므로 저절로 섞인다 */
+  const need = GACHA[kind === 'mix' ? 'plane' : kind].cost * 10
   if (prog.ticket < need) return null
   const out = []
   for (let i = 0; i < 10; i++) {
@@ -1765,6 +1791,12 @@ function paintGacha10(list) {
 }
 
 function pull(kind) {
+  /*
+   * 'mix' 로 부르면 여기서 갈래가 정해진다. 표(확률·조각 수·천장)는
+   * 갈래별로 그대로 두고 고르는 순간만 옮긴 것이라, 뽑기 안쪽 계산은
+   * 하나도 안 바뀐다.
+   */
+  if (kind === 'mix') kind = rollKind()
   const g = GACHA[kind]
   if (prog.ticket < g.cost) return null
   prog.ticket -= g.cost
@@ -2666,9 +2698,9 @@ function renderPlanes() {
   const ef = document.getElementById('planeFilters')
   ef.innerHTML = ''
   const gb = document.createElement('button')
-  gb.textContent = `기체 뽑기 · 가챠권 ${prog.ticket}장`
+  gb.textContent = `뽑기 · 가챠권 ${prog.ticket}장`
   gb.style.cssText = 'background:#24406b;color:#cfe6ff'
-  gb.onclick = () => openGacha('plane')
+  gb.onclick = () => openGacha()
   ef.appendChild(gb)
   for (const [k, label] of FILTERS) {
     const b = document.createElement('button')
@@ -2775,17 +2807,17 @@ document.getElementById('dailyOk').onclick = () => {
 
 /* ── 뽑기 ───────────────────────────────────────────────────────── */
 const elGacha = document.getElementById('gacha')
-let gKind = 'plane'
+let gKind = 'mix'
 
-function openGacha(kind) {
-  gKind = kind
-  document.getElementById('gTitle').textContent = GACHA[kind].name
+function openGacha() {
+  gKind = 'mix'
+  document.getElementById('gTitle').textContent = '뽑기'
   elGacha.hidden = false
   paintGacha(null)
 }
 
 function paintGacha(res) {
-  const g = GACHA[gKind]
+  const g = GACHA.plane
   const body = document.getElementById('gBody')
   const btn = document.getElementById('gPull')
   const enough = prog.ticket >= g.cost
@@ -2804,17 +2836,23 @@ function paintGacha(res) {
     `<span class="v">${prog.star} / ${STAR_TICKET}</span></div>`
 
   if (!res) {
-    const pity = PITY[gKind]
-    const left = pity.at - (prog.pull[gKind] % pity.at)
+    /*
+     * 천장은 갈래마다 따로 센다. 어느 쪽이 나올지 모르는 만큼, 지금
+     * 어디까지 왔는지는 둘 다 보여 준다 - 안 보여 주면 천장이 있는 줄도
+     * 모른 채 돌리게 된다.
+     */
+    const lp = PITY.plane.at - (prog.pull.plane % PITY.plane.at)
+    const li = PITY.pilot.at - (prog.pull.pilot % PITY.pilot.at)
     body.innerHTML = head +
-      `<div class="empty">${gKind === 'plane'
-        ? '기체 조각이 나옵니다. 조각을 모으면 기체가 열리고, 남는 조각은 강화에 씁니다.'
-        : '파일럿 조각이 나옵니다. 조각을 모으면 그 등급 파일럿이 열립니다.'}<br>` +
+      `<div class="empty">` +
+      (pilotLeft()
+        ? '기체가 나올지 파일럿이 나올지는 열어 봐야 압니다.<br>'
+        : '파일럿은 다 모으셨습니다. 이제 기체만 나옵니다.<br>') +
+      `조각을 모으면 열리고, 남는 조각은 강화에 씁니다.<br>` +
       `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.<br>` +
-      `<b>${left}번</b> 안에 ${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.` +
-      (gKind === 'plane'
-        ? `<br>기체 확정까지 <b>${HARD_PITY - (prog.pull.plane % HARD_PITY)}장</b>`
-        : '') + `</div>`
+      `기체 <b>${lp}번</b> 안에 ${GRADES.legend ? GRADES.legend.name : '전설'} 이상 확정` +
+      (pilotLeft() ? ` · 파일럿 <b>${li}번</b> 안에 상급 이상 확정` : '') +
+      `<br>기체 확정까지 <b>${HARD_PITY - (prog.pull.plane % HARD_PITY)}장</b></div>`
     return
   }
 
@@ -2832,7 +2870,9 @@ function paintGacha(res) {
      * 그대로 두면 「사냥개 조각조각 13개」로 읽힌다.
      */
     `<span class="big">${res.name.replace(/ 조각$/, '')}</span>` +
-    `<span class="cnt">${label}</span>` +
+    /* 갈래를 적는다. 합치고 나서는 이름만으로 기체인지 파일럿인지
+       바로 안 읽히는 경우가 있다 */
+    `<span class="cnt">${res.kind === 'pilot' ? '파일럿' : '기체'} · ${label}</span>` +
     (res.got ? `<span class="msg">${res.jack ? '바로 열렸습니다' : '조각이 다 모여 열렸습니다'}</span>` : '') +
     `</div>`
 }
@@ -2847,35 +2887,58 @@ function pullsFor(kind, tier) {
   const g = GACHA[kind]
   const w = (g.rates.find(([t]) => t === tier) || [0, 0])[1] / 100
   const [lo, hi] = g.amount[tier]
-  const per = w * ((lo + hi) / 2)
+  /*
+   * 갈래 확률을 곱한다.
+   *
+   * 뽑기를 하나로 합친 뒤로는 전설 7% 가 뽑기 한 번의 7% 가 아니라
+   * **기체가 걸렸을 때의** 7% 다. 그 몫을 빼고 세면 254번이라고 적히는데
+   * 실제로는 363번이다. 확률형 아이템 표시는 실제와 같아야 한다.
+   */
+  const kw = kind === 'pilot' ? PILOT_CHANCE : 1 - PILOT_CHANCE
+  const per = kw * w * ((lo + hi) / 2)
   const need = kind === 'plane' ? SHARD_NEED[tier] : GRADE_NEED[tier]
   if (!per || !need) return 0
   return Math.round(need / per)
 }
 
 function paintRates() {
-  const g = GACHA[gKind]
   const body = document.getElementById('gBody')
-  const rows = g.rates.map(([t, w]) => {
-    const nm = GRADES[t] ? GRADES[t].name : TIERS[t]
-    const [lo, hi] = g.amount[t]
-    const need = pullsFor(gKind, t)
-    return `<div class="rate"><span>${nm}</span>` +
-      `<span class="v">${w}% · 조각 ${lo}~${hi}` +
-      (need ? ` · 하나 열기까지 평균 ${need.toLocaleString('ko-KR')}번` : '') +
-      `</span></div>`
-  }).join('')
-  const pity = PITY[gKind]
+  /*
+   * 갈래 확률을 맨 위에 적는다.
+   *
+   * 합치고 나면 "전설 7%" 가 뽑기 한 번의 확률처럼 읽히는데, 실제로는
+   * 기체가 걸렸을 때의 7% 다. 갈래 확률을 먼저 보여 줘야 아래 표가
+   * 무엇에 대한 표인지 어긋나지 않는다.
+   */
+  const pilotPct = pilotLeft() ? Math.round(PILOT_CHANCE * 100) : 0
+  const block = (kind) => {
+    const g = GACHA[kind]
+    const rows = g.rates.map(([t, w]) => {
+      const nm = GRADES[t] ? GRADES[t].name : TIERS[t]
+      const [lo, hi] = g.amount[t]
+      const need = pullsFor(kind, t)
+      return `<div class="rate"><span>${nm}</span>` +
+        `<span class="v">${w}% · 조각 ${lo}~${hi}` +
+        (need ? ` · 하나 열기까지 평균 ${need.toLocaleString('ko-KR')}번` : '') +
+        `</span></div>`
+    }).join('')
+    const pity = PITY[kind]
+    return `<div class="lab">${kind === 'plane' ? '기체' : '파일럿'} 등급별 확률</div>${rows}` +
+      `<div class="rate"><span>완성품 (조각 대신 통째로)</span><span class="v">${g.jackpot}%</span></div>` +
+      `<div class="rate"><span>${pity.at}번마다</span><span class="v">` +
+      `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상 확정</span></div>`
+  }
   body.innerHTML =
-    `<div class="lab">등급별 확률</div>${rows}` +
-    `<div class="rate"><span>완성품 (조각 대신 통째로)</span><span class="v">${g.jackpot}%</span></div>` +
+    `<div class="lab">무엇이 나오는가</div>` +
+    `<div class="rate"><span>기체</span><span class="v">${100 - pilotPct}%</span></div>` +
+    `<div class="rate"><span>파일럿</span><span class="v">${pilotPct}%` +
+    (pilotPct ? '' : ' (다 모아서 안 나옵니다)') + `</span></div>` +
+    block('plane') +
+    (pilotPct ? block('pilot') : '') +
     `<div class="rate"><span>완성품이 이미 가진 것이면</span><span class="v">조각 ${JACK_SHARD}개</span></div>` +
-    (gKind === 'plane'
-      ? `<div class="rate"><span>${HARD_PITY}장째</span>` +
-        `<span class="v">기체 하나 확정 (등급 랜덤)</span></div>`
-      : '') +
-    `<div class="empty">${pity.at}번마다 ` +
-    `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.<br>` +
+    `<div class="rate"><span>기체 ${HARD_PITY}장째</span>` +
+    `<span class="v">기체 하나 확정 (등급 랜덤)</span></div>` +
+    `<div class="empty">아래 확률은 그 갈래가 걸렸을 때의 값입니다.<br>` +
     `가챠권은 별 ${STAR_TICKET}개마다 한 장입니다. 별은 한 판에 ${STAR_FAIL}개, ` +
     `깨면 ${STAR_CLEAR}개가 찹니다. 돈으로는 살 수 없습니다.</div>`
 }
@@ -3201,7 +3264,7 @@ function renderPilot() {
     `<div class="lab">파일럿 등급</div>` +
     `<div class="grades">${gradeBox}</div>` +
     `<div class="bar"><button class="ghost small" id="pilotGacha">` +
-    `파일럿 뽑기 · 가챠권 ${prog.ticket}장</button></div>` +
+    `뽑기 · 가챠권 ${prog.ticket}장</button></div>` +
 
     `<div class="lab">편대</div><div class="sum">${legendBox}</div>` +
 
@@ -3242,7 +3305,7 @@ function renderPilot() {
       save(); sfx('pick'); renderPilot()
     }
   })
-  document.getElementById('pilotGacha').onclick = () => openGacha('pilot')
+  document.getElementById('pilotGacha').onclick = () => openGacha()
 
   const buy = document.getElementById('buyLegend')
   if (buy) buy.onclick = () => {
