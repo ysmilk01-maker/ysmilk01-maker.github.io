@@ -10057,22 +10057,143 @@ const BULLET_KEY = {
   mine: 'missile', beam: 'beam', boomer: 'boomer', chain: 'chain',
 }
 
-function drawBullet(b) {
-  /*
-   * 속성이 있으면 그 색 후광을 먼저 깐다.
-   *
-   * 탄 그림을 속성마다 새로 그리지 않는다 - 열한 대에 다섯 속성이면
-   * 그림이 쉰다섯 장이 된다. 뒤에 색을 깔면 같은 그림이 다른 탄으로
-   * 읽히고, 무엇이 나가고 있는지도 한눈에 보인다.
-   */
-  if (b.el && ELS[b.el]) {
-    const R = (b.r || 4) * 2.6
-    const gr = g.createRadialGradient(b.x, b.y, 0, b.x, b.y, R)
-    gr.addColorStop(0, ELS[b.el].tint + '0.55)')
-    gr.addColorStop(1, ELS[b.el].tint + '0)')
-    g.fillStyle = gr
-    g.beginPath(); g.arc(b.x, b.y, R, 0, Math.PI * 2); g.fill()
+/*
+ * 속성탄 꾸미기.
+ *
+ * 탄 그림을 속성마다 새로 그리지 않는다 - 열한 대에 다섯 속성이면 그림이
+ * 쉰다섯 장이 된다. 그림은 그대로 두고 **뒤와 앞에 빛을 얹는다.**
+ *
+ * 상태를 안 쓴다. 알갱이를 뿌리면 전설 기체가 초당 수십 발을 쏘는 동안
+ * 배열이 계속 부풀어 프레임이 떨어진다. 좌표와 나이로 모양을 정하면
+ * 같은 탄은 늘 같게 그려지고 비용은 0 이다.
+ *
+ * 뒤 - 후광 두 겹과 꼬리
+ */
+function elBack(b) {
+  const E = ELS[b.el]
+  if (!E) return
+  const r = b.r || 4
+  const R = r * 3.2
+  g.save()
+  g.globalCompositeOperation = 'lighter'
+  /* 꼬리. 방향이 있는 탄만 - 위성은 vx 가 없다 */
+  if (b.vx != null && (b.vx || b.vy)) {
+    const an = Math.atan2(b.vy, b.vx)
+    const L = r * (b.kind === 'laser' ? 9 : 5.5)
+    g.save()
+    g.translate(b.x, b.y)
+    g.rotate(an)
+    const tg = g.createLinearGradient(0, 0, -L, 0)
+    tg.addColorStop(0, E.tint + '.55)')
+    tg.addColorStop(1, E.tint + '0)')
+    g.fillStyle = tg
+    g.beginPath()
+    g.moveTo(0, -r * .9); g.lineTo(0, r * .9); g.lineTo(-L, 0)
+    g.closePath(); g.fill()
+    g.restore()
   }
+  const gr = g.createRadialGradient(b.x, b.y, 0, b.x, b.y, R)
+  gr.addColorStop(0, E.tint + '.60)')
+  gr.addColorStop(.45, E.tint + '.28)')
+  gr.addColorStop(1, E.tint + '0)')
+  g.fillStyle = gr
+  g.beginPath(); g.arc(b.x, b.y, R, 0, Math.PI * 2); g.fill()
+  g.restore()
+}
+
+/*
+ * 앞 - 속성마다 다른 장식과 흰 심지.
+ *
+ * 후광 색만으로는 다섯이 「색이 다른 같은 탄」이다. 모양이 갈려야
+ * 화염과 독이 다른 것으로 읽힌다.
+ */
+function elFront(b) {
+  const E = ELS[b.el]
+  if (!E) return
+  const r = b.r || 4
+  const t = state.t
+  /* 탄마다 다른 위상. 좌표를 쓰면 같은 발은 늘 같고 다른 발은 다르다 */
+  const ph = (b.x * 0.7 + b.y * 0.3) % 6.283
+  g.save()
+  g.globalCompositeOperation = 'lighter'
+  g.fillStyle = E.color
+  g.strokeStyle = E.color
+
+  if (b.el === 'fire') {
+    /* 흔들리는 불티 셋이 뒤로 흩어진다 */
+    for (let i = 0; i < 3; i++) {
+      const k = 0.4 + Math.abs(Math.sin(t * 26 + ph + i * 2.1)) * 0.6
+      const dy = r * (1.4 + i * 1.15)
+      const dx = Math.sin(t * 19 + ph + i) * r * 0.85
+      g.globalAlpha = k * (1 - i * 0.26)
+      g.beginPath(); g.arc(b.x + dx, b.y + dy, r * (0.72 - i * 0.14), 0, 6.283); g.fill()
+    }
+    g.globalAlpha = 1
+  } else if (b.el === 'ice') {
+    /* 도는 얼음 조각 셋 */
+    for (let i = 0; i < 3; i++) {
+      const a = t * 3.6 + ph + (i / 3) * 6.283
+      const R2 = r * 1.9
+      const cx = b.x + Math.cos(a) * R2, cy = b.y + Math.sin(a) * R2
+      g.globalAlpha = .85
+      g.beginPath()
+      g.moveTo(cx, cy - r * .55)
+      g.lineTo(cx + r * .38, cy + r * .38)
+      g.lineTo(cx - r * .38, cy + r * .38)
+      g.closePath(); g.fill()
+    }
+    g.globalAlpha = 1
+  } else if (b.el === 'elec') {
+    /* 짧은 지그재그 둘 */
+    g.lineWidth = 1.6
+    for (let s2 = -1; s2 <= 1; s2 += 2) {
+      g.globalAlpha = .5 + Math.abs(Math.sin(t * 40 + ph)) * .5
+      g.beginPath()
+      let px = b.x, py = b.y
+      for (let i = 1; i <= 3; i++) {
+        px += s2 * r * 1.1
+        py += Math.sin(t * 33 + ph + i * 2.3) * r * 1.0
+        g.lineTo(px, py)
+      }
+      g.stroke()
+    }
+    g.globalAlpha = 1
+  } else if (b.el === 'psn') {
+    /* 위로 떠오르는 방울 셋 */
+    for (let i = 0; i < 3; i++) {
+      const up = ((t * 1.6 + ph + i * 0.33) % 1)
+      g.globalAlpha = (1 - up) * .95
+      const rr = r * (0.60 - i * 0.09)
+      g.beginPath()
+      g.arc(b.x + Math.sin(ph + i * 2) * r * 1.2, b.y + r * 1.2 - up * r * 3.2, rr, 0, 6.283)
+      g.fill()
+    }
+    g.globalAlpha = 1
+  } else if (b.el === 'lite') {
+    /* 십자 빛살. 길이가 숨 쉰다 */
+    const L = r * (3.4 + Math.sin(t * 12 + ph) * 0.7)
+    const lg = g.createLinearGradient(b.x - L, b.y, b.x + L, b.y)
+    lg.addColorStop(0, E.tint + '0)')
+    lg.addColorStop(.5, E.tint + '.9)')
+    lg.addColorStop(1, E.tint + '0)')
+    g.fillStyle = lg
+    g.fillRect(b.x - L, b.y - 1, L * 2, 2)
+    const lg2 = g.createLinearGradient(b.x, b.y - L, b.x, b.y + L)
+    lg2.addColorStop(0, E.tint + '0)')
+    lg2.addColorStop(.5, E.tint + '.9)')
+    lg2.addColorStop(1, E.tint + '0)')
+    g.fillStyle = lg2
+    g.fillRect(b.x - 1, b.y - L, 2, L * 2)
+  }
+
+  /* 흰 심지. 다섯 다 공통이다 - 가운데가 하얘야 「빛나는 것」이 된다 */
+  g.fillStyle = 'rgba(255,255,255,.85)'
+  g.beginPath(); g.arc(b.x, b.y, r * .42, 0, 6.283); g.fill()
+  g.restore()
+}
+
+function drawBullet(b) {
+  if (b.el && ELS[b.el]) elBack(b)
   /*
    * 그림이 있으면 그림으로 그린다.
    *
@@ -10095,7 +10216,21 @@ function drawBullet(b) {
     g.save(); g.translate(b.x, b.y)
     if (b.vx || b.vy) g.rotate(Math.atan2(b.vy, b.vx) + Math.PI / 2)
     g.drawImage(bi, -w / 2, -h / 2, w, h)
+    /*
+     * 속성탄은 그림을 한 번 더 겹쳐 태운다.
+     *
+     * 뒤에 후광만 깔면 가운데 그림은 원래 색 그대로라, 화염탄인데 파란
+     * 탄이 박혀 있는 꼴이 된다. lighter 로 한 겹 더 얹으면 그림이 그
+     * 색으로 달아오른다 - 그림을 속성마다 새로 그리지 않고도 색이 바뀐다.
+     */
+    if (b.el && ELS[b.el]) {
+      g.globalCompositeOperation = 'lighter'
+      g.globalAlpha = .55
+      g.drawImage(bi, -w / 2, -h / 2, w, h)
+      g.globalAlpha = 1
+    }
     g.restore()
+    if (b.el && ELS[b.el]) elFront(b)
     return
   }
   switch (b.kind) {
@@ -10145,6 +10280,8 @@ function drawBullet(b) {
     default:
       g.fillStyle = '#9fe8ff'; g.fillRect(b.x - b.r / 2, b.y - 7, b.r, 11)
   }
+  /* 그림 없이 도형으로 떨어진 경우에도 장식은 얹는다 */
+  if (b.el && ELS[b.el]) elFront(b)
 }
 
 /* 지상 위협 그리기. 예고는 크게, 본체는 작게 — 눈이 예고를 먼저 잡아야 한다. */
