@@ -807,7 +807,7 @@ const WEAPONS = {
   pierce:  { name: '관통탄', desc: '적을 뚫고 계속 갑니다' },
   wave:    { name: '파동탄', desc: '좌우로 흔들리며 나아갑니다' },
   orb:     { name: '궤도구슬', desc: '기체 둘레를 돌며 부딪칩니다' },
-  mine:    { name: '기뢰',   desc: '멈춰 있다가 터집니다' },
+  mine:    { name: '미사일', desc: '느리게 날아가 닿으면 터집니다' },
   beam:    { name: '집속포', desc: '굵고 느리게, 크게 터집니다' },
   boomer:  { name: '부메랑', desc: '나갔다가 되돌아옵니다' },
   chain:   { name: '연쇄뇌격', desc: '맞은 적에서 번개가 옆으로 튑니다' },
@@ -896,7 +896,7 @@ const PLANES = []
     pierce: ['송곳', '창', '벼락창'],
     wave:   ['물결', '해일', '심연해일'],
     orb:    ['팽이', '위성', '쌍성'],
-    mine:   ['씨앗', '지뢰', '검은씨앗'],
+    mine:   ['불화살', '작살', '검은작살'],
     beam:   ['망치', '대포', '천둥대포'],
     boomer: ['회귀', '부메랑', '쌍회귀'],
   }
@@ -3311,6 +3311,8 @@ function newState() {
     grounds: [], slabs: [], beams: [], arcs: [], blasts: [],
     /* 이 판에서만 사는 개조. 저장하지 않는다. */
     mods: Object.fromEntries(MOD_KEYS.map((k) => [k, 0])),
+    /* 이 판에서 지금까지 떨어뜨린 개조의 수. MOD_CAP 에서 멈춘다 */
+    modDrops: 0,
     boss: null, waveIdx: 0, banner: null, bannerT: 0, cleared: false,
     /* 총구 불꽃과 피격 불똥. 아주 짧게 떴다 사라지므로 따로 담는다 */
     muzzles: [], sparks: [],
@@ -3445,7 +3447,7 @@ const LV = [null,
 
 function baseRate(w) {
   return { rapid: .10, spread: .30, laser: .05, homing: .38, pierce: .26,
-           wave: .22, orb: 1.2, mine: .70, beam: .85, boomer: .55, chain: .34 }[w]
+           wave: .22, orb: 1.2, mine: .52, beam: .85, boomer: .55, chain: .34 }[w]
 }
 
 function nearestEnemy(x, y) {
@@ -3553,7 +3555,27 @@ function shoot(u, i, dt) {
       break
     }
     case 'mine':
-      add({ vx: 0, vy: -180, kind: 'mine', fuse: 1.1, r: 6, dmg: dmg * 1.6 })
+      /*
+       * 느리고 무겁다.
+       *
+       * 화면에서 가장 느린 탄이다(레이저 1100, 속사 620, 이것 215).
+       * 그만큼 한 발이 크다 - 기본 피해의 2.6배가 반경 안 전부에 들어간다.
+       * 앞을 막아 주지 않으니 쏘고 나서 자리를 지켜야 맞는다.
+       */
+      {
+        /*
+         * 등급이 오르면 발수가 는다.
+         *
+         * 한 발만 나가던 때는 0/8 이었다. 초당 피해가 속사의 3분의 1 이라
+         * 화면이 안 비워지고, 안 비워지면 탄에 갇힌다. 느린 성질은 그대로
+         * 두고 나오는 수와 한 발의 무게로 메운다.
+         */
+        const n = 1 + tier + state.mods.extra
+        for (let k = 0; k < n; k++) {
+          add({ x: pos.x + (k - (n - 1) / 2) * 15, vx: (k - (n - 1) / 2) * 34,
+                vy: -215, kind: 'mine', r: 7, dmg: dmg * 3.2 })
+        }
+      }
       break
     case 'beam':
       add({ vx: 0, vy: -300, kind: 'beam', r: 11 + tier * 3, pierce: 4 + tier * 2, dmg: dmg * 2.2 })
@@ -3740,7 +3762,7 @@ const CHAPTERS = [
      * 재 보니 이 값에서 1-5 가 4/6, 1-20 이 3/6 에 체력 85% 를 남긴다.
      * 봇은 적기에 판마다 두세 번 들이받으므로 사람은 이보다 낫다.
      */
-    bossHp: 520, hpMul: 1.0, spMul: 1.0, fireMul: 2.6,
+    bossHp: 520, hpMul: 1.0, spMul: 1.0, fireMul: 3.2,
     pool: [
       [5, (r) => line(2 + ((r() * 4) | 0), 'small')],
       [3, (r) => diagonal('small', r() < .5 ? 1 : -1)],
@@ -3803,46 +3825,113 @@ function pickFrom(pool, r) {
  * 같은 챕터·같은 단계면 언제나 같은 판이 나온다. 단계가 오를수록 길어지고
  * 사이가 좁아진다.
  */
+/*
+ * 판의 구간.
+ *
+ * 전에는 처음부터 끝까지 **같은 간격으로 무작위 하나씩** 뽑았다. 오르내림도
+ * 쉬는 자리도 절정도 없어서, 25초짜리 판이 25초 내내 똑같았다. 짧은 게
+ * 문제가 아니라 **아무 일도 안 일어나는 게** 문제였다.
+ *
+ * 슈팅의 한 판은 리듬이 있어야 한다.
+ *   도입   손 풀기. 간격이 넓다
+ *   전개   밀도가 오른다
+ *   소강   거의 비운다. **아이템이 하나 떨어진다** - 숨 돌리고 강화하는 자리
+ *   절정   가장 촘촘하고, 가끔 두 웨이브가 동시에 온다
+ *   마무리 잠깐 비고 보스나 클리어로 넘어간다
+ *
+ * span 은 판 길이에서 차지하는 비율이고 합이 1 이다. gap 은 그 구간의
+ * 간격 배수 - 클수록 성기다.
+ */
+const PHASES = [
+  { name: '도입',   span: 0.16, gap: 1.55, pair: 0 },
+  { name: '전개',   span: 0.30, gap: 1.00, pair: 0.08 },
+  { name: '소강',   span: 0.10, gap: 3.20, pair: 0, calm: true },
+  { name: '절정',   span: 0.32, gap: 0.62, pair: 0.28 },
+  { name: '마무리', span: 0.12, gap: 1.45, pair: 0.10 },
+]
+
 function buildWaves(ch, sub) {
   const r = seeded(ch.id * 977 + sub * 31)
   const bossStage = sub === SUBS
   /*
    * 판 길이.
    *
-   * 전에는 어느 단계나 24 + 단계×1.1 이었다. 20단계는 46초다. 재 보니
-   * **보스에 닿기도 전에 체력이 없었다** - 46초 동안 일반탄을 열일곱 발쯤
-   * 맞고(153) 체력이 214 인데, 거기서 보스를 상대해야 했다. 20단계가
-   * 유독 벽이었던 진짜 이유가 이것이고, 보스 체력을 깎아도 안 풀렸다.
+   * 42 + 단계×1.4 다. 전에는 24 + 단계×1.1 이라 1단계가 25초였는데,
+   * 슈팅 한 판으로는 너무 짧았다 - 리듬을 만들 자리 자체가 없다.
+   * 지금은 1-1 이 43초, 1-20 이 70초다.
    *
-   * **최종보스(20단계)에만** 접근 구간을 30% 줄인다. 보스전에 쓸 체력을
-   * 남겨 주는 것이다.
-   *
-   * 처음엔 중간보스(5·10·15)에도 같이 줬다가 되돌렸다. 5단계는 원래
-   * 접근이 29.5초뿐인데 20.6초로 줄이니 **강화 아이템을 모을 시간이
-   * 사라져** 클리어가 2/5 에서 0/6 으로 떨어졌다. 중간보스는 체력이
-   * 본체의 0.315 배라 누적 피해보다 화력 부족이 먼저 걸린다 - 같은
-   * 처방이 반대로 듣는다.
+   * **최종보스(20단계)만** 접근 구간을 30% 줄인다. 보스전에 쓸 체력을
+   * 남겨 주는 것이다. 처음엔 중간보스(5·10·15)에도 같이 줬다가 되돌렸다 -
+   * 5단계는 강화 아이템 모을 시간이 사라져 클리어가 2/5 에서 0/6 으로
+   * 떨어졌다. 중간보스는 누적 피해보다 화력 부족이 먼저 걸린다.
    */
-  const len = (24 + sub * 1.1) * (bossStage ? 0.7 : 1)
+  const len = (42 + sub * 1.4) * (bossStage ? 0.7 : 1)
   /*
-   * 웨이브 간격. 좁을수록 촘촘하다.
+   * 기본 간격. 좁을수록 촘촘하다.
    *
-   * 전에는 `sub` 만 봤다. 그래서 챕터가 바뀌면 밀도가 1단계로 **리셋**됐다 -
-   * 2-1 을 스무 판 올라온 편성으로 재 보니 한 대도 안 맞고 6/6 이었다.
-   * 21판째가 첫 판보다 헐거우면 곡선이 아니라 톱니가 된다.
-   *
-   * 챕터마다 아홉 단계를 미리 얹는다. 2-1 은 1-10 쯤의 밀도에서 시작하고,
-   * 3-1 은 1-19 쯤에서 시작한다. 챕터를 넘어가도 계단이 이어진다.
+   * 챕터마다 아홉 단계를 미리 얹는다 - 그러지 않으면 챕터가 바뀔 때
+   * 밀도가 1단계로 리셋돼서, 스무 판 올라온 편성이 21판째에 한 대도
+   * 안 맞는 일이 생긴다.
    */
   const dens = sub + (ch.id - 1) * 9
-  const gap = 2.0 - Math.min(0.9, dens * 0.045)
+  const base = 2.0 - Math.min(0.9, dens * 0.045)
+
+  /*
+   * 절정의 세기를 단계에 따라 눕힌다.
+   *
+   * 구간을 넣고 재 보니 **초보 편성이 1-1 에서 세 판 다 정확히 26초에**
+   * 죽었다. 우연이 아니라 43초 판의 60% 지점 - 절정이 시작되는 그 시각이다.
+   * 밀도가 갑자기 오르는 것을 1대짜리 편대가 못 받아냈다.
+   *
+   * 구간 자체는 옳다. 잘못된 건 **1단계와 20단계에 같은 세기를 준 것**이다.
+   * dens 가 12 를 넘으면 원래 값이고, 그 아래면 간격을 벌리고 동시 출현을
+   * 줄인다. 1-1 은 절정도 완만하고, 3-10 은 원래대로 몰아친다.
+   */
+  const ramp = Math.min(1, dens / 12)
+
+  /*
+   * 이 판의 성격.
+   *
+   * 씨앗으로 풀에서 한 종류를 골라 그 판에서만 무게를 두 배로 준다.
+   * 같은 챕터 스무 판이 다 비슷해 보이던 이유가 이것이 없어서였다 -
+   * 어떤 판은 지상이 많고 어떤 판은 편대가 많아야 기억에 남는다.
+   */
+  const flavorIdx = Math.floor(r() * ch.pool.length)
+  const pool = ch.pool.map(([w, f], i) => [i === flavorIdx ? w * 2.2 : w, f])
+
   const out = []
   let t = 0.8
-  while (t < len) {
-    const f = pickFrom(ch.pool, r)
-    out.push({ at: +t.toFixed(2), f: () => f(seeded((t * 1000) | 0)) })
-    t += gap + r() * 1.1
+  let acc = 0
+  for (const ph of PHASES) {
+    const end = Math.min(len, acc + len * ph.span)
+    while (t < end) {
+      const f = pickFrom(pool, r)
+      const at = +t.toFixed(2)
+      out.push({ at, f: () => f(seeded((at * 1000) | 0)) })
+      /* 절정에서는 가끔 둘이 한꺼번에 온다. 초반 단계에서는 거의 없다 */
+      if (r() < ph.pair * ramp) {
+        const g2 = pickFrom(pool, r)
+        const at2 = +(t + 0.25).toFixed(2)
+        out.push({ at: at2, f: () => g2(seeded((at2 * 1000) | 0)) })
+      }
+      /* 촘촘한 구간(gap<1)만 눕힌다. 성긴 구간을 더 벌리면 판이 빈다 */
+      const gm = ph.gap < 1 ? ph.gap + (1 - ph.gap) * (1 - ramp) : ph.gap
+      t += base * gm + r() * 1.1 * gm
+    }
+    /*
+     * 소강 구간에는 아이템을 하나 놓는다.
+     *
+     * 강화 아이템이 적을 잡아야만 나오니, 적이 없는 구간에서는 아무것도
+     * 안 생긴다. 숨 돌리는 자리에 보상이 있어야 그 자리가 의미가 된다.
+     */
+    if (ph.calm) {
+      const at = +(acc + len * ph.span * 0.5).toFixed(2)
+      out.push({ at, f: () => dropItem(60 + Math.random() * (W - 120), -20, true) })
+    }
+    acc = end
+    if (t >= len) break
   }
+
   /* 5·10·15 단계는 중간보스, 20 단계는 보스 */
   if (sub === SUBS) out.push({ at: len + 1.2, f: () => spawnBoss(false) })
   else if (MID_AT.includes(sub)) out.push({ at: len + 1.2, f: () => spawnBoss(true) })
@@ -4284,15 +4373,83 @@ function banner(t) { state.banner = t; state.bannerT = 1.6 }
 /* 아주 가끔 가챠권이 떨어진다. 한 판에 셋 중 하나꼴 */
 const TICKET_DROP = 0.004
 
+/*
+ * 한 판에 나오는 강화 재료의 상한.
+ *
+ * 상한이 없을 때는 중형을 잡을 때마다 절반 넘게, 지상을 부술 때마다 셋에
+ * 하나꼴로 개조가 떨어졌다. 한 판을 도는 동안 화면이 개조로 덮여서, 강화가
+ * 고르는 일이 아니라 줍는 일이 됐다. 두 개까지만 나온다 - 그래야 어느
+ * 것을 집을지 생각하게 된다.
+ *
+ * 세는 것은 주운 수가 아니라 떨어뜨린 수다. 안 주우면 다음 것이 나오는
+ * 식이면 상한이 상한 구실을 못 한다.
+ */
+const MOD_CAP = 2
+
 function dropItem(x, y, richer) {
   const s = state
   if (Math.random() < TICKET_DROP) {
     s.items.push({ x, y, t: 0, r: 12, tk: true })
     return
   }
-  const wantMod = Math.random() < (richer ? .55 : .35)
+  const wantMod = s.modDrops < MOD_CAP && Math.random() < (richer ? .55 : .35)
   const key = wantMod ? rollMod(s.mods) : null
+  if (key) s.modDrops++
   s.items.push({ x, y, t: 0, r: 11, mod: key })   // mod 가 null 이면 화력 아이템
+}
+
+/*
+ * 미사일이 터진다.
+ *
+ * 기뢰였을 때는 제자리에 서서 1.1초를 세다 터졌다. 그 사이 적은 계속
+ * 움직이니 대부분 빈 자리에서 터졌고, 열 발을 쏴도 한 발이 맞을까 말까
+ * 였다. 쓸 수 있는 무기가 아니었다.
+ *
+ * 잡은 것을 여기서 직접 치운다. 점수도 궁 게이지도 떨어뜨리는 것도
+ * collide 안에 있는데, 미사일은 그 목록을 안 지나가기 때문이다. 번개(chain)
+ * 도 같은 이유로 자기 자리에서 치운다.
+ */
+const MISSILE_R = 66
+
+function missileBurst(b) {
+  const s = state
+  b.dead = true
+  boom(b.x, b.y, 22, '#ffd166')
+  sfx('hit')
+  const rr = MISSILE_R * MISSILE_R
+
+  for (const e of s.enemies) {
+    if (e.dead) continue
+    if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 >= rr) continue
+    e.hp -= b.dmg
+    e.flash = .1
+    if (e.hp > 0) continue
+    e.dead = true
+    s.score += e.score
+    s.kills++
+    boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
+    if (Math.random() < (e.kind === 'mid' ? .55 : .08)) dropItem(e.x, e.y, e.kind === 'mid')
+    const before = s.ult
+    s.ult = Math.min(ULT_MAX, s.ult + (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6))
+    if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
+  }
+
+  for (const u of s.grounds) {
+    if (u.dead) continue
+    if ((u.x - b.x) ** 2 + (u.y - b.y) ** 2 >= rr) continue
+    u.hp -= b.dmg
+    u.flash = .1
+    if (u.hp > 0) continue
+    u.dead = true
+    s.score += u.score
+    s.kills++
+    boom(u.x, u.y, 24, '#ffcf7a')
+    if (Math.random() < .35) dropItem(u.x, u.y, true)
+  }
+
+  if (s.boss && (s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < (MISSILE_R + 14) ** 2) {
+    bossArea(s.boss, b.dmg)
+  }
 }
 
 /*
@@ -4342,7 +4499,7 @@ function fireScale() {
    * 체력을 아무리 올려도 위협이 안 됐다.
    *
    * 그래서 쏘는 빈도에 챕터 계수를 건다. 값이 클수록 느리게 쏜다.
-   *   1챕터 2.60  스무 판을 휘파람 불며 넘어가는 구간
+   *   1챕터 3.20  스무 판을 휘파람 불며 넘어가는 구간
    *              (체력을 110 으로 내리고 피해를 올린 뒤 2.2 -> 2.6)
    *   2챕터 1.00  스물한 판째부터 집중이 필요하다
    *   3챕터 0.86  더 촘촘하다
@@ -4815,21 +4972,29 @@ function update(dt) {
         b.y = p.y + Math.sin(b.a) * b.rad
         break
       }
-      case 'mine':
-        b.vy *= 1 - Math.min(1, dt * 5)
-        b.fuse -= dt
-        if (b.fuse <= 0) {
-          b.dead = true
-          boom(b.x, b.y, 18, '#ffd166')
-          for (const e of s.enemies) {
-            if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 < 62 * 62) { e.hp -= b.dmg; e.flash = .1 }
-          }
-          for (const u of s.grounds) {
-            if ((u.x - b.x) ** 2 + (u.y - b.y) ** 2 < 62 * 62) { u.hp -= b.dmg; u.flash = .1 }
-          }
-          if (s.boss && (s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < 70 * 70) bossArea(s.boss, b.dmg)
+      case 'mine': {
+        /*
+         * 닿으면 터진다.
+         *
+         * 일반 충돌 목록에서는 빠져 있다(collide 가 kind === 'mine' 을
+         * 건너뛴다). 한 대만 때리고 사라지면 안 되고, 닿은 자리를 중심으로
+         * 반경 전부를 때려야 하기 때문이다.
+         */
+        let hit = null
+        for (const e of s.enemies) {
+          if (!e.dead && near(b, e, e.r + b.r)) { hit = e; break }
         }
+        if (!hit) {
+          for (const u of s.grounds) {
+            if (!u.dead && u.y > -20 && near(b, u, u.r + b.r)) { hit = u; break }
+          }
+        }
+        const bs = s.boss
+        /* 화면 위로 나가기 직전에도 터뜨린다. 조용히 사라지면 빗나간 건지
+           안 나간 건지 알 수 없다 */
+        if (hit || (bs && !bs.entering && near(b, bs, bs.r + b.r)) || b.y < 26) missileBurst(b)
         break
+      }
       case 'boomer':
         b.vy += 900 * dt
         if (b.age > 1.6) b.dead = true
@@ -5383,7 +5548,15 @@ function collide() {
       banner('가챠권 +1')
       sfx('ready')
     } else if (it.mod) {
-      s.mods[it.mod] = Math.min(MOD_MAX, s.mods[it.mod] + 1)
+      /*
+       * 한 개가 두 칸을 올린다.
+       *
+       * 한 판에 두 개까지만 나오게 막았더니(MOD_CAP) 후반이 무너졌다 -
+       * 2챕터 마지막 판 클리어가 여덟 판 중 둘에서 0 이 됐다. 줄여야 하는
+       * 것은 화면에 널린 아이템 수지 강화의 총량이 아니다. 수를 줄인 만큼
+       * 한 개를 무겁게 한다.
+       */
+      s.mods[it.mod] = Math.min(MOD_MAX, s.mods[it.mod] + 2)
       banner(MODS[it.mod].name + ' ' + s.mods[it.mod])
     } else {
       levelUp()
@@ -5779,11 +5952,15 @@ function drawShipOn(g, x, y, opt) {
             g.beginPath(); g.arc(sgn * (span * .82), -1, 3.2, 0, Math.PI * 2); g.fill()
           }
           break
-        case 'mine':                // 배 밑에 매단 둥근 폭뢰
+        case 'mine':                // 날개 밑에 매단 미사일 두 발
           for (const sgn of [-1, 1]) {
-            g.beginPath(); g.arc(sgn * 5.5, 9, 3.4, 0, Math.PI * 2); g.fill()
+            g.fillRect(sgn * 5.5 - 1.7, 4, 3.4, 9)
+            g.beginPath()
+            g.moveTo(sgn * 5.5 - 1.7, 4.5)
+            g.lineTo(sgn * 5.5, 1)
+            g.lineTo(sgn * 5.5 + 1.7, 4.5)
+            g.closePath(); g.fill()
           }
-          g.fillRect(-7, 6.5, 14, 1.6)
           break
         case 'beam':                // 기수 밑 굵은 포신
           g.fillRect(-4, -nose * .8, 8, 15)
@@ -6107,9 +6284,27 @@ function drawBullet(b) {
     case 'orb':
       g.fillStyle = '#c9a8ff'
       g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill(); break
-    case 'mine':
-      g.fillStyle = b.fuse < .35 && Math.floor(b.fuse * 20) % 2 ? '#ffffff' : '#ffd166'
-      g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill(); break
+    case 'mine': {
+      /* 길쭉한 몸통에 뾰족한 머리, 뒤로 꼬리 불꽃. 둥근 공이었을 때는
+         화면에 널린 다른 둥근 탄들과 구분이 안 갔다 */
+      const w = b.r * .55
+      g.fillStyle = '#ff9a4c'
+      g.globalAlpha = .5 + Math.random() * .4
+      g.beginPath()
+      g.moveTo(b.x - w * .9, b.y + b.r * 1.3)
+      g.lineTo(b.x, b.y + b.r * 3.1)
+      g.lineTo(b.x + w * .9, b.y + b.r * 1.3)
+      g.closePath(); g.fill()
+      g.globalAlpha = 1
+      g.fillStyle = '#ffd166'
+      g.fillRect(b.x - w, b.y - b.r * 1.4, w * 2, b.r * 2.8)
+      g.beginPath()
+      g.moveTo(b.x - w, b.y - b.r * 1.3)
+      g.lineTo(b.x, b.y - b.r * 2.7)
+      g.lineTo(b.x + w, b.y - b.r * 1.3)
+      g.closePath(); g.fill()
+      break
+    }
     case 'beam': {
       const gr = g.createRadialGradient(b.x, b.y, 1, b.x, b.y, b.r)
       gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, 'rgba(120,200,255,.15)')
