@@ -1419,6 +1419,19 @@ function enMax() { return prog.pilot.lv >= EN_LV ? EN_MAX_HI : EN_MAX }
 const EN_REGEN = 30 * 60 * 1000        // 30분에 하나
 const AD_ENERGY_DAY = 10               // 하루에 광고로 채울 수 있는 횟수
 
+/* ================================================================
+ * 시험 모드
+ *
+ * 손으로 돌려 보는 동안 출격권·광고 횟수·이어하기 제한이 걸린다.
+ * 서른 판을 이어서 봐야 하는데 다섯 판에 한 번씩 삼십 분을 기다릴
+ * 수는 없다.
+ *
+ * **출시 전에 false 로 되돌린다.** 이 한 줄이 전부다 - 제한을 지우지
+ * 않고 스위치로 둔 이유가 그것이다. 지우면 되돌릴 때 세 곳을 다시
+ * 찾아야 하고 하나를 빠뜨린다.
+ * ================================================================ */
+const FREE_PLAY = true
+
 const SAVE_KEY = 'shooter-proto-v3'
 const OLD_KEY = 'shooter-proto-v2'
 function load() {
@@ -2542,6 +2555,7 @@ if (!prog.energy.t) { prog.energy.t = Date.now(); prog.energy.n = EN_MAX }
  * 타이머는 화면이 꺼지면 브라우저가 멈춰 세우기 때문이다.
  */
 function energy() {
+  if (FREE_PLAY) return 99
   const e = prog.energy
   // 보상으로 받은 것은 상한 위로 쌓인다. 저절로 차는 것만 다섯에서 멈춘다
   if (e.n >= enMax()) { e.t = Date.now(); return e.n }
@@ -2555,10 +2569,12 @@ function energy() {
 }
 /** 다음 한 장까지 남은 밀리초. 꽉 찼으면 0 */
 function energyWait() {
+  if (FREE_PLAY) return 0
   if (energy() >= enMax()) return 0
   return Math.max(0, EN_REGEN - (Date.now() - prog.energy.t))
 }
 function energySpend() {
+  if (FREE_PLAY) return true
   const e = prog.energy
   if (energy() <= 0) return false
   if (e.n >= enMax()) e.t = Date.now()   // 꽉 찬 상태에서 처음 쓰면 그때부터 잰다
@@ -2567,6 +2583,7 @@ function energySpend() {
   return true
 }
 function adDayLeft() {
+  if (FREE_PLAY) return 99
   const key = new Date().toISOString().slice(0, 10)
   if (prog.adDay.d !== key) { prog.adDay = { d: key, n: 0 }; save() }
   return AD_ENERGY_DAY - prog.adDay.n
@@ -6486,7 +6503,8 @@ function boom(x, y, n, color) {
  * 횟수 제한은 판마다 초기화된다. 예전에 스도쿠에서 부활 횟수를 세는 걸
  * 빠뜨려 무한 부활이 됐던 적이 있어서, 세는 자리를 한 곳에 모았다.
  * ================================================================ */
-const AD_LIMIT = { revive: 1 }   // 한 판에 몇 번까지
+/* 한 판에 몇 번까지. 시험 중에는 안 센다 */
+const AD_LIMIT = { revive: FREE_PLAY ? 99 : 1 }
 
 const scAd = document.getElementById('adv')
 
