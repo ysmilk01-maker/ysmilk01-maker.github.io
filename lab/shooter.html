@@ -677,6 +677,20 @@
     border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; cursor: pointer;
   }
   .gcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  /*
+   * 지금 올릴 수 있는 것.
+   *
+   * 테두리가 천천히 숨 쉰다. 깜빡이게 했더니 목록에 열 장이 있을 때
+   * 화면이 정신없었다 - 눈에 걸리되 재촉하지는 않아야 한다.
+   */
+  @keyframes upglow {
+    0%, 100% { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(255,200,90,.18); }
+    50%      { border-color: #ffd98a; box-shadow: 0 0 12px 1px rgba(255,200,90,.45); }
+  }
+  .card.can, .gcard.can { animation: upglow 1.8s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .card.can, .gcard.can { animation: none; border-color: var(--gold); }
+  }
   .gcard.no { opacity: .5; }
   /*
    * 초상.
@@ -2213,6 +2227,31 @@ function upgCost(p, lv) {
   return Math.round((40 + lv * 55) * t)
 }
 function upgOf(id) { return prog.upg[id] || 0 }
+/**
+ * 지금 이 기체를 한 단계 올릴 수 있는가.
+ *
+ * 부품과 조각이 둘 다 차야 한다. 화면 여기저기서 같은 판단을 하므로
+ * 한 곳에 둔다 - 조건이 어긋나면 불은 들어오는데 단추는 안 눌리는
+ * 일이 생긴다.
+ */
+function canUpg(p) {
+  if (!unlocked(p)) return false
+  const lv = upgOf(p.id)
+  if (lv >= UPG_MAX) return false
+  return prog.parts >= upgCost(p, lv) && shardOf(p.id) >= shardUpg(p, lv)
+}
+/** 올릴 수 있는 기체가 하나라도 있는가 */
+function anyUpg() { return PLANES.some(canUpg) }
+/**
+ * 파일럿 쪽에 할 일이 있는가.
+ *
+ * 남은 투자점이 있거나, 조각이 다 모여 열 수 있는 등급이 있으면 그렇다.
+ */
+function anyPilotUp() {
+  if (pilotPts() > 0) return true
+  return GRADE_KEYS.some((k) => GRADE_NEED[k] > 0 && !hasGrade(k) &&
+                                shardG(k) >= GRADE_NEED[k])
+}
 /** 강화 단계가 화력과 연사에 얹히는 몫 */
 function upgPower(id) { return 1 + upgOf(id) * 0.12 }
 function upgRate(id) { return 1 - upgOf(id) * 0.04 }
@@ -2822,10 +2861,20 @@ function render() {
   else renderPilot()
 }
 
-/** 뽑기 탭에 점을 찍는다. 돌릴 수 있을 때만 */
+/*
+ * 탭에 점을 찍는다.
+ *
+ * 지금 할 수 있는 일이 있는 곳만 켠다. 부품과 조각이 쌓여 있는데
+ * 격납고에 안 들어가 보면 그대로 잠자는 것이라, 화면이 먼저 알려 준다.
+ */
 function renderTabs() {
-  const b = elTabs.querySelector('button[data-go="gacha"]')
-  if (b) b.classList.toggle('dot', prog.ticket >= GACHA.plane.cost)
+  const set = (go, on) => {
+    const b = elTabs.querySelector('button[data-go="' + go + '"]')
+    if (b) b.classList.toggle('dot', !!on)
+  }
+  set('gacha', prog.ticket >= GACHA.plane.cost)
+  set('planes', anyUpg())
+  set('pilot', anyPilotUp())
 }
 
 function renderWallet() {
@@ -3069,7 +3118,8 @@ function renderPlanes() {
     const ok = unlocked(p)
     const picked = prog.squad[activeSlot] === p.id
     const c = document.createElement('div')
-    c.className = 'card' + (ok ? '' : ' locked') + (picked ? ' picked' : '')
+    c.className = 'card' + (ok ? '' : ' locked') + (picked ? ' picked' : '') +
+      (canUpg(p) ? ' can' : '')
     const lab = unlockLabel(p)
     const lv = upgOf(p.id)
     const cost = upgCost(p, lv)
@@ -3609,7 +3659,9 @@ function renderPilot() {
     const pic = PCARD_B64[k]
       ? `<div class="pf" style="--face:var(--pc-${k})"></div>`
       : `<div class="rk ${k}"></div>`
-    return `<div class="gcard${on ? ' on' : ''}${have ? '' : ' no'}" data-g="${k}">` +
+    /* 조각이 다 모여 지금 열 수 있으면 테두리를 켠다 */
+    const ready = !have && GRADE_NEED[k] > 0 && shardG(k) >= GRADE_NEED[k]
+    return `<div class="gcard${on ? ' on' : ''}${have ? '' : ' no'}${ready ? ' can' : ''}" data-g="${k}">` +
       pic +
       `<div><div class="nm">${G.name} 파일럿</div><div class="de">${eff}</div></div>` +
       `<span class="rt">${have ? (on ? '사용 중' : '보유') :
@@ -3689,8 +3741,10 @@ function renderPilot() {
        * 파일럿은 기체 그림 대신 초상을 띄운다. 올린 것이 무엇인지
        * (화력·연사·탄폭·내구) 이름으로 적는다.
        */
-      const pa = PILOT_ART[prog.pilot.grade]
-      const face = pa && GC[pa.face[0]]
+      /* 카드와 같은 반신을 쓴다. 없으면 4차 얼굴로 떨어진다 */
+      const gk = prog.pilot.grade
+      const pa = PILOT_ART[gk]
+      const face = PC_IMG[gk] || (pa && GC[pa.face[0]])
       upgPlay(face || null, STATS[k].name, prog.pilot.st[k],
               gTone(prog.pilot.grade).main, () => renderPilot())
     }
@@ -4254,7 +4308,7 @@ const CHAPTERS = [
      * 재 보니 이 값에서 1-5 가 4/6, 1-20 이 3/6 에 체력 85% 를 남긴다.
      * 봇은 적기에 판마다 두세 번 들이받으므로 사람은 이보다 낫다.
      */
-    bossHp: 1000, hpMul: 0.52, spMul: 1.14, fireMul: 3.1,
+    bossHp: 800, hpMul: 0.52, spMul: 1.14, fireMul: 3.1,
     pool: [
       [5, (r) => line(2 + ((r() * 4) | 0), 'small')],
       [3, (r) => diagonal('small', r() < .5 ? 1 : -1)],
@@ -4271,7 +4325,7 @@ const CHAPTERS = [
   },
   {
     id: 2, name: '사막 회랑', sub: '대공포가 늘어선 붉은 협곡', theme: 'sand',
-    bossHp: 4600, hpMul: 1.23, spMul: 1.26, fireMul: 1.12,
+    bossHp: 3680, hpMul: 1.23, spMul: 1.26, fireMul: 1.12,
     pool: [
       [4, (r) => ground(['turret', 'flak', 'radar', 'laser'][(r() * 4) | 0], 60 + r() * (W - 120))],
       [3, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
@@ -4295,7 +4349,7 @@ const CHAPTERS = [
   },
   {
     id: 3, name: '극야 전선', sub: '해가 뜨지 않는 마지막 방어선', theme: 'snow',
-    bossHp: 9900, hpMul: 1.96, spMul: 1.40, fireMul: 0.95,
+    bossHp: 7920, hpMul: 1.96, spMul: 1.40, fireMul: 0.95,
     pool: [
       [4, (r) => dive(3 + ((r() * 3) | 0))],
       [3, (r) => line(1 + ((r() * 3) | 0), 'tank')],
@@ -5934,7 +5988,46 @@ function update(dt) {
          * 같이 순해져야 한다.
          */
         const chf = (s.stage && s.stage.fireMul) || 1
-        if (bs.phase === 1) {
+        /*
+         * 페이즈를 부위 상태에서 매번 다시 뽑는다.
+         *
+         * 전에는 코어가 열릴 때 한 번 2로 바꾸는 게 전부여서, 부위를
+         * 하나 부수든 둘 부수든 보스가 똑같이 쐈다. 부위를 부수는 것이
+         * 화면에 아무 변화도 안 만들면 그건 진행이 아니라 작업이다.
+         *
+         *   1  부위가 다 살아 있다      부채꼴 + 유도탄
+         *   2  하나라도 부쉈다          나선. 서 있을 자리가 계속 옮겨간다
+         *   3  코어가 열렸다            원형 탄막 + 조준 연발, 가끔 폭격
+         */
+        const nAlive = bs.parts.filter((p) => p.alive).length
+        bs.phase = bs.core.open ? 3 : nAlive < bs.parts.length ? 2 : 1
+
+        if (bs.phase === 2) {
+          /*
+           * 나선.
+           *
+           * 각도가 조금씩 돌아가며 계속 나온다. 부채꼴은 한 번 피하면
+           * 다음 발까지 쉴 틈이 있는데, 나선은 안전한 자리가 천천히
+           * 옮겨다녀서 계속 따라 움직여야 한다.
+           */
+          bs.cd = 0.42 * slow * haste * chf
+          bs.spin = (bs.spin || 0) + 0.42
+          const arms = bs.mid ? 2 : 3
+          for (let k = 0; k < arms; k++) {
+            const a = bs.spin + (k / arms) * Math.PI * 2
+            s.ebullets.push({ x: bs.x, y: bs.y + 10, vx: Math.cos(a) * 175, vy: Math.sin(a) * 175,
+                              r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
+          }
+          /* 가끔 좌우에서 벽이 온다. 나선만이면 가운데가 늘 안전해진다 */
+          if (Math.random() < 0.08) {
+            const dir = Math.random() < .5 ? 1 : -1
+            for (let i = 0; i < 5; i++) {
+              s.ebullets.push({ x: dir > 0 ? -20 : W + 20, y: 120 + i * 46,
+                                vx: dir * 190, vy: 26, r: 4, age: 0,
+                                dmg: DMG.boss, sh: 'mid' })
+            }
+          }
+        } else if (bs.phase === 1) {
           bs.cd = 1.05 * slow * haste * chf
           for (let i = -3; i <= 3; i++) {
             const a = Math.PI / 2 + i * .17
@@ -5949,6 +6042,13 @@ function update(dt) {
         } else {
           /* 코어가 열리면 원형 탄막 + 조준 3연발을 번갈아 */
           bs.cd = 1.15 * chf
+          /*
+           * 그리고 가끔 폭격을 부른다.
+           *
+           * 마지막 페이즈에는 보스만 보고 있을 수 없게 만든다 - 화면
+           * 위쪽에 경고가 뜨면 눈을 두 곳에 둬야 한다.
+           */
+          if (!bs.mid && Math.random() < 0.16) bombRaid(3 + ((Math.random() * 2) | 0))
           if (Math.floor(bs.t) % 2 === 0) {
             for (let i = 0; i < 18; i++) {
               const a = (i / 18) * Math.PI * 2 - bs.t * .6
@@ -7239,6 +7339,20 @@ for (const k in GDECO_B64) {
 function gd(k) {
   const im = GD[k]
   return im && im.complete && im.naturalWidth ? im : null
+}
+
+/*
+ * 반신 초상을 캔버스에서도 쓴다.
+ *
+ * 강화 연출이 4차 얼굴(plN1)을 쓰고 파일럿 카드가 8차 반신(pc-normal)을
+ * 써서, 같은 파일럿인데 화면마다 다른 사람이 나왔다. 카드에 여자가
+ * 앉아 있는데 강화하면 남자가 떴다.
+ */
+const PC_IMG = {}
+for (const k in PCARD_B64) {
+  const im = new Image()
+  im.src = 'data:image/webp;base64,' + PCARD_B64[k]
+  PC_IMG[k] = im
 }
 
 /* CSS 에서 쓴다. 화면과 카드는 HTML 요소다 */
