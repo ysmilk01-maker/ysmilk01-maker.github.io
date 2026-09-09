@@ -1419,6 +1419,8 @@ function load() {
      * 않으면 스탯을 찍을 때마다 레벨이 내려간다.
      */
     pilot: { name: '', mark: 0, xp: 0, xpTotal: 0, lv: 1, grade: 'normal',
+             /* 지금 쓰는 사람. 등급마다 둘이라 등급만으로는 안 정해진다 */
+             who: 'n1',
              st: { pow: 0, rate: 0, rng: 0, hp: 0 } },
     pilotOwned: { normal: true },   // 가진 파일럿 등급
     shardP: {},                     // 기체 조각. 기체 id -> 개수
@@ -1684,7 +1686,9 @@ for (const k in GACHA_B64) {
  */
 {
   const r = document.documentElement.style
-  for (const k of ['plN1', 'plM1', 'plH1', 'plL1', 'bgN', 'bgM', 'bgH', 'bgL']) {
+  /* 둘째 장 넷을 더 내보낸다. 전에는 첫 장만 내보내서 카드에 못 썼다 */
+  for (const k of ['plN1', 'plN2', 'plM1', 'plM2', 'plH1', 'plH2', 'plL1', 'plL2',
+                   'bgN', 'bgM', 'bgH', 'bgL']) {
     r.setProperty('--gc-' + k, "url('data:image/webp;base64," + GACHA_B64[k] + "')")
   }
 }
@@ -1710,6 +1714,57 @@ const PILOT_ART = {
   mid:    { face: ['plM1', 'plM2'], bg: 'bgM' },
   high:   { face: ['plH1', 'plH2'], bg: 'bgH' },
   legend: { face: ['plL1', 'plL2'], bg: 'bgL' },
+}
+
+/* ================================================================
+ * 파일럿 명단
+ *
+ * 전에는 등급이 곧 파일럿이었다. 넷뿐이고 고를 것이 없었다 - 상급을
+ * 열면 상급을 쓰는 것 말고 할 일이 없다.
+ *
+ * 초상은 등급마다 두 장씩 여덟 장이 이미 들어 있는데 첫 장만 쓰고
+ * 있었다. 둘째 장 넷이 파일 안에서 놀고 있었던 것이다. 그 넷을 꺼내
+ * 등급마다 두 명을 세운다.
+ *
+ * **같은 등급의 둘은 세기가 같고 특성이 다르다.** 등급이 세로축(얼마나
+ * 센가), 특성이 가로축(무엇을 잘하는가)이다. 그래야 상급을 열고 나서도
+ * 고를 것이 남는다.
+ *
+ * 등급을 열면 그 등급의 둘 다 열린다. 조각을 두 배로 모으게 하면
+ * 「고를 수 있다」가 「더 모아라」가 된다.
+ * ================================================================ */
+const PERK0 = { pow: 1, rate: 1, rng: 1, hp: 0, ult: 1, heal: 0, inv: 0 }
+const PILOTS = [
+  { id: 'n1', grade: 'normal', face: 0, name: '무명',
+    perk: {}, desc: '치우침이 없습니다' },
+  { id: 'n2', grade: 'normal', face: 1, name: '반석',
+    perk: { hp: 14 }, desc: '최대 체력 +14' },
+
+  { id: 'm1', grade: 'mid', face: 0, name: '예리',
+    perk: { pow: 1.06 }, desc: '화력 +6%' },
+  { id: 'm2', grade: 'mid', face: 1, name: '쾌속',
+    perk: { rate: 0.94 }, desc: '사격 간격 -6%' },
+
+  { id: 'h1', grade: 'high', face: 0, name: '형안',
+    perk: { rng: 1.10 }, desc: '탄폭 +10%' },
+  { id: 'h2', grade: 'high', face: 1, name: '철벽',
+    perk: { heal: 5, inv: 0.12 }, desc: '보급 회복 두 배 · 피격 무적 +0.12초' },
+
+  { id: 'l1', grade: 'legend', face: 0, name: '홍염',
+    perk: { ult: 1.25 }, desc: '필살기 충전 +25%' },
+  { id: 'l2', grade: 'legend', face: 1, name: '백야',
+    perk: { hp: 20, inv: 0.2 }, desc: '최대 체력 +20 · 피격 무적 +0.2초' },
+]
+const PILOT_BY = Object.fromEntries(PILOTS.map((p) => [p.id, p]))
+/** 지금 쓰는 파일럿. 저장에 없으면 그 등급의 첫 사람 */
+function pilotNow() {
+  return PILOT_BY[prog.pilot.who] ||
+         PILOTS.find((p) => p.grade === prog.pilot.grade) || PILOTS[0]
+}
+/** 그 사람의 특성 하나. 없는 칸은 기본값 */
+function perk(k) {
+  const v = pilotNow().perk[k]
+  return v == null ? PERK0[k] : v
 }
 
 /* ================================================================
@@ -2615,10 +2670,12 @@ function isLegend() { return prog.pilot.lv >= PILOT_MAX || boughtLegend() }
  * 연사와 탄폭에까지 곱하면 상급 파일럿 하나로 모든 축이 한꺼번에 올라
  * 스탯 투자가 의미를 잃는다. 두 축은 투자로만 오른다.
  */
-function pilotPow()  { return grade().base * (1 + prog.pilot.st.pow * 0.025) }
-function pilotRate() { return 1 - prog.pilot.st.rate * 0.015 }
-function pilotRng()  { return 1 + prog.pilot.st.rng * 0.02 }
-function pilotHp()   { return Math.round(PLAYER_HP * (grade().base - 1)) + prog.pilot.st.hp * 6 }
+function pilotPow()  { return grade().base * (1 + prog.pilot.st.pow * 0.025) * perk('pow') }
+function pilotRate() { return (1 - prog.pilot.st.rate * 0.015) * perk('rate') }
+function pilotRng()  { return (1 + prog.pilot.st.rng * 0.02) * perk('rng') }
+function pilotHp()   {
+  return Math.round(PLAYER_HP * (grade().base - 1)) + prog.pilot.st.hp * 6 + perk('hp')
+}
 
 /** 경험치를 그대로 넣는다. 포션처럼 점수를 거치지 않는 것이 쓴다 */
 function addXpRaw(n) {
@@ -2681,6 +2738,12 @@ if (prog.__migPilot) {
   const leftPts = Math.max(0, (pt.lv - 1) - spent)
   pt.xpTotal = base + (pt.xp || 0)
   pt.xp = (pt.xp || 0) + leftPts * 1200
+  save()
+}
+/* 옛 저장에는 who 가 없다. 쓰던 등급의 첫 사람으로 둔다 */
+if (!PILOT_BY[prog.pilot.who]) {
+  const first = PILOTS.find((p) => p.grade === prog.pilot.grade)
+  prog.pilot.who = (first || PILOTS[0]).id
   save()
 }
 delete prog.__migPilot
@@ -3992,27 +4055,33 @@ function renderPilot() {
       `</div>`
   }).join('')
 
-  const gradeBox = GRADE_KEYS.map((k) => {
-    const G = GRADES[k]
-    const have = hasGrade(k)
-    const on = prog.pilot.grade === k
-    const eff = k === 'legend'
-      ? '스탯 100% · 후방 자리'
-      : `스탯 ${Math.round(G.base * 100)}%`
-    /*
-     * 초상은 등급마다 두 장이 있다. 첫 장으로 고정한다 - 화면을 다시
-     * 그릴 때마다 얼굴이 바뀌면 그게 내 파일럿으로 안 읽힌다.
-     */
-    const pic = PCARD_B64[k]
-      ? `<div class="pf" style="--face:var(--pc-${k})"></div>`
-      : `<div class="rk ${k}"></div>`
-    /* 조각이 다 모여 지금 열 수 있으면 테두리를 켠다 */
-    const ready = !have && GRADE_NEED[k] > 0 && shardG(k) >= GRADE_NEED[k]
-    return `<div class="gcard${on ? ' on' : ''}${have ? '' : ' no'}${ready ? ' can' : ''}" data-g="${k}">` +
+  /*
+   * 파일럿 여덟 장.
+   *
+   * 등급마다 둘이고 세기는 같다 - 다른 것은 특성뿐이다. 등급을 열면
+   * 그 등급의 둘 다 열린다. 조각을 두 배로 모으게 하면 「고를 수 있다」가
+   * 「더 모아라」가 된다.
+   *
+   * 초상은 등급마다 두 장이 이미 들어 있었는데 첫 장만 쓰고 있었다.
+   * 둘째 장을 여기서 꺼내 쓴다.
+   */
+  const gradeBox = PILOTS.map((pl) => {
+    const G = GRADES[pl.grade]
+    const have = hasGrade(pl.grade)
+    const on = pilotNow().id === pl.id
+    const art = PILOT_ART[pl.grade]
+    const face = art && art.face[pl.face]
+    const pic = face
+      ? `<div class="pf" style="--face:var(--gc-${face})"></div>`
+      : `<div class="rk ${pl.grade}"></div>`
+    const ready = !have && GRADE_NEED[pl.grade] > 0 && shardG(pl.grade) >= GRADE_NEED[pl.grade]
+    return `<div class="gcard${on ? ' on' : ''}${have ? '' : ' no'}${ready ? ' can' : ''}" data-who="${pl.id}">` +
       pic +
-      `<div><div class="nm">${G.name} 파일럿</div><div class="de">${eff}</div></div>` +
+      `<div><div class="nm">${pl.name} <span style="color:var(--dim);font-size:10.5px">` +
+        `${G.name}${pl.grade === 'legend' ? ' · 후방' : ` ${Math.round(G.base * 100)}%`}</span></div>` +
+      `<div class="de">${pl.desc}</div></div>` +
       `<span class="rt">${have ? (on ? '사용 중' : '보유') :
-        `조각 ${shardG(k)}/${GRADE_NEED[k]}`}</span></div>`
+        `조각 ${shardG(pl.grade)}/${GRADE_NEED[pl.grade]}`}</span></div>`
   }).join('')
 
   const legendBox = boughtLegend()
@@ -4098,11 +4167,18 @@ function renderPilot() {
     }
   })
 
-  document.querySelectorAll('.gcard[data-g]').forEach((el) => {
-    const k = el.dataset.g
+  document.querySelectorAll('.gcard[data-who]').forEach((el) => {
+    const pl = PILOT_BY[el.dataset.who]
     el.onclick = () => {
-      if (!hasGrade(k)) { alert(`${GRADES[k].name} 파일럿은 조각 ${GRADE_NEED[k]}개가 필요합니다.\n지금 ${shardG(k)}개.`); return }
+      const k = pl.grade
+      if (!hasGrade(k)) {
+        alert(GRADES[k].name + ' 파일럿은 조각 ' + GRADE_NEED[k] + '개가 필요합니다.' + String.fromCharCode(10) +
+              '지금 ' + shardG(k) + '개. 열면 ' + GRADES[k].name + ' 둘 다 쓸 수 있습니다.')
+        return
+      }
+      /* 세기는 등급이, 특성은 사람이 정한다. 둘을 같이 옮긴다 */
       prog.pilot.grade = k
+      prog.pilot.who = pl.id
       save(); sfx('pick'); renderPilot()
     }
   })
@@ -4324,6 +4400,16 @@ function newState() {
     modDrops: 0,
     modCap: rollModCap(),
     boss: null, waveIdx: 0, banner: null, bannerT: 0, cleared: false,
+    /*
+     * 타격감.
+     *
+     *   shake  화면 흔들림. 맞은 세기만큼 커지고 빠르게 잦아든다
+     *   hurtT  가장자리가 붉어지는 시간
+     *
+     * pl.shake 라는 값이 이미 있었는데 어디에서도 안 쓰이고 있었다 -
+     * 설정만 하고 화면에 안 나갔으니 맞아도 화면이 조용했다.
+     */
+    shake: 0, hurtT: 0,
     supplyT: SUPPLY_FIRST,
     /* 총구 불꽃과 피격 불똥. 아주 짧게 떴다 사라지므로 따로 담는다 */
     muzzles: [], sparks: [],
@@ -6060,7 +6146,8 @@ function missileBurst(b) {
     boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
     /* 격파로는 아이템이 안 나온다. 아이템은 보급으로만 온다(dropSupply) */
     const before = s.ult
-    s.ult = Math.min(ULT_MAX, s.ult + (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN)
+    s.ult = Math.min(ULT_MAX, s.ult +
+      (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
     if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
   }
 
@@ -6168,7 +6255,7 @@ function chainFrom(from, b) {
       s.score += best.score
       s.kills++
       boom(best.x, best.y, 12, '#bff0ff')
-      s.ult = Math.min(ULT_MAX, s.ult + 8 * ULT_GAIN)
+      s.ult = Math.min(ULT_MAX, s.ult + 8 * ULT_GAIN * perk('ult'))
     }
     bit.push(best)
     cur = best
@@ -6195,7 +6282,26 @@ function boom(x, y, n, color) {
    * 알갱이는 남겨 둔다 - 사방으로 튀는 움직임이 있어야 무게가 생긴다.
    */
   if (n >= 6) {
-    state.blasts.push({ x, y, r: 22 + n * 1.5, age: 0, life: .34 })
+    /*
+     * 터지는 불꽃.
+     *
+     * 반지름 22+n*1.5, 0.34초였다. 잡졸(n=12)이면 40 이라 기체보다 작고
+     * 순식간에 사라진다 - 「죽였다」가 화면에 거의 안 남는다. 타격감은
+     * 맞히는 순간이 아니라 **터지는 순간**에서 온다.
+     *
+     * 크기를 키우고 조금 더 오래 둔다. 그리고 겹쳐서 하나 더 얹는다 -
+     * 그림 여섯 장을 한 번 훑는 것만으로는 불길이 뭉치지 않는다.
+     */
+    state.blasts.push({ x, y, r: 30 + n * 2.4, age: 0, life: .46 })
+    if (n >= 10) {
+      /* 두 번째 불길은 조금 늦게, 조금 옆에서. 한 덩어리가 아니라 번져 보인다 */
+      state.blasts.push({
+        x: x + (Math.random() - .5) * n * .8, y: y + (Math.random() - .5) * n * .8,
+        r: 20 + n * 1.6, age: -0.06, life: .42,
+      })
+    }
+    /* 큰 것이 터지면 화면도 조금 흔들린다 */
+    if (n >= 18) state.shake = Math.max(state.shake, 2 + n * .12)
   } else {
     /*
      * 탄이 박히는 순간. 알갱이 두 개만 튀던 자리다.
@@ -6208,10 +6314,11 @@ function boom(x, y, n, color) {
                         k: n >= 4 ? 'sp3' : n >= 2 ? 'sp2' : 'sp1',
                         rot: Math.random() * 6.28 })
   }
-  for (let i = 0; i < Math.round(n * .55); i++) {
-    const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 180
+  /* 잔해. 0.55 에서 0.85 로, 더 멀리 튀게 - 터진 자리가 넓어야 크게 보인다 */
+  for (let i = 0; i < Math.round(n * .85); i++) {
+    const a = Math.random() * Math.PI * 2, sp = 55 + Math.random() * 260
     state.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-                       life: .3 + Math.random() * .5, age: 0, color })
+                       life: .3 + Math.random() * .6, age: 0, color })
   }
 }
 
@@ -6487,15 +6594,29 @@ function hitPlayer(dmg) {
   const pl = state.player
   if (pl.inv > 0) return
   state.hitCount++
-  pl.inv = HIT_INV
+  /* 「철벽」·「백야」는 맞고 나서 더 오래 무적이다 */
+  pl.inv = HIT_INV + perk('inv')
   pl.hp -= dmg || DMG.bullet
   boom(pl.x, pl.y, dmg >= 20 ? 22 : 10, '#7fd6ff')
-  pl.shake = Math.min(1, (dmg || 8) / 22)
+  /*
+   * 맞았다는 것이 화면 전체에 나야 한다.
+   *
+   * 전에는 기체 자리에 작은 불꽃 하나였다. 탄막 한가운데서 그건 안
+   * 보인다 - 체력 막대가 줄어든 걸 나중에 보고서야 「아까 맞았구나」
+   * 한다. 맞은 순간을 모르면 무엇을 피해야 하는지도 못 배운다.
+   *
+   * 셋을 같이 낸다. 화면이 흔들리고, 가장자리가 붉어지고, 손이 울린다.
+   */
+  const k = Math.min(1, (dmg || 8) / 26)
+  state.shake = Math.max(state.shake, 4 + k * 12)
+  state.hurtT = Math.max(state.hurtT, 0.34 + k * 0.3)
   sfx('hurt', dmg >= 24 ? 1 : 0)
   haptic(dmg >= 24 ? 'hard' : 'soft')
   if (pl.hp > 0) return
 
   boom(pl.x, pl.y, 34, '#ffd27a')
+  state.shake = 26
+  state.hurtT = 1.1
   haptic('down')
   state.lives--
   pl.hp = pl.maxHp
@@ -7080,6 +7201,10 @@ function update(dt) {
   for (const a of s.arcs) a.age += dt
   s.arcs = s.arcs.filter((a) => a.age < a.life)
 
+  /* 흔들림은 빠르게, 붉은 기는 조금 느리게 잦아든다 */
+  if (s.shake > 0) s.shake = Math.max(0, s.shake - dt * 52)
+  if (s.hurtT > 0) s.hurtT = Math.max(0, s.hurtT - dt)
+
   for (const b of s.blasts) b.age += dt
   s.blasts = s.blasts.filter((b) => b.age < b.life)
   /* 총구 불꽃 0.06초, 불똥 0.18초. 길면 화면에 지저분하게 남는다 */
@@ -7240,7 +7365,8 @@ function collide() {
           // 큰 적일수록 많이 찬다. 열댓 마리 잡으면 한 번 쓴다
           const before = s.ult
           // 예전엔 잡졸 열일곱만 잡으면 궁이 찼다. 판이 궁으로만 굴러갔다
-          s.ult = Math.min(ULT_MAX, s.ult + (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN)
+          s.ult = Math.min(ULT_MAX, s.ult +
+            (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
           if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
         }
       }
@@ -7359,7 +7485,8 @@ function collide() {
      * 되돌리면, 맞고 줍기를 반복하는 것이 피하는 것보다 낫다 - 실제로
      * 스물여덟 대를 맞고도 체력이 가득 찬 채로 끝나는 판이 있었다.
      */
-    pl.hp = Math.min(pl.maxHp, pl.hp + 5)
+    /* 「철벽」은 보급 회복이 두 배다 */
+    pl.hp = Math.min(pl.maxHp, pl.hp + 5 + perk('heal'))
     if (it.tk) {
       prog.ticket++
       save()
@@ -8594,6 +8721,21 @@ function draw() {
   const now = performance.now() / 1000
   g.clearRect(0, 0, W, H)
 
+  /*
+   * 화면 흔들림.
+   *
+   * 여기서 한 번 밀면 배경부터 UI 앞까지 다 같이 흔들린다. 기체만
+   * 흔들면 기체가 떨리는 것이지 「맞았다」가 아니다.
+   *
+   * 마지막에 restore 한 뒤 붉은 비네트를 얹는다 - 그건 화면에 붙어
+   * 있어야지 같이 흔들리면 어지럽다.
+   */
+  const shk = s.shake || 0
+  g.save()
+  if (shk > 0.4) {
+    g.translate((Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk)
+  }
+
   /* 지면 - 위가 멀고 아래가 가깝다. 색은 스테이지가 정한다 */
   const TH = s.theme || THEMES.sea
   const sea = g.createLinearGradient(0, 0, 0, H)
@@ -8709,6 +8851,7 @@ function draw() {
     gaDraw(m.k, m.x, m.y - 4, 20 - t * 4, 1 - t * .5)
   }
   for (const bl of s.blasts) {
+    if (bl.age < 0) continue          // 늦게 터지는 두 번째 불길
     const i = Math.min(BOOM_IMG.length - 1, Math.floor((bl.age / bl.life) * BOOM_IMG.length))
     const im = BOOM_IMG[i]
     if (!im || !im.complete || !im.naturalWidth) continue
@@ -9008,6 +9151,27 @@ function draw() {
     g.textAlign = 'center'; g.textBaseline = 'middle'
     g.fillText(s.banner, W / 2, H * .34)
     g.globalAlpha = 1
+  }
+
+  /* 흔들림은 여기서 끝난다. 아래는 화면에 붙어 있어야 하는 것들 */
+  g.restore()
+
+  /*
+   * 맞았을 때 가장자리가 붉어진다.
+   *
+   * 가운데는 비워 둔다 - 거기가 정작 봐야 하는 곳이라, 덮으면 맞은
+   * 다음이 더 위험해진다. 가장자리만 물들이면 눈은 화면 전체가 붉어진
+   * 것으로 읽으면서도 볼 것은 다 보인다.
+   */
+  if (s.hurtT > 0) {
+    const a = Math.min(1, s.hurtT / 0.5)
+    const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.20,
+                                      W / 2, H / 2, Math.max(W, H) * 0.62)
+    vg.addColorStop(0, 'rgba(255,40,60,0)')
+    vg.addColorStop(0.55, 'rgba(255,40,60,' + (a * 0.20).toFixed(3) + ')')
+    vg.addColorStop(1, 'rgba(255,20,45,' + (a * 0.62).toFixed(3) + ')')
+    g.fillStyle = vg
+    g.fillRect(0, 0, W, H)
   }
 }
 
@@ -9518,10 +9682,11 @@ function end(win) {
   if (up) {
     const rankUp = rankAfter !== rankBefore
     setTimeout(() => {
-      const pa = PILOT_ART[prog.pilot.grade]
-      const face = pa && GC[pa.face[0]]
+      const who = pilotNow()
+      const pa = PILOT_ART[who.grade]
+      const face = pa && GC[pa.face[who.face]]
       upgPlay(face || null,
-              rankUp ? '파일럿 · ' + rankAfter : '파일럿',
+              rankUp ? '파일럿 · ' + rankAfter : '파일럿 · ' + who.name,
               'Lv.' + prog.pilot.lv,
               gTone(rankUp ? 'legend' : prog.pilot.grade).main)
       haptic('ult')
