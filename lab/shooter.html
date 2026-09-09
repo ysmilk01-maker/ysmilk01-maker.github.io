@@ -104,6 +104,16 @@
 
   /* 편대 슬롯 */
   .slots { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 8px; margin-bottom: 14px; }
+  /*
+   * 후방 자리는 가운데 칸에 둔다.
+   *
+   * 전에는 아래 줄을 가로로 꽉 채웠다. 그러면 339×98 이 되는데, 프레임이
+   * 9분할 그림이라 3.4:1 로 늘리면 위쪽 장식이 뭉개진다. 다른 슬롯과
+   * 같은 비율로 두면 그 문제가 사라지고, 넷이 한 편대로도 읽힌다.
+   *
+   * 자리 자체도 이쪽이 맞다 - 후방기는 메인 뒤에 붙는다.
+   */
+  .slot.rear { grid-column: 2 / 3; }
   .slot {
     background: var(--tex, none) repeat, var(--panel);
     border: 1px solid var(--line); border-radius: 14px;
@@ -2202,9 +2212,19 @@ function renderSquad() {
     const usable = slotOpen(i)
     const p = usable ? planeById(prog.squad[i]) : null
     const d = document.createElement('div')
-    d.className = 'slot' + (i === activeSlot && usable ? ' on' : '') + (usable ? '' : ' locked-slot')
-    // 후방은 한 줄을 통째로 쓴다. 셋은 위, 하나는 아래 - 대형이 그대로 보인다
-    if (m.legend) d.style.gridColumn = '1 / -1'
+    d.className = 'slot' + (i === activeSlot && usable ? ' on' : '') +
+      (usable ? '' : ' locked-slot') + (m.legend ? ' rear' : '')
+    /*
+     * 후방은 아랫줄 **가운데** 칸이다.
+     *
+     * 전에는 아랫줄을 통째로 썼다(`1 / -1`). 대형은 잘 보였는데 폭이
+     * 339 에 높이가 99 가 되면서, 9분할 프레임을 3.4:1 로 늘리는 바람에
+     * 위쪽 장식이 뭉개졌다. 화면을 찍어 보고서야 보였다.
+     *
+     * 가운데 칸에 두면 메인 바로 뒤가 되니 대형은 그대로 읽히고,
+     * 다른 슬롯과 비율이 같아 프레임도 멀쩡하다. 자리는 CSS 의
+     * `.slot.rear` 가 잡는다 - 인라인으로 박으면 나중에 규칙으로 못 고친다.
+     */
     d.innerHTML = usable
       ? `<div class="role">${m.role}</div>` +
         `<canvas class="pv" width="120" height="120"></canvas>` +
