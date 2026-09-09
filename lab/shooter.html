@@ -27,21 +27,50 @@
 -->
 
 <style>
+  /*
+   * 글꼴은 홈페이지와 같은 것을 쓴다.
+   *
+   * 한글 UI 에서 글꼴만큼 인상을 크게 바꾸는 게 없다. 맑은 고딕은 굵기가
+   * 둘뿐이라 제목과 본문이 같은 무게로 눌린다. 프리텐다드는 가변 폰트라
+   * 층이 생긴다.
+   *
+   * 못 받아 오면 뒤의 목록으로 조용히 내려간다 - 토스 안에서 바깥 주소가
+   * 막히는 경우가 있어서 대비를 둔다.
+   */
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+  /*
+   * 색.
+   *
+   * 바탕을 푸른 남색에서 거의 검정으로 내렸다. 홈페이지가 검정 바탕이고,
+   * 무엇보다 게임 화면(바다·사막·설원)이 저마다 색이 강해서 UI 바탕까지
+   * 색을 가지면 서로 싸운다.
+   *
+   * 금색·붉은색·초록은 홈페이지에서 앱마다 쓰던 색을 그대로 가져왔다.
+   * 시안만 게임 것으로 남긴다 - 이건 이 게임의 얼굴이다.
+   */
   :root {
-    --bg: #070b14; --panel: #0e1421; --line: #1e293b;
-    --ink: #e8edf7; --muted: #8496b0; --dim: #5a6b85;
-    --accent: #4fd1ff; --gold: #ffc44d; --warn: #ff5470; --ok: #4ade80;
+    --bg: #08090d; --panel: #13151c; --panel-2: #191c25;
+    --line: #23262f; --line-2: #2e323e;
+    --ink: #ececef; --muted: #8b8b93; --dim: #5f6068;
+    --accent: #4fd1ff; --accent-ink: #04121a;
+    --gold: #f0b90b; --warn: #f76c82; --ok: #4f9e77;
+    --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+      'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-    font-family: "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+    font-family: var(--font);
+    /* 한국어는 어절 단위로 끊어야 읽힌다. 안 넣으면 낱글자가 줄 끝에 남는다 */
+    word-break: keep-all;
+    -webkit-font-smoothing: antialiased;
     overflow: hidden; overscroll-behavior: none;
   }
   #wrap { position: fixed; inset: 0; display: grid; place-items: center; }
   canvas {
-    display: block; touch-action: none; background: #050810;
-    box-shadow: 0 0 0 1px #1b2436, 0 24px 80px rgba(0,0,0,.6); border-radius: 10px;
+    display: block; touch-action: none; background: #05060a;
+    box-shadow: 0 0 0 1px var(--line), 0 24px 80px rgba(0,0,0,.7); border-radius: 12px;
   }
 
   .screen {
@@ -50,25 +79,33 @@
   }
   .screen[hidden] { display: none !important; }
 
-  h1 { margin: 0 0 4px; font-size: 22px; }
-  h2 { margin: 0 0 4px; font-size: 19px; }
-  .sub { margin: 0 0 14px; font-size: 12.5px; color: var(--muted); line-height: 1.7; }
-  b { color: var(--accent); }
+  h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+  h2 { margin: 0 0 6px; font-size: 20px; font-weight: 800; letter-spacing: -.015em; }
+  .sub { margin: 0 0 16px; font-size: 13px; color: var(--muted); line-height: 1.65; }
+  b { color: var(--accent); font-weight: 700; }
+  .lab {
+    font-size: 11.5px; color: var(--dim); margin: 18px 0 8px;
+    letter-spacing: .02em; font-weight: 600;
+  }
 
   button {
-    border: 0; border-radius: 11px; font-family: inherit; cursor: pointer;
-    background: var(--accent); color: #04121a; font-size: 15px; font-weight: 800;
-    padding: 13px 24px;
+    border: 0; border-radius: 12px; font-family: inherit; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink);
+    font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+    padding: 13px 24px; transition: transform .08s, background .12s;
   }
-  button:active { transform: translateY(1px); }
-  button.ghost { background: transparent; color: var(--muted); font-weight: 600; }
-  button.small { padding: 9px 14px; font-size: 13px; }
+  button:active { transform: translateY(1px) scale(.995); }
+  button.ghost {
+    background: var(--panel); color: var(--muted); font-weight: 600;
+    border: 1px solid var(--line);
+  }
+  button.small { padding: 9px 14px; font-size: 12.5px; border-radius: 10px; }
 
   /* 편대 슬롯 */
   .slots { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 8px; margin-bottom: 14px; }
   .slot {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 13px;
-    padding: 10px 8px; text-align: center; cursor: pointer; min-height: 96px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 11px 8px; text-align: center; cursor: pointer; min-height: 98px;
   }
   .slot.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .slot .role { font-size: 10.5px; color: var(--dim); letter-spacing: .04em; }
@@ -80,8 +117,8 @@
   .list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 10px 11px; cursor: pointer; position: relative;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 13px; cursor: pointer; position: relative;
   }
   .card.locked { opacity: .5; }
   .card.picked { border-color: var(--accent); }
@@ -92,9 +129,9 @@
     position: absolute; top: 9px; right: 10px; font-size: 9.5px; font-weight: 800;
     padding: 2px 6px; border-radius: 5px;
   }
-  .t-common { background: #1e293b; color: #94a3b8; }
-  .t-rare { background: #1e3a5f; color: #7dd3fc; }
-  .t-legend { background: #4a3410; color: var(--gold); }
+  .t-common { background: #232733; color: #9aa1ae; }
+  .t-rare { background: #16324e; color: #7dd3fc; }
+  .t-legend { background: #3d2f07; color: var(--gold); }
   .card .lock { font-size: 10.5px; color: var(--gold); margin-top: 5px; font-weight: 700; }
   .card .pv {
     display: block; width: 100%; height: 74px; margin: 2px 0 6px;
@@ -114,13 +151,19 @@
   .slot .pv { display: block; width: 100%; height: 52px; margin: 2px 0 1px; }
 
   .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  /* 제일 자주 누르는 단추다. 다른 것보다 확실히 커야 한다 */
+  #launch, #launch2 {
+    flex: 1 1 160px; padding: 16px 24px; font-size: 17px; border-radius: 13px;
+    box-shadow: 0 6px 18px rgba(79,209,255,.22);
+  }
   button.off { opacity: .45; }
   .bar .grow { flex: 1; }
   .hint { font-size: 11px; color: var(--dim); }
 
   .panel {
     position: fixed; inset: 0; display: grid; place-items: center;
-    background: rgba(5,8,16,.88); text-align: center; padding: 24px;
+    background: rgba(6,7,10,.9); backdrop-filter: blur(4px);
+    text-align: center; padding: 24px;
   }
   .panel[hidden] { display: none !important; }
 
@@ -128,23 +171,25 @@
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
     display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;
-    background: #0b111c; border-top: 1px solid var(--line);
+    background: rgba(8,9,13,.94); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   }
   .tabs button {
     background: transparent; color: var(--dim); font-size: 11.5px;
-    font-weight: 700; padding: 10px 2px; border-radius: 9px;
+    font-weight: 600; padding: 10px 2px; border-radius: 10px; border: 0;
   }
-  .tabs button.on { color: var(--accent); background: #12203a; }
+  .tabs button.on { color: var(--accent); background: rgba(79,209,255,.10); font-weight: 700; }
   .tabs[hidden] { display: none !important; }
-  .screen { padding-bottom: 8px; }
+  /* 탭이 아래에 떠 있다. 그만큼을 비워 두지 않으면 출격 단추가 그 밑에 깔린다 */
+  .screen { padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
   .body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px 8px; }
 
   /* 편대 요약 */
   .sum { display: grid; gap: 7px; margin-top: 14px; }
   .row {
     display: flex; align-items: center; gap: 9px; background: var(--panel);
-    border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; font-size: 12.5px;
+    border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; font-size: 13px;
   }
   .row .k { color: var(--muted); }
   .row .v { margin-left: auto; font-weight: 800; }
@@ -263,12 +308,12 @@
   .chtabs button.lock { opacity: .45; }
   .nodes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-top: 10px; }
   .node {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 11px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
     padding: 8px 2px 6px; text-align: center; cursor: pointer; position: relative;
   }
   .node.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .node.lock { opacity: .38; }
-  .node.boss { background: #2a1420; border-color: #5a2b3a; }
+  .node.boss { background: #24141a; border-color: #4a2833; }
   .node .n { font-size: 13px; font-weight: 800; color: var(--ink); }
   .node .k { font-size: 9px; color: var(--gold); font-weight: 800; }
   .node .st { font-size: 9px; letter-spacing: 1px; margin-top: 2px; }
@@ -278,8 +323,8 @@
   /* 오늘의 임무 */
   .miss { display: grid; gap: 7px; margin-top: 14px; }
   .mrow {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 11px;
-    padding: 10px 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 11px 13px;
   }
   .mrow.done { border-color: var(--ok); }
   .mrow .top { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
@@ -294,7 +339,7 @@
   .mrow button[disabled] { background: #1a2536; color: #5b6a80; }
   .setrow {
     display: flex; align-items: center; gap: 10px; background: var(--panel);
-    border: 1px solid var(--line); border-radius: 11px; padding: 11px 12px;
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px;
   }
   .setrow .nm { font-size: 13px; font-weight: 700; }
   .setrow .de { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
@@ -311,7 +356,7 @@
 
   /* 뽑기 */
   .gbox {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    background: var(--panel); border: 1px solid var(--line-2); border-radius: 18px;
     padding: 20px 18px; width: min(420px, 100%); max-height: 86vh; overflow-y: auto;
   }
   .gbox h2 { margin-bottom: 12px; }
@@ -874,6 +919,14 @@ const GACHA = {
 /** 완성품이 이미 가진 것에 걸렸을 때 대신 주는 조각 */
 const JACK_SHARD = 10
 /*
+ * 백 장을 쓰면 기체 하나가 확정으로 나온다.
+ *
+ * 조각만 쌓이다 보면 "이걸 계속 돌려서 뭐가 되나" 하는 구간이 온다.
+ * 백 장이면 눈에 보이는 끝이 있어서 그 구간을 넘긴다. 등급은 랜덤이다 -
+ * 확정을 주되 무엇이 나올지는 안 정한다.
+ */
+const HARD_PITY = 100
+/*
  * 가챠권 판매.
  *
  * 결제가 붙으면 뽑기가 '간접적으로 유상'이 되어 게임산업법의 확률형 아이템
@@ -909,6 +962,18 @@ function pull(kind) {
   if (prog.ticket < g.cost) return null
   prog.ticket -= g.cost
   prog.pull[kind]++
+
+  /* 백 장째는 기체가 통째로 나온다. 등급은 그때 뽑는다 */
+  if (kind === 'plane' && prog.pull.plane % HARD_PITY === 0) {
+    const locked = PLANES.filter((p) => !unlocked(p))
+    if (locked.length) {
+      const pick = locked[Math.floor(Math.random() * locked.length)]
+      prog.owned.push(pick.id)
+      save()
+      return { kind, tier: pick.tier, n: 1, name: pick.name, plane: pick,
+               got: true, jack: true, hard: true }
+    }
+  }
   const tier = rollTier(kind)
   const [lo, hi] = g.amount[tier]
   let n = lo + Math.floor(Math.random() * (hi - lo + 1))
@@ -1586,11 +1651,14 @@ function paintGacha(res) {
         ? '기체 조각이 나옵니다. 조각을 모으면 기체가 열리고, 남는 조각은 강화에 씁니다.'
         : '파일럿 조각이 나옵니다. 조각을 모으면 그 등급 파일럿이 열립니다.'}<br>` +
       `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.<br>` +
-      `<b>${left}번</b> 안에 ${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.</div>`
+      `<b>${left}번</b> 안에 ${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.` +
+      (gKind === 'plane'
+        ? `<br>기체 확정까지 <b>${HARD_PITY - (prog.pull.plane % HARD_PITY)}장</b>`
+        : '') + `</div>`
     return
   }
 
-  const label = res.jack ? '완성품!' : res.big ? `조각 ${res.n}개 (완성품 대체)` : `조각 ${res.n}개`
+  const label = res.hard ? '100장 확정!' : res.jack ? '완성품!' : res.big ? `조각 ${res.n}개 (완성품 대체)` : `조각 ${res.n}개`
   body.innerHTML = head +
     `<div class="got">` +
     `<span class="tag ${GRADES[res.tier] ? GRADES[res.tier].tag : 't-' + res.tier}" style="position:static">` +
@@ -1634,6 +1702,10 @@ function paintRates() {
     `<div class="lab">등급별 확률</div>${rows}` +
     `<div class="rate"><span>완성품 (조각 대신 통째로)</span><span class="v">${g.jackpot}%</span></div>` +
     `<div class="rate"><span>완성품이 이미 가진 것이면</span><span class="v">조각 ${JACK_SHARD}개</span></div>` +
+    (gKind === 'plane'
+      ? `<div class="rate"><span>${HARD_PITY}장째</span>` +
+        `<span class="v">기체 하나 확정 (등급 랜덤)</span></div>`
+      : '') +
     `<div class="empty">${pity.at}번마다 ` +
     `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상이 한 번 확정됩니다.<br>` +
     `가챠권은 별 ${STAR_TICKET}개마다 한 장입니다. 별은 한 판에 ${STAR_FAIL}개, ` +
@@ -2039,7 +2111,7 @@ function newState() {
               hp: PLAYER_HP + pilotHp(), maxHp: PLAYER_HP + pilotHp() },
     ult: 0, ultT: 0, ultKind: null, escorts: [], shards: [], sweeps: [],
     adUsed: { revive: 0, charge: 0 },
-    squad, lives: 3, score: 0, kills: 0, ultUsed: 0, hitCount: 0, clearWait: 0,
+    squad, lives: LIVES, score: 0, kills: 0, ultUsed: 0, hitCount: 0, clearWait: 0,
     bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [],
     grounds: [], slabs: [], beams: [], arcs: [],
     /* 이 판에서만 사는 개조. 저장하지 않는다. */
@@ -2647,6 +2719,14 @@ function mkEnemy(kind, x, y, drift) {
  * 피하기 쉬운 것일수록 세게 때린다. 방공 레이저는 예고가 뜨고 폭이 좁아
  * 피할 수 있으니 제일 아프고, 흔한 총알은 스쳐도 살 만하다.
  */
+/*
+ * 목숨.
+ *
+ * 셋이면 두 번을 그냥 버려도 판이 이어져서, 조심할 이유가 없었다. 하나면
+ * 한 번의 실수가 판을 끝낸다 - 대신 체력이 넉넉하고(100 에 등급·스탯이
+ * 얹힌다) 격추돼도 부활 광고가 한 번 있다.
+ */
+const LIVES = 1
 const PLAYER_HP = 100
 const DMG = {
   bullet: 12,      // 적기 일반탄
@@ -2971,7 +3051,7 @@ function reviveByAd() {
   showAd('이어하기', () => {
     state.adUsed.revive++
     const pl = state.player
-    state.lives = 1
+    state.lives = LIVES
     pl.hp = pl.maxHp
     pl.inv = 3
     pl.x = W / 2
@@ -5095,7 +5175,7 @@ function end(win) {
   let rate = 0
   if (win) {
     rate = 1
-    if (state.lives === 3) rate++
+    if (state.lives === LIVES) rate++
     if (state.player.hp / state.player.maxHp >= 0.7) rate++
   }
   const before = prog.stars[key] || 0
