@@ -1,33 +1,26 @@
 /*
- * 스크롤에 맞춰 한 번만 올라오게 한다.
+ * 등장 연출.
+ *
+ * 두 갈래다. GSAP 이 실려 있으면 그쪽으로 — 첫 화면 제목이 낱말 단위로
+ * 올라오고, 스크롤에 맞춰 첫 화면이 뒤로 물러나고, 카드 속 폰이 스크롤과
+ * 다른 속도로 움직인다. GSAP 이 안 실렸거나(CDN 이 막힌 곳) 움직임을 줄여
+ * 달라고 했으면 예전 그대로 IntersectionObserver 로 한 번씩만 올린다.
  *
  * 한 번 올라온 것은 다시 감추지 않는다 — 위아래로 스크롤할 때마다 글이
- * 깜빡이면 읽는 사람이 피곤하다. 그래서 들어온 요소는 관찰을 끊는다.
+ * 깜빡이면 읽는 사람이 피곤하다.
  *
  * 메인과 상세 페이지가 같이 쓰므로 파일로 뺐다.
  */
 (function () {
   var items = document.querySelectorAll('.rise');
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var gsap = window.gsap;
+  var useGsap = !reduce && gsap && window.ScrollTrigger;
 
-  if (reduce || !('IntersectionObserver' in window)) {
+  if (reduce || (!useGsap && !('IntersectionObserver' in window))) {
     for (var i = 0; i < items.length; i++) items[i].classList.add('in');
     return;
   }
-
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) {
-      if (!e.isIntersecting) return;
-      e.target.classList.add('in');
-      io.unobserve(e.target);
-    });
-  }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
-
-  items.forEach(function (el, i) {
-    // 같은 무대 안에서는 위에서부터 차례로 — 한꺼번에 뜨면 순서가 안 읽힌다
-    el.style.transitionDelay = (Math.min(i % 7, 5) * 0.06) + 's';
-    io.observe(el);
-  });
 
   /*
    * 첫 화면은 스크롤을 기다리지 않는다.
@@ -38,23 +31,7 @@
    */
   var boot = document.getElementById('boot');
   var booting = document.documentElement.classList.contains('boot-on') && boot;
-
-  /*
-   * 다음 프레임에 올린다. 지금 바로 클래스를 붙이면 시작 상태가 한 번도
-   * 그려지지 않아 전환이 생략되고 그냥 켜진 것처럼 보인다.
-   *
-   * 다만 배경 탭에서는 requestAnimationFrame 이 오지 않는 경우가 있어
-   * 타이머로 한 번 더 건다. 두 번 붙어도 같은 클래스라 문제가 없다.
-   */
-  function raiseHero() {
-    var go = function () {
-      document.querySelectorAll('.hero .rise').forEach(function (el) {
-        el.classList.add('in');
-      });
-    };
-    requestAnimationFrame(go);
-    setTimeout(go, 250);
-  }
+  var raiseHero = useGsap ? setupGsap() : setupObserver();
 
   if (!booting) {
     raiseHero();
@@ -83,4 +60,174 @@
 
   /* 애니메이션 이벤트를 못 받는 경우가 있어 시간으로도 한 번 더 건다 */
   setTimeout(endBoot, 2600);
+
+  /* ---------- GSAP 이 없을 때 ---------- */
+
+  function setupObserver() {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
+
+    items.forEach(function (el, i) {
+      // 같은 무대 안에서는 위에서부터 차례로 — 한꺼번에 뜨면 순서가 안 읽힌다
+      el.style.transitionDelay = (Math.min(i % 7, 5) * 0.06) + 's';
+      io.observe(el);
+    });
+
+    /*
+     * 다음 프레임에 올린다. 지금 바로 클래스를 붙이면 시작 상태가 한 번도
+     * 그려지지 않아 전환이 생략되고 그냥 켜진 것처럼 보인다.
+     *
+     * 다만 배경 탭에서는 requestAnimationFrame 이 오지 않는 경우가 있어
+     * 타이머로 한 번 더 건다. 두 번 붙어도 같은 클래스라 문제가 없다.
+     */
+    return function () {
+      var go = function () {
+        document.querySelectorAll('.hero .rise').forEach(function (el) {
+          el.classList.add('in');
+        });
+      };
+      requestAnimationFrame(go);
+      setTimeout(go, 250);
+    };
+  }
+
+  /* ---------- GSAP 이 있을 때 ---------- */
+
+  function setupGsap() {
+    var ScrollTrigger = window.ScrollTrigger;
+    var SplitText = window.SplitText;
+    gsap.registerPlugin(ScrollTrigger);
+    if (SplitText) gsap.registerPlugin(SplitText);
+
+    // 이 클래스가 붙으면 CSS 쪽 transition 이 꺼진다 — 둘이 같이 움직이면 늦고 끊긴다
+    document.documentElement.classList.add('gsap');
+
+    var ease = 'power3.out';
+    var heroRise = gsap.utils.toArray('.hero .rise');
+    var rest = gsap.utils.toArray('.rise').filter(function (el) {
+      return heroRise.indexOf(el) === -1;
+    });
+
+    /* 시작 상태를 인라인으로 박아 둔다. CSS 값과 같지만 GSAP 이 읽기 쉽다 */
+    if (heroRise.length) gsap.set(heroRise, { autoAlpha: 0, y: 26 });
+    if (rest.length) gsap.set(rest, { autoAlpha: 0, y: 26 });
+    var phones = gsap.utils.toArray('.phone.rise');
+    if (phones.length) gsap.set(phones, { y: 38, scale: 0.965 });
+
+    /*
+     * 첫 화면 밖의 것은 스크롤로 들어올 때 한 번만.
+     *
+     * 같은 프레임에 걸린 것끼리 묶어서(batch) 위에서부터 차례로 올린다.
+     */
+    ScrollTrigger.batch(rest, {
+      start: 'top 88%',
+      once: true,
+      onEnter: function (batch) {
+        gsap.to(batch, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.9,
+          stagger: 0.08,
+          ease: ease,
+          overwrite: true
+        });
+      }
+    });
+
+    /*
+     * 카드 속 폰.
+     *
+     * 카드가 화면을 지나는 동안 폰이 살짝 반대로 움직인다. transform 을
+     * 직접 잡으면 hover 때 올라가는 CSS 와 싸우므로 변수(--py)만 돌린다.
+     */
+    gsap.utils.toArray('.tile').forEach(function (tile) {
+      var img = tile.querySelector('.tile-phone img');
+      if (!img) return;
+      gsap.fromTo(img, { '--py': '22px' }, {
+        '--py': '-22px',
+        ease: 'none',
+        scrollTrigger: { trigger: tile, start: 'top bottom', end: 'bottom top', scrub: true }
+      });
+    });
+
+    /* 첫 화면이 없는 페이지(상세)는 여기까지 — 위쪽 요소들도 batch 가 올린다 */
+    var hero = document.querySelector('.hero');
+    if (!hero) {
+      return function () {};
+    }
+
+    /*
+     * 스크롤하면 첫 화면이 뒤로 물러난다.
+     *
+     * 글이 아래 무대보다 느리게 올라가며 옅어진다. 배경 빛은 그보다 더
+     * 느리게. 그래서 겹이 생긴다 — 앞의 것이 먼저 가고 뒤의 것이 남는다.
+     */
+    gsap.timeline({
+      scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }
+    })
+      .to(hero.querySelector('.inner'), { y: 140, autoAlpha: 0, ease: 'none' }, 0)
+      .to(hero.querySelector('.light'), { y: 90, ease: 'none' }, 0);
+
+    /* 스크롤 안내선 — 위에서 아래로 한 번씩 흘러내린다 */
+    var cue = hero.querySelector('.scroll-cue');
+    var cueLine = cue && cue.querySelector('span');
+    if (cueLine) {
+      gsap.fromTo(cueLine,
+        { scaleY: 0, transformOrigin: 'top' },
+        { scaleY: 1, duration: 1.3, ease: 'power2.inOut', repeat: -1, repeatDelay: 0.5 });
+    }
+
+    /*
+     * 안내선은 스크롤을 조금만 해도 사라진다.
+     *
+     * 등장 트윈(0→1)과 같은 요소를 건드리므로 등장이 끝난 뒤에 건다. 먼저
+     * 걸면 스크롤 위치 0 에서 "사라진 상태"를 그려 버려 등장이 지워진다.
+     */
+    function fadeCueOnScroll() {
+      if (!cue) return;
+      gsap.to(cue, {
+        autoAlpha: 0,
+        ease: 'none',
+        scrollTrigger: { trigger: hero, start: 'top top', end: '25% top', scrub: true }
+      });
+    }
+
+    /*
+     * 제목은 낱말로 쪼개서 아래에서 올라온다.
+     *
+     * 낱말마다 덮개(mask)가 있어 잘린 채로 올라오다 드러난다. 그냥 올리는 것과
+     * 달리 글자가 "나타나는" 순서가 생긴다. SplitText 가 없으면 한 덩이로.
+     */
+    var title = hero.querySelector('h1');
+    var words = null;
+    if (SplitText && title) {
+      try {
+        var split = SplitText.create(title, { type: 'words', mask: 'words', wordsClass: 'w' });
+        words = split.words;
+        gsap.set(words, { yPercent: 110 });
+      } catch (e) {
+        words = null;
+      }
+    }
+
+    return function () {
+      var tl = gsap.timeline({ defaults: { ease: ease }, onComplete: fadeCueOnScroll });
+      tl.to(hero.querySelector('.eyebrow'), { autoAlpha: 1, y: 0, duration: 0.7 }, 0);
+      if (words) {
+        tl.set(title, { autoAlpha: 1, y: 0 }, 0.1)
+          .to(words, { yPercent: 0, duration: 0.95, stagger: 0.07, ease: 'power4.out' }, 0.1);
+      } else {
+        tl.to(title, { autoAlpha: 1, y: 0, duration: 0.9 }, 0.1);
+      }
+      tl.to(hero.querySelector('.sub'), { autoAlpha: 1, y: 0, duration: 0.8 }, 0.45)
+        .to(hero.querySelector('.cta'), { autoAlpha: 1, y: 0, duration: 0.8 }, 0.6)
+        .to(hero.querySelector('.scroll-cue'), { autoAlpha: 1, y: 0, duration: 0.8 }, 0.9);
+    };
+  }
 })();
