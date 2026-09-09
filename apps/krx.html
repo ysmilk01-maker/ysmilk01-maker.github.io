@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>국내주식 롱숏 챌린지 · 나인투식스랩</title>
-<meta name="description" content="코스피·코스닥 전 종목을 가상 자금으로 롱과 숏 해봅니다. 개인이 못 하는 공매도를 연습합니다.">
+<meta name="description" content="코스피·코스닥 전 종목에 롱과 숏을 걸어봅니다. 가상 자금 1,000만원, 시세는 최근 영업일 종가입니다.">
 <meta name="theme-color" content="#000000">
 <meta property="og:title" content="국내주식 롱숏 챌린지">
 <meta property="og:description" content="국장에서 숏을 쳐봅니다. 코스피·코스닥 전 종목, 가상 1,000만원.">
@@ -27,14 +27,14 @@
   </ul>
 </nav>
 
+<!-- 첫 화면. 폰이 가운데 서고 글은 위, 여는 버튼은 아래 -->
 <section class="stage app-stage" style="--tint:var(--krx); --glow:rgba(49,130,246,0.11)">
   <div class="inner">
     <a class="back rise" href="../index.html#apps">← 모든 앱</a>
     <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
     <h1 class="rise">국장에서<br>숏을 쳐봅니다</h1>
     <p class="desc rise">
-      개인은 공매도가 사실상 막혀 있습니다. 여기서는 코스피·코스닥 전 종목을
-      내리는 쪽에도 걸어볼 수 있습니다. 가상 자금 1,000만원으로 시작합니다.
+      개인은 공매도가 사실상 막혀 있습니다. 여기서는 코스피·코스닥 전 종목을 내리는 쪽에도 걸어볼 수 있습니다. 가상 자금 1,000만원으로 시작합니다.
     </p>
     <div class="phone rise">
       <img src="../img/krx.png" width="1170" height="2532" alt="국내주식 롱숏 챌린지 주문 화면. 삼성전자 일봉 차트와 롱·숏 버튼, 레버리지 선택과 청산가." decoding="async">
@@ -48,6 +48,89 @@
     </ul>
     <a class="open rise" href="intoss://krx-sim">토스에서 열기</a>
     <p class="hint rise">시세는 최근 영업일 종가이며 실시간이 아닙니다. 검색창에 ‘국내주식 롱숏 챌린지’</p>
+  </div>
+</section>
+
+<!-- 화면 둘러보기. 스토어에 올린 스크린샷 그대로 — 옆으로 넘긴다 -->
+<section class="sec shots" style="--tint:var(--krx)">
+  <div class="inner">
+    <div class="shots-head">
+      <p class="eyebrow rise">화면 둘러보기</p>
+      <h2 class="rise">앱 안은 이렇게 생겼습니다</h2>
+    </div>
+    <ul class="strip">
+      <li class="rise"><img src="../img/shots/krx-1.webp" width="636" height="1048" alt="종목을 검색해 고르는 화면" loading="lazy" decoding="async"></li>
+      <li class="rise"><img src="../img/shots/krx-2.webp" width="636" height="1048" alt="레버리지 5배로 삼성전자에 숏을 거는 주문 화면" loading="lazy" decoding="async"></li>
+      <li class="rise"><img src="../img/shots/krx-3.webp" width="636" height="1048" alt="보유 포지션과 계좌 현황" loading="lazy" decoding="async"></li>
+    </ul>
+    <p class="strip-hint rise">옆으로 넘기세요</p>
+  </div>
+</section>
+
+<!-- 특징. 숫자 하나 + 제목 + 두 줄. 길게 쓰면 안 읽는다 -->
+<section class="sec" style="--tint:var(--krx)">
+  <div class="inner">
+    <p class="eyebrow rise">특징</p>
+    <h2 class="rise">코인은 숏이 되는데<br>국장은 왜 안 될까요</h2>
+    <p class="lead rise">궁금했던 것을 해보는 앱입니다. 실제 시장에서 못 하는 방향에 걸어 보고, 배수가 왜 무서운지 숫자로 봅니다.</p>
+    <ul class="feats">
+      <li class="rise"><b>전 종목</b><h3>코스피 · 코스닥</h3><p>이름으로 검색해서 고릅니다. 상장된 종목은 다 있습니다.</p></li>
+      <li class="rise"><b>숏</b><h3>내리는 쪽에도</h3><p>개인은 막혀 있는 공매도를 여기서는 버튼 하나로. 오를지 내릴지 둘 다 걸어봅니다.</p></li>
+      <li class="rise"><b>100배</b><h3>레버리지</h3><p>0.5%만 반대로 가면 청산됩니다. 그 숫자를 청산가로 미리 보여줍니다.</p></li>
+      <li class="rise"><b>종가</b><h3>하루 한 번 갱신</h3><p>시세는 금융위원회 공개 데이터의 최근 영업일 종가입니다. 장중 값이 아닙니다.</p></li>
+      <li class="rise"><b>주간</b><h3>수익률 랭킹</h3><p>이번 주 수익률로 줄을 섭니다. 닉네임은 자동으로 정해집니다.</p></li>
+      <li class="rise"><b>짧게</b><h3>게시판</h3><p>한 줄씩 남깁니다. 신고가 쌓이면 자동으로 가려집니다.</p></li>
+    </ul>
+  </div>
+</section>
+
+<!--
+  지금 숫자. app.js 가 Supabase 공개 뷰에서 읽어 채운다. 읽기 전에는 숨겨 두고,
+  못 읽으면 통째로 뺀다 — 빈 표를 남기지 않는다.
+-->
+<section class="sec" data-rank="krx_ranking" hidden style="--tint:var(--krx)">
+  <div class="inner">
+    <p class="eyebrow">지금 이 순간</p>
+    <h2>랭킹 상위 5</h2>
+    <p class="lead">앱이 읽는 것과 같은 표를 같은 자리에서 읽습니다. 숫자는 이 페이지를 연 순간의 값입니다.</p>
+    <div class="live">
+      <div><b data-n="players">—</b><span>명이 랭킹에 올라 있습니다</span></div>
+      <div><b data-n="top">—</b><span>1위 수익률</span></div>
+      <div><b data-n="last">—</b><span>마지막 거래</span></div>
+    </div>
+    <table class="rank">
+      <thead><tr><th>순위</th><th>닉네임</th><th style="text-align:right">수익률</th><th style="text-align:right">거래</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="rank-note">닉네임은 앱이 자동으로 지어 준 것이고, 서버에는 익명 키와 닉네임·성적만 있습니다.</p>
+  </div>
+</section>
+
+<!-- 여는 법 — 밝은 구간 -->
+<section class="stage light-stage" style="--tint:var(--krx)">
+  <div class="inner">
+    <p class="eyebrow rise" style="color:var(--muted-light)">여는 법</p>
+    <h2 class="rise">세 번이면 됩니다</h2>
+    <ol class="steps">
+      <li class="rise"><i>1</i><h3>토스 앱을 엽니다</h3><p>따로 설치할 게 없습니다. 토스가 이미 있으면 끝입니다.</p></li>
+      <li class="rise"><i>2</i><h3>검색창에 이름을 칩니다</h3><p>‘국내주식 롱숏 챌린지’ 또는 ‘롱숏’.</p></li>
+      <li class="rise"><i>3</i><h3>바로 시작합니다</h3><p>회원가입도 로그인도 없이 가상 1,000만원이 들어와 있습니다.</p></li>
+    </ol>
+    <a class="open rise" href="intoss://krx-sim">토스에서 열기</a>
+  </div>
+</section>
+
+<!-- 알아둘 것. 작게 쓰지만 빼지 않는다 -->
+<section class="sec" style="--tint:var(--krx)">
+  <div class="inner">
+    <p class="eyebrow rise">알아둘 것</p>
+    <h2 class="rise">먼저 말씀드립니다</h2>
+    <ul class="notes">
+      <li class="rise"><strong>시세는 실시간이 아닙니다.</strong> 최근 영업일 종가로 하루 한 번 갱신됩니다. 장중에 낸 주문은 그날 종가로 계산됩니다.</li>
+      <li class="rise"><strong>가상 자금입니다.</strong> 실제 증권 계좌와 연결되지 않고, 실제 공매도가 일어나지 않습니다.</li>
+      <li class="rise"><strong>투자 조언이 아닙니다.</strong> 종목·방향·배수는 전부 사용자가 고르는 연습입니다.</li>
+      <li class="rise">서버에 저장되는 것은 토스가 주는 익명 키, 닉네임, 성적, 게시판에 쓴 글뿐입니다.</li>
+    </ul>
   </div>
 </section>
 
@@ -78,5 +161,6 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
 <script src="../site.js"></script>
+<script src="../app.js"></script>
 </body>
 </html>
