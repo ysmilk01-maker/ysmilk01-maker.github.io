@@ -5799,6 +5799,26 @@ const SUBS = 20
 const BOSS_AT = [5, 10, 15, 20]
 /** 보스 형태 다섯. 전함·전차·요새·모선·항모 */
 const BOSS_FORMS = ['ship', 'tank', 'fort', 'air', 'carrier']
+
+/*
+ * 어디에 무엇이 설 수 있나.
+ *
+ * 바다 위에 전차가 서 있고 사막 한가운데 항공모함이 떠 있었다. 다섯
+ * 형태를 챕터·단계로만 흩었기 때문이다 - 지형은 보지 않았다.
+ *
+ * 물 판은 배(함선·항모), 뭍 판은 땅에 있는 것(전차·요새). 공중 편대는
+ * 양쪽 다 선다 - 하늘에 뜨는 것이라 바닥이 무엇이든 상관이 없고,
+ * 이게 있어야 양쪽 다 셋이 되어 스무 판에 같은 것만 나오지 않는다.
+ */
+const WATER_THEME = { sea: true }
+const BOSS_POOL = {
+  water: ['ship', 'carrier', 'air'],
+  land:  ['tank', 'fort', 'air'],
+}
+/** 그 판에 설 수 있는 보스 형태 */
+function bossPool(theme) {
+  return BOSS_POOL[WATER_THEME[theme] ? 'water' : 'land']
+}
 /** 보스가 안 서는 판. 여기엔 전부 중간보스가 선다 */
 function isMidStage(sub) { return !BOSS_AT.includes(sub) }
 
@@ -6804,8 +6824,17 @@ function spawnBoss(mid) {
    * 3을 곱한다. 5와 서로소라 챕터마다 시작점이 옮겨가고, 한 챕터
    * 안에서는 넷이 겹치지 않는다.
    */
+  /*
+   * 지형에 맞는 것 중에서 고른다.
+   *
+   * 다섯을 통으로 돌리던 것을 셋짜리 두 벌로 나눴다. 곱하는 수를 3 에서
+   * 2 로 바꾼 것은 셋과 서로소라야 챕터마다 시작점이 옮겨가기 때문이다 -
+   * 3 을 그대로 두면 3으로 나눈 나머지에서 챕터 항이 통째로 사라진다.
+   * 한 챕터에 보스 판이 넷이고 후보가 셋이라 하나는 두 번 나온다.
+   */
+  const pool = bossPool((state.stage && state.stage.theme) || 'sea')
   const form = mid ? 'mid'
-    : BOSS_FORMS[(bch * 3 + BOSS_AT.indexOf(bsub)) % BOSS_FORMS.length]
+    : pool[(bch * 2 + BOSS_AT.indexOf(bsub)) % pool.length]
   const mk = (key, name, dx, dy, r, mul, cd) => ({
     key, name, dx, dy, r, cd, flash: 0, alive: true,
     hp: Math.round(base * mul), maxHp: Math.round(base * mul),
