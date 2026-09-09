@@ -192,11 +192,13 @@
     padding: 3px 0; text-align: center; border-radius: 0 0 13px 13px;
   }
   .card.picked { border-color: var(--accent); background: var(--tex, none) repeat, rgba(90,170,255,.10); padding-bottom: 26px; }
-  .card .info {
-    position: absolute; top: 8px; left: 9px; z-index: 2;
-    font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px;
-    background: rgba(10,14,20,.78); color: var(--ink); border: 1px solid var(--line);
+  /* 카드 아래 전폭. 누를 자리로 보여야 실제로 눌린다 */
+  .card .more {
+    display: block; width: 100%; margin-top: 8px; padding: 8px 0;
+    font-size: 11.5px; font-weight: 800; border-radius: 8px;
+    background: #1d2b3f; color: #9fd0ff; border: 1px solid #2f4a6e;
   }
+  .card .more:active { background: #26374f; }
 
   /* 상세 시트 */
   .dsheet {
@@ -239,14 +241,21 @@
     background: radial-gradient(ellipse at 50% 60%, #16243a 0%, #0d1522 72%);
     border-radius: 9px;
   }
+  /*
+   * 강화 줄.
+   *
+   * 한 줄에 「강화 0/7」과 「부품 40 · 조각 10」을 나란히 놓았더니 두
+   * 칸 배치에서 단추가 카드 밖으로 잘렸다. 값이 세 자리가 되면 더
+   * 심해진다. 위아래로 쌓는다 - 단추가 넓어져서 누르기도 낫다.
+   */
   .card .up {
-    display: flex; align-items: center; gap: 6px; margin-top: 7px;
+    display: block; margin-top: 7px;
     padding-top: 7px; border-top: 1px solid var(--line);
   }
-  .card .up .lvl { font-size: 10.5px; color: var(--muted); font-weight: 700; }
+  .card .up .lvl { display: block; font-size: 10.5px; color: var(--muted); font-weight: 700; }
   .card .up button {
-    margin-left: auto; padding: 4px 9px; font-size: 10.5px; border-radius: 7px;
-    background: #24406b; color: #cfe6ff; font-weight: 700; border: 0;
+    display: block; width: 100%; margin-top: 5px; padding: 7px 0; font-size: 11px;
+    border-radius: 7px; background: #24406b; color: #cfe6ff; font-weight: 700; border: 0;
   }
   .card .up button[disabled] { background: #1a2536; color: #5b6a80; }
   .slot .pv { display: block; width: 100%; height: 52px; margin: 2px 0 1px; }
@@ -3563,11 +3572,19 @@ function renderPlanes() {
     const cost = upgCost(p, lv)
     c.innerHTML =
       `<span class="tag t-${p.tier}">${TIERS[p.tier]}</span>` +
-      `<button class="info">정보</button>` +
+      /*
+       * 상세로 들어가는 문.
+       *
+       * 전에는 왼쪽 위에 붙은 10px 짜리 「정보」 칩이었다. 등급 태그와
+       * 같은 줄에 있어서 **장식으로 읽혔고, 아무도 누르지 않았다.**
+       * 상세에는 발사 모습·실제 간격·초당 발수가 다 들어 있는데 그걸
+       * 보여 줄 길이 없었던 셈이다. 카드 아래 전폭 단추로 내린다.
+       */
       `<canvas class="pv" width="220" height="150"></canvas>` +
       `<div class="nm">${p.name}</div>` +
       `<div class="wp"><i class="wi w-${p.weapon}"></i>${WEAPONS[p.weapon].name}</div>` +
       `<div class="de">${WEAPONS[p.weapon].desc}</div>` +
+      `<button class="more">상세 · 발사 모습 보기 ▸</button>` +
       (lab ? `<div class="lock">${p.unlock.kind === 'paid' ? '🔒 ' : ''}${lab}</div>` : '') +
       (ok
         ? (shardOf(p.id) ? `<div class="shard">조각 ${shardOf(p.id)}개</div>` : '')
@@ -3583,7 +3600,7 @@ function renderPlanes() {
         : '')
 
     /* 카드를 누르면 고르고, 정보를 누르면 상세를 연다 - 눌린 자리가 갈려야 한다 */
-    const ib = c.querySelector('.info')
+    const ib = c.querySelector('.more')
     if (ib) ib.onclick = (ev) => { ev.stopPropagation(); openDetail(p, list) }
 
     const btn = c.querySelector('.up button')
@@ -4510,6 +4527,8 @@ function newState() {
      * 설정만 하고 화면에 안 나갔으니 맞아도 화면이 조용했다.
      */
     shake: 0, hurtT: 0,
+    /* flareT - 폭격이 터질 때 화면 전체가 잠깐 달아오른다 */
+    flareT: 0,
     supplyT: SUPPLY_FIRST,
     /* 총구 불꽃과 피격 불똥. 아주 짧게 떴다 사라지므로 따로 담는다 */
     muzzles: [], sparks: [],
@@ -6693,7 +6712,7 @@ function fireUlt() {
       break
     case 'mine':
       // 옆으로 빠지며 화면 전체에 떨군다. 자리는 미리 정해 두고 시간차로 터진다
-      s.ultT = 1.8
+      s.ultT = 2.4
       /*
        * 화면 안에 떨어뜨린다.
        *
@@ -6706,12 +6725,23 @@ function fireUlt() {
        * 아래로 훑고 내려가는 것처럼 보이게 한다 - 한꺼번에 터지면
        * 폭격이 아니라 한 방이다.
        */
-      for (let i = 0; i < 14; i++) {
-        const t = i / 13
+      /*
+       * 14발 1.25초에서 20발 1.75초로 늘렸다.
+       *
+       * 「융단」이면 화면이 한 번 뒤덮여야 하는데, 14발이 흩어지니 점이
+       * 몇 개 찍히고 끝났다. 발수를 늘리고 훑는 시간도 같이 늘린다 -
+       * 발수만 늘리면 한꺼번에 터져서 폭격이 아니라 한 방이 된다.
+       *
+       * 좌우로도 갈랐다. i 가 홀수면 오른쪽 절반, 짝수면 왼쪽 절반에서
+       * 뽑는다. 순수 난수로 뽑으면 한쪽에 몰린 판이 자주 나온다.
+       */
+      for (let i = 0; i < 20; i++) {
+        const t = i / 19
+        const half = (i % 2) ? (W / 2) : 0
         s.shards.push({
-          x: 34 + Math.random() * (W - 68),
-          y: 70 + t * (H * 0.62) + (Math.random() - .5) * 60,
-          r: 0, kind: 'bomb', delay: t * 1.25 + Math.random() * 0.18,
+          x: 26 + half + Math.random() * (W / 2 - 52),
+          y: 56 + t * (H * 0.66) + (Math.random() - .5) * 74,
+          r: 0, kind: 'bomb', delay: t * 1.75 + Math.random() * 0.2,
         })
       }
       break
@@ -6789,9 +6819,31 @@ function updateUlt(dt) {
      */
     if (!sh.lit) {
       sh.lit = true
-      boom(sh.x, sh.y, sh.kind === 'shell' ? 34 : 24,
+      boom(sh.x, sh.y, sh.kind === 'shell' ? 34 : 30,
            sh.kind === 'shock' ? '#a0ebff' : '#ffb45c')
+      if (sh.kind === 'bomb') {
+        /*
+         * 착탄 한 발에 네 겹을 쌓는다.
+         *
+         *   불길      boom 이 낸 것 위에, 조금 늦게 조금 옆에서 하나 더.
+         *             한 장이면 동그란 불꽃 하나로 끝나고 번지지 않는다
+         *   충격파    sh.ring. 판정과 무관한 그림이다. 열기 원(SHARD_R)
+         *             보다 두 배 빠르게 나가서 「퍽」 하는 순간을 만든다
+         *   섬광      화면 전체가 잠깐 달아오른다. 쌓이므로 연달아 터질수록
+         *             밝아진다 - 융단폭격의 한가운데가 제일 밝다
+         *   흔들림    boom 의 것(약 6)보다 세게 덮어쓴다
+         */
+        state.blasts.push({
+          x: sh.x + (Math.random() - .5) * 46, y: sh.y + (Math.random() - .5) * 34,
+          r: 46, age: -0.1, life: .54,
+        })
+        sh.ring = 0
+        state.flareT = Math.min(0.46, state.flareT + 0.14)
+        state.shake = Math.max(state.shake, 8)
+      }
     }
+    /* 충격파 링. 데미지는 sh.r 이 맡고 이쪽은 눈만 맡는다 */
+    if (sh.ring !== undefined) sh.ring += 760 * dt
     if (sh.kind === 'shock') {
       sh.r += 620 * dt
       for (const b of s.ebullets) if ((b.x - sh.x) ** 2 + (b.y - sh.y) ** 2 < sh.r * sh.r) b.dead = true
@@ -7546,6 +7598,8 @@ function update(dt) {
   /* 흔들림은 빠르게, 붉은 기는 조금 느리게 잦아든다 */
   if (s.shake > 0) s.shake = Math.max(0, s.shake - dt * 52)
   if (s.hurtT > 0) s.hurtT = Math.max(0, s.hurtT - dt)
+  /* 섬광은 제일 빠르게 뺀다. 오래 두면 화면이 계속 누렇다 */
+  if (s.flareT > 0) s.flareT = Math.max(0, s.flareT - dt * 3.2)
 
   for (const b of s.blasts) b.age += dt
   s.blasts = s.blasts.filter((b) => b.age < b.life)
@@ -9459,7 +9513,67 @@ function draw() {
                                          mods: NO_MODS, scale: .5, shadow: false })
   }
   for (const sh of s.shards) {
-    if (sh.delay > 0) continue
+    /*
+     * 아직 안 터진 폭탄.
+     *
+     * 전에는 그냥 건너뛰었다. 그래서 아무것도 없던 자리에서 갑자기 불이
+     * 났다 - 「폭격」인데 **떨어지는 것이 안 보였다.** 폭격의 절반은
+     * 내려오는 그 시간이다.
+     *
+     * 남은 시차의 마지막 0.5초 동안만 그린다. 그 전부터 그리면 화면
+     * 위쪽에 폭탄 스무 개가 줄지어 떠 있게 된다. 낙하 속도 700 이라
+     * 착탄점 350px 위에서 나타나 정확히 delay 가 0 이 될 때 도착한다.
+     */
+    if (sh.delay > 0) {
+      if (sh.kind !== 'bomb' || sh.delay > 0.5) continue
+      const fy = sh.y - sh.delay * 700
+      const fa = Math.min(1, (0.5 - sh.delay) * 5)
+      /* 꼬리. 뒤로 늘어지는 연기가 있어야 속도가 읽힌다 */
+      const tg = g.createLinearGradient(sh.x, fy - 78, sh.x, fy)
+      tg.addColorStop(0, 'rgba(200,214,232,0)')
+      tg.addColorStop(1, 'rgba(226,236,250,' + (fa * .42).toFixed(3) + ')')
+      g.strokeStyle = tg; g.lineWidth = 3
+      g.beginPath(); g.moveTo(sh.x, fy - 78); g.lineTo(sh.x, fy); g.stroke()
+      /*
+       * 폭탄 몸통을 직접 그린다.
+       *
+       * 처음엔 'wBomb' 그림을 썼는데 **그건 폭탄이 아니라 경고 삼각형**
+       * 이었다(적 폭격 예고에 쓰는 표식이다). 화면에 ⚠ 가 스무 개 쏟아져
+       * 내렸다. 그림이 따로 없으므로 여기서 그린다 - 코가 아래를 향한
+       * 물방울 몸통에 위쪽 꼬리날개.
+       */
+      g.save()
+      g.translate(sh.x, fy)
+      g.globalAlpha = fa
+      g.fillStyle = '#8d99ab'
+      g.beginPath()
+      g.moveTo(-6.5, -13); g.lineTo(6.5, -13); g.lineTo(3.4, -6); g.lineTo(-3.4, -6)
+      g.closePath(); g.fill()
+      g.fillStyle = '#39424f'
+      g.beginPath()
+      g.moveTo(0, 12)
+      g.bezierCurveTo(5.6, 4, 5.6, -4, 3.6, -9)
+      g.lineTo(-3.6, -9)
+      g.bezierCurveTo(-5.6, -4, -5.6, 4, 0, 12)
+      g.fill()
+      /* 왼쪽에 빛 한 줄. 없으면 검은 덩어리로 뭉친다 */
+      g.fillStyle = '#6f7d90'
+      g.fillRect(-3.2, -8, 2, 13)
+      g.globalAlpha = 1
+      g.restore()
+      /*
+       * 착탄 예정 자리.
+       *
+       * 어디에 떨어지는지가 보여야 몰아넣거나 비켜설 수 있다. 다만
+       * 스무 개가 한꺼번에 뜨면 화면이 고리로 뒤덮이므로, 도착이
+       * 가까울수록만 진하게 둔다.
+       */
+      const mf = Math.max(0, 1 - sh.delay / 0.5)
+      g.strokeStyle = 'rgba(255,132,88,' + (mf * .5).toFixed(3) + ')'
+      g.lineWidth = 1.6
+      g.beginPath(); g.arc(sh.x, sh.y, 12 + sh.delay * 34, 0, Math.PI * 2); g.stroke()
+      continue
+    }
     if (sh.kind === 'shock') {
       g.strokeStyle = 'rgba(160,235,255,' + Math.max(0, 1 - sh.r / H) + ')'
       g.lineWidth = 5
@@ -9473,11 +9587,34 @@ function draw() {
        */
       const k = sh.kind === 'shell' ? 130 : SHARD_R
       const f = Math.max(0, 1 - sh.r / k)
-      g.fillStyle = 'rgba(255,170,90,' + (f * 0.30).toFixed(3) + ')'
-      g.beginPath(); g.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); g.fill()
+      /*
+       * 열기. 납작한 색 하나였는데 그러면 반투명 원판으로 보인다.
+       * 가운데를 희게 띄우고 가장자리로 갈수록 붉게 떨어뜨리면 같은
+       * 원이 불덩이로 읽힌다.
+       */
+      if (sh.r > 1) {
+        const rg = g.createRadialGradient(sh.x, sh.y, 0, sh.x, sh.y, sh.r)
+        rg.addColorStop(0, 'rgba(255,246,214,' + (f * 0.50).toFixed(3) + ')')
+        rg.addColorStop(0.45, 'rgba(255,168,74,' + (f * 0.34).toFixed(3) + ')')
+        rg.addColorStop(1, 'rgba(214,64,34,0)')
+        g.fillStyle = rg
+        g.beginPath(); g.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); g.fill()
+      }
       g.strokeStyle = 'rgba(255,225,160,' + (f * 0.75).toFixed(3) + ')'
       g.lineWidth = 2.5
       g.beginPath(); g.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); g.stroke()
+      /*
+       * 충격파. 열기보다 두 배 넓게, 두 배 빠르게 빠져나간다.
+       * 이게 있어야 「퍼졌다」가 아니라 「퍽 터졌다」가 된다.
+       */
+      if (sh.ring !== undefined) {
+        const rf = Math.max(0, 1 - sh.ring / (k * 2.1))
+        if (rf > 0) {
+          g.strokeStyle = 'rgba(255,255,255,' + (rf * rf * 0.55).toFixed(3) + ')'
+          g.lineWidth = 1 + rf * 3
+          g.beginPath(); g.arc(sh.x, sh.y, sh.ring, 0, Math.PI * 2); g.stroke()
+        }
+      }
     }
   }
 
@@ -9640,6 +9777,25 @@ function draw() {
    * 다음이 더 위험해진다. 가장자리만 물들이면 눈은 화면 전체가 붉어진
    * 것으로 읽으면서도 볼 것은 다 보인다.
    */
+  /*
+   * 폭격 섬광.
+   *
+   * 붉은 피격 막과 같은 자리에 있지만 방향이 반대다 - 저쪽은 가장자리를
+   * 물들여 「맞았다」를 말하고, 이쪽은 화면 전체를 따뜻하게 띄워
+   * 「내가 쏟아부었다」를 말한다. 그래서 가운데가 제일 밝다.
+   *
+   * 알파를 0.17 로 묶는다. 이보다 세면 폭격 도중에 적이 안 보여서
+   * 정작 궁을 쓴 판이 제일 안 보이는 판이 된다.
+   */
+  if (s.flareT > 0) {
+    const fa = Math.min(1, s.flareT / 0.46) * 0.17
+    const fg = g.createRadialGradient(W / 2, H * 0.42, 0, W / 2, H * 0.42, Math.max(W, H) * 0.8)
+    fg.addColorStop(0, 'rgba(255,214,150,' + fa.toFixed(3) + ')')
+    fg.addColorStop(1, 'rgba(255,120,40,' + (fa * 0.35).toFixed(3) + ')')
+    g.fillStyle = fg
+    g.fillRect(0, 0, W, H)
+  }
+
   if (s.hurtT > 0) {
     const a = Math.min(1, s.hurtT / 0.5)
     const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.20,
