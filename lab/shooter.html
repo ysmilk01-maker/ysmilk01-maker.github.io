@@ -1138,6 +1138,15 @@ const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는
  * 두고 켜져 있는 시간만 줄이면 총량이 정확히 20% 준다.
  */
 /** 방패기의 방패. 다 깎거나 시간이 다 되면 꺼진다 */
+/*
+ * 융단 폭격 한 발이 닿는 반경.
+ *
+ * 76 이었다. 열네 발을 뿌려도 열 마리 중 둘만 죽었다 - 적이 그 사이에
+ * 움직이고 폭탄은 제자리에서 퍼지기만 하므로, 반경이 적의 이동 폭보다
+ * 작으면 대부분 빗나간다. 104 면 한 발이 화면 폭의 4분의 1을 덮는다.
+ */
+const SHARD_R = 104
+
 const SHIELD_MAX = 55
 const SHIELD_TIME = 6.5
 
@@ -6529,9 +6538,25 @@ function fireUlt() {
     case 'mine':
       // 옆으로 빠지며 화면 전체에 떨군다. 자리는 미리 정해 두고 시간차로 터진다
       s.ultT = 1.8
+      /*
+       * 화면 안에 떨어뜨린다.
+       *
+       * y 가 -20 - random * H*0.8 이었다. 전부 화면 위 바깥(-20 ~ -596)이다.
+       * 게다가 이 조각들은 제자리에서 반지름만 커질 뿐 떨어지지 않는다 -
+       * 화면 밖에서 터지고 끝나서 「융단 폭격」이 보이지도 않고 맞지도
+       * 않았다. 이름만 있고 효과가 없던 궁이다.
+       *
+       * 적이 있는 자리, 즉 위쪽 3분의 2에 흩는다. 시차를 두어 위에서
+       * 아래로 훑고 내려가는 것처럼 보이게 한다 - 한꺼번에 터지면
+       * 폭격이 아니라 한 방이다.
+       */
       for (let i = 0; i < 14; i++) {
-        s.shards.push({ x: 30 + Math.random() * (W - 60), y: -20 - Math.random() * H * .8,
-                        r: 0, kind: 'bomb', delay: Math.random() * 1.5 })
+        const t = i / 13
+        s.shards.push({
+          x: 34 + Math.random() * (W - 68),
+          y: 70 + t * (H * 0.62) + (Math.random() - .5) * 60,
+          r: 0, kind: 'bomb', delay: t * 1.25 + Math.random() * 0.18,
+        })
       }
       break
     case 'beam':
@@ -6600,6 +6625,17 @@ function updateUlt(dt) {
   /* 폭탄·포격·충격파 */
   for (const sh of s.shards) {
     if (sh.delay > 0) { sh.delay -= dt; continue }
+    /*
+     * 터지는 순간 한 번.
+     *
+     * 전에는 다 퍼진 뒤에 작은 불꽃(16)을 하나 냈다. 터지는 것은 시작인데
+     * 끝에 표시하니 「터졌다」가 안 읽혔다. 시작에서 크게 낸다.
+     */
+    if (!sh.lit) {
+      sh.lit = true
+      boom(sh.x, sh.y, sh.kind === 'shell' ? 34 : 24,
+           sh.kind === 'shock' ? '#a0ebff' : '#ffb45c')
+    }
     if (sh.kind === 'shock') {
       sh.r += 620 * dt
       for (const b of s.ebullets) if ((b.x - sh.x) ** 2 + (b.y - sh.y) ** 2 < sh.r * sh.r) b.dead = true
@@ -6610,7 +6646,7 @@ function updateUlt(dt) {
       }
       if (sh.r > H) sh.done = true
     } else {
-      sh.r += (sh.kind === 'shell' ? 420 : 260) * dt
+      sh.r += (sh.kind === 'shell' ? 420 : 330) * dt
       /* 기뢰(44)와 포격(90). 둘 다 한 방형이라 여기서 곱한다 */
       const dmg = (sh.kind === 'shell' ? 90 : 44) * ULT_POWER
       for (const e of s.enemies) {
@@ -6622,7 +6658,7 @@ function updateUlt(dt) {
         if ((u.x - sh.x) ** 2 + (u.y - sh.y) ** 2 < sh.r * sh.r) { u.hp -= dmg * dt * 6; u.flash = .1 }
       }
       if (s.boss && (s.boss.x - sh.x) ** 2 + (s.boss.y - sh.y) ** 2 < sh.r * sh.r) bossArea(s.boss, dmg * dt * 5)
-      if (sh.r > (sh.kind === 'shell' ? 130 : 76)) { sh.done = true; boom(sh.x, sh.y, 16, '#ffd27a') }
+      if (sh.r > (sh.kind === 'shell' ? 130 : SHARD_R)) sh.done = true
     }
   }
   s.shards = s.shards.filter((sh) => !sh.done)
@@ -9232,9 +9268,19 @@ function draw() {
       g.lineWidth = 5
       g.beginPath(); g.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); g.stroke()
     } else {
-      const k = sh.kind === 'shell' ? 130 : 76
-      g.fillStyle = 'rgba(255,190,110,' + Math.max(0, .55 - sh.r / k * .5) + ')'
+      /*
+       * 퍼지는 열기. 채운 원에 테두리를 하나 더 얹는다.
+       *
+       * 옅은 원 하나만 있었을 때는 불꽃 그림에 묻혀서 「어디까지 닿나」가
+       * 안 보였다. 범위 공격은 그 범위가 보여야 쓸 자리를 고를 수 있다.
+       */
+      const k = sh.kind === 'shell' ? 130 : SHARD_R
+      const f = Math.max(0, 1 - sh.r / k)
+      g.fillStyle = 'rgba(255,170,90,' + (f * 0.30).toFixed(3) + ')'
       g.beginPath(); g.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); g.fill()
+      g.strokeStyle = 'rgba(255,225,160,' + (f * 0.75).toFixed(3) + ')'
+      g.lineWidth = 2.5
+      g.beginPath(); g.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); g.stroke()
     }
   }
 
