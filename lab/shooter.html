@@ -1327,6 +1327,21 @@ const ULT = {
   boomer: { name: '호위 편대', desc: '아군 넷이 6초간 함께 쏩니다' },
   chain:  { name: '뇌우', desc: '화면의 적을 번개가 차례로 물고 갑니다' },
 }
+/*
+ * 궁극기마다 색.
+ *
+ * 발동 연출·오라·빔이 전부 이 값을 본다. 열한 개가 다 같은 파란빛이면
+ * 「무엇을 썼는지」가 화면에 안 남는다 - 이름은 0.8초 배너로 지나가고
+ * 나면 끝이라, 색이 유일하게 남는 표시다.
+ */
+const ULT_TONE = {
+  rapid: '255,180,92', spread: '127,240,255', laser: '191,244,255',
+  homing: '255,154,214', pierce: '255,224,138', wave: '160,235,255',
+  orb: '201,168,255', mine: '255,138,60', beam: '255,210,122',
+  boomer: '159,255,207', chain: '191,240,255',
+}
+function ultTone(k) { return ULT_TONE[k] || '159,232,255' }
+
 /* 「위성 방벽」의 구슬. 판정과 그림이 같은 값을 본다 */
 const ORB_ULT = { n: 10, rad: 66, r: 24, dps: 190 }
 const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는지는 처치 쪽에 있다
@@ -5174,6 +5189,10 @@ function newState() {
      */
     /* paused - 멈춤. resumeT - 재개까지 남은 초(0보다 크면 세는 중) */
     paused: false, resumeT: 0,
+    /* 필살기 발동 연출. 쓸 때 생기고 0.85초 뒤 사라진다 */
+    ultFx: null,
+    /* 궁이 도는 내내 이어지는 화면 색과 진동 */
+    ultHold: null,
     shake: 0, hurtT: 0,
     /* flareT - 폭격이 터질 때 화면 전체가 잠깐 달아오른다 */
     flareT: 0,
@@ -6683,11 +6702,16 @@ function mkGround(kind, x, y) {
      * 부수려면 화력을 거기 쏟아야 하도록 단단하게 뒀다.
      */
     /*
-     * 92 에서 184 로. 전설 기체가 2.15/0.66 로 세지면서 예고(1.6초)
-     * 안에 그냥 녹아 없어졌다 - 「비키는 수밖에 없는 위협」으로 만들어
-     * 둔 것이 「쏘면 사라지는 것」이 되면 직선 미사일이 판에서 빠진다.
+     * 92 -> 184 -> 552.
+     *
+     * 전설 기체가 2.15/0.66 로 세지고 고유 속성까지 붙으면서 예고(1.6초)
+     * 안에 그냥 녹아 없어졌다. 184 로도 부족했다 - 「비키는 수밖에 없는
+     * 위협」으로 만들어 둔 것이 「쏘면 사라지는 것」이 되면 직선 미사일이
+     * 판에서 통째로 빠진다. 점수는 그대로 520 이다. 부수라고 올린 값이
+     * 아니라 못 부수게 하려고 올린 값이라, 부순 값까지 올리면 앞뒤가
+     * 안 맞는다.
      */
-    sam:    { hp: 184, r: 20, cd: 2.2, score: 520 },
+    sam:    { hp: 552, r: 20, cd: 2.2, score: 520 },
   }[kind]
   return { kind, x, y, t: Math.random() * 2, phase: 'idle', ph: 0, lock: 0, aimX: 0, flash: 0, ...b }
 }
@@ -7457,6 +7481,32 @@ function fireUlt() {
   banner(ULT[k].name)
   sfx('ult')
   haptic('ult')
+  /*
+   * 발동 순간.
+   *
+   * 열한 개 중 아홉은 「눌렀는데 뭔가 일어나긴 했다」로 끝났다 - 난사는
+   * 아예 화면에 아무 표시도 없었고, 나머지도 효과가 곧바로 일을 시작할
+   * 뿐 「지금 필살기를 썼다」는 순간이 없었다. 게이지를 스무 마리쯤
+   * 잡아서 채우는 것인데 쓰는 순간이 조용하면 채울 이유가 약해진다.
+   *
+   * 궁마다 색이 다른 한 벌을 공통으로 깐다 - 전면 섬광, 기체에서
+   * 퍼지는 이중 링, 위로 솟는 빛기둥, 흔들림.
+   */
+  /* pl 은 아래에서 선언된다. 여기서 쓰면 TDZ 로 fireUlt 전체가 터진다 */
+  /* pl 은 아래에서 선언된다. 여기서 쓰면 TDZ 로 fireUlt 전체가 터진다 */
+  s.ultFx = { t: 0, life: 0.85, tone: ultTone(k), x: s.player.x, y: s.player.y }
+  s.shake = Math.max(s.shake, 11)
+  /*
+   * 궁이 도는 내내 화면이 그 색을 띤다.
+   *
+   * 발동 0.85초만 화려하고 그 뒤로는 평소 화면이었다. 그런데 난사는
+   * 2.8초, 위성 방벽은 4.8초를 돈다 - 제일 긴 시간이 제일 조용했다.
+   *
+   * 즉발형(충격파·일제 사격·뇌우·거포·융단폭격)은 ultT 가 0 이라
+   * 여기서 최소 시간을 준다. 안 그러면 「효과는 화면 밖에서 일어나고
+   * 화면은 그대로」가 된다.
+   */
+  s.ultHold = { t: 0, life: 0, tone: ultTone(k), vib: 0 }
 
   const pl = s.player
   switch (k) {
@@ -8471,6 +8521,24 @@ function update(dt) {
   if (s.hurtT > 0) s.hurtT = Math.max(0, s.hurtT - dt)
   /* 섬광은 제일 빠르게 뺀다. 오래 두면 화면이 계속 누렇다 */
   if (s.flareT > 0) s.flareT = Math.max(0, s.flareT - dt * 3.2)
+  /* 필살기 발동 연출. 기체를 따라다니지 않는다 - 쏜 자리에서 퍼진다 */
+  if (s.ultFx) { s.ultFx.t += dt; if (s.ultFx.t >= s.ultFx.life) s.ultFx = null }
+  /*
+   * 궁이 도는 동안의 화면 색과 진동.
+   *
+   * life 를 여기서 정한다 - fireUlt 가 ultT 를 정하기 전에 만들어지므로
+   * 첫 프레임에 한 번 읽어서 채운다. 이어지는 궁은 남은 시간, 즉발형은
+   * 최소 1.4초.
+   */
+  if (s.ultHold) {
+    const H2 = s.ultHold
+    if (H2.life <= 0) H2.life = Math.max(1.4, s.ultT + 0.5)
+    H2.t += dt
+    /* 0.22초마다 짧게 울린다. 계속 울리면 손이 저리고 배터리를 먹는다 */
+    H2.vib -= dt
+    if (H2.vib <= 0) { H2.vib = 0.22; haptic('soft') }
+    if (H2.t >= H2.life) s.ultHold = null
+  }
 
   for (const b of s.blasts) b.age += dt
   s.blasts = s.blasts.filter((b) => b.age < b.life)
@@ -10249,10 +10317,17 @@ function draw() {
     const amp = Math.max(8, Math.min(34, len * 0.11))
     const seg = Math.max(5, Math.min(12, Math.round(len / 40)))
     g.lineCap = 'round'
-    for (let pass = 0; pass < 2; pass++) {
-      g.strokeStyle = pass ? 'rgba(255,255,255,' + k + ')'
-                           : 'rgba(150,225,255,' + (k * .8) + ')'
-      g.lineWidth = pass ? 1.6 : 5
+    /*
+     * 세 겹으로 간다. 바깥 후광 - 줄기 - 흰 심지.
+     * 두 겹일 때는 가는 파란 선이라 탄막에 묻혔다.
+     */
+    g.save()
+    g.globalCompositeOperation = 'lighter'
+    for (let pass = 0; pass < 3; pass++) {
+      g.strokeStyle = pass === 2 ? 'rgba(255,255,255,' + k + ')'
+                    : pass === 1 ? 'rgba(150,225,255,' + (k * .85) + ')'
+                                 : 'rgba(90,180,255,' + (k * .35) + ')'
+      g.lineWidth = pass === 2 ? 2 : pass === 1 ? 6 : 14
       g.beginPath()
       g.moveTo(a.x1, a.y1)
       for (let i = 1; i < seg; i++) {
@@ -10264,6 +10339,16 @@ function draw() {
       g.lineTo(a.x2, a.y2)
       g.stroke()
     }
+    /* 가지 하나. 번개는 곧게 가지 않는다 */
+    const bt = 0.35 + (a.seed % 1) * 0.3
+    const bx = a.x1 + dx * bt, by = a.y1 + dy * bt
+    g.strokeStyle = 'rgba(190,235,255,' + (k * .55) + ')'
+    g.lineWidth = 2
+    g.beginPath()
+    g.moveTo(bx, by)
+    g.lineTo(bx + Math.cos(a.seed) * 26, by + Math.sin(a.seed * 1.7) * 26)
+    g.stroke()
+    g.restore()
   }
   /* 불꽃. 적기 위에 얹어야 터진 자리가 가려지지 않는다 */
   /*
@@ -10448,13 +10533,128 @@ function draw() {
   }
 
   /* ---- 필살기 그림 ---- */
+  /*
+   * 지속 광선(관통 광선·전면 소사).
+   *
+   * 그라디언트 한 겹이었다. 그러면 「반투명 띠」로 보이지 지나가는
+   * 자리를 태우는 빛으로는 안 읽힌다. 네 겹으로 쌓는다.
+   *
+   *   후광    바깥으로 넓게 번지는 색
+   *   본체    가장자리가 죽는 띠
+   *   심지    가운데 흰 선. 두께가 미세하게 뛴다
+   *   마디    위로 흐르는 밝은 가로줄. 흐르는 방향이 보여야 살아 있다
+   *
+   * 그리고 맨 위에 부딪는 자리를 낸다 - 빛이 어디까지 가는지가 끝에서
+   * 끊기면 화면 밖으로 새는 것처럼 보인다.
+   */
   for (const sw of s.sweeps || []) {
+    const tone = ultTone(s.ultKind)
+    const py = s.player.y
+    const puls = 0.86 + Math.sin(s.t * 34) * 0.14
+
+    const og = g.createLinearGradient(sw.x - sw.half * 2.6, 0, sw.x + sw.half * 2.6, 0)
+    og.addColorStop(0, 'rgba(' + tone + ',0)')
+    og.addColorStop(.5, 'rgba(' + tone + ',' + (0.24 * puls).toFixed(3) + ')')
+    og.addColorStop(1, 'rgba(' + tone + ',0)')
+    g.fillStyle = og
+    g.fillRect(sw.x - sw.half * 2.6, 0, sw.half * 5.2, py)
+
     const gr = g.createLinearGradient(sw.x - sw.half, 0, sw.x + sw.half, 0)
-    gr.addColorStop(0, 'rgba(120,220,255,0)')
-    gr.addColorStop(.5, 'rgba(190,245,255,.85)')
-    gr.addColorStop(1, 'rgba(120,220,255,0)')
+    gr.addColorStop(0, 'rgba(' + tone + ',0)')
+    gr.addColorStop(.5, 'rgba(' + tone + ',' + (0.82 * puls).toFixed(3) + ')')
+    gr.addColorStop(1, 'rgba(' + tone + ',0)')
     g.fillStyle = gr
-    g.fillRect(sw.x - sw.half, 0, sw.half * 2, s.player.y)
+    g.fillRect(sw.x - sw.half, 0, sw.half * 2, py)
+
+    const cw = sw.half * (0.26 + Math.sin(s.t * 41) * 0.05)
+    g.fillStyle = 'rgba(255,255,255,.92)'
+    g.fillRect(sw.x - cw, 0, cw * 2, py)
+
+    /* 위로 흐르는 마디 */
+    g.save()
+    g.globalCompositeOperation = 'lighter'
+    for (let i = 0; i < 7; i++) {
+      const yy = ((s.t * 900 + i * 130) % (py + 130)) - 65
+      const hh = 3 + (i % 3) * 2
+      g.fillStyle = 'rgba(255,255,255,.30)'
+      g.fillRect(sw.x - sw.half * .9, py - yy, sw.half * 1.8, hh)
+    }
+    /* 부딪는 자리 */
+    const hg = g.createRadialGradient(sw.x, 0, 0, sw.x, 0, sw.half * 3.4)
+    hg.addColorStop(0, 'rgba(255,255,255,.75)')
+    hg.addColorStop(.4, 'rgba(' + tone + ',.42)')
+    hg.addColorStop(1, 'rgba(' + tone + ',0)')
+    g.fillStyle = hg
+    g.beginPath(); g.arc(sw.x, 0, sw.half * 3.4, 0, Math.PI * 2); g.fill()
+    g.restore()
+    /* 총구 쪽 열기 */
+    const mg = g.createRadialGradient(sw.x, py, 0, sw.x, py, sw.half * 2.2)
+    mg.addColorStop(0, 'rgba(255,255,255,.6)')
+    mg.addColorStop(1, 'rgba(' + tone + ',0)')
+    g.fillStyle = mg
+    g.beginPath(); g.arc(sw.x, py, sw.half * 2.2, 0, Math.PI * 2); g.fill()
+  }
+
+  /*
+   * 난사.
+   *
+   * 유일하게 **화면에 아무 표시도 없던 궁**이다. 간격이 3분의 1로
+   * 줄어들 뿐이라, 총알이 좀 많아 보이는 것 말고는 쓴 티가 안 났다.
+   * 기체 둘레에 도는 열기와 총구 아래 불빛을 얹는다.
+   */
+  if (s.ultKind === 'rapid' && s.ultT > 0) {
+    const tone = ultTone('rapid')
+    const px = s.player.x, py = s.player.y
+    g.save()
+    g.globalCompositeOperation = 'lighter'
+    for (let i = 0; i < 3; i++) {
+      const r = 26 + i * 11 + Math.sin(s.t * 22 + i * 2) * 4
+      g.strokeStyle = 'rgba(' + tone + ',' + (0.42 - i * 0.11).toFixed(2) + ')'
+      g.lineWidth = 2.5 - i * 0.6
+      g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.stroke()
+    }
+    const fg = g.createRadialGradient(px, py - 16, 0, px, py - 16, 46)
+    fg.addColorStop(0, 'rgba(255,240,210,.55)')
+    fg.addColorStop(1, 'rgba(' + tone + ',0)')
+    g.fillStyle = fg
+    g.beginPath(); g.arc(px, py - 16, 46, 0, Math.PI * 2); g.fill()
+    g.restore()
+  }
+
+  /*
+   * 돌격.
+   *
+   * 무적으로 위로 뚫는데 화면에는 기체가 위로 미끄러질 뿐이었다.
+   * 뒤로 늘어지는 잔상과 속도선을 깐다 - 뚫고 지나간다는 말은 지나간
+   * 자리가 남아야 성립한다.
+   */
+  if (s.ultKind === 'pierce' && s.ultT > 0) {
+    const tone = ultTone('pierce')
+    const px = s.player.x, py = s.player.y
+    g.save()
+    g.globalCompositeOperation = 'lighter'
+    const tg = g.createLinearGradient(0, py - 30, 0, py + 190)
+    tg.addColorStop(0, 'rgba(' + tone + ',.55)')
+    tg.addColorStop(1, 'rgba(' + tone + ',0)')
+    g.fillStyle = tg
+    g.beginPath()
+    g.moveTo(px - 22, py); g.lineTo(px + 22, py)
+    g.lineTo(px + 5, py + 190); g.lineTo(px - 5, py + 190)
+    g.closePath(); g.fill()
+    for (let i = 0; i < 9; i++) {
+      const ox = px + ((i * 37) % 74) - 37
+      const yy = py + ((s.t * 1400 + i * 60) % 200)
+      g.strokeStyle = 'rgba(255,255,255,' + (0.35 - Math.abs(ox - px) / 220).toFixed(2) + ')'
+      g.lineWidth = 1.6
+      g.beginPath(); g.moveTo(ox, yy); g.lineTo(ox, yy + 26); g.stroke()
+    }
+    /* 앞머리 충격파 */
+    const hg = g.createRadialGradient(px, py - 26, 0, px, py - 26, 44)
+    hg.addColorStop(0, 'rgba(255,255,255,.7)')
+    hg.addColorStop(1, 'rgba(' + tone + ',0)')
+    g.fillStyle = hg
+    g.beginPath(); g.arc(px, py - 26, 44, 0, Math.PI * 2); g.fill()
+    g.restore()
   }
   if (s.ultKind === 'orb' && s.ultT > 0) {
     /* 판정과 같은 크기로 그린다. 6픽셀 점이면 무엇이 막아 주는지 안 보인다 */
@@ -10538,9 +10738,28 @@ function draw() {
       continue
     }
     if (sh.kind === 'shock') {
-      g.strokeStyle = 'rgba(160,235,255,' + Math.max(0, 1 - sh.r / H) + ')'
-      g.lineWidth = 5
-      g.beginPath(); g.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); g.stroke()
+      /*
+       * 링 한 겹이었다. 화면을 가로지르는 파동인데 선 하나가 지나가는
+       * 것으로는 「밀어냈다」가 안 읽힌다. 세 겹에 안쪽 채움을 더한다.
+       */
+      const k = Math.max(0, 1 - sh.r / H)
+      g.save()
+      g.globalCompositeOperation = 'lighter'
+      const fg = g.createRadialGradient(sh.x, sh.y, Math.max(1, sh.r * 0.72),
+                                        sh.x, sh.y, sh.r)
+      fg.addColorStop(0, 'rgba(160,235,255,0)')
+      fg.addColorStop(1, 'rgba(160,235,255,' + (k * 0.30).toFixed(3) + ')')
+      g.fillStyle = fg
+      g.beginPath(); g.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); g.fill()
+      for (let i = 0; i < 3; i++) {
+        const rr = sh.r - i * 16
+        if (rr <= 0) continue
+        g.strokeStyle = i === 0 ? 'rgba(255,255,255,' + (k * 0.9).toFixed(3) + ')'
+                                : 'rgba(160,235,255,' + (k * (0.5 - i * 0.15)).toFixed(3) + ')'
+        g.lineWidth = i === 0 ? 4 : 7 - i * 2
+        g.beginPath(); g.arc(sh.x, sh.y, rr, 0, Math.PI * 2); g.stroke()
+      }
+      g.restore()
     } else {
       /*
        * 퍼지는 열기. 채운 원에 테두리를 하나 더 얹는다.
@@ -10828,6 +11047,90 @@ function draw() {
     fg.addColorStop(1, 'rgba(255,120,40,' + (fa * 0.35).toFixed(3) + ')')
     g.fillStyle = fg
     g.fillRect(0, 0, W, H)
+  }
+
+  /*
+   * 궁이 도는 동안의 화면.
+   *
+   * 가장자리를 그 색으로 물들이고 위아래에 띠를 깐다. 가운데는 비운다 -
+   * 여기를 덮으면 정작 궁을 쓴 판에서 적이 안 보인다(피격 막과 같은 셈).
+   * 끝나갈 때 옅어지므로 「끝났다」도 화면으로 알 수 있다.
+   */
+  if (s.ultHold && s.ultHold.life > 0) {
+    const Hd = s.ultHold
+    const f = Math.min(1, Hd.t / Hd.life)
+    /* 들어올 때 빠르게 차고 나갈 때 천천히 빠진다 */
+    const a = Math.min(1, f * 6) * (1 - f * f)
+    const c = Hd.tone
+    g.save()
+    const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.30,
+                                      W / 2, H / 2, Math.max(W, H) * 0.68)
+    vg.addColorStop(0, 'rgba(' + c + ',0)')
+    vg.addColorStop(1, 'rgba(' + c + ',' + (a * 0.42).toFixed(3) + ')')
+    g.fillStyle = vg
+    g.fillRect(0, 0, W, H)
+    /* 위아래 띠. 숨 쉬듯 두께가 뛴다 */
+    const bh = 26 + Math.sin(s.t * 9) * 6
+    const tg = g.createLinearGradient(0, 0, 0, bh)
+    tg.addColorStop(0, 'rgba(' + c + ',' + (a * 0.5).toFixed(3) + ')')
+    tg.addColorStop(1, 'rgba(' + c + ',0)')
+    g.fillStyle = tg
+    g.fillRect(0, 0, W, bh)
+    const bg2 = g.createLinearGradient(0, H, 0, H - bh)
+    bg2.addColorStop(0, 'rgba(' + c + ',' + (a * 0.5).toFixed(3) + ')')
+    bg2.addColorStop(1, 'rgba(' + c + ',0)')
+    g.fillStyle = bg2
+    g.fillRect(0, H - bh, W, bh)
+    g.restore()
+    /* 손에도 계속 남는다. 흔들림을 아주 약하게 깔아 둔다 */
+    if (a > 0.15) s.shake = Math.max(s.shake, 1.6)
+  }
+
+  /*
+   * 필살기 발동 연출.
+   *
+   * HUD 아래, 멈춤 덮개 위에 둔다 - 판 위의 것이라 점수와 단추는 덮지
+   * 않고, 멈춰 있는 동안에는 이것도 같이 멈춘 그림으로 남아야 한다.
+   */
+  if (s.ultFx) {
+    const F = s.ultFx
+    const f = Math.min(1, F.t / F.life)
+    const c = F.tone
+    g.save()
+    /* 전면 섬광. 0.28 을 넘기면 이 순간에 적이 안 보인다 */
+    g.fillStyle = 'rgba(' + c + ',' + ((1 - f) * (1 - f) * 0.30).toFixed(3) + ')'
+    g.fillRect(0, 0, W, H)
+    g.globalCompositeOperation = 'lighter'
+    /* 위로 솟는 빛기둥. 좁게 시작해 넓게 흩어진다 */
+    const bw = 26 + f * 92
+    const lg = g.createLinearGradient(0, F.y, 0, 0)
+    lg.addColorStop(0, 'rgba(' + c + ',' + ((1 - f) * 0.55).toFixed(3) + ')')
+    lg.addColorStop(1, 'rgba(' + c + ',0)')
+    g.fillStyle = lg
+    g.fillRect(F.x - bw, 0, bw * 2, F.y)
+    /* 퍼지는 링 셋. 시차를 두어 겹쳐 나간다 */
+    for (let i = 0; i < 3; i++) {
+      const d = i * 0.16
+      if (f <= d) continue
+      const t = Math.min(1, (f - d) / (1 - d))
+      const r = 24 + t * (300 + i * 95)
+      g.strokeStyle = 'rgba(' + c + ',' + ((1 - t) * (0.85 - i * 0.2)).toFixed(3) + ')'
+      g.lineWidth = 1 + (1 - t) * (9 - i * 2.4)
+      g.beginPath(); g.arc(F.x, F.y, r, 0, Math.PI * 2); g.stroke()
+    }
+    /* 발밑에서 튀는 빛살 */
+    const rays = 10
+    for (let i = 0; i < rays; i++) {
+      const a = (i / rays) * Math.PI * 2 + F.life
+      const r0 = 18 + f * 60, r1 = r0 + (1 - f) * 120
+      g.strokeStyle = 'rgba(255,255,255,' + ((1 - f) * 0.5).toFixed(3) + ')'
+      g.lineWidth = 2
+      g.beginPath()
+      g.moveTo(F.x + Math.cos(a) * r0, F.y + Math.sin(a) * r0)
+      g.lineTo(F.x + Math.cos(a) * r1, F.y + Math.sin(a) * r1)
+      g.stroke()
+    }
+    g.restore()
   }
 
   /*
