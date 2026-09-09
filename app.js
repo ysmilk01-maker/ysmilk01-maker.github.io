@@ -58,8 +58,10 @@
   Promise.all([
     get(view + '?select=rank,nickname,roi,trades&order=rank.asc&limit=5',
       { Prefer: 'count=exact', Range: '0-4' }),
-    /* 마지막 거래 시각은 뷰에 updated_at 이 있을 때만(코인은 있고 주식은 없다) */
-    get(view + '?select=updated_at&order=updated_at.desc&limit=1').catch(function () { return { json: [] }; })
+    /* 마지막 거래 시각은 뷰에 updated_at 이 있을 때만 — 없는 뷰(주식)는 data-last="no" 로 표시해 두어 헛요청을 안 낸다 */
+    box.getAttribute('data-last') === 'no'
+      ? Promise.resolve({ json: [] })
+      : get(view + '?select=updated_at&order=updated_at.desc&limit=1').catch(function () { return { json: [] }; })
   ]).then(function (r) {
     var rows = r[0].json;
     var range = r[0].res.headers.get('content-range') || '';

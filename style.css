@@ -27,6 +27,7 @@
   --saju: #f76c82;
   --sudoku: #4f9e77;
   --krx: #3182f6;
+  --ai: #4e9cf5;
 
   --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
     'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
@@ -724,13 +725,17 @@ html.gsap .tile-phone img { transition-duration: 0.25s; }
   list-style: none;
   margin: 0 auto;
   padding: 0;
-  max-width: 860px;
+  max-width: 980px;
   display: grid;
   gap: 12px;
 }
 
-@media (min-width: 620px) {
-  .others ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 560px) {
+  .others ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 900px) {
+  .others ul { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .others a {
@@ -1285,3 +1290,53 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 
 .notes li:first-child { border-top: 0; }
 .notes strong { color: var(--ink-on-dark); font-weight: 600; }
+
+/* 여섯 단계 사다리 — AI 진단. 위가 높은 칸이다 */
+
+.ladder {
+  margin: 34px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line-dark);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.ladder li {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 4px 16px;
+  padding: 18px 22px;
+  background: var(--stage);
+  border-top: 1px solid var(--line-dark);
+}
+
+.ladder li:first-child { border-top: 0; }
+
+.ladder b {
+  grid-row: span 2;
+  align-self: start;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--tint);
+  font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+
+.ladder li:nth-child(n+4) b { color: var(--muted-dark); }
+
+.ladder h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ladder p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted-dark);
+  letter-spacing: -0.008em;
+}
