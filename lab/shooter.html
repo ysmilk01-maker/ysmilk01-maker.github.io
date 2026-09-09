@@ -4549,14 +4549,30 @@ const BG_OBJ = {
  */
 function seedGround(s) {
   const pool = BG_OBJ[(s.stage && s.stage.theme) || 'sea'] || BG_OBJ.sea
+  /*
+   * 오브젝트가 설 자리.
+   *
+   * 가운데를 피해 가장자리로 민다. 전에는 아무 데나 놓고 알파 0.2 로
+   * 깔았는데, 그러면 항공모함이 있어도 안 보인다 - 실제로 「항모는 몇째
+   * 판에 나오냐」는 물음을 받았다. 있는데 못 본 것이다.
+   *
+   * 가운데는 적기와 적탄이 지나는 자리다. 거기만 비우면 가장자리에서는
+   * 크고 진하게 그려도 아무것도 안 가린다.
+   */
+  const edgeX = () => {
+    const side = Math.random() < .5 ? 0 : 1
+    return side ? W * 0.72 + Math.random() * (W * 0.26)
+                : W * 0.02 + Math.random() * (W * 0.26)
+  }
+
   const put = (n, far) => {
     for (let i = 0; i < n; i++) {
       /* 오브젝트는 근경에만. 멀리 있는 항공모함은 무엇인지 안 읽힌다 */
-      const obj = !far && Math.random() < .22
+      const obj = !far && Math.random() < .32
         ? pool[(Math.random() * pool.length) | 0] : null
       const sc = far ? 0.55 : 1
       s.slabs.push({
-        x: Math.random() * W, y: Math.random() * H,
+        x: obj ? edgeX() : Math.random() * W, y: Math.random() * H,
         w: (obj ? 44 + Math.random() * 30 : 34 + Math.random() * 54) * sc,
         h: (obj ? 44 + Math.random() * 30 : 20 + Math.random() * 32) * sc,
         seed: Math.random() * 6.28,
@@ -7303,9 +7319,22 @@ function update(dt) {
   for (const sl of s.slabs) {
     sl.y += TERRAIN_SPEED * sl.sp * dt
     if (sl.y > H + 40) {
+      /*
+       * 돌아올 때 오브젝트를 다시 뽑는다.
+       *
+       * 전에는 obj 를 그대로 뒀다. 판 시작 때 정해진 것이 판 내내
+       * 같은 자리로 반복해서 지나갔고, 아예 안 걸린 판은 끝까지
+       * 아무것도 안 나왔다 - 항모가 하나도 없는 판이 39% 였다.
+       */
+      const pool2 = BG_OBJ[(s.stage && s.stage.theme) || 'sea'] || BG_OBJ.sea
+      sl.obj = !sl.far && Math.random() < .32
+        ? pool2[(Math.random() * pool2.length) | 0] : null
       sl.y = -60 - Math.random() * 80
-      sl.x = Math.random() * W
       const sc = sl.far ? 0.55 : 1
+      sl.x = sl.obj
+        ? (Math.random() < .5 ? W * 0.02 + Math.random() * (W * 0.26)
+                              : W * 0.72 + Math.random() * (W * 0.26))
+        : Math.random() * W
       sl.w = (30 + Math.random() * 70) * sc
       sl.h = (20 + Math.random() * 32) * sc
     }
@@ -8054,7 +8083,13 @@ function drawIsle(sl) {
    * 아주 옅게(0.2) 깐다. 배경은 눈에 띄면 안 된다 - 0.42 로 크게 넣었더니
    * 항공모함 위를 지날 때 적기를 놓쳤다. 화면을 찍어 보고서야 알았다.
    */
-  if (sl.obj && gaDraw(sl.obj, 0, 0, Math.max(sl.w, sl.h) * 1.15, .2, sl.seed * .18)) {
+  /*
+   * 1.15 배에 알파 0.2 였다. 화면에 있어도 못 알아본다.
+   *
+   * 가장자리로 밀어 놓았으므로 크고 진하게 그려도 전투를 안 가린다 -
+   * 가리는 것이 문제였지 크기가 문제였던 게 아니다.
+   */
+  if (sl.obj && gaDraw(sl.obj, 0, 0, Math.max(sl.w, sl.h) * 1.9, .44, sl.seed * .18)) {
     g.restore()
     return
   }
