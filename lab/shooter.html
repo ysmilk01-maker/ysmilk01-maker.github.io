@@ -4393,7 +4393,7 @@ function newState() {
     adUsed: { revive: 0 },
     squad, lives: LIVES, score: 0, kills: 0, ultUsed: 0, hitCount: 0, clearWait: 0,
     bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [],
-    grounds: [], slabs: [], bands: [], beams: [], arcs: [], blasts: [],
+    grounds: [], slabs: [], bands: [], zones: [], shadows: [], beams: [], arcs: [], blasts: [],
     /* 이 판에서만 사는 개조. 저장하지 않는다. */
     mods: Object.fromEntries(MOD_KEYS.map((k) => [k, 0])),
     /* 이 판에서 지금까지 떨어뜨린 개조의 수와, 이 판의 상한 */
@@ -4491,6 +4491,37 @@ function seedGround(s) {
       y: Math.random() * H, x: Math.random() * W,
       w: 90 + Math.random() * 220, h: 2 + Math.random() * 3.5,
       a: 0.05 + Math.random() * 0.07, sp: 0.5 + Math.random() * 0.35,
+    })
+  }
+
+  /*
+   * 지대.
+   *
+   * 화면 폭을 가로지르는 넓은 띠다. 모래톱·빙원·용암지대처럼 「지금
+   * 무엇 위를 지나는가」를 만든다.
+   *
+   * 덩어리만 흐르면 어디를 지나든 같아 보인다. 경계가 한 번씩 지나가야
+   * 지형이 바뀌는 것으로 읽힌다 - 아무 일도 없는 배경과 지나가는 땅은
+   * 다르다.
+   */
+  for (let i = 0; i < 2; i++) {
+    s.zones.push({ y: -400 - i * 900 - Math.random() * 400, h: 200 + Math.random() * 180 })
+  }
+
+  /*
+   * 구름 그림자.
+   *
+   * 이것 하나로 「공중에 있다」가 난다. 땅에 그림자가 지나가면 그 사이에
+   * 내가 있다는 뜻이라, 배경과 나 사이에 층이 하나 더 생긴다.
+   *
+   * 지형보다 빠르게 흐른다 - 구름이 더 낮게 떠 있다.
+   */
+  for (let i = 0; i < 4; i++) {
+    s.shadows.push({
+      x: Math.random() * W, y: Math.random() * H,
+      rx: 90 + Math.random() * 150, ry: 40 + Math.random() * 70,
+      a: 0.06 + Math.random() * 0.06, sp: 1.5 + Math.random() * 0.9,
+      rot: Math.random() * 3,
     })
   }
 }
@@ -4993,6 +5024,8 @@ const CHAPTERS = [
       [1, (r) => line(1, 'guard')],
       /* 폭격은 2챕터부터. 1챕터는 휘파람 구간이다 */
       [1, (r) => bombRaid(3 + ((r() * 2) | 0))],
+      /* 미확인기. 무게 1 이라 판에 한 번 나올까 말까다 */
+      [1, () => spawnUfo()],
       /* 직선 미사일도 같이. 한 발이면 피할 자리가 화면의 대부분이다 */
       [1, (r) => rocketVolley(1)],
       [1, (r) => rise('gunner', 2)],
@@ -5018,6 +5051,7 @@ const CHAPTERS = [
       /* 지원기는 둘씩 온다. 하나만 잡으면 나머지가 다시 덮어 준다 */
       [2, (r) => line(2, 'guard')],
       [2, (r) => bombRaid(4 + ((r() * 2) | 0))],
+      [1, () => spawnUfo()],
       [2, (r) => rocketVolley(1 + ((r() * 2) | 0))],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
       [1, (r) => wing('small', 5)],
@@ -5058,6 +5092,7 @@ const CHAPTERS = [
       [2, (r) => ground('sam', 70 + r() * (W - 140))],
       [2, (r) => ground(['laser', 'radar', 'flak'][(r() * 3) | 0], 60 + r() * (W - 120))],
       [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
+      [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
       [2, (r) => wing('mid', 3)],
@@ -5451,6 +5486,27 @@ function breakShield(e) {
   sfx('hit', 1)
 }
 
+/*
+ * 미확인기를 부른다.
+ *
+ * 판마다 한 번, 그것도 확률로. 늘 나오면 「가챠권 받는 시간」이 되고
+ * 그러면 판을 도는 이유가 그것 하나로 좁아진다. 가끔 와야 반갑다.
+ *
+ * 화면 한쪽 끝에서 들어와 반대편으로 지나간다. 들어오는 쪽은 매번
+ * 다르다 - 늘 같은 쪽이면 그쪽만 보고 있으면 된다.
+ */
+function spawnUfo() {
+  const s = state
+  if (s.enemies.some((e) => e.ufo)) return       // 둘이 겹치지 않는다
+  const dir = Math.random() < .5 ? 1 : -1
+  const e = mkEnemy('ufo', dir > 0 ? -50 : W + 50, 120 + Math.random() * 130, 0)
+  e.dir = dir
+  e.ufoT = 0
+  s.enemies.push(e)
+  banner('미확인기')
+  sfx('alarm')
+}
+
 /** 돌진기를 위에서 흩뿌린다. 같은 자리에 겹치면 한 번에 다 맞는다 */
 function dive(n) {
   for (let i = 0; i < n; i++) {
@@ -5586,6 +5642,22 @@ function mkEnemy(kind, x, y, drift) {
      * 화면에 순서가 생긴다.
      */
     guard:  { hp: 23, r: 18, sp: 38, score: 400, fire: 99, art: 42, auraR: 118 },
+
+    /*
+     * 미확인기.
+     *
+     * 가끔 화면을 가로질러 지나가는 원반이다. 쏘지 않고 지나가기만 한다.
+     * 잡으면 가챠권 셋.
+     *
+     * **잡으라고 있는 게 아니라 놓치라고 있는 것**에 가깝다. 열여덟 초
+     * 뒤에는 위로 빠져 버리므로, 잡으려면 하던 것을 멈추고 화력을 거기
+     * 쏟아야 한다 - 그 동안 적은 그대로 내려온다. 「지금 쫓을까 말까」를
+     * 고르게 만드는 것이 이 적의 일이다.
+     *
+     * 체력은 중형의 여덟 배다. 지나가는 김에 몇 발 맞혀서는 안 떨어지고
+     * 작정하고 붙어야 겨우 떨어진다.
+     */
+    ufo:    { hp: 240, r: 26, sp: 26, score: 3000, fire: 99, art: 66, ufo: true },
   }
   const b = B[kind] || B.small
   // 뒤 스테이지일수록 더 단단하고 빠르다. 점수는 그대로 둔다 - 뒤 판을
@@ -6556,17 +6628,27 @@ function updateUlt(dt) {
   s.shards = s.shards.filter((sh) => !sh.done)
 }
 
+/*
+ * 판 안에서 한 단계 오른다.
+ *
+ * **체력은 안 채운다.** 전에는 한 단계마다 20, 만렙이면 25 를 채워
+ * 줬는데, 보급이 시간마다 오게 바뀐 뒤로 그게 「잘한 상」이 아니라
+ * 「기다리면 오는 것」이 됐다. 맞는 것이 안 아파지고, 안 아프면 피할
+ * 이유가 없다.
+ *
+ * 최대 체력은 그대로 올린다 - 그건 회복이 아니라 그릇이 커지는 것이라
+ * 지금 아픈 것을 지워 주지 않는다. 오히려 비율로는 더 깎인 상태가 된다.
+ *
+ * 회복은 보스 앞(BOSS_HEAL)과 구역 넘김에만 남는다. 구간을 넘긴 값으로만 준다.
+ */
 function levelUp() {
   const pl = state.player
   if (pl.lv < 5) {
     pl.lv++
-    const gain = 20
-    pl.maxHp += gain
-    pl.hp = Math.min(pl.maxHp, pl.hp + gain)
+    pl.maxHp += 20
     banner('편대 ' + pl.lv + '단계')
   } else {
-    state.score += 500
-    pl.hp = Math.min(pl.maxHp, pl.hp + 25)     // 만렙이면 점수와 수리로
+    state.score += 500                          // 만렙이면 점수로
   }
 }
 /**
@@ -6810,6 +6892,27 @@ function update(dt) {
       } else {
         e.y += e.dashSp * dt                    // 꽂힌다
       }
+      continue
+    }
+
+    if (e.ufo) {
+      /*
+       * 가로로 흐르며 위아래로 얕게 흔들린다. 아래로 안 내려온다 -
+       * 내려오면 부딪쳐 죽으므로 「놓쳤다」가 아니라 「잡혔다」가 된다.
+       */
+      e.ufoT = (e.ufoT || 0) + dt
+      e.x += (e.dir || 1) * e.sp * dt
+      e.y += Math.sin(e.t * 1.6) * 22 * dt
+      /* 열여덟 초가 지나면 위로 빠진다. 그때부터는 못 잡는다 */
+      if (e.ufoT > 18) e.y -= 150 * dt
+      /*
+       * 화면 밖으로 나가면 사라진다. 「놓친 것」이라 보상이 없다.
+       *
+       * 체력이 0 인 경우는 여기서 손대지 않는다 - 총알에 맞아 죽는 길은
+       * collide 가 처리하고, 그 뒤 정리 루프가 가챠권을 준다. 여기서
+       * 미리 죽여 두면 잡은 것과 놓친 것이 구분되지 않는다.
+       */
+      if (e.x < -70 || e.x > W + 70 || e.y < -80) { e.dead = true; e.reaped = true }
       continue
     }
 
@@ -7093,6 +7196,19 @@ function update(dt) {
   for (const bd of s.bands) {
     bd.y += TERRAIN_SPEED * bd.sp * dt
     if (bd.y > H + 20) { bd.y = -20; bd.x = Math.random() * W; bd.w = 90 + Math.random() * 220 }
+  }
+  for (const z of s.zones) {
+    z.y += TERRAIN_SPEED * dt
+    /* 다 지나가면 한참 위에서 다시. 늘 깔려 있으면 경계가 안 된다 */
+    if (z.y > H + 40) { z.y = -400 - Math.random() * 800; z.h = 200 + Math.random() * 180 }
+  }
+  for (const sh of s.shadows) {
+    sh.y += TERRAIN_SPEED * sh.sp * dt
+    if (sh.y - sh.ry > H) {
+      sh.y = -sh.ry - Math.random() * 200
+      sh.x = Math.random() * W
+      sh.rx = 90 + Math.random() * 150
+    }
   }
   for (const u of s.grounds) {
     u.y += TERRAIN_SPEED * dt
@@ -7404,7 +7520,16 @@ function collide() {
     }
   }
   s.bullets = s.bullets.filter((b) => !b.dead)
-  s.enemies = s.enemies.filter((e) => !e.dead)
+  /*
+   * 여기서 죽은 적을 치우지 않는다.
+   *
+   * 바로 아래 「죽은 뒤에 일어나는 일」이 분열·자폭·미확인기 보상을
+   * 처리하는데, 여기서 먼저 걸러 버리면 그 루프가 빈 목록을 본다 -
+   * 분열기가 안 갈라지고 자폭기가 안 터지고 있었다. 실제로 재 보니
+   * 분열기를 잡아도 잡졸이 0마리였다.
+   *
+   * 치우는 것은 그 루프가 끝난 뒤 한 번만 한다.
+   */
 
   /* 판정은 메인 한 대뿐이다. 윙맨은 그림만 있고 맞지 않는다. */
   for (const b of s.ebullets) {
@@ -7431,6 +7556,21 @@ function collide() {
   for (const e of s.enemies) {
     if (!e.dead || e.reaped) continue
     e.reaped = true
+    if (e.ufo) {
+      /*
+       * 잡았을 때만 준다. 시간이 다 돼서 빠져나간 것은 hp 가 남아 있다.
+       * 놓친 것에도 주면 「놓치라고 있는 것」이 성립하지 않는다.
+       */
+      if (e.hp <= 0) {
+        prog.ticket += 3
+        save()
+        banner('가챠권 +3')
+        sfx('ready')
+        haptic('ult')
+        boom(e.x, e.y, 40, '#ffd27a')
+      }
+      continue
+    }
     if (e.splits) {
       /* 갈라진 것은 부모보다 작고 빠르다. 옆으로 벌어지며 나온다 */
       for (let i = 0; i < e.splits; i++) {
@@ -7479,14 +7619,18 @@ function collide() {
     s.score += 60
     sfx('pick')
     /*
-     * 무엇을 줍든 조금 아문다. 회복 수단이 아예 없으면 후반이 버티기만 된다.
+     * 주워도 체력은 안 찬다.
      *
-     * 12 였던 것을 5 로 줄였다. 한 대가 20 인데 아이템 하나가 12 를
-     * 되돌리면, 맞고 줍기를 반복하는 것이 피하는 것보다 낫다 - 실제로
-     * 스물여덟 대를 맞고도 체력이 가득 찬 채로 끝나는 판이 있었다.
+     * 12 에서 5 로 줄였다가 0 으로 뺐다. 보급이 시간마다 오게 바뀐 뒤로
+     * 회복이 「잘한 상」이 아니라 「기다리면 오는 것」이 됐다. 그러면
+     * 맞는 것이 안 아파지고, 안 아프면 피할 이유가 없다.
+     *
+     * 회복은 보스 앞(BOSS_HEAL)과 구역 넘김에만 남긴다 - 구간을 넘긴
+     * 값으로만 준다.
+     *
+     * 「철벽」의 회복 특성은 그 자리에서 뜻을 잃었다. 지금은 무적 시간만
+     * 붙는다 - perk('heal') 은 남겨 두되 여기서는 안 쓴다.
      */
-    /* 「철벽」은 보급 회복이 두 배다 */
-    pl.hp = Math.min(pl.maxHp, pl.hp + 5 + perk('heal'))
     if (it.tk) {
       prog.ticket++
       save()
@@ -8165,7 +8309,8 @@ function drawEnemy(e) {
     }
   }
 
-  const art = enemyArt(e.kind)
+  /* 미확인기는 원반형 중간보스 그림을 쓴다. 적기 중에 원반이 없다 */
+  const art = e.ufo ? (bimg(BOSS_IMG, 'mid7') || enemyArt('tank')) : enemyArt(e.kind)
   if (art) {
     const sz = e.r * (big ? 3.1 : 2.9)
     g.save(); g.translate(e.x, e.y)
@@ -8765,10 +8910,72 @@ function draw() {
     g.fillRect(st.x, st.y, 1.6 + st.z, 1.2)
   }
 
-  /* 결을 제일 밑에, 그 위에 원경, 그 위에 근경 */
+  /*
+   * 지대를 제일 밑에.
+   *
+   * 화면 폭을 가로지르는 넓은 띠다. 가장자리를 물결지게 잘라서 직선이
+   * 안 보이게 한다 - 자로 그은 경계는 지형이 아니라 화면 분할로 읽힌다.
+   */
+  for (const z of s.zones) {
+    if (z.y + z.h < -20 || z.y > H + 20) continue
+    const TH2 = s.theme || THEMES.sea
+    g.save()
+    g.fillStyle = TH2.body
+    g.globalAlpha = 0.5
+    g.beginPath()
+    g.moveTo(-4, z.y)
+    for (let x = 0; x <= W + 8; x += 22) {
+      g.lineTo(x, z.y + Math.sin(x * 0.021 + z.h) * 9)
+    }
+    for (let x = W + 8; x >= -4; x -= 22) {
+      g.lineTo(x, z.y + z.h + Math.sin(x * 0.017 + z.y * .01) * 11)
+    }
+    g.closePath(); g.fill()
+    /* 들어오는 쪽에 밝은 선 하나. 경계가 있다는 표시 */
+    g.globalAlpha = 0.28
+    g.strokeStyle = 'rgba(' + TH2.line + ',.5)'
+    g.lineWidth = 1.6
+    g.beginPath()
+    g.moveTo(-4, z.y)
+    for (let x = 0; x <= W + 8; x += 22) g.lineTo(x, z.y + Math.sin(x * 0.021 + z.h) * 9)
+    g.stroke()
+    g.restore()
+  }
+
+  /* 결을 그 위에, 그 위에 원경, 그 위에 근경 */
   for (const bd of s.bands) drawBand(bd)
   for (const sl of s.slabs) if (sl.far) drawIsle(sl)
   for (const sl of s.slabs) if (!sl.far) drawIsle(sl)
+
+  /*
+   * 구름 그림자. 지형 위에, 적기 아래에.
+   *
+   * 이것 하나로 「공중에 있다」가 난다 - 땅에 그림자가 지나가면 그
+   * 사이에 내가 있다는 뜻이다. 지형보다 빠르게 흘러서 구름이 더 낮게
+   * 떠 있는 것으로 읽힌다.
+   */
+  for (const sh of s.shadows) {
+    if (sh.y + sh.ry < 0 || sh.y - sh.ry > H) continue
+    g.save()
+    g.globalAlpha = sh.a
+    g.fillStyle = '#000814'
+    g.beginPath(); g.ellipse(sh.x, sh.y, sh.rx, sh.ry, sh.rot, 0, Math.PI * 2); g.fill()
+    g.restore()
+  }
+
+  /*
+   * 고도 명암.
+   *
+   * 위쪽을 어둡게 깐다. 멀리가 흐려야 깊이가 생긴다 - 위아래가 똑같이
+   * 밝으면 화면이 평면 한 장이 된다.
+   */
+  {
+    const hz = g.createLinearGradient(0, 0, 0, H * 0.55)
+    hz.addColorStop(0, 'rgba(2,6,14,.34)')
+    hz.addColorStop(1, 'rgba(2,6,14,0)')
+    g.fillStyle = hz
+    g.fillRect(0, 0, W, H * 0.55)
+  }
   for (const u of s.grounds) drawGround(u)
   /* 방공 빔 */
   for (const bm of s.beams) {
