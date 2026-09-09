@@ -561,8 +561,15 @@ html.boot-done body { overflow: visible; }
   transition: transform 0.6s cubic-bezier(0.22, 0.7, 0.28, 1);
 }
 
-/* 눌러보라는 신호 — 화면이 살짝 위로 스크롤된다 */
-.tile:hover .tile-phone img { transform: translateY(-16px); }
+/*
+ * 눌러보라는 신호 — 화면이 살짝 위로 스크롤된다.
+ *
+ * --py 는 GSAP 이 스크롤에 맞춰 돌리는 값이다(site.js). transform 을 변수로
+ * 짜 두어야 스크롤 움직임과 hover 움직임이 서로를 지우지 않고 더해진다.
+ */
+.tile-phone img { transform: translateY(var(--py, 0px)); }
+.tile:hover .tile-phone img { transform: translateY(calc(var(--py, 0px) - 16px)); }
+html.gsap .tile-phone img { transition-duration: 0.25s; }
 
 /* 글이 짧아 폰이 바닥에 붙지 못할 때 최소 간격 */
 .tile-text { padding-bottom: 30px; }
@@ -881,6 +888,12 @@ html.boot-done body { overflow: visible; }
 @media (prefers-reduced-motion: reduce) {
   .rise, .phone.rise { opacity: 1; transform: none; transition: none; }
 }
+
+/* GSAP 이 움직임을 맡으면 CSS transition 은 끈다 — 둘이 겹치면 늦고 끊긴다 */
+html.gsap .rise, html.gsap .phone.rise { transition: none; }
+
+/* 낱말 덮개(SplitText mask) — 낱말 사이 간격은 그대로 두어야 한다 */
+.hero h1 .w { display: inline-block; }
 
 /* ---------- 본문 페이지 (개인정보처리방침) ---------- */
 
