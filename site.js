@@ -45,11 +45,6 @@
     document.documentElement.classList.remove('boot-on');
     document.documentElement.classList.add('boot-done');
     if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
-    try {
-      sessionStorage.setItem('n2s-boot', '1');
-    } catch (e) {
-      /* 저장 못 하면 다음 화면에서 한 번 더 볼 뿐이다 */
-    }
     raiseHero();
   }
 
