@@ -215,6 +215,9 @@
   .dsheet .r2 { display: flex; font-size: 12px; padding: 7px 10px; background: rgba(255,255,255,.04); border-radius: 8px; }
   .dsheet .r2 span:last-child { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
   .dsheet .note2 { font-size: 11.5px; color: var(--muted); line-height: 1.65; margin-top: 10px; }
+  .dsheet .bar.nav { justify-content: space-between; align-items: center; margin-top: 12px; }
+  .dsheet .bar.nav button { flex: none; padding: 8px 14px; font-size: 12.5px; }
+  .dsheet .bar.nav .pos { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
   .dsheet .bar { display: flex; gap: 8px; margin-top: 14px; }
   .dsheet .bar button { flex: 1; }
 
@@ -3427,7 +3430,17 @@ document.getElementById('btnSet').onclick = () => { elSet.hidden = false; render
 document.getElementById('setClose').onclick = () => { elSet.hidden = true; render() }
 
 /* ── 기체 ───────────────────────────────────────────────────────── */
-const FILTERS = [['all', '전체'], ['own', '보유'], ['lock', '잠김'], ['legend', '전설']]
+/*
+ * 거르개.
+ *
+ * 전에는 「전체·보유·잠김·전설」이었다. 등급이 셋인데 전설만 따로 있어서
+ * 일반·희귀를 모아 볼 길이 없었다 - 서른 대가 한 줄로 섞여 나온다.
+ *
+ * 등급 셋을 다 넣는다. 「보유」와 등급은 성격이 다른 축이지만 한 줄에
+ * 두는 편이 낫다 - 두 줄로 나누면 화면 위쪽이 거르개로 덮인다.
+ */
+const FILTERS = [['all', '전체'], ['own', '보유'], ['lock', '잠김'],
+                 ['common', '일반'], ['rare', '희귀'], ['legend', '전설']]
 
 function renderPlanes() {
   /*
@@ -3479,6 +3492,9 @@ function renderPlanes() {
         `<div>사격 간격 <b>${(upgRate(now.id) * 100).toFixed(0)}%</b></div>` +
       `</div></div>`
     paintPlane(pk.querySelector('canvas'), now, 1.35)
+    /* 위쪽 큰 그림도 누르면 상세가 열린다. 여기가 제일 먼저 눈에 든다 */
+    pk.onclick = () => openDetail(now, list)
+    pk.style.cursor = 'pointer'
   }
 
   const ef = document.getElementById('planeFilters')
@@ -3501,7 +3517,7 @@ function renderPlanes() {
     planeFilter === 'all' ? true
     : planeFilter === 'own' ? unlocked(p)
     : planeFilter === 'lock' ? !unlocked(p)
-    : p.tier === 'legend')
+    : p.tier === planeFilter)
 
   if (!list.length) {
     elPlanes.innerHTML = '<div class="empty">여기 해당하는 기체가 없습니다.</div>'
@@ -3540,7 +3556,7 @@ function renderPlanes() {
 
     /* 카드를 누르면 고르고, 정보를 누르면 상세를 연다 - 눌린 자리가 갈려야 한다 */
     const ib = c.querySelector('.info')
-    if (ib) ib.onclick = (ev) => { ev.stopPropagation(); openDetail(p) }
+    if (ib) ib.onclick = (ev) => { ev.stopPropagation(); openDetail(p, list) }
 
     const btn = c.querySelector('.up button')
     if (btn && !btn.disabled) {
@@ -4295,14 +4311,41 @@ function demoShots(p, t) {
   return out
 }
 
-/** @param p 기체 */
-function openDetail(p) {
+/**
+ * 상세를 연다.
+ *
+ * @param p    기체
+ * @param list 넘겨보기용 목록. 주면 팝업 안에서 이전·다음으로 옮긴다 -
+ *             닫고 다시 여는 것보다 훨씬 빠르게 견줄 수 있다
+ */
+function openDetail(p, list) {
   const panel = document.getElementById('detail')
   const body = document.getElementById('detailBody')
   const lv = upgOf(p.id)
   const ok = unlocked(p)
   const lab = unlockLabel(p)
   const row = (k, v) => `<div class="r2"><span>${k}</span><span>${v}</span></div>`
+  const dim = (t) => `<span style="color:var(--dim);font-weight:500">${t}</span>`
+
+  /*
+   * 스펙.
+   *
+   * 전에는 화력·간격 두 줄이 전부였는데, 그건 강화로 붙는 몫만 보여준
+   * 것이라 **기체끼리 견줄 수가 없었다** - 등급이 올라가면 얼마나 세지는지,
+   * 이 무기가 원래 얼마나 빨리 쏘는지가 안 나온다.
+   *
+   * 기체가 실제로 쓰는 값을 그대로 낸다.
+   *
+   *   등급 배수   power / rate. 일반 1.00 · 희귀 1.35 · 전설 1.80
+   *   기본 간격   무기마다 다르다. 레이저 .05 초, 대포 .85 초
+   *   실제 간격   등급·강화·파일럿·PLAYER_CD 를 다 곱한 값
+   *   초당 발수   그 간격의 역수. 이게 제일 손에 잡힌다
+   */
+  const lvNum = state ? state.player.lv : 1
+  const L = LV[Math.min(5, Math.max(1, lvNum))] || LV[1]
+  const realRate = baseRate(p.weapon) * p.rate * upgRate(p.id) * pilotRate() /
+                   (0.85 + L.mult * 0.15) * PLAYER_CD
+  const shots = realRate > 0 ? (1 / realRate) : 0
 
   body.innerHTML =
     `<h3>${p.name}</h3>` +
@@ -4311,11 +4354,12 @@ function openDetail(p) {
     `<div class="cap">게임에서 나가는 모습입니다</div>` +
     `<div class="rows">` +
       row('무기', WEAPONS[p.weapon].desc) +
-      row('강화', `${lv}/${UPG_MAX}`) +
-      row('화력', `${Math.round(upgPower(p.id) * 100)}%` +
-          (lv ? ` <span style="color:var(--dim)">(+${Math.round((upgPower(p.id) - 1) * 100)}%)</span>` : '')) +
-      row('사격 간격', `${(upgRate(p.id) * 100).toFixed(0)}%` +
-          (lv ? ` <span style="color:var(--dim)">(-${Math.round((1 - upgRate(p.id)) * 100)}%)</span>` : '')) +
+      row('등급 화력', `×${p.power.toFixed(2)}`) +
+      row('등급 연사', `×${p.rate.toFixed(2)} ` + dim('작을수록 빠름')) +
+      row('강화', `${lv}/${UPG_MAX}` +
+          (lv ? ' ' + dim(`화력 +${Math.round((upgPower(p.id) - 1) * 100)}% · 간격 -${Math.round((1 - upgRate(p.id)) * 100)}%`) : '')) +
+      row('사격 간격', `${realRate.toFixed(2)}초 ` + dim(`기본 ${baseRate(p.weapon).toFixed(2)}`)) +
+      row('초당 발수', `${shots.toFixed(1)}발`) +
       row('조각', ok ? `${shardOf(p.id)}개` : `${shardOf(p.id)} / ${shardNeed(p)}`) +
     `</div>` +
     (ok ? '' : `<div class="note2">아직 잠겨 있습니다. ${lab}</div>`) +
@@ -4323,6 +4367,12 @@ function openDetail(p) {
       `자리마다 화력 몫이 다릅니다 — 메인 100%, 윙맨 30%, 후방 ` +
       `${Math.round(REAR_EARNED * 100)}%. 같은 기체라도 어느 자리에 두느냐로 값이 갈립니다.` +
     `</div>` +
+    /* 팝업 안에서 옮겨 다닌다. 닫고 다시 여는 것보다 훨씬 빠르게 견준다 */
+    (list && list.length > 1
+      ? `<div class="bar nav"><button class="ghost" id="dPrev">◀ 이전</button>` +
+        `<span class="pos">${list.indexOf(p) + 1} / ${list.length}</span>` +
+        `<button class="ghost" id="dNext">다음 ▶</button></div>`
+      : '') +
     `<div class="bar">` +
       (ok ? `<button id="dPick">이 자리에 넣기</button>` : '') +
       `<button class="ghost" id="dClose">닫기</button>` +
@@ -4359,6 +4409,19 @@ function openDetail(p) {
   panel.onclick = (e) => { if (e.target === panel) close() }
   const dc = document.getElementById('dClose')
   if (dc) dc.onclick = close
+  /* 이전·다음. 목록 안에서 돌아간다 - 끝에서 막히면 되돌아가야 해서 번거롭다 */
+  if (list && list.length > 1) {
+    const at = list.indexOf(p)
+    const go2 = (d) => {
+      stop()
+      openDetail(list[(at + d + list.length) % list.length], list)
+    }
+    const pv = document.getElementById('dPrev')
+    const nx = document.getElementById('dNext')
+    if (pv) pv.onclick = () => go2(-1)
+    if (nx) nx.onclick = () => go2(1)
+  }
+
   const dp = document.getElementById('dPick')
   if (dp) dp.onclick = () => {
     const dup = prog.squad.indexOf(p.id)
