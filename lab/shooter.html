@@ -183,15 +183,27 @@
   /* 하단 탭 — 화면을 넷으로 나눴으니 오가는 길이 늘 보여야 한다 */
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px;
     background: var(--tex, none) repeat, rgba(8,9,13,.94);
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--line);
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   }
   .tabs button {
-    background: transparent; color: var(--dim); font-size: 11.5px;
-    font-weight: 600; padding: 10px 2px; border-radius: 10px; border: 0;
+    background: transparent; color: var(--dim); font-size: 11px;
+    font-weight: 600; padding: 10px 1px; border-radius: 10px; border: 0;
+    white-space: nowrap;
+  }
+  /*
+   * 뽑기 탭에는 가챠권이 있을 때 점을 하나 찍는다.
+   *
+   * 여섯 칸에 글자를 욱여넣은 탓에 「뽑기」가 다른 탭과 똑같이 조용하다.
+   * 돌릴 수 있는 상태인지 아닌지가 그 탭을 누를 유일한 이유라서, 그것만
+   * 점 하나로 알린다.
+   */
+  .tabs button.dot::after {
+    content: ''; position: absolute; margin: -14px 0 0 2px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--gold);
   }
   .tabs button.on { color: var(--accent); background: rgba(79,209,255,.10); font-weight: 700; }
   .tabs[hidden] { display: none !important; }
@@ -581,6 +593,28 @@
   .rate { display: flex; font-size: 12.5px; padding: 7px 2px; border-bottom: 1px solid var(--line); }
   .rate .v { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); }
   .shard { font-size: 10.5px; color: var(--accent); margin-top: 4px; font-weight: 700; }
+  /* 뽑기 화면 */
+  .gapity {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px;
+  }
+  .gapity div {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 6px; text-align: center;
+  }
+  .gapity .k { display: block; font-size: 10px; color: var(--muted); }
+  .gapity .v { display: block; font-size: 15px; font-weight: 800; margin-top: 3px; }
+  .gatab { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 14px 0 4px; }
+  .gatab button {
+    background: var(--panel); color: var(--dim); border: 1px solid var(--line);
+    border-radius: 9px; padding: 8px 2px; font-size: 12px; font-weight: 700;
+  }
+  .gatab button.on { color: var(--accent); border-color: var(--accent); }
+  /* 아래 단추는 화면에 고정한다. 결과를 훑다 보면 뽑기 단추가 위로 밀린다 */
+  #scGacha .gmain {
+    position: sticky; bottom: 0; margin-top: 10px;
+    padding-top: 10px; background: linear-gradient(transparent, var(--bg) 40%);
+  }
+
   .grades { display: grid; gap: 7px; }
   .gcard {
     display: flex; align-items: center; gap: 9px; background: var(--panel);
@@ -588,6 +622,20 @@
   }
   .gcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .gcard.no { opacity: .5; }
+  /*
+   * 초상.
+   *
+   * 전에는 계급장 26픽셀짜리만 붙어 있었다. 파일럿이 사람이 아니라
+   * 표식으로 읽혀서, 넷 중 하나를 고르는 일이 설정 항목처럼 느껴졌다.
+   */
+  .gcard .pf {
+    width: 46px; height: 46px; flex: none; border-radius: 10px;
+    background: center/cover no-repeat; overflow: hidden;
+    border: 1px solid var(--line); position: relative;
+  }
+  .gcard .pf i {
+    position: absolute; inset: 0; background: center/contain no-repeat;
+  }
   .gcard .nm { font-size: 13px; font-weight: 800; }
   .gcard .de { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .gcard .rt { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--gold); }
@@ -672,6 +720,35 @@
   <div class="body" id="pilotBody"></div>
 </div>
 
+<!--
+  뽑기.
+
+  전에는 편대 화면 위에 덮이는 모달이었다. 좁은 칸 하나에 상자 연출과
+  결과와 확률표와 상점을 돌려 써서, 열 장을 뽑으면 결과 칸이 접히고
+  확률표는 스크롤을 한참 내려야 했다. 기체 뽑기와 파일럿 뽑기를 하나로
+  합치면서 확률표가 두 배로 길어져 더 답답해졌다.
+
+  전용 화면으로 뺀다. 천장 진행도를 늘 위에 띄우고, 뽑기·확률·상점을
+  탭으로 갈라 각자 자리를 준다.
+-->
+<div class="screen" id="scGacha" hidden>
+  <h1>뽑기</h1>
+  <p class="sub" id="gaSub"></p>
+  <div class="body">
+    <div class="gapity" id="gaPity"></div>
+    <div class="gatab" id="gaTabs">
+      <button data-t="pull" class="on">뽑기</button>
+      <button data-t="rates">확률</button>
+      <button data-t="shop">가챠권</button>
+    </div>
+    <div id="gBody"></div>
+  </div>
+  <div class="bar gmain" id="gaBar">
+    <button id="gPull">뽑기</button>
+    <button id="gPull10">10연차</button>
+  </div>
+</div>
+
 <div class="panel" id="daily" hidden>
   <div class="gbox" style="text-align:center">
     <h2>접속 보상</h2>
@@ -687,27 +764,6 @@
     <div class="sum" id="setBody"></div>
     <div class="bar" style="justify-content:center">
       <button id="setClose">닫기</button>
-    </div>
-  </div>
-</div>
-
-<div class="panel" id="gacha" hidden>
-  <div class="gbox">
-    <h2 id="gTitle">뽑기</h2>
-    <div id="gBody"></div>
-    <!--
-      두 줄로 나눈다. 다섯을 한 줄에 밀어 넣었더니 폭이 모자라 세 줄로
-      제멋대로 접혔다. 누를 것(뽑기·10연차)과 곁다리(확률·상점·닫기)를
-      갈라 두면 접히는 자리가 정해진다.
-    -->
-    <div class="bar gmain">
-      <button id="gPull">뽑기</button>
-      <button id="gPull10">10연차</button>
-    </div>
-    <div class="bar gsub">
-      <button class="ghost small" id="gRates">확률 보기</button>
-      <button class="ghost small" id="gShop">가챠권 사기</button>
-      <button class="ghost small" id="gClose">닫기</button>
     </div>
   </div>
 </div>
@@ -728,6 +784,7 @@
   <button data-go="squad" class="on">편대</button>
   <button data-go="planes">기체</button>
   <button data-go="stage">스테이지</button>
+  <button data-go="gacha">뽑기</button>
   <button data-go="rank">랭킹</button>
   <button data-go="pilot">파일럿</button>
 </nav>
@@ -1767,15 +1824,25 @@ function pull10(kind) {
 
 function paintGacha10(list) {
   const body = document.getElementById('gBody')
-  const head = `<div class="row"><span class="k">가챠권</span>` +
-    `<span class="v">${prog.ticket}장</span></div>`
+  /* 가챠권은 화면 위 칸이 이미 보여 준다 */
+  const head = `<div class="row"><span class="k">다음 가챠권까지</span>` +
+    `<span class="v">별 ${prog.star} / ${STAR_TICKET}</span></div>`
   const gotN = list.filter((r) => r.got).length
   const top = bestOf(list)
   const cells = list.map((r, i) => {
     const nm = GRADES[r.tier] ? GRADES[r.tier].name : TIERS[r.tier]
+    /*
+     * 파일럿도 얼굴을 보여 준다.
+     *
+     * 합친 뒤로 열 칸에 기체와 파일럿이 섞여 나오는데, 기체만 그림이
+     * 있어서 파일럿 칸은 글자만 남은 빈 칸처럼 보였다. 같은 자리에서
+     * 같은 무게로 나오는 것이면 둘 다 얼굴이 있어야 한다.
+     */
     const im = r.plane && SHIP_IMG[r.plane.id]
+    const pa = r.kind === 'pilot' && PILOT_ART[r.tier]
     const pic = im && im.complete && im.naturalWidth
-      ? `<img src="${im.src}" alt="">` : ''
+      ? `<img src="${im.src}" alt="">`
+      : pa ? `<img src="data:image/webp;base64,${GACHA_B64[pa.face[0]]}" alt="">` : ''
     return `<div class="g10 r-${r.tier}${r.got ? ' hit' : ''}" style="animation-delay:${i * 45}ms">` +
       pic +
       `<div class="t">${nm}</div>` +
@@ -2397,7 +2464,7 @@ function makeTexture() {
  * 나누기 전과 같은 두 번의 손짓이다 - 화면만 넓어졌다.
  * ================================================================ */
 const SCREENS = { squad: 'scSquad', planes: 'scPlanes', stage: 'scStage',
-                  rank: 'scRank', pilot: 'scPilot' }
+                  gacha: 'scGacha', rank: 'scRank', pilot: 'scPilot' }
 const elTabs = document.getElementById('tabs')
 let curScreen = 'squad'
 let planeFilter = 'all'
@@ -2482,11 +2549,19 @@ function render() {
   if (curScreen === 'squad') renderSquad()
   else if (curScreen === 'planes') renderPlanes()
   else if (curScreen === 'stage') renderStage()
+  else if (curScreen === 'gacha') renderGacha(null)
   else if (curScreen === 'rank') renderRank()
   else renderPilot()
 }
 
+/** 뽑기 탭에 점을 찍는다. 돌릴 수 있을 때만 */
+function renderTabs() {
+  const b = elTabs.querySelector('button[data-go="gacha"]')
+  if (b) b.classList.toggle('dot', prog.ticket >= GACHA.plane.cost)
+}
+
 function renderWallet() {
+  renderTabs()
   elWallet.textContent =
     `부품 ${prog.parts.toLocaleString('ko-KR')}개 · 가챠권 ${prog.ticket}장` +
     ` · 보유 ${PLANES.filter(unlocked).length}/30기`
@@ -2806,14 +2881,50 @@ document.getElementById('dailyOk').onclick = () => {
 }
 
 /* ── 뽑기 ───────────────────────────────────────────────────────── */
-const elGacha = document.getElementById('gacha')
 let gKind = 'mix'
+/** 지금 보고 있는 갈피. pull | rates | shop */
+let gaTab = 'pull'
 
 function openGacha() {
   gKind = 'mix'
-  document.getElementById('gTitle').textContent = '뽑기'
-  elGacha.hidden = false
-  paintGacha(null)
+  gaTab = 'pull'
+  go('gacha')
+}
+
+/**
+ * 뽑기 화면 전체.
+ *
+ * 머리(천장 진행도)와 갈피는 늘 그리고, 몸통만 갈피에 따라 바꾼다.
+ * 전에는 몸통 하나를 셋이 돌려 써서, 확률을 보다가 뽑으려면 어디를
+ * 눌러야 하는지 매번 찾아야 했다.
+ */
+function renderGacha(res) {
+  const need = pilotLeft()
+  document.getElementById('gaSub').innerHTML = need
+    ? '기체가 나올지 파일럿이 나올지는 <b>열어 봐야</b> 압니다.'
+    : '파일럿은 다 모으셨습니다. 이제 기체만 나옵니다.'
+
+  const lp = PITY.plane.at - (prog.pull.plane % PITY.plane.at)
+  const li = PITY.pilot.at - (prog.pull.pilot % PITY.pilot.at)
+  document.getElementById('gaPity').innerHTML =
+    `<div><span class="k">가챠권</span><span class="v">${prog.ticket}</span></div>` +
+    `<div><span class="k">전설 확정까지</span><span class="v">${lp}</span></div>` +
+    (need
+      ? `<div><span class="k">상급 확정까지</span><span class="v">${li}</span></div>`
+      : `<div><span class="k">기체 확정까지</span>` +
+        `<span class="v">${HARD_PITY - (prog.pull.plane % HARD_PITY)}</span></div>`)
+
+  document.querySelectorAll('#gaTabs button').forEach((b) => {
+    b.className = b.dataset.t === gaTab ? 'on' : ''
+    b.onclick = () => { gaTab = b.dataset.t; renderGacha(null) }
+  })
+
+  const bar = document.getElementById('gaBar')
+  bar.hidden = gaTab !== 'pull'
+  if (gaTab === 'rates') paintRates()
+  else if (gaTab === 'shop') paintShop()
+  else if (Array.isArray(res)) paintGacha10(res)
+  else paintGacha(res)
 }
 
 function paintGacha(res) {
@@ -2830,10 +2941,13 @@ function paintGacha(res) {
     b10.textContent = ten ? '10연차 · 10장' : '10연차 (10장 필요)'
   }
 
-  const head = `<div class="row"><span class="k">가챠권</span>` +
-    `<span class="v">${prog.ticket}장</span></div>` +
-    `<div class="row"><span class="k">별</span>` +
-    `<span class="v">${prog.star} / ${STAR_TICKET}</span></div>`
+  /*
+   * 가챠권은 여기 안 적는다. 화면 맨 위 칸이 이미 크게 보여 주고 있어서,
+   * 한 화면에 같은 숫자가 두 번 나오면 둘 중 어느 쪽이 진짜인지 눈이
+   * 한 번 멈춘다.
+   */
+  const head = `<div class="row"><span class="k">다음 가챠권까지</span>` +
+    `<span class="v">별 ${prog.star} / ${STAR_TICKET}</span></div>`
 
   if (!res) {
     /*
@@ -2843,16 +2957,13 @@ function paintGacha(res) {
      */
     const lp = PITY.plane.at - (prog.pull.plane % PITY.plane.at)
     const li = PITY.pilot.at - (prog.pull.pilot % PITY.pilot.at)
+    /*
+     * 천장 숫자와 「무엇이 나오는지」는 화면 위쪽이 맡는다. 여기서는
+     * 조각이 무엇인지만 말한다 - 같은 말을 세 번 적으면 아무도 안 읽는다.
+     */
     body.innerHTML = head +
-      `<div class="empty">` +
-      (pilotLeft()
-        ? '기체가 나올지 파일럿이 나올지는 열어 봐야 압니다.<br>'
-        : '파일럿은 다 모으셨습니다. 이제 기체만 나옵니다.<br>') +
-      `조각을 모으면 열리고, 남는 조각은 강화에 씁니다.<br>` +
-      `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.<br>` +
-      `기체 <b>${lp}번</b> 안에 ${GRADES.legend ? GRADES.legend.name : '전설'} 이상 확정` +
-      (pilotLeft() ? ` · 파일럿 <b>${li}번</b> 안에 상급 이상 확정` : '') +
-      `<br>기체 확정까지 <b>${HARD_PITY - (prog.pull.plane % HARD_PITY)}장</b></div>`
+      `<div class="empty">조각을 모으면 열립니다. 남는 조각은 강화에 씁니다.<br>` +
+      `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.</div>`
     return
   }
 
@@ -2946,17 +3057,19 @@ function paintRates() {
 document.getElementById('gPull').onclick = () => {
   const res = pull(gKind)
   if (!res) return
+  gaTab = 'pull'
   /*
    * 소리는 연출 안에서 등급에 맞춰 낸다. 여기서 먼저 내면 상자가 열리기
    * 전에 결과를 알려 주는 꼴이 된다.
    */
-  gfxPlay([res], () => { paintGacha(res); renderWallet() })
+  gfxPlay([res], () => { renderGacha(res); renderWallet(); renderTabs() })
 }
 
 document.getElementById('gPull10').onclick = () => {
   const list = pull10(gKind)
   if (!list) return
-  gfxPlay(list, () => { paintGacha10(list); renderWallet() })
+  gaTab = 'pull'
+  gfxPlay(list, () => { renderGacha(list); renderWallet(); renderTabs() })
 }
 function paintShop() {
   const body = document.getElementById('gBody')
@@ -2976,9 +3089,6 @@ function paintShop() {
   })
 }
 
-document.getElementById('gRates').onclick = paintRates
-document.getElementById('gShop').onclick = paintShop
-document.getElementById('gClose').onclick = () => { elGacha.hidden = true; render() }
 
 /* ── 스테이지 ───────────────────────────────────────────────────── */
 /** 카드에 그 판의 색을 그대로 보여 준다. 이름만으로는 어떤 곳인지 모른다 */
@@ -3220,8 +3330,19 @@ function renderPilot() {
     const eff = k === 'legend'
       ? '스탯 100% · 후방 자리'
       : `스탯 ${Math.round(G.base * 100)}%`
+    /*
+     * 초상은 등급마다 두 장이 있다. 첫 장으로 고정한다 - 화면을 다시
+     * 그릴 때마다 얼굴이 바뀌면 그게 내 파일럿으로 안 읽힌다.
+     */
+    const pa = PILOT_ART[k]
+    const face = pa && GACHA_B64[pa.face[0]]
+    const back = pa && GACHA_B64[pa.bg]
+    const pic = face
+      ? `<div class="pf" style="background-image:url('data:image/webp;base64,${back}')">` +
+        `<i style="background-image:url('data:image/webp;base64,${face}')"></i></div>`
+      : `<div class="rk ${k}"></div>`
     return `<div class="gcard${on ? ' on' : ''}${have ? '' : ' no'}" data-g="${k}">` +
-      `<div class="rk ${k}"></div>` +
+      pic +
       `<div><div class="nm">${G.name} 파일럿</div><div class="de">${eff}</div></div>` +
       `<span class="rt">${have ? (on ? '사용 중' : '보유') :
         `조각 ${shardG(k)}/${GRADE_NEED[k]}`}</span></div>`
