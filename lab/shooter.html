@@ -1318,13 +1318,13 @@ const ULT = {
   rapid:  { name: '난사', desc: '5초간 발사 속도가 세 배가 됩니다' },
   spread: { name: '전면 소사', desc: '화면 폭을 훑는 광선이 2.5초간 지나갑니다' },
   laser:  { name: '관통 광선', desc: '굵은 광선이 3초간 위를 뚫습니다' },
-  homing: { name: '일제 사격', desc: '화면의 모든 적에게 유도탄이 날아갑니다' },
+  homing: { name: '분신 전개', desc: '분신 셋이 5초간 따라오며 같이 쏩니다' },
   pierce: { name: '돌격', desc: '무적으로 위로 뚫고 올라갑니다' },
-  wave:   { name: '충격파', desc: '퍼지는 파동이 적탄을 지우고 적을 밀칩니다' },
-  orb:    { name: '위성 방벽', desc: '구슬 열 개가 6초간 돌며 막고 깎습니다' },
+  wave:   { name: 'EMP 펄스', desc: '화면의 적탄을 전부 지우고 적을 마비시킵니다' },
+  orb:    { name: '반사 방벽', desc: '막은 만큼 모았다가 펄스로 되돌려 줍니다' },
   mine:   { name: '융단 폭격', desc: '옆으로 빠지며 화면 전체에 폭탄을 떨굽니다' },
-  beam:   { name: '거포 사격', desc: '큰 포격이 세 번 떨어집니다' },
-  boomer: { name: '호위 편대', desc: '아군 넷이 6초간 함께 쏩니다' },
+  beam:   { name: '기지 화력 지원', desc: '조준한 뒤 기지에서 미사일 100발이 줄지어 올라옵니다' },
+  boomer: { name: '편대 일제 사격', desc: '아군 다섯이 한 줄로 들어와 퍼붓습니다' },
   chain:  { name: '뇌우', desc: '화면의 적을 번개가 차례로 물고 갑니다' },
 }
 /*
@@ -1342,8 +1342,78 @@ const ULT_TONE = {
 }
 function ultTone(k) { return ULT_TONE[k] || '159,232,255' }
 
-/* 「위성 방벽」의 구슬. 판정과 그림이 같은 값을 본다 */
-const ORB_ULT = { n: 10, rad: 66, r: 24, dps: 190 }
+/*
+ * 「반사 방벽」.
+ *
+ * 막기만 하던 것을 「막은 만큼 되돌려 준다」로 바꾼다. 방어형 궁의 값이
+ * 「안 맞았다」뿐이면 화면에서 아무 일도 안 일어난 것과 구분이 안 된다 -
+ * 막을수록 게이지가 차고, 끝날 때 그만큼 큰 펄스가 나간다.
+ *
+ *   hold   방벽이 서 있는 시간
+ *   rad    반지름. 이 안에 들어온 적탄은 흡수된다
+ *   dps    닿은 적을 깎는 속도
+ *   gain   적탄 하나를 흡수할 때 모이는 값
+ *   base   흡수를 하나도 못 해도 나가는 펄스 피해
+ *   cap    모을 수 있는 상한. 탄막 판에서 무한정 쌓이면 안 된다
+ */
+const ORB_ULT = { hold: 3.6, rad: 72, r: 26, dps: 170,
+                  gain: 34, base: 200, cap: 1600 }
+
+/*
+ * 「기지 폭격 요청」.
+ *
+ * 레이더로 훑어 적을 표시하고, 화면 아래(우리 기지)에서 미사일이 올라와
+ * 표시된 자리에 꽂힌다. 포격 세 발이 화면 위쪽에 떨어지던 것을 바꾼 것이다 -
+ * 세 발은 어디에 떨어질지 알 수도 없고 맞을지도 운이었다.
+ *
+ *   scan   레이더가 훑는 시간. 이 동안 조준 표식이 하나씩 붙는다
+ *   max    한 번에 몇 발까지
+ *   gap    발 사이 간격
+ *   fly    기지에서 표적까지 나는 시간
+ */
+/*
+ * 「기지 화력 지원」.
+ *
+ * 조준한 뒤 화면 아래에서 미사일이 **줄지어** 올라간다. 열여섯 발이
+ * 점점이 떨어지던 것을 백 발이 흐르는 줄기로 바꾼다 - 「지원 요청」이면
+ * 한두 발이 아니라 쏟아져야 한다.
+ *
+ * 한 발은 가볍다(18). 백 발이 다 맞아도 1800 이고, 실제로는 절반쯤
+ * 빗나가므로 다른 궁과 나란하다. 무게는 수에서 온다.
+ *
+ *   scan  레이더가 훑는 시간
+ *   n     발수
+ *   gap   발 사이 간격. 0.022초면 초당 마흔다섯 발이다
+ *   dmg   한 발
+ */
+const STRIKE = { scan: 0.6, n: 100, gap: 0.022, dmg: 18 }
+
+/*
+ * 「분신 전개」.
+ *
+ * 셋이 내 지난 자리를 따라온다. 편대(WINGMEN)와 다른 점은 **내 움직임을
+ * 그대로 따라온다**는 것이다 - 편대는 제자리에서 쏘고, 분신은 내가 피하는
+ * 대로 같이 피한다. 그래서 조작이 화면에 세 배로 나온다.
+ *
+ *   lag  몇 프레임 뒤처지나. 클수록 길게 늘어선다
+ *   dx   좌우 어긋남
+ *   mul  화력 몫
+ */
+const CLONES = [
+  { lag: 8,  dx: -46, mul: 0.45 },
+  { lag: 8,  dx: 46,  mul: 0.45 },
+  { lag: 18, dx: 0,   mul: 0.45 },
+]
+const CLONE_TIME = 5.0
+
+/*
+ * 「편대 일제 사격」.
+ *
+ * 아군 다섯이 화면 아래에서 한 줄로 들어와 자리를 잡고 퍼붓다가 위로
+ * 빠져나간다. 넷이 내 옆에 붙어 같이 쏘던 것을 바꾼 것이다 - 붙어 있으면
+ * 내가 서 있는 줄만 훑어서, 넷이 있으나 없으나 화면은 같았다.
+ */
+const WINGMEN = { n: 5, hold: 3.0, inY: 0.60, cd: 0.20, dmg: 15 }
 const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는지는 처치 쪽에 있다
 /*
  * 쌓아 둘 수 있는 발수.
@@ -5194,6 +5264,15 @@ function newState() {
     /* 궁이 도는 내내 이어지는 화면 색과 진동 */
     ultHold: null,
     /*
+     * orbCharge 반사 방벽이 모은 값
+     * radar     화력 지원의 조준
+     * volley    아직 안 나간 미사일
+     * clones    분신
+     * trail     지난 자리. 분신이 이걸 따라온다
+     * empT      EMP 잔상. 화면이 죽어 있는 시간
+     */
+    orbCharge: 0, radar: null, volley: null, clones: [], trail: [], empT: 0,
+    /*
      * 화면 밖에서 들어오는 것의 예고.
      *
      * edges   가장자리 표식 {side:'l'|'r'|'b', pos, t, life}
@@ -5532,7 +5611,8 @@ function shoot(u, i, dt) {
   u.cd = rate * PLAYER_CD
   sfx('shot', p.tier === 'legend' ? 2 : p.tier === 'rare' ? 1 : 0)
 
-  const pos = slotPos(i)
+  /* 분신은 제 자리를 들고 온다. 편대 자리 계산을 안 탄다 */
+  const pos = u.at || slotPos(i)
   /*
    * 총구 불꽃.
    *
@@ -7573,18 +7653,63 @@ function fireUlt() {
     case 'rapid':  s.ultT = 3.5 * ULT_POWER; break
     case 'laser':  s.ultT = 3 * ULT_POWER; break
     case 'spread': s.ultT = 2.5 * ULT_POWER; break
-    case 'orb':    s.ultT = 6 * ULT_POWER; break
-    case 'boomer':
-      s.ultT = 6 * ULT_POWER
-      s.escorts = [-1.6, -0.8, 0.8, 1.6].map((o) => ({ off: o, cd: 0 }))
+    case 'orb':
+      s.ultT = ORB_ULT.hold
+      /* 모은 값. 끝날 때 이만큼이 펄스로 나간다 */
+      s.orbCharge = 0
       break
+    case 'boomer': {
+      /*
+       * 아래에서 한 줄로 들어온다. 자리는 화면을 고르게 나눈다 -
+       * 내 옆에 붙이면 내가 선 줄만 훑는다.
+       */
+      s.ultT = WINGMEN.hold + 1.0
+      const gap = W / (WINGMEN.n + 1)
+      s.escorts = Array.from({ length: WINGMEN.n }, (_, i) => ({
+        x: gap * (i + 1), y: H + 40 + i * 26,
+        toY: H * WINGMEN.inY + (i % 2 ? 16 : 0),
+        cd: 0.25 + i * 0.06, phase: 'in',
+      }))
+      break
+    }
     case 'pierce':
       s.ultT = 1.2 * ULT_POWER
       pl.inv = Math.max(pl.inv, 1.4)
       break
-    case 'wave':
+    case 'wave': {
+      /*
+       * EMP.
+       *
+       * 링이 닿는 것만 지우던 것을 **그 자리에서 전부** 지우는 것으로
+       * 바꾼다. 예고 중인 폭격·미사일까지 같이 끈다 - 「전자기 펄스」인데
+       * 이미 발사된 것만 지우면 이름값을 못 한다.
+       *
+       * 링은 남는다. 지운 뒤에 아무 그림도 없으면 화면이 갑자기 비는
+       * 것으로만 보이고 무엇이 지웠는지 안 읽힌다.
+       */
+      let n = 0
+      for (const b of s.ebullets) { if (!b.dead) { b.dead = true; n++ } }
+      s.beams.length = 0
       s.shards.push({ x: pl.x, y: pl.y, r: 10, kind: 'shock' })
+      s.flareT = Math.min(0.46, s.flareT + 0.34)
+      s.shake = Math.max(s.shake, 18)
+      /*
+       * 잔상 2.5초.
+       *
+       * 지우고 끝나면 화면이 잠깐 비었다가 도로 찬다 - 한 순간이라
+       * 「내가 지웠다」가 안 남는다. 2.5초 동안 화면에 주사선과 잡음이
+       * 남고, 그 동안 적이 느려진다. 전기가 나간 상태가 눈에 보인다.
+       */
+      s.empT = 2.5
+      for (const e of s.enemies) {
+        if (e.dead) continue
+        if (!(e.slowT > 0)) { e.sp0 = e.sp; e.sp = e.sp * 0.45 }
+        e.slowT = 2.5
+        e.cd = Math.max(e.cd, 1.6)
+      }
+      if (n) banner('EMP · 적탄 ' + n)
       break
+    }
     case 'chain': {
       /* 나에게서 시작해 화면 전체를 물고 간다. 거리 제한을 풀어 다 닿게 */
       const save = CHAIN.range
@@ -7594,7 +7719,24 @@ function fireUlt() {
       CHAIN.range = save
       break
     }
-    case 'homing':
+    case 'homing': {
+      /*
+       * 분신 셋.
+       *
+       * 화면의 적을 한 번씩 때리고 끝나던 것을 5초짜리로 바꾼다. 한 번
+       * 때리는 것은 적이 몇이냐에 값이 통째로 달렸고, 적이 적은 순간에
+       * 쓰면 아무것도 아니었다.
+       */
+      s.ultT = CLONE_TIME
+      const mainU = s.squad[MAIN_SLOT]
+      s.clones = CLONES.map((c, i) => ({
+        plane: mainU && mainU.plane, mul: c.mul, cd: 0.1 + i * 0.05,
+        lag: c.lag, dx: c.dx, orbA: 0, at: { x: pl.x + c.dx, y: pl.y },
+        born: 0,
+      }))
+      break
+    }
+    case 'homing_old':
       for (const e of s.enemies) {
         const a = Math.atan2(e.y - pl.y, e.x - pl.x)
         s.bullets.push({ x: pl.x, y: pl.y, vx: Math.cos(a) * 240, vy: Math.sin(a) * 240,
@@ -7645,10 +7787,15 @@ function fireUlt() {
       }
       break
     case 'beam':
-      s.ultT = 1.6
-      for (let i = 0; i < 3; i++) {
-        s.shards.push({ x: W * (.25 + i * .25), y: H * .3, r: 0, kind: 'shell', delay: i * .45 })
-      }
+      /*
+       * 조준하고, 기지에서 백 발이 줄지어 올라온다.
+       *
+       * 발사는 updateUlt 가 한 발씩 낸다 - 여기서 백 발을 한꺼번에 만들면
+       * 같은 자리에서 한 덩어리로 튀어나가고, 「줄지어」가 안 된다.
+       */
+      s.ultT = STRIKE.scan + STRIKE.n * STRIKE.gap + 1.0
+      s.radar = { t: 0, life: STRIKE.scan }
+      s.volley = { left: STRIKE.n, cd: STRIKE.scan, i: 0 }
       break
   }
 }
@@ -7692,7 +7839,46 @@ function updateUlt(dt) {
         if (near(e, pl, e.r + 26)) { e.hp -= 90; e.flash = .1; boom(e.x, e.y, 8, '#ffe08a') }
       }
       if (s.boss && near(s.boss, pl, s.boss.r + 26)) bossArea(s.boss, 160 * dt)
+    } else if (k === 'homing') {
+      /*
+       * 분신 셋이 지난 자리를 따라오며 같이 쏜다.
+       *
+       * shoot 를 그대로 부른다 - 무기 열한 가지 분기를 다시 쓸 이유가
+       * 없고, 새 무기를 넣어도 분신이 저절로 따라간다.
+       */
+      for (const c of s.clones) {
+        c.born = Math.min(1, (c.born || 0) + dt * 5)
+        const h = s.trail[Math.max(0, s.trail.length - 1 - c.lag)] || pl
+        c.at.x = Math.max(16, Math.min(W - 16, h.x + c.dx))
+        c.at.y = h.y
+        if (c.plane) shoot(c, MAIN_SLOT, dt)
+      }
+    } else if (k === 'beam') {
+      /*
+       * 백 발을 한 발씩 낸다.
+       *
+       * 발사 자리가 좌우로 훑는다 - 한 점에서 나가면 백 발이 한 줄기로
+       * 겹쳐서 열 발과 구분이 안 된다. 표적은 가장 가까운 적을 각자 문다.
+       */
+      const V = s.volley
+      if (V && V.left > 0) {
+        V.cd -= dt
+        while (V.cd <= 0 && V.left > 0) {
+          V.cd += STRIKE.gap
+          V.left--
+          const t = V.i++ / STRIKE.n
+          /* 좌우로 두 번 훑는다 */
+          const sx = W * (0.5 + Math.sin(t * Math.PI * 4) * 0.42)
+          s.bullets.push({
+            x: sx, y: H + 14, vx: (pl.x - sx) * 0.25, vy: -470,
+            r: 4.5, dmg: STRIKE.dmg, kind: 'homing', turn: PLAYER_HOMING_TURN * 1.6,
+            life: 3.2, age: 0, owner: MAIN_SLOT, pierce: 0, bounce: 0,
+          })
+          if (V.i % 6 === 0) sfx('shot', 0)
+        }
+      }
     } else if (k === 'orb') {
+      /* 아래 원본 자리. 새 방벽은 이 위에서 따로 처리한다 */
       /*
        * 도는 구슬이 적탄을 지우고, 닿은 적을 깎는다.
        *
@@ -7703,44 +7889,83 @@ function updateUlt(dt) {
        * 개수와 반지름도 키웠다 - 여덟 개를 반지름 54 에 두면 사이가
        * 벌어져서 탄이 새고, 그림은 6픽셀 점이라 벽으로 안 보였다.
        */
-      const n = ORB_ULT.n
-      s.orbHit = s.orbHit || []
-      for (let i = 0; i < n; i++) {
-        const a = s.t * 3.4 + (i / n) * Math.PI * 2
-        const ox = pl.x + Math.cos(a) * ORB_ULT.rad, oy = pl.y + Math.sin(a) * ORB_ULT.rad
-        for (const b of s.ebullets) {
-          if ((b.x - ox) ** 2 + (b.y - oy) ** 2 < ORB_ULT.r * ORB_ULT.r) b.dead = true
-        }
-        for (const e of s.enemies) {
-          if (e.dead) continue
-          if ((e.x - ox) ** 2 + (e.y - oy) ** 2 < (ORB_ULT.r + e.r) ** 2) {
-            e.hp -= ORB_ULT.dps * dt; e.flash = .08
-          }
-        }
-        if (s.boss && !s.boss.entering &&
-            (s.boss.x - ox) ** 2 + (s.boss.y - oy) ** 2 < (ORB_ULT.r + s.boss.r) ** 2) {
-          bossArea(s.boss, ORB_ULT.dps * dt)
+      /*
+       * 방벽 안에 들어온 적탄을 삼킨다. 삼킨 만큼 모인다.
+       *
+       * 지우기만 하던 것과 다르다 - 탄막이 두꺼울수록 끝에 나가는 펄스가
+       * 커진다. 「버틴 값」이 화면에 숫자로 남는다.
+       */
+      const R = ORB_ULT.rad
+      for (const b of s.ebullets) {
+        if (b.dead || b.warnT > 0) continue
+        if ((b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 < R * R) {
+          b.dead = true
+          s.orbCharge = Math.min(ORB_ULT.cap, (s.orbCharge || 0) + ORB_ULT.gain)
+          /* 삼킨 자리에 작은 빛. 무엇이 막혔는지 보여야 버틸 마음이 든다 */
+          s.parts.push({ x: b.x, y: b.y, vx: (pl.x - b.x) * 1.6, vy: (pl.y - b.y) * 1.6,
+                         age: 0, life: .3, color: '#e0d0ff' })
         }
       }
+      /* 벽에 닿은 적은 계속 깎인다 */
+      for (const e of s.enemies) {
+        if (e.dead) continue
+        if ((e.x - pl.x) ** 2 + (e.y - pl.y) ** 2 < (R + e.r) ** 2) {
+          e.hp -= ORB_ULT.dps * dt; e.flash = .08
+        }
+      }
+      if (s.boss && !s.boss.entering &&
+          (s.boss.x - pl.x) ** 2 + (s.boss.y - pl.y) ** 2 < (R + s.boss.r) ** 2) {
+        bossArea(s.boss, ORB_ULT.dps * dt)
+      }
     } else if (k === 'boomer') {
+      /*
+       * 들어오고 - 쏘고 - 빠진다.
+       *
+       * 남은 시간이 1초 아래로 내려가면 위로 가속해 화면 밖으로 나간다.
+       * 그냥 사라지게 두면 다섯이 한꺼번에 증발한다.
+       */
+      const leaving = s.ultT < 1.0
       for (const es of s.escorts) {
+        if (leaving) {
+          es.phase = 'out'
+          es.y -= 620 * dt
+        } else if (es.phase === 'in') {
+          es.y += (es.toY - es.y) * Math.min(1, dt * 5.5)
+          if (es.y - es.toY < 6) es.phase = 'hold'
+        }
+        if (es.phase === 'out' || es.y > H + 20) continue
         es.cd -= dt
         if (es.cd <= 0) {
-          es.cd = .13
-          const ex = Math.max(20, Math.min(W - 20, pl.x + es.off * 46))
-          /*
-           * 한 발 6 이었다. 넷이 6초를 쏴도 총 216 이라, 같은 값의 다른
-           * 궁(융단폭격 1197)의 5분의 1도 안 됐다. 게다가 전부 직진이라
-           * 표적이 그 네 줄 위에 있어야만 맞는다 - 빗나가는 몫까지 치면
-           * 화면에서는 아무 일도 안 일어나는 것처럼 보였다.
-           */
-          /* 26 은 과했다(실측 2392). 13 이면 1200 언저리로 다른 궁과 나란하다 */
-          s.bullets.push({ x: ex, y: pl.y - 10, vx: 0, vy: -560, r: 4, dmg: 13,
-                           kind: 'rapid', life: 2, age: 0, owner: MAIN_SLOT, pierce: 1, bounce: 0 })
+          es.cd = WINGMEN.cd
+          sfx('shot', 0)
+          state.muzzles.push({ x: es.x, y: es.y - 12, age: 0, k: 'mz2' })
+          /* 두 발씩. 한 발이면 다섯이 쏘는 것이 한 줄로 보인다 */
+          for (const dx of [-6, 6]) {
+            s.bullets.push({ x: es.x + dx, y: es.y - 10, vx: 0, vy: -640, r: 4,
+                             dmg: WINGMEN.dmg, kind: 'rapid', life: 2, age: 0,
+                             owner: MAIN_SLOT, pierce: 1, bounce: 0 })
+          }
         }
       }
     }
-    if (s.ultT <= 0) { s.ultKind = null; s.escorts = []; s.sweeps = [] }
+    if (s.ultT <= 0) {
+      /*
+       * 방벽이 끝나면 모은 만큼을 펄스로 되돌린다.
+       *
+       * 흡수한 탄 하나가 34, 기본 260, 상한 1600. 탄막이 두꺼운 판일수록
+       * 크게 나간다 - 「버틴 값」이 여기서 화면에 나온다.
+       */
+      if (s.ultKind === 'orb') {
+        const dmg = Math.min(ORB_ULT.cap, ORB_ULT.base + (s.orbCharge || 0))
+        s.shards.push({ x: pl.x, y: pl.y, r: 10, kind: 'pulse', dmg })
+        s.shake = Math.max(s.shake, 16)
+        s.flareT = Math.min(0.46, s.flareT + 0.2)
+        sfx('ult'); haptic('ult')
+        banner('반사 ' + Math.round(dmg))
+        s.orbCharge = 0
+      }
+      s.ultKind = null; s.escorts = []; s.sweeps = []; s.clones = []; s.volley = null
+    }
   } else {
     s.sweeps = []
   }
@@ -7756,8 +7981,8 @@ function updateUlt(dt) {
      */
     if (!sh.lit) {
       sh.lit = true
-      boom(sh.x, sh.y, sh.kind === 'shell' ? 34 : 30,
-           sh.kind === 'shock' ? '#a0ebff' : '#ffb45c')
+      boom(sh.x, sh.y, sh.kind === 'shell' ? 34 : sh.kind === 'pulse' ? 20 : 30,
+           sh.kind === 'shock' ? '#a0ebff' : sh.kind === 'pulse' ? '#c9a8ff' : '#ffb45c')
       if (sh.kind === 'bomb') {
         /*
          * 착탄 한 발에 네 겹을 쌓는다.
@@ -7781,7 +8006,33 @@ function updateUlt(dt) {
     }
     /* 충격파 링. 데미지는 sh.r 이 맡고 이쪽은 눈만 맡는다 */
     if (sh.ring !== undefined) sh.ring += 760 * dt
-    if (sh.kind === 'shock') {
+    if (sh.kind === 'pulse') {
+      /*
+       * 반사 펄스. 충격파와 달리 적탄을 지우고 **피해도 준다.**
+       * 한 대상에 한 번만 - 반지름이 커지는 동안 계속 스치면 몇 배가 된다.
+       */
+      sh.r += 900 * dt
+      sh.hit = sh.hit || []
+      for (const b of s.ebullets) {
+        if ((b.x - sh.x) ** 2 + (b.y - sh.y) ** 2 < sh.r * sh.r) b.dead = true
+      }
+      for (const e of s.enemies) {
+        if (e.dead || sh.hit.includes(e)) continue
+        if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r) {
+          e.hp -= sh.dmg; e.flash = .12; sh.hit.push(e)
+          if (e.hp <= 0 && !e.dead) {
+            e.dead = true; s.score += e.score; s.kills++
+            boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#c9a8ff')
+          }
+        }
+      }
+      if (s.boss && !s.boss.entering && !sh.bossHit &&
+          (s.boss.x - sh.x) ** 2 + (s.boss.y - sh.y) ** 2 < sh.r * sh.r) {
+        sh.bossHit = true
+        bossArea(s.boss, sh.dmg)
+      }
+      if (sh.r > H * 1.1) sh.done = true
+    } else if (sh.kind === 'shock') {
       sh.r += 620 * dt
       for (const b of s.ebullets) if ((b.x - sh.x) ** 2 + (b.y - sh.y) ** 2 < sh.r * sh.r) b.dead = true
       for (const e of s.enemies) {
@@ -7958,6 +8209,15 @@ function update(dt) {
   pl.x = Math.max(18, Math.min(W - 18, pl.x))
   pl.y = Math.max(70, Math.min(H - 34, pl.y))
   if (pl.inv > 0) pl.inv -= dt
+
+  /*
+   * 지난 자리를 남긴다. 분신이 이걸 따라온다.
+   *
+   * 늘 쌓는다 - 궁을 쓰는 순간부터 쌓으면 첫 순간에 따라올 자리가 없어서
+   * 셋이 한 점에 겹쳐 나온다.
+   */
+  s.trail.push({ x: pl.x, y: pl.y })
+  if (s.trail.length > 40) s.trail.shift()
 
   s.squad.forEach((u, i) => shoot(u, i, dt))
 
@@ -8583,6 +8843,12 @@ function update(dt) {
   if (s.flareT > 0) s.flareT = Math.max(0, s.flareT - dt * 3.2)
   /* 필살기 발동 연출. 기체를 따라다니지 않는다 - 쏜 자리에서 퍼진다 */
   if (s.ultFx) { s.ultFx.t += dt; if (s.ultFx.t >= s.ultFx.life) s.ultFx = null }
+  /* EMP 잔상 */
+  if (s.empT > 0) s.empT = Math.max(0, s.empT - dt)
+
+  /* 폭격 요청의 레이더. 훑는 동안만 산다 */
+  if (s.radar) { s.radar.t += dt; if (s.radar.t >= s.radar.life) s.radar = null }
+
   /* 가장자리 예고와 그 뒤에 부를 것 */
   for (const w of s.edges) w.t += dt
   s.edges = s.edges.filter((w) => w.t < w.life)
@@ -10866,24 +11132,82 @@ function draw() {
     g.beginPath(); g.arc(px, py - 26, 44, 0, Math.PI * 2); g.fill()
     g.restore()
   }
+  /*
+   * 반사 방벽.
+   *
+   * 구슬 열 개가 돌던 것을 하나의 막으로 바꿨다. 구슬 사이로 탄이 새고,
+   * 무엇이 막히고 무엇이 새는지 눈으로 못 가렸다. 막 안쪽에 모은 양을
+   * 띠로 채운다 - 버틸수록 차오르는 것이 보여야 버틸 마음이 든다.
+   */
   if (s.ultKind === 'orb' && s.ultT > 0) {
-    /* 판정과 같은 크기로 그린다. 6픽셀 점이면 무엇이 막아 주는지 안 보인다 */
-    for (let i = 0; i < ORB_ULT.n; i++) {
-      const a = s.t * 3.4 + (i / ORB_ULT.n) * Math.PI * 2
-      const ox = s.player.x + Math.cos(a) * ORB_ULT.rad
-      const oy = s.player.y + Math.sin(a) * ORB_ULT.rad
-      const gr = g.createRadialGradient(ox, oy, 0, ox, oy, ORB_ULT.r)
-      gr.addColorStop(0, 'rgba(240,230,255,.95)')
-      gr.addColorStop(.55, 'rgba(201,168,255,.75)')
-      gr.addColorStop(1, 'rgba(150,110,255,0)')
-      g.fillStyle = gr
-      g.beginPath(); g.arc(ox, oy, ORB_ULT.r, 0, Math.PI * 2); g.fill()
+    const px = s.player.x, py = s.player.y, R = ORB_ULT.rad
+    const chg = Math.min(1, (s.orbCharge || 0) / ORB_ULT.cap)
+    g.save()
+    g.globalCompositeOperation = 'lighter'
+    /* 안쪽 채움. 모은 만큼 진해진다 */
+    const fg = g.createRadialGradient(px, py, R * 0.15, px, py, R)
+    fg.addColorStop(0, 'rgba(150,110,255,' + (0.05 + chg * 0.16).toFixed(3) + ')')
+    fg.addColorStop(.75, 'rgba(180,140,255,' + (0.10 + chg * 0.22).toFixed(3) + ')')
+    fg.addColorStop(1, 'rgba(230,215,255,' + (0.30 + chg * 0.4).toFixed(3) + ')')
+    g.fillStyle = fg
+    g.beginPath(); g.arc(px, py, R, 0, Math.PI * 2); g.fill()
+    /* 테두리 두 겹. 바깥이 숨 쉰다 */
+    const puls = 1 + Math.sin(s.t * 7) * 0.02
+    g.strokeStyle = 'rgba(230,215,255,.9)'
+    g.lineWidth = 2.2
+    g.beginPath(); g.arc(px, py, R * puls, 0, Math.PI * 2); g.stroke()
+    g.strokeStyle = 'rgba(201,168,255,.45)'
+    g.lineWidth = 6
+    g.beginPath(); g.arc(px, py, R * puls + 5, 0, Math.PI * 2); g.stroke()
+    /* 도는 마디. 막이 살아 있다는 표시 */
+    for (let i = 0; i < 8; i++) {
+      const a = s.t * 1.9 + (i / 8) * Math.PI * 2
+      g.strokeStyle = 'rgba(255,255,255,.55)'
+      g.lineWidth = 2
+      g.beginPath()
+      g.arc(px, py, R, a, a + 0.16)
+      g.stroke()
     }
+    g.restore()
+    /* 모은 양. 막 위에 띠 하나 */
+    const bw = 54
+    g.fillStyle = 'rgba(0,0,0,.45)'
+    g.fillRect(px - bw / 2 - 1, py - R - 15, bw + 2, 6)
+    g.fillStyle = chg >= 1 ? '#ffd166' : '#c9a8ff'
+    g.fillRect(px - bw / 2, py - R - 14, bw * chg, 4)
   }
+  /*
+   * 편대.
+   *
+   * 제 자리를 들고 있다. 내 옆에 붙던 때는 x 를 여기서 계산했는데,
+   * 이제 화면을 나눠 선 자리라 그대로 쓴다.
+   */
   for (const es of s.escorts || []) {
-    const ex = Math.max(20, Math.min(W - 20, s.player.x + es.off * 46))
-    drawShipOn(g, ex, s.player.y + 6, { plane: s.squad[MAIN_SLOT].plane, lv: 2,
-                                         mods: NO_MODS, scale: .5, shadow: false })
+    if (es.y > H + 30) continue
+    drawShipOn(g, es.x, es.y, { plane: s.squad[MAIN_SLOT].plane, lv: 3,
+                                mods: NO_MODS, scale: .62, shadow: false, flame: true })
+  }
+  /*
+   * 분신.
+   *
+   * 반투명으로 그리고 뒤에 옅은 잔상을 하나 더 깐다 - 실체가 아니라는
+   * 것이 보여야 「분신」이다. born 으로 나타나는 0.2초를 만든다.
+   */
+  for (const c of s.clones || []) {
+    if (!c.plane) continue
+    const k = c.born || 0
+    g.save()
+    g.globalAlpha = 0.30 * k
+    drawShipOn(g, c.at.x, c.at.y + 14, { plane: c.plane, lv: 2, mods: NO_MODS,
+                                         scale: 0.92 * (0.6 + k * 0.4), shadow: false })
+    g.globalAlpha = 0.72 * k
+    drawShipOn(g, c.at.x, c.at.y, { plane: c.plane, lv: 3, mods: NO_MODS,
+                                    scale: 0.92 * (0.6 + k * 0.4), shadow: false, flame: true })
+    g.restore()
+    /* 발밑 고리. 셋이 겹쳐 있을 때 몇인지 세어진다 */
+    g.strokeStyle = 'rgba(180,160,255,' + (0.5 * k).toFixed(2) + ')'
+    g.lineWidth = 1.5
+    g.beginPath(); g.ellipse(c.at.x, c.at.y + 16, 17, 6, 0, 0, Math.PI * 2); g.stroke()
   }
   for (const sh of s.shards) {
     /*
@@ -10899,14 +11223,16 @@ function draw() {
      */
     if (sh.delay > 0) {
       if (sh.kind !== 'bomb' || sh.delay > 0.5) continue
-      const fy = sh.y - sh.delay * 700
+      /* up 인 것은 기지(화면 아래)에서 올라온다. 방향만 뒤집으면 된다 */
+      const fy = sh.up ? sh.y + sh.delay * 700 : sh.y - sh.delay * 700
       const fa = Math.min(1, (0.5 - sh.delay) * 5)
       /* 꼬리. 뒤로 늘어지는 연기가 있어야 속도가 읽힌다 */
-      const tg = g.createLinearGradient(sh.x, fy - 78, sh.x, fy)
-      tg.addColorStop(0, 'rgba(200,214,232,0)')
-      tg.addColorStop(1, 'rgba(226,236,250,' + (fa * .42).toFixed(3) + ')')
-      g.strokeStyle = tg; g.lineWidth = 3
-      g.beginPath(); g.moveTo(sh.x, fy - 78); g.lineTo(sh.x, fy); g.stroke()
+      const back = sh.up ? fy + 78 : fy - 78
+      const tg = g.createLinearGradient(sh.x, back, sh.x, fy)
+      tg.addColorStop(0, sh.up ? 'rgba(255,190,120,0)' : 'rgba(200,214,232,0)')
+      tg.addColorStop(1, (sh.up ? 'rgba(255,214,160,' : 'rgba(226,236,250,') + (fa * .55).toFixed(3) + ')')
+      g.strokeStyle = tg; g.lineWidth = sh.up ? 4 : 3
+      g.beginPath(); g.moveTo(sh.x, back); g.lineTo(sh.x, fy); g.stroke()
       /*
        * 폭탄 몸통을 직접 그린다.
        *
@@ -10917,12 +11243,14 @@ function draw() {
        */
       g.save()
       g.translate(sh.x, fy)
+      /* 올라오는 것은 코가 위다. 그림을 뒤집는다 */
+      if (sh.up) g.scale(1, -1)
       g.globalAlpha = fa
-      g.fillStyle = '#8d99ab'
+      g.fillStyle = sh.up ? '#c8b18a' : '#8d99ab'
       g.beginPath()
       g.moveTo(-6.5, -13); g.lineTo(6.5, -13); g.lineTo(3.4, -6); g.lineTo(-3.4, -6)
       g.closePath(); g.fill()
-      g.fillStyle = '#39424f'
+      g.fillStyle = sh.up ? '#5c4a30' : '#39424f'
       g.beginPath()
       g.moveTo(0, 12)
       g.bezierCurveTo(5.6, 4, 5.6, -4, 3.6, -9)
@@ -11260,6 +11588,57 @@ function draw() {
   }
 
   /*
+   * 폭격 요청의 레이더.
+   *
+   * 훑는 선이 한 바퀴 돌고, 이미 지나간 각도에 있는 적에 조준틀이 붙는다.
+   * 「요청했다」와 「떨어진다」 사이에 이 0.75초가 있어야 폭격이 우연이
+   * 아니라 겨눈 것이 된다.
+   */
+  if (s.radar) {
+    const R = s.radar
+    const k = R.t / R.life
+    const cx = s.player.x, cy = s.player.y
+    const rad = Math.hypot(W, H)
+    const a0 = -Math.PI / 2
+    const a1 = a0 + k * Math.PI * 2
+    g.save()
+    g.globalCompositeOperation = 'lighter'
+    /* 지나간 부채꼴 */
+    const sg = g.createRadialGradient(cx, cy, 0, cx, cy, rad)
+    sg.addColorStop(0, 'rgba(120,255,190,.16)')
+    sg.addColorStop(1, 'rgba(120,255,190,0)')
+    g.fillStyle = sg
+    g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, rad, a0, a1); g.closePath(); g.fill()
+    /* 훑는 선 */
+    g.strokeStyle = 'rgba(170,255,215,.9)'
+    g.lineWidth = 2
+    g.beginPath(); g.moveTo(cx, cy)
+    g.lineTo(cx + Math.cos(a1) * rad, cy + Math.sin(a1) * rad); g.stroke()
+    /* 동심원 */
+    for (let i = 1; i <= 3; i++) {
+      g.strokeStyle = 'rgba(120,255,190,.18)'
+      g.lineWidth = 1
+      g.beginPath(); g.arc(cx, cy, i * 130, 0, Math.PI * 2); g.stroke()
+    }
+    g.restore()
+    /* 지나간 각도의 적에 조준틀 */
+    for (const e of s.enemies) {
+      if (e.dead) continue
+      let ea = Math.atan2(e.y - cy, e.x - cx) - a0
+      while (ea < 0) ea += Math.PI * 2
+      if (ea > a1 - a0) continue
+      const q = e.r + 8
+      g.strokeStyle = 'rgba(255,120,120,.9)'
+      g.lineWidth = 1.6
+      g.strokeRect(e.x - q, e.y - q, q * 2, q * 2)
+      g.beginPath()
+      g.moveTo(e.x - q, e.y); g.lineTo(e.x - q + 5, e.y)
+      g.moveTo(e.x + q, e.y); g.lineTo(e.x + q - 5, e.y)
+      g.stroke()
+    }
+  }
+
+  /*
    * 가장자리 예고.
    *
    * 들어올 쪽 테두리를 붉게 물들이고, 안쪽을 향한 세모를 깜빡인다.
@@ -11296,6 +11675,42 @@ function draw() {
       g.closePath(); g.fill()
     }
     g.restore()
+  }
+
+  /*
+   * EMP 잔상.
+   *
+   * 전기가 나간 화면을 흉내낸다 - 흐르는 주사선, 가로로 튀는 잡음 띠,
+   * 푸른 기운. 2.5초 동안 옅어지면서 사라진다. 지우고 곧바로 평소
+   * 화면으로 돌아가면 「지웠다」가 한 순간도 안 남는다.
+   */
+  if (s.empT > 0) {
+    const k = Math.min(1, s.empT / 2.5)
+    g.save()
+    g.globalCompositeOperation = 'lighter'
+    /* 푸른 기운 */
+    g.fillStyle = 'rgba(90,170,255,' + (k * 0.10).toFixed(3) + ')'
+    g.fillRect(0, 0, W, H)
+    /* 흐르는 주사선 */
+    g.fillStyle = 'rgba(160,220,255,' + (k * 0.10).toFixed(3) + ')'
+    const off = (s.t * 90) % 6
+    for (let y = -6 + off; y < H; y += 6) g.fillRect(0, y, W, 1.4)
+    /* 가로로 튀는 잡음 띠 셋 */
+    for (let i = 0; i < 3; i++) {
+      const ph = (s.t * (1.7 + i * 0.6) + i * 3.1) % 1
+      const yy = ph * H
+      const hh = 4 + i * 5
+      g.fillStyle = 'rgba(200,235,255,' + (k * (0.22 - i * 0.05)).toFixed(3) + ')'
+      g.fillRect(0, yy, W, hh)
+    }
+    g.restore()
+    /* 가장자리 어둠. 가운데는 안 건드린다 */
+    const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.34,
+                                      W / 2, H / 2, Math.max(W, H) * 0.7)
+    vg.addColorStop(0, 'rgba(4,10,20,0)')
+    vg.addColorStop(1, 'rgba(4,10,20,' + (k * 0.45).toFixed(3) + ')')
+    g.fillStyle = vg
+    g.fillRect(0, 0, W, H)
   }
 
   /*
