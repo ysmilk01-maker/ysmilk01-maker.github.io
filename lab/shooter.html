@@ -4667,13 +4667,13 @@ function mkEnemy(kind, x, y, drift) {
      * 버틸수록 위협이 길어진다 - 그 값이 실제로 붙는다.
      */
     small:  { hp: 4,  r: 13, sp: 78, score: 90,  fire: 2.4, art: 30 },
-    mid:    { hp: 33, r: 20, sp: 52, score: 220, fire: 1.5, art: 46 },
+    mid:    { hp: 30, r: 20, sp: 52, score: 220, fire: 1.5, art: 46 },
     /* 쏘지 않고 몸으로 온다. 조준하는 동안 예고선이 보인다 */
-    dive:   { hp: 6,  r: 15, sp: 40, score: 180, fire: 99,  art: 34, aim: .9, dashSp: 430 },
+    dive:   { hp: 5,  r: 15, sp: 40, score: 180, fire: 99,  art: 34, aim: .9, dashSp: 430 },
     /* 좌우로 크게 흔들며 부채꼴로 뿌린다. 정면에 서 있으면 안 된다 */
-    gunner: { hp: 8,  r: 18, sp: 44, score: 200, fire: 2.0, art: 42, sway: 92 },
+    gunner: { hp: 7,  r: 18, sp: 44, score: 200, fire: 2.0, art: 42, sway: 92 },
     /* 느리고 단단하다. 지나가길 기다리지 말고 화력을 모아 떨궈야 한다 */
-    tank:   { hp: 78, r: 24, sp: 30, score: 420, fire: 2.6, art: 54 },
+    tank:   { hp: 70, r: 24, sp: 30, score: 420, fire: 2.6, art: 54 },
     /*
      * 자리를 잡고 아래로 굵은 빔을 쏜다.
      *
@@ -4681,7 +4681,7 @@ function mkEnemy(kind, x, y, drift) {
      * 대신 안 비키면 제일 아프다 - 피할 수 있는 것일수록 세게 때린다는
      * 원칙을 여기서도 지킨다.
      */
-    lancer: { hp: 48, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
+    lancer: { hp: 43, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
 
     /*
      * 방패.
@@ -4692,7 +4692,7 @@ function mkEnemy(kind, x, y, drift) {
      * 지금까지 열한 종이 다 「쏘면 죽는다」 하나였다. 이건 서는 자리를
      * 바꾸게 만든다 - 정면에서 화력을 쏟는 대신 옆으로 돌아야 한다.
      */
-    shield: { hp: 30, r: 21, sp: 34, score: 460, fire: 2.4, art: 48, shield: 55 },
+    shield: { hp: 27, r: 21, sp: 34, score: 460, fire: 2.4, art: 48, shield: 55 },
 
     /*
      * 분열.
@@ -4701,7 +4701,7 @@ function mkEnemy(kind, x, y, drift) {
      * 갈라진 둘까지 같이 쓸어 담고, 한 발씩 쏘는 무기는 두 번 일한다.
      * 무기를 고를 이유가 생긴다.
      */
-    split:  { hp: 22, r: 19, sp: 46, score: 300, fire: 2.2, art: 44, splits: 2 },
+    split:  { hp: 20, r: 19, sp: 46, score: 300, fire: 2.2, art: 44, splits: 2 },
 
     /*
      * 자폭.
@@ -4710,7 +4710,7 @@ function mkEnemy(kind, x, y, drift) {
      * 반경 안에 있으면 맞는다. 그래서 쏴서 미리 떨구는 것이 답인데,
      * 터질 때도 반경이 남으므로 가까이서 잡으면 같이 맞는다.
      */
-    bomber: { hp: 14, r: 17, sp: 66, score: 340, fire: 99, art: 38, boomR: 96 },
+    bomber: { hp: 13, r: 17, sp: 66, score: 340, fire: 99, art: 38, boomR: 96 },
 
     /*
      * 지원기.
@@ -4719,7 +4719,7 @@ function mkEnemy(kind, x, y, drift) {
      * 이걸 먼저 잡을지, 눈앞의 것을 먼저 잡을지 고르게 하는 적이다 -
      * 화면에 순서가 생긴다.
      */
-    guard:  { hp: 26, r: 18, sp: 38, score: 400, fire: 99, art: 42, auraR: 118 },
+    guard:  { hp: 23, r: 18, sp: 38, score: 400, fire: 99, art: 42, auraR: 118 },
   }
   const b = B[kind] || B.small
   // 뒤 스테이지일수록 더 단단하고 빠르다. 점수는 그대로 둔다 - 뒤 판을
@@ -4814,10 +4814,10 @@ const TERRAIN_SPEED = 62
 
 function mkGround(kind, x, y) {
   const b = {
-    turret: { hp: 27, r: 16, cd: 1.8, score: 150 },
-    flak:   { hp: 33, r: 17, cd: 3.0, score: 210 },
-    laser:  { hp: 48, r: 18, cd: 3.4, score: 340 },
-    radar:  { hp: 39, r: 18, cd: 0,   score: 300 },
+    turret: { hp: 24, r: 16, cd: 1.8, score: 150 },
+    flak:   { hp: 30, r: 17, cd: 3.0, score: 210 },
+    laser:  { hp: 43, r: 18, cd: 3.4, score: 340 },
+    radar:  { hp: 35, r: 18, cd: 0,   score: 300 },
     /*
      * 지대공 미사일.
      *
@@ -4838,7 +4838,7 @@ function mkGround(kind, x, y) {
      * 위협은 위협이 아니다.** 들어오면 곧 예고를 켜고, 그 예고 안에
      * 부수려면 화력을 거기 쏟아야 하도록 단단하게 뒀다.
      */
-    sam:    { hp: 102, r: 20, cd: 2.2, score: 520 },
+    sam:    { hp: 92, r: 20, cd: 2.2, score: 520 },
   }[kind]
   return { kind, x, y, t: Math.random() * 2, phase: 'idle', ph: 0, lock: 0, aimX: 0, flash: 0, ...b }
 }
@@ -5255,7 +5255,14 @@ function fireScale() {
    *   3챕터 0.86  더 촘촘하다
    */
   const chf = (s.stage && s.stage.fireMul) || 1
-  return (1.9 - 0.9 * warm) * small * chf
+  /*
+   * 1.111 을 곱한다 = 쏘는 횟수가 10% 준다.
+   *
+   * 체력을 10% 깎으면서 같이 내린 값이다. 한쪽만 내리면 「무른데 계속
+   * 쏘는 적」이나 「단단한데 조용한 적」이 되는데, 둘 다 지금 원하는
+   * 그림이 아니다.
+   */
+  return (1.9 - 0.9 * warm) * small * chf * 1.111
 }
 
 function chainFrom(from, b) {
@@ -6010,7 +6017,7 @@ function update(dt) {
            * 다음 발까지 쉴 틈이 있는데, 나선은 안전한 자리가 천천히
            * 옮겨다녀서 계속 따라 움직여야 한다.
            */
-          bs.cd = 0.42 * slow * haste * chf
+          bs.cd = 0.42 * slow * haste * chf * 1.111
           bs.spin = (bs.spin || 0) + 0.42
           const arms = bs.mid ? 2 : 3
           for (let k = 0; k < arms; k++) {
@@ -6028,7 +6035,7 @@ function update(dt) {
             }
           }
         } else if (bs.phase === 1) {
-          bs.cd = 1.05 * slow * haste * chf
+          bs.cd = 1.05 * slow * haste * chf * 1.111
           for (let i = -3; i <= 3; i++) {
             const a = Math.PI / 2 + i * .17
             s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150,
@@ -6041,7 +6048,7 @@ function update(dt) {
           }
         } else {
           /* 코어가 열리면 원형 탄막 + 조준 3연발을 번갈아 */
-          bs.cd = 1.15 * chf
+          bs.cd = 1.15 * chf * 1.111
           /*
            * 그리고 가끔 폭격을 부른다.
            *
