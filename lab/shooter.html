@@ -4265,6 +4265,8 @@ const CHAPTERS = [
       [1, (r) => dive(2 + ((r() * 2) | 0))],
       [1, (r) => side('small', 3, r() < .5 ? 1 : -1)],
       [1, (r) => rise('small', 2)],
+      /* 분열만 1챕터에 둔다. 방패·자폭·지원기는 판을 읽는 눈이 필요하다 */
+      [1, (r) => line(1 + ((r() * 2) | 0), 'split')],
     ],
   },
   {
@@ -4281,6 +4283,12 @@ const CHAPTERS = [
       /* 지대공은 2챕터부터. 1챕터는 휘파람 구간이라 즉사탄을 두지 않는다 */
       [1, (r) => ground('sam', 70 + r() * (W - 140))],
       [1, (r) => line(1, 'lancer')],
+      [2, (r) => line(1 + ((r() * 2) | 0), 'split')],
+      [2, (r) => line(1, 'shield')],
+      [1, (r) => line(1 + ((r() * 2) | 0), 'bomber')],
+      [1, (r) => line(1, 'guard')],
+      /* 폭격은 2챕터부터. 1챕터는 휘파람 구간이다 */
+      [1, (r) => bombRaid(3 + ((r() * 2) | 0))],
       [1, (r) => rise('gunner', 2)],
       [1, (r) => line(1, 'tank')],
     ],
@@ -4298,6 +4306,12 @@ const CHAPTERS = [
       [2, (r) => line(1 + ((r() * 2) | 0), 'lancer')],
       [2, (r) => ground(['laser', 'radar', 'flak'][(r() * 3) | 0], 60 + r() * (W - 120))],
       [2, (r) => ground('sam', 70 + r() * (W - 140))],
+      [3, (r) => line(1 + ((r() * 2) | 0), 'shield')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'bomber')],
+      [2, (r) => line(1 + ((r() * 2) | 0), 'split')],
+      /* 지원기는 둘씩 온다. 하나만 잡으면 나머지가 다시 덮어 준다 */
+      [2, (r) => line(2, 'guard')],
+      [2, (r) => bombRaid(4 + ((r() * 2) | 0))],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
       [1, (r) => wing('small', 5)],
     ],
@@ -4493,6 +4507,39 @@ function curStage() {
     fireMul: (ch.fireMul || 1) * (1 - (sub - 1) * 0.006),
   }
 }
+/*
+ * 폭격.
+ *
+ * 경고 삼각형이 화면 위에 줄지어 뜨고, 그 열로 대형 미사일이 떨어진다.
+ *
+ * 다른 모든 위협과 다른 점은 **어디가 위험한지를 먼저 다 보여준다**는
+ * 것이다. 탄막은 지금 날아오는 것을 피하는 일이지만 이건 몇 초 뒤의
+ * 화면을 보고 미리 자리를 잡는 일이다 - 판을 읽는 눈이 필요하다.
+ *
+ * 쏘면 떨어뜨릴 수 있다(체력 4). 지대공 미사일과 같은 원칙이다 -
+ * 못 막는 즉사는 사형선고지 게임이 아니다. 다만 넷을 다 요격하려면
+ * 화력을 거기 쏟아야 하므로, 피하는 쪽이 대개 싸다.
+ *
+ * @param n 떨어지는 수
+ */
+function bombRaid(n) {
+  const s = state
+  const gap = (W - 90) / Math.max(1, n - 1)
+  /* 열을 고르게 벌린다. 무작위로 놓으면 두 발이 겹쳐 한 자리만 위험해진다 */
+  const off = 45 + (Math.random() - 0.5) * 26
+  for (let i = 0; i < n; i++) {
+    s.ebullets.push({
+      x: Math.max(30, Math.min(W - 30, off + gap * i + (Math.random() - .5) * 22)),
+      y: -70, vx: 0, vy: 205, r: 15, age: 0,
+      sh: 'bomb', dmg: DMG.dive, hp: 4,
+      /* 이 시간 동안은 안 움직이고 안 맞는다. 경고만 뜬다 */
+      warnT: 1.7 + Math.random() * 0.3,
+    })
+  }
+  sfx('alarm')
+  banner('폭격')
+}
+
 /** 돌진기를 위에서 흩뿌린다. 같은 자리에 겹치면 한 번에 다 맞는다 */
 function dive(n) {
   for (let i = 0; i < n; i++) {
@@ -4581,6 +4628,44 @@ function mkEnemy(kind, x, y, drift) {
      * 원칙을 여기서도 지킨다.
      */
     lancer: { hp: 48, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
+
+    /*
+     * 방패.
+     *
+     * 앞이 막혀 있다. 정면으로 쏘면 방패가 먼저 깎이고, 방패가 남아
+     * 있는 동안 본체는 안 다친다. **옆이나 뒤에서 치면 방패를 지나간다.**
+     *
+     * 지금까지 열한 종이 다 「쏘면 죽는다」 하나였다. 이건 서는 자리를
+     * 바꾸게 만든다 - 정면에서 화력을 쏟는 대신 옆으로 돌아야 한다.
+     */
+    shield: { hp: 30, r: 21, sp: 34, score: 460, fire: 2.4, art: 48, shield: 55 },
+
+    /*
+     * 분열.
+     *
+     * 죽으면 잡졸 둘로 갈라진다. 한 방에 몰아치는 무기(미사일·집속포)는
+     * 갈라진 둘까지 같이 쓸어 담고, 한 발씩 쏘는 무기는 두 번 일한다.
+     * 무기를 고를 이유가 생긴다.
+     */
+    split:  { hp: 22, r: 19, sp: 46, score: 300, fire: 2.2, art: 44, splits: 2 },
+
+    /*
+     * 자폭.
+     *
+     * 다가와서 터진다. 돌진기와 다른 것은 **범위**다 - 몸이 안 닿아도
+     * 반경 안에 있으면 맞는다. 그래서 쏴서 미리 떨구는 것이 답인데,
+     * 터질 때도 반경이 남으므로 가까이서 잡으면 같이 맞는다.
+     */
+    bomber: { hp: 14, r: 17, sp: 66, score: 340, fire: 99, art: 38, boomR: 96 },
+
+    /*
+     * 지원기.
+     *
+     * 자기는 안 쏜다. 대신 둘레의 적이 받는 피해를 절반으로 만든다.
+     * 이걸 먼저 잡을지, 눈앞의 것을 먼저 잡을지 고르게 하는 적이다 -
+     * 화면에 순서가 생긴다.
+     */
+    guard:  { hp: 26, r: 18, sp: 38, score: 400, fire: 99, art: 42, auraR: 118 },
   }
   const b = B[kind] || B.small
   // 뒤 스테이지일수록 더 단단하고 빠르다. 점수는 그대로 둔다 - 뒤 판을
@@ -4961,7 +5046,17 @@ function banner(t) { state.banner = t; state.bannerT = 1.6 }
  * 후반이 버겁다. 섞되 화력을 조금 더 자주 준다.
  */
 /* 아주 가끔 가챠권이 떨어진다. 한 판에 셋 중 하나꼴 */
-const TICKET_DROP = 0.004
+/*
+ * 아이템 하나가 가챠권일 확률.
+ *
+ * 0.004 였다. 한 판에 아이템이 스무 개쯤 떨어지니 열두 판을 돌아야
+ * 한 장이 나온다 - 나온 기억이 없을 만큼 드물었다. 별로 받는 것
+ * (세 개마다 한 장)이 사실상 유일한 통로였다.
+ *
+ * 0.022 로 올린다. 두어 판에 한 장쯤이라, 판을 도는 것 자체가
+ * 뽑기로 이어진다.
+ */
+const TICKET_DROP = 0.022
 
 /*
  * 한 판에 나오는 강화 재료의 상한.
@@ -5623,6 +5718,21 @@ function update(dt) {
   }
   s.bullets = s.bullets.filter((b) => !b.dead && b.y > -60 && b.y < H + 80 && b.x > -60 && b.x < W + 60)
 
+  /*
+   * 지원기 둘레를 먼저 표시한다.
+   *
+   * 매 프레임 적마다 지원기를 다시 뒤지면 적이 서른이면 곱이 된다.
+   * 지원기만 먼저 모아 두고 한 번씩만 훑는다.
+   */
+  const guards = s.enemies.filter((g) => !g.dead && g.auraR)
+  for (const e of s.enemies) {
+    e.guarded = false
+    if (e.dead || e.auraR) continue
+    for (const g of guards) {
+      if ((g.x - e.x) ** 2 + (g.y - e.y) ** 2 < g.auraR * g.auraR) { e.guarded = true; break }
+    }
+  }
+
   for (const e of s.enemies) {
     e.t += dt
     if (e.flash > 0) e.flash -= dt
@@ -5636,6 +5746,17 @@ function update(dt) {
       } else {
         e.y += e.dashSp * dt                    // 꽂힌다
       }
+      continue
+    }
+
+    if (e.kind === 'bomber') {
+      /* 곧장 따라붙는다. 조준 예고가 없는 대신 느리고 눈에 띈다 */
+      e.y += e.sp * dt
+      e.x += (pl.x - e.x) * Math.min(1, dt * 1.5)
+      e.x = Math.max(18, Math.min(W - 18, e.x))
+      /* 붙으면 스스로 터진다 */
+      if ((pl.x - e.x) ** 2 + (pl.y - e.y) ** 2 < (e.r + 26) ** 2) e.hp = 0
+      if (e.hp <= 0) e.dead = true
       continue
     }
 
@@ -5902,6 +6023,10 @@ function update(dt) {
       const sp = Math.hypot(b.vx, b.vy)
       b.vx = Math.cos(na) * sp; b.vy = Math.sin(na) * sp
       if (b.age > 6) b.dead = true
+    } else if (b.warnT > 0) {
+      /* 예고 중. 자리만 알리고 아직 안 떨어진다 */
+      b.warnT -= dt
+      continue
     } else if (b.kind === 'flakshell' && b.y <= b.burstY) {
       /* 정해진 높이에서 파편으로 터진다 */
       b.dead = true
@@ -5913,7 +6038,13 @@ function update(dt) {
     }
     b.x += b.vx * dt; b.y += b.vy * dt
   }
-  s.ebullets = s.ebullets.filter((b) => !b.dead && b.y > -60 && b.y < H + 40 && b.x > -40 && b.x < W + 40)
+  /*
+   * 예고 중인 폭격탄은 화면 위에 서 있다. 화면 밖이라고 지우면
+   * 경고가 뜨자마자 사라진다 - 실제로 그렇게 만들었다가 삼각형이
+   * 한 번도 안 보였다.
+   */
+  s.ebullets = s.ebullets.filter((b) =>
+    !b.dead && (b.warnT > 0 || (b.y > -60 && b.y < H + 40 && b.x > -40 && b.x < W + 40)))
 
   for (const it of s.items) { it.y += 90 * dt; it.t += dt }
   s.items = s.items.filter((it) => it.y < H + 30)
@@ -6044,7 +6175,24 @@ function collide() {
       if (e.dead || b.dead) continue
       if (b.hitList && b.hitList.includes(e)) continue
       if (near(b, e, e.r + b.r)) {
-        e.hp -= b.dmg; e.flash = .1
+        /*
+         * 방패.
+         *
+         * 앞(적 기준 아래쪽)에서 온 탄은 방패가 먼저 받는다. 옆이나
+         * 뒤로 돌아 들어온 탄은 그냥 지나간다 - 각도로 푸는 적이다.
+         */
+        if (e.shield > 0 && b.y > e.y - e.r * 0.35) {
+          e.shield -= b.dmg
+          e.flash = .1
+          boom(b.x, b.y, 2, '#9fd8ff')
+          sfx('hit')
+          if (e.shield <= 0) boom(e.x, e.y + e.r * 0.6, 12, '#9fd8ff')
+          if (b.pierce > 0) b.pierce--; else b.dead = true
+          continue
+        }
+        /* 지원기가 지키고 있으면 절반만 들어간다 */
+        e.hp -= b.dmg * (e.guarded ? 0.5 : 1)
+        e.flash = .1
         sfx('hit')
         /*
          * 박힌 자리에 불똥 한 장.
@@ -6109,6 +6257,7 @@ function collide() {
 
   /* 판정은 메인 한 대뿐이다. 윙맨은 그림만 있고 맞지 않는다. */
   for (const b of s.ebullets) {
+    if (b.warnT > 0) continue          // 예고 중에는 없는 것과 같다
     if (!near(b, pl, b.r + PLAYER_R)) continue
     b.dead = true
     hitPlayer(b.dmg || DMG.bullet)
@@ -6120,6 +6269,31 @@ function collide() {
     e.dead = true
     boom(e.x, e.y, 14, '#ffb45c')
     hitPlayer(e.kind === 'dive' ? DMG.dive : DMG.ram)
+  }
+  /*
+   * 죽은 뒤에 일어나는 일.
+   *
+   * 여기 한 자리에서 처리한다. 적을 죽이는 길이 셋이라(일반 충돌,
+   * 미사일 폭발, 번개) 각각에 붙이면 하나를 빠뜨린다 - 실제로
+   * 미사일과 번개는 점수 처리를 따로 갖고 있다.
+   */
+  for (const e of s.enemies) {
+    if (!e.dead || e.reaped) continue
+    e.reaped = true
+    if (e.splits) {
+      /* 갈라진 것은 부모보다 작고 빠르다. 옆으로 벌어지며 나온다 */
+      for (let i = 0; i < e.splits; i++) {
+        const c = mkEnemy('small', e.x + (i ? 16 : -16), e.y, i ? 0.7 : -0.7)
+        c.sp = Math.round(c.sp * 1.2)
+        s.enemies.push(c)
+      }
+      boom(e.x, e.y, 14, '#ffd27a')
+    }
+    if (e.boomR) {
+      boom(e.x, e.y, 26, '#ff8a5c')
+      sfx('boom', 0.7)
+      if ((pl.x - e.x) ** 2 + (pl.y - e.y) ** 2 < e.boomR * e.boomR) hitPlayer(DMG.dive)
+    }
   }
   s.enemies = s.enemies.filter((e) => !e.dead)
 
@@ -6133,7 +6307,7 @@ function collide() {
   for (const b of s.bullets) {
     if (b.dead) continue
     for (const e of s.ebullets) {
-      if (e.dead || !e.hp) continue
+      if (e.dead || !e.hp || e.warnT > 0) continue
       if (!near(b, e, e.r + b.r + 3)) continue
       e.hp--
       b.dead = true
@@ -6303,7 +6477,14 @@ for (const k in ENEMY_B64) {
   im.src = 'data:image/webp;base64,' + ENEMY_B64[k]
   ENEMY_IMG[k] = im
 }
-const ENEMY_ART_ALIAS = {}
+/*
+ * 새로 만든 넷은 아직 제 그림이 없다. 결이 맞는 것을 빌려 쓰되,
+ * 그 위에 코드로 표식을 덧그려서 구분한다 - 방패는 앞의 호,
+ * 분열은 가운데 금, 자폭은 붉은 맥박, 지원기는 둘레의 고리다.
+ */
+const ENEMY_ART_ALIAS = {
+  shield: 'tank', split: 'mid', bomber: 'dive', guard: 'gunner',
+}
 
 function enemyArt(kind) {
   kind = ENEMY_ART_ALIAS[kind] || kind
@@ -6727,6 +6908,54 @@ function drawEnemy(e) {
    * 그림은 이미 기수가 아래를 본다. 아래 도형 갈래처럼 180도 돌리면
    * 거꾸로 난다.
    */
+  /*
+   * 새로 만든 넷은 아직 제 그림이 없어 다른 것을 빌려 쓴다. 그대로
+   * 두면 무엇인지 알 수 없으므로 표식을 덧그린다 - 알아볼 수 없는
+   * 적은 새 적이 아니라 그냥 헷갈리는 적이다.
+   */
+  const mark = () => {
+    if (e.shield !== undefined && e.shield > 0) {
+      /* 앞을 가로지르는 호. 남은 양만큼 진해진다 */
+      const k = Math.max(0.25, e.shield / 55)
+      g.save(); g.translate(e.x, e.y)
+      g.strokeStyle = 'rgba(150,215,255,' + (0.35 + k * 0.5).toFixed(2) + ')'
+      g.lineWidth = 3.2
+      g.beginPath(); g.arc(0, 0, e.r + 7, 0.35, Math.PI - 0.35); g.stroke()
+      g.restore()
+    }
+    if (e.splits) {
+      /* 가운데 금. 여기가 갈라진다는 표시 */
+      g.save(); g.translate(e.x, e.y)
+      g.strokeStyle = 'rgba(255,220,120,.75)'; g.lineWidth = 2
+      g.setLineDash([4, 4])
+      g.beginPath(); g.moveTo(0, -e.r * .8); g.lineTo(0, e.r * .8); g.stroke()
+      g.setLineDash([])
+      g.restore()
+    }
+    if (e.boomR) {
+      /* 붉은 맥박. 가까울수록 빨라진다 */
+      const d = Math.hypot(state.player.x - e.x, state.player.y - e.y)
+      const sp = d < e.boomR * 1.6 ? 9 : 4
+      const a = .18 + Math.abs(Math.sin(e.t * sp)) * .3
+      g.fillStyle = 'rgba(255,90,70,' + a.toFixed(2) + ')'
+      g.beginPath(); g.arc(e.x, e.y, e.r + 6, 0, 6.283); g.fill()
+    }
+    if (e.auraR) {
+      /* 지키는 범위. 안 보이면 왜 안 죽는지 알 수 없다 */
+      g.save()
+      g.strokeStyle = 'rgba(120,255,190,.22)'; g.lineWidth = 1.4
+      g.setLineDash([7, 7]); g.lineDashOffset = -e.t * 22
+      g.beginPath(); g.arc(e.x, e.y, e.auraR, 0, 6.283); g.stroke()
+      g.setLineDash([])
+      g.restore()
+    }
+    if (e.guarded) {
+      /* 보호받는 쪽에도 표시한다. 절반만 들어가는 이유가 보여야 한다 */
+      g.strokeStyle = 'rgba(120,255,190,.5)'; g.lineWidth = 1.6
+      g.beginPath(); g.arc(e.x, e.y, e.r + 4, 0, 6.283); g.stroke()
+    }
+  }
+
   const art = enemyArt(e.kind)
   if (art) {
     const sz = e.r * (big ? 3.1 : 2.9)
@@ -6741,9 +6970,11 @@ function drawEnemy(e) {
       g.globalAlpha = 1
     }
     g.restore()
+    mark()
     return
   }
 
+  mark()
   g.save(); g.translate(e.x, e.y); g.rotate(Math.PI)
 
   /* 주익 */
@@ -7085,6 +7316,8 @@ const EBUL = {
   heavy: { glow: 'rgba(255,90,90,.34)',   body: '#e8503f', core: '#ffd2c9' },
   boss:  { glow: 'rgba(190,140,255,.32)', body: '#b388ff', core: '#efe4ff', },
   lance: { glow: 'rgba(255,255,255,.4)',  body: '#ffffff', core: '#ffffff', long: true },
+  /* 폭격탄. 크고 느리고 요격할 수 있다 */
+  bomb:  { glow: 'rgba(255,150,80,.34)',  body: '#e6e9ef', core: '#ffffff', long: true },
 }
 
 /*
@@ -7093,6 +7326,9 @@ const EBUL = {
  * 코드의 kind 와 그림 이름이 하나만 어긋난다. 무기 열쇠는 아직 'mine'
  * 인데(기체 서른 기의 id 가 그것에 매여 있다) 물건은 미사일이 됐다.
  */
+/* 폭격탄은 아군 미사일 그림을 180도 돌려 쓴다. 내려오는 물건이다 */
+const EBUL_ART_ALIAS = { bomb: 'missile' }
+
 const BULLET_KEY = {
   normal: 'rapid', rapid: 'rapid', spread: 'spread', laser: 'laser',
   homing: 'homing', pierce: 'pierce', wave: 'wave', orb: 'orb',
@@ -7428,10 +7664,37 @@ function draw() {
        * 안 읽힌다. 아픈 탄일수록 크고 진하게, 흔한 탄은 작고 옅게 둔다 -
        * 색이 정보가 되어야 피할 것을 고를 수 있다.
        */
+      /*
+       * 예고.
+       *
+       * 화면 위쪽에 붉은 삼각형이 뜨고, 그 아래로 열이 옅게 깔린다.
+       * 삼각형만 있으면 어느 열인지 눈으로 이어 붙여야 한다.
+       */
+      if (b.warnT > 0) {
+        const k = 1 - b.warnT / 2
+        const blink = .45 + Math.abs(Math.sin(b.warnT * 12)) * .5
+        g.save()
+        g.fillStyle = 'rgba(255,70,70,' + (0.05 + k * 0.07).toFixed(3) + ')'
+        g.fillRect(b.x - 26, 0, 52, H)
+        g.translate(b.x, 74)
+        const sz = 30 + k * 8
+        g.strokeStyle = 'rgba(255,80,80,' + blink.toFixed(2) + ')'
+        g.fillStyle = 'rgba(255,60,60,' + (blink * .28).toFixed(2) + ')'
+        g.lineWidth = 3
+        g.beginPath()
+        g.moveTo(0, -sz * .62); g.lineTo(sz * .58, sz * .44); g.lineTo(-sz * .58, sz * .44)
+        g.closePath(); g.fill(); g.stroke()
+        g.fillStyle = 'rgba(255,220,220,' + blink.toFixed(2) + ')'
+        g.fillRect(-2, -sz * .26, 4, sz * .38)
+        g.beginPath(); g.arc(0, sz * .27, 2.4, 0, 6.283); g.fill()
+        g.restore()
+        continue
+      }
       const C = EBUL[b.sh] || EBUL.small
-      const ei = bimg(EBUL_IMG, b.sh) || bimg(EBUL_IMG, 'small')
+      const ei = (b.sh === 'bomb' ? bimg(BULLET_IMG, 'missile') : null) ||
+                 bimg(EBUL_IMG, b.sh) || bimg(EBUL_IMG, 'small')
       if (ei) {
-        const w = b.r * (C.long ? 2.4 : 3.6)
+        const w = b.r * (b.sh === 'bomb' ? 1.5 : C.long ? 2.4 : 3.6)
         const h = w * (ei.naturalHeight / ei.naturalWidth)
         g.save(); g.translate(b.x, b.y)
         /* 길쭉한 탄만 눕힌다. 둥근 것은 돌려도 티가 안 나고 값만 든다 */
