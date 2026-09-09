@@ -5486,15 +5486,24 @@ function shoot(u, i, dt) {
   u.cd -= dt
   const lv = LV[state.player.lv]
   /*
-   * 기체 고유 성질을 이 판의 개조에 얹는다.
+   * 이 기체에 걸리는 것들.
    *
-   * 주운 개조(state.mods)는 편대 전체에 걸리고, 성질은 그 기체에만
-   * 걸린다. 둘을 여기서 한 번만 합치면 아래 add() 는 무엇이 어디서
-   * 왔는지 몰라도 된다 - 새 성질을 넣을 때 손댈 곳이 늘지 않는다.
+   *   주운 개조(state.mods)  **메인 기체에만** 붙는다
+   *   고유 성질(p.trait)     그 기체의 성질이라 어느 자리든 붙는다
+   *
+   * 전에는 개조가 편대 전부에 걸렸다. 그러면 「증편」 하나를 주웠을 때
+   * 네 기가 동시에 한 발씩 늘어서, 개조 하나가 실제로는 네 개 값을
+   * 한다 - 자리마다 화력 몫을 30%·10%로 깎아 놓은 것이 그 자리에서
+   * 도로 풀렸다. 조종하는 기체 하나만 강해지는 쪽이 「내가 주웠다」에
+   * 도 맞는다.
+   *
+   * 성질은 다르다. 그건 그 기체가 원래 가진 것이라 후방에 넣어도
+   * 따라간다 - 대신 그 자리의 화력 몫만큼만 값을 한다.
    */
+  const picked = i === MAIN_SLOT ? state.mods : NO_MODS
   const M = p.trait
-    ? MOD_KEYS.reduce((o, k) => (o[k] = (state.mods[k] || 0) + (p.trait[k] || 0), o), {})
-    : state.mods
+    ? MOD_KEYS.reduce((o, k) => (o[k] = (picked[k] || 0) + (p.trait[k] || 0), o), {})
+    : picked
 
   let rate = baseRate(p.weapon) * p.rate * upgRate(p.id) * pilotRate()
     / (0.85 + lv.mult * 0.15) * (1 - M.rate * 0.18)
@@ -8935,7 +8944,8 @@ function collide() {
        * 한 개를 무겁게 한다.
        */
       s.mods[it.mod] = Math.min(MOD_MAX, s.mods[it.mod] + 2)
-      banner(MODS[it.mod].name + ' ' + s.mods[it.mod])
+      /* 어디에 걸리는지 같이 적는다. 편대 전체에 걸리는 줄 알면 셈이 틀어진다 */
+      banner(MODS[it.mod].name + ' ' + s.mods[it.mod] + ' · 메인')
     } else {
       levelUp()
     }
@@ -9264,8 +9274,10 @@ function drawIsle(sl) {
  */
 /* 격납고 카드도 같은 그림을 써야 한다. 그래서 캔버스를 밖에서 받는다. */
 function drawShip(x, y, u, isMain) {
+  /* 개조가 메인에만 걸리므로 그림에도 메인에만 얹는다 - 안 그러면 거짓말이다 */
   drawShipOn(g, x, y, {
-    plane: u.plane, lv: state.player.lv, mods: state.mods, scale: isMain ? 1 : 0.58,
+    plane: u.plane, lv: state.player.lv, mods: isMain ? state.mods : NO_MODS,
+    scale: isMain ? 1 : 0.58,
   })
 }
 
