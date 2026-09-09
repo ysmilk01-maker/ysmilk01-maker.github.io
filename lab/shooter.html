@@ -4051,6 +4051,7 @@ function newState() {
     modDrops: 0,
     modCap: rollModCap(),
     boss: null, waveIdx: 0, banner: null, bannerT: 0, cleared: false,
+    supplyT: SUPPLY_FIRST,
     /* 총구 불꽃과 피격 불똥. 아주 짧게 떴다 사라지므로 따로 담는다 */
     muzzles: [], sparks: [],
     /* 끝없는 출격이면 첫 구역, 아니면 고른 판 */
@@ -4844,16 +4845,6 @@ function buildWaves(ch, sub) {
        */
       const gm = (ph.gap < 1 ? ph.gap + (1 - ph.gap) * (1 - ramp) : ph.gap) * solo * 0.667
       t += base * gm + r() * 1.1 * gm
-    }
-    /*
-     * 소강 구간에는 아이템을 하나 놓는다.
-     *
-     * 강화 아이템이 적을 잡아야만 나오니, 적이 없는 구간에서는 아무것도
-     * 안 생긴다. 숨 돌리는 자리에 보상이 있어야 그 자리가 의미가 된다.
-     */
-    if (ph.calm) {
-      const at = +(acc + len * ph.span * 0.5).toFixed(2)
-      out.push({ at, f: () => dropItem(60 + Math.random() * (W - 120), -20, true) })
     }
     acc = end
     if (t >= len) break
@@ -5722,6 +5713,36 @@ function rollModCap() {
   return r < 0.2 ? 0 : r < 0.6 ? 1 : MOD_CAP
 }
 
+/*
+ * 보급.
+ *
+ * 전에는 적을 잡아야만 아이템이 나왔다. 그러면 아이템이 「전리품」이라
+ * 잘 잡는 사람에게 몰리고, 밀리는 사람은 강화를 못 받아 더 밀린다 -
+ * 뒤처질수록 뒤처지는 구조였다. 소강 구간에 하나 놓는 땜질을 이미
+ * 해 뒀던 것도 그 때문이다.
+ *
+ * 보급은 판이 흐르는 대로 온다. 잡든 못 잡든 같은 간격으로 내려오므로
+ * 아이템이 실력에 대한 상이 아니라 판이 주는 밑천이 된다.
+ *
+ * 간격은 3.5~5.5초, 첫 보급은 1.2초.
+ *
+ * 처음엔 7~11초로 뒀다가 되돌렸다. 평범한 아이템은 판 안에서 기체
+ * 레벨을 올리는데(LV 5 면 화력 1.65배에 탄 두 발 추가), 격파 드롭을
+ * 걷어내니 그 상승 곡선이 통째로 사라졌다 - 재 보니 1-10 에서 판이
+ * 끝날 때 기체 레벨이 1.4/5 였고 여덟 판 중 0판을 깼다.
+ *
+ * 게다가 악순환이 돈다. 약하면 일찍 죽고, 일찍 죽으면 보급을 덜 받고,
+ * 덜 받으면 더 약하다. 그래서 앞으로 당기고 촘촘하게 한다 - 판 초반에
+ * 레벨이 올라야 그 뒤가 굴러간다.
+ */
+const SUPPLY_FIRST = 1.2
+const SUPPLY_GAP = [3.5, 5.5]
+
+/** 화면 위 아무 자리에서 보급품 하나가 내려온다 */
+function dropSupply() {
+  dropItem(56 + Math.random() * (W - 112), -24, true)
+}
+
 function dropItem(x, y, richer) {
   const s = state
   if (Math.random() < TICKET_DROP) {
@@ -5764,7 +5785,7 @@ function missileBurst(b) {
     s.score += e.score
     s.kills++
     boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
-    if (Math.random() < (e.kind === 'mid' ? .55 : .08)) dropItem(e.x, e.y, e.kind === 'mid')
+    /* 격파로는 아이템이 안 나온다. 아이템은 보급으로만 온다(dropSupply) */
     const before = s.ult
     s.ult = Math.min(ULT_MAX, s.ult + (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN)
     if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
@@ -5780,7 +5801,7 @@ function missileBurst(b) {
     s.score += u.score
     s.kills++
     boom(u.x, u.y, 24, '#ffcf7a')
-    if (Math.random() < .35) dropItem(u.x, u.y, true)
+    /* 지상도 마찬가지다 */
   }
 
   if (s.boss && (s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < (MISSILE_R + 14) ** 2) {
@@ -6741,7 +6762,33 @@ function update(dt) {
   s.ebullets = s.ebullets.filter((b) =>
     !b.dead && (b.warnT > 0 || (b.y > -60 && b.y < H + 40 && b.x > -40 && b.x < W + 40)))
 
-  for (const it of s.items) { it.y += 90 * dt; it.t += dt }
+  /*
+   * 보급. 판이 흐르는 대로 온다.
+   *
+   * **보스가 서면 끊긴다.** 보스전에도 계속 떨어뜨려 봤더니 여덟 판 중
+   * 한 판이었는데, 끊으니 여섯 판이 됐다. 보스를 보고 있어야 할 때
+   * 화면 위에서 물건이 계속 내려오면 눈과 몸이 둘로 나뉜다 - 주우러
+   * 가면 맞고, 안 주우면 아깝다.
+   *
+   * 규칙으로 세우면 판의 뼈대가 된다. 웨이브 구간에서 채우고, 보스는
+   * 채운 것으로 싸운다. 그러면 웨이브를 잘 넘기는 것이 보스전 준비가
+   * 된다 - 앞 구간이 그냥 지나가는 길이 아니게 된다.
+   */
+  s.supplyT -= dt
+  if (s.supplyT <= 0 && !s.boss) {
+    dropSupply()
+    s.supplyT = SUPPLY_GAP[0] + Math.random() * (SUPPLY_GAP[1] - SUPPLY_GAP[0])
+  }
+
+  /*
+   * 90 에서 165 로 올렸다.
+   *
+   * 격파 드롭은 적이 있던 자리 - 화면 가운데쯤 - 에서 났지만 보급은
+   * 맨 위에서 온다. 90 이면 플레이어에게 닿는 데 8.3초가 걸려서, 판
+   * 초반에 레벨이 못 오르고 그대로 보스를 만난다. 재 보니 보스 판이
+   * 여덟 판 중 0판이었다. 165 면 4.5초다.
+   */
+  for (const it of s.items) { it.y += 165 * dt; it.t += dt }
   s.items = s.items.filter((it) => it.y < H + 30)
 
   for (const p of s.parts) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .94; p.vy *= .94 }
@@ -6906,7 +6953,7 @@ function collide() {
           e.dead = true; s.score += e.score; s.kills++
           boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
           // 중형이 죽을 때마다 뭔가 떨어지니 화면이 아이템으로 덮였다
-          if (Math.random() < (e.kind === 'mid' ? .55 : .08)) dropItem(e.x, e.y, e.kind === 'mid')
+          /* 미사일·번개로 잡아도 같다 */
           // 큰 적일수록 많이 찬다. 열댓 마리 잡으면 한 번 쓴다
           const before = s.ult
           // 예전엔 잡졸 열일곱만 잡으면 궁이 찼다. 판이 궁으로만 굴러갔다
@@ -6927,7 +6974,7 @@ function collide() {
           u.dead = true; s.score += u.score; s.kills++
           boom(u.x, u.y, 24, '#ffcf7a')
           // 지상 위협은 피하기 까다로우니 개조가 더 자주 나온다
-          if (Math.random() < .35) dropItem(u.x, u.y, true)
+          /* 지상도 같다 */
         }
       }
     }
