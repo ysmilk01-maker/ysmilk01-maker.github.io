@@ -1131,6 +1131,17 @@ const ULT = {
 }
 const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는지는 처치 쪽에 있다
 /*
+ * 쌓아 둘 수 있는 발수.
+ *
+ * 전에는 하나였다. 가득 찬 뒤로는 잡아도 게이지가 안 오르니, 「지금
+ * 쓸 자리가 아닌데」 싶어도 흘려버리지 않으려고 아무 데나 썼다.
+ *
+ * 둘까지 쌓이면 한 발을 아껴 둘 수 있다. 보스 앞에서 두 발을 연달아
+ * 쓰는 길이 생기고, 그러려면 웨이브 구간을 궁 없이 넘겨야 한다 -
+ * 참는 것이 선택지가 된다.
+ */
+const ULT_STOCK = 2
+/*
  * 필살기 배수.
  *
  * 효과는 5분의 1 줄이고 게이지는 5분의 1 빨리 채운다. 한 판에 더 자주
@@ -5058,6 +5069,8 @@ const SUBS = 20
  * 판마다 관문이 하나씩 있는 셈이다.
  */
 const BOSS_AT = [5, 10, 15, 20]
+/** 보스 형태 다섯. 전함·전차·요새·모선·항모 */
+const BOSS_FORMS = ['ship', 'tank', 'fort', 'air', 'carrier']
 /** 보스가 안 서는 판. 여기엔 전부 중간보스가 선다 */
 function isMidStage(sub) { return !BOSS_AT.includes(sub) }
 
@@ -6024,7 +6037,26 @@ function spawnBoss(mid) {
    * 오히려 보스가 특별하지 않게 된다.
    */
   const bsub = (state.stage && state.stage.sub) || 1
-  const form = mid ? 'mid' : ['ship', 'tank', 'fort', 'air'][BOSS_AT.indexOf(bsub)] || 'air'
+  /*
+   * 보스 형태.
+   *
+   * 전에는 단계(5·10·15·20)만 보고 넷 중 하나를 골랐다. 자리가 넷이라
+   * 다섯째 형태를 넣을 데가 없었고, 챕터가 넷인데 어느 챕터를 가도
+   * 5단계는 늘 전함이었다 - 챕터가 바뀌어도 보스 순서가 똑같았다.
+   *
+   * 챕터와 단계를 같이 섞어 열여섯 자리에 다섯을 흩는다. 같은 5단계라도
+   * 챕터마다 다른 것이 서고, 한 챕터를 도는 동안 넷이 겹치지 않는다.
+   */
+  const bch = ((state.stage && state.stage.id) || 1) - 1
+  /*
+   * bch*4 + bch 로 썼다가 고쳤다. 그건 bch*5 라서 5로 나눈 나머지에서
+   * 챕터 항이 통째로 사라진다 - 네 챕터가 전부 같은 순서로 나왔다.
+   *
+   * 3을 곱한다. 5와 서로소라 챕터마다 시작점이 옮겨가고, 한 챕터
+   * 안에서는 넷이 겹치지 않는다.
+   */
+  const form = mid ? 'mid'
+    : BOSS_FORMS[(bch * 3 + BOSS_AT.indexOf(bsub)) % BOSS_FORMS.length]
   const mk = (key, name, dx, dy, r, mul, cd) => ({
     key, name, dx, dy, r, cd, flash: 0, alive: true,
     hp: Math.round(base * mul), maxHp: Math.round(base * mul),
@@ -6082,9 +6114,19 @@ function spawnBoss(mid) {
        * 부위 수가 곧 두께가 되면, 흩어 놓은 것이 재미가 아니라 벌이 된다.
        * 하나하나를 얇게 해서 총량을 나머지와 맞춘다.
        */
+      /*
+       * 판정을 키웠다.
+       *
+       * 부위가 넷이면 코어를 열기까지 자리를 네 번 옮겨야 한다. 값은
+       * 체력이 아니라 그 이동 시간이다 - 총량을 셋짜리보다 가볍게(0.74)
+       * 해 뒀는데도 재 보니 여덟 판 중 0판이었고 보스전이 131초까지 갔다.
+       *
+       * 반지름을 키우면 옮기는 폭이 줄어든다. 체력은 그대로 두고 「닿는
+       * 넓이」만 넓히는 것이라, 약해지는 게 아니라 덜 번거로워진다.
+       */
       fort: [
-        mk('lt', '좌 포좌', -44, 14, 17, 0.20, 1.0),
-        mk('rt', '우 포좌', 44, 14, 17, 0.20, 1.6),
+        mk('lt', '좌 포좌', -44, 14, 23, 0.20, 1.0),
+        mk('rt', '우 포좌', 44, 14, 23, 0.20, 1.6),
         /*
          * 가운데 둘은 더 얇게.
          *
@@ -6093,13 +6135,29 @@ function spawnBoss(mid) {
          * 요새만 유독 오래 걸린다 - 재 보니 세 기 편성으로 다른 보스는
          * 8~9/12 인데 요새만 3/12 였다.
          */
-        mk('tp', '상부 포탑', 0, -40, 19, 0.17, 2.2),
-        mk('en', '탄약고', 0, 44, 18, 0.17, 3.0),
+        mk('tp', '상부 포탑', 0, -40, 25, 0.17, 2.2),
+        mk('en', '탄약고', 0, 44, 24, 0.17, 3.0),
       ],
       air: [
         mk('lt', '좌 포탑', -40, 8, 17, 0.26, 1.0),
         mk('rt', '우 포탑', 40, 8, 17, 0.26, 1.7),
         mk('en', '엔진', 0, 34, 20, 0.40, 2.4),
+      ],
+      /*
+       * 항모 - 갑판을 따라 넷.
+       *
+       * 함교는 오른쪽에 치우쳐 있다(실제 항모가 그렇다). 사출기 둘은
+       * 기수 쪽(아래), 엘리베이터는 함미 쪽(위). 네 곳이 서로 멀어서
+       * 한 자리에 서서 다 부수기 어렵다 - 요새와 같은 성격인데 배치가
+       * 좌우로 더 벌어져 있다.
+       *
+       * 부위가 넷이라 총량은 요새와 같이 0.74 로 맞춘다.
+       */
+      carrier: [
+        mk('md', '함교', 34, 2, 25, 0.20, 1.0),
+        mk('lt', '좌 사출기', -30, 42, 22, 0.20, 1.6),
+        mk('rt', '우 사출기', 4, 48, 22, 0.17, 2.2),
+        mk('en', '엘리베이터', -14, -42, 24, 0.17, 2.8),
       ],
     }[form],
     core: { hp: base, maxHp: base, open: false },
@@ -6323,7 +6381,7 @@ function missileBurst(b) {
     boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
     /* 격파로는 아이템이 안 나온다. 아이템은 보급으로만 온다(dropSupply) */
     const before = s.ult
-    s.ult = Math.min(ULT_MAX, s.ult +
+    s.ult = Math.min(ULT_MAX * ULT_STOCK, s.ult +
       (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
     if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
   }
@@ -6432,7 +6490,7 @@ function chainFrom(from, b) {
       s.score += best.score
       s.kills++
       boom(best.x, best.y, 12, '#bff0ff')
-      s.ult = Math.min(ULT_MAX, s.ult + 8 * ULT_GAIN * perk('ult'))
+      s.ult = Math.min(ULT_MAX * ULT_STOCK, s.ult + 8 * ULT_GAIN * perk('ult'))
     }
     bit.push(best)
     cur = best
@@ -6584,7 +6642,8 @@ function fireUlt() {
   if (!s || !s.running || s.ult < ULT_MAX) return
   const k = ultKind()
   if (!k) return
-  s.ult = 0
+  /* 한 발만 깎는다. 남은 몫은 그대로 둔다 - 그래야 쌓아 둔 뜻이 있다 */
+  s.ult -= ULT_MAX
   s.ultUsed++
   s.ultKind = k
   banner(ULT[k].name)
@@ -6975,9 +7034,18 @@ function update(dt) {
           }
         }
         const bs = s.boss
-        /* 화면 위로 나가기 직전에도 터뜨린다. 조용히 사라지면 빗나간 건지
-           안 나간 건지 알 수 없다 */
-        if (hit || (bs && !bs.entering && near(b, bs, bs.r + b.r)) || b.y < 26) missileBurst(b)
+        /*
+         * 무언가에 닿았을 때만 터진다.
+         *
+         * 전에는 화면 위로 나가기 직전(y < 26)에도 터뜨렸다 - 조용히
+         * 사라지면 빗나간 건지 안 나간 건지 모른다는 이유였다. 그런데
+         * 거기는 허공이다. 아무것도 없는 자리에서 불꽃이 피고 소리까지
+         * 나니 「뭔가 맞았나」로 읽힌다.
+         *
+         * 빗나간 것은 빗나간 대로 조용히 나가는 게 맞다. 결과를 알리려고
+         * 없는 사건을 만들면 그건 정보가 아니라 잡음이다.
+         */
+        if (hit || (bs && !bs.entering && near(b, bs, bs.r + b.r))) missileBurst(b)
         break
       }
       case 'boomer':
@@ -7627,7 +7695,7 @@ function collide() {
           // 큰 적일수록 많이 찬다. 열댓 마리 잡으면 한 번 쓴다
           const before = s.ult
           // 예전엔 잡졸 열일곱만 잡으면 궁이 찼다. 판이 궁으로만 굴러갔다
-          s.ult = Math.min(ULT_MAX, s.ult +
+          s.ult = Math.min(ULT_MAX * ULT_STOCK, s.ult +
             (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
           if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
         }
@@ -8044,7 +8112,8 @@ function shade(hex, amt) {
  */
 function partArt(bs, p, dead) {
   const d = dead ? 'd' : ''
-  if (p.key === 'md' && bs.form === 'ship') return 'ptBrg' + d
+  /* 함교는 전함에도 항모에도 있다 */
+  if (p.key === 'md' && (bs.form === 'ship' || bs.form === 'carrier')) return 'ptBrg' + d
   if (p.key === 'en') {
     if (bs.form === 'tank') return 'ptTrk' + d
     if (bs.form === 'fort') return 'ptAmo' + d
@@ -9442,8 +9511,19 @@ function draw() {
   {
     ULT_BTN.x = W - 52
     ULT_BTN.y = H - 56
-    const ready = s.ult >= ULT_MAX
-    const r = s.ult / ULT_MAX
+    /*
+     * 게이지가 둘까지 쌓인다.
+     *
+     *   stock  다 찬 발수(0·1·2)
+     *   r      지금 채우는 중인 한 발의 비율
+     *
+     * 테두리는 늘 「지금 채우는 중인 것」만 돈다. 두 발을 한 바퀴에
+     * 겹쳐 그리면 반 바퀴가 한 발인지 두 발의 절반인지 알 수 없다.
+     * 쌓인 발수는 단추 옆의 점으로 센다 - 개수는 세는 것이 정확하다.
+     */
+    const stock = Math.min(ULT_STOCK, Math.floor(s.ult / ULT_MAX))
+    const ready = stock > 0
+    const r = stock >= ULT_STOCK ? 1 : (s.ult % ULT_MAX) / ULT_MAX
     const k = ultKind()
 
     g.save()
@@ -9457,6 +9537,22 @@ function draw() {
     g.strokeStyle = ready ? '#7fe3ff' : '#4a90c8'
     g.lineWidth = 4
     g.beginPath(); g.arc(0, 0, ULT_BTN.r, -Math.PI / 2, -Math.PI / 2 + r * Math.PI * 2); g.stroke()
+    /*
+     * 쌓인 발수. 단추 위쪽에 점으로.
+     *
+     * 두 개가 다 차면 더 안 쌓이므로 그때는 점 둘이 다 켜진다 -
+     * 「지금 흘리고 있다」가 보여야 쓸 때를 고른다.
+     */
+    for (let i = 0; i < ULT_STOCK; i++) {
+      const dx = (i - (ULT_STOCK - 1) / 2) * 13
+      g.beginPath(); g.arc(dx, -ULT_BTN.r - 11, 4.2, 0, Math.PI * 2)
+      g.fillStyle = i < stock ? '#7fe3ff' : 'rgba(255,255,255,.18)'
+      g.fill()
+      if (i < stock) {
+        g.strokeStyle = 'rgba(127,227,255,.5)'; g.lineWidth = 2
+        g.beginPath(); g.arc(dx, -ULT_BTN.r - 11, 7, 0, Math.PI * 2); g.stroke()
+      }
+    }
     /*
      * 아이콘을 크게, 이름은 아래로 작게.
      *
