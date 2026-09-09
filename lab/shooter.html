@@ -74,7 +74,8 @@
   }
 
   .screen {
-    position: fixed; inset: 0; background: var(--bg);
+    position: fixed; inset: 0;
+    background: var(--tex, none) repeat, var(--bg);
     display: flex; flex-direction: column; padding: 18px;
   }
   .screen[hidden] { display: none !important; }
@@ -104,7 +105,8 @@
   /* 편대 슬롯 */
   .slots { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 8px; margin-bottom: 14px; }
   .slot {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    background: var(--tex, none) repeat, var(--panel);
+    border: 1px solid var(--line); border-radius: 14px;
     padding: 11px 8px; text-align: center; cursor: pointer; min-height: 98px;
   }
   .slot.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
@@ -117,7 +119,8 @@
   .list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    background: var(--tex, none) repeat, var(--panel);
+    border: 1px solid var(--line); border-radius: 14px;
     padding: 12px 13px; cursor: pointer; position: relative;
   }
   .card.locked { opacity: .5; }
@@ -171,7 +174,8 @@
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
     display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;
-    background: rgba(8,9,13,.94); backdrop-filter: blur(10px);
+    background: var(--tex, none) repeat, rgba(8,9,13,.94);
+    backdrop-filter: blur(10px);
     border-top: 1px solid var(--line);
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   }
@@ -188,7 +192,8 @@
   /* 편대 요약 */
   .sum { display: grid; gap: 7px; margin-top: 14px; }
   .row {
-    display: flex; align-items: center; gap: 9px; background: var(--panel);
+    display: flex; align-items: center; gap: 9px;
+    background: var(--tex, none) repeat, var(--panel);
     border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; font-size: 13px;
   }
   .row .k { color: var(--muted); }
@@ -1397,6 +1402,89 @@ const BOOM_IMG = BOOM_B64.map((d) => {
   im.src = 'data:image/webp;base64,' + d
   return im
 })
+
+
+/* ================================================================
+ * 배경 질감
+ *
+ * 그림 파일로 받을 수도 있었지만 코드로 만든다. 타일 두 장이면 수백 KB 인데,
+ * 여기서 만들면 0 바이트이고 색을 바꿀 때 파일을 다시 받지 않아도 된다.
+ *
+ * 만드는 법은 네 겹이다.
+ *   결      세로로 아주 옅은 줄. 금속을 갈아 낸 자국
+ *   격자    64 픽셀마다 선 하나. 군용 지도
+ *   십자    격자가 만나는 자리에 작은 +
+ *   리벳    격자 칸 가운데 점 하나와 그 위의 반사광
+ *
+ * 이어 붙였을 때 이음매가 안 보여야 한다. 세로 줄은 위아래로 끝까지 긋고,
+ * 격자와 리벳은 타일 크기의 약수 자리에만 찍는다. 그러면 어디서 잘라도
+ * 무늬가 맞는다.
+ *
+ * 아주 옅게 깐다. 눈에 띄면 배경이 아니라 무늬가 되고, 그 위의 글자가
+ * 읽히지 않는다.
+ * ================================================================ */
+function makeTexture() {
+  const S = 256
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const x = c.getContext('2d')
+
+  /* 같은 씨드면 같은 무늬. 새로고침마다 배경이 달라지면 그것도 이상하다 */
+  let n = 20260909
+  const rnd = () => {
+    n = (n * 1103515245 + 12345) >>> 0
+    return (n >>> 8) / 16777216
+  }
+
+  // 1) 결 - 세로로 긋는다. 위아래 끝까지 가야 이어 붙여도 안 끊긴다
+  for (let i = 0; i < 260; i++) {
+    const px = Math.floor(rnd() * S)
+    x.fillStyle = 'rgba(255,255,255,' + (0.004 + rnd() * 0.012).toFixed(4) + ')'
+    x.fillRect(px, 0, rnd() < .75 ? 1 : 2, S)
+  }
+
+  // 2) 격자
+  x.strokeStyle = 'rgba(160,190,230,.030)'
+  x.lineWidth = 1
+  for (let g = 0; g <= S; g += 64) {
+    x.beginPath(); x.moveTo(g + .5, 0); x.lineTo(g + .5, S); x.stroke()
+    x.beginPath(); x.moveTo(0, g + .5); x.lineTo(S, g + .5); x.stroke()
+  }
+
+  // 3) 십자 - 격자가 만나는 자리
+  x.strokeStyle = 'rgba(160,190,230,.055)'
+  for (let gx = 0; gx <= S; gx += 64) {
+    for (let gy = 0; gy <= S; gy += 64) {
+      x.beginPath()
+      x.moveTo(gx - 3.5, gy + .5); x.lineTo(gx + 4.5, gy + .5)
+      x.moveTo(gx + .5, gy - 3.5); x.lineTo(gx + .5, gy + 4.5)
+      x.stroke()
+    }
+  }
+
+  // 4) 리벳 - 칸 가운데. 어두운 점 위에 반사광 하나
+  for (let gx = 32; gx < S; gx += 64) {
+    for (let gy = 32; gy < S; gy += 64) {
+      x.fillStyle = 'rgba(0,0,0,.16)'
+      x.beginPath(); x.arc(gx, gy, 2.4, 0, 6.284); x.fill()
+      x.fillStyle = 'rgba(190,215,245,.07)'
+      x.beginPath(); x.arc(gx - .6, gy - .7, 1.5, 0, 6.284); x.fill()
+    }
+  }
+
+  // 5) 티끌 - 아주 미세한 얼룩. 완전히 매끈하면 인쇄물처럼 죽어 보인다
+  for (let i = 0; i < 520; i++) {
+    x.fillStyle = 'rgba(255,255,255,' + (0.006 + rnd() * 0.014).toFixed(4) + ')'
+    x.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * S), 1, 1)
+  }
+
+  return c.toDataURL('image/png')
+}
+
+{
+  const url = makeTexture()
+  document.documentElement.style.setProperty('--tex', 'url(' + url + ')')
+}
 
 /* ================================================================
  * 화면 넷
