@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>사주 여덟 글자 · 나인투식스랩</title>
-<meta name="description" content="태양황경으로 절기를 계산해 사주 여덟 글자를 세웁니다. 오늘의 운, 오늘의 옷차림, 궁합까지. 생년월일은 폰 밖으로 안 나갑니다.">
+<meta name="description" content="생년월일만 있으면 5초. 절기 기준 만세력으로 사주를 세우고 오늘의 운·옷차림·궁합까지. 계산은 기기 안에서 끝납니다.">
 <meta name="theme-color" content="#000000">
 <meta property="og:title" content="사주 여덟 글자">
 <meta property="og:description" content="생년월일은 폰 밖으로 안 나갑니다. 오늘의 운, 오늘의 옷차림, 궁합까지.">
@@ -27,15 +27,14 @@
   </ul>
 </nav>
 
+<!-- 첫 화면. 폰이 가운데 서고 글은 위, 여는 버튼은 아래 -->
 <section class="stage app-stage" style="--tint:var(--saju); --glow:rgba(247,108,130,0.10)">
   <div class="inner">
     <a class="back rise" href="../index.html#apps">← 모든 앱</a>
     <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
     <h1 class="rise">생년월일은<br>폰 밖으로 안 나갑니다</h1>
     <p class="desc rise">
-      태양황경으로 절기를 계산해 사주 여덟 글자를 세웁니다. 오늘의 운과 궁합,
-      그리고 기상청 날씨에 내 사주의 기운을 겹친 오늘의 옷차림까지.
-      사주 계산은 전부 기기 안에서 끝납니다.
+      태양황경으로 절기를 계산해 사주 여덟 글자를 세웁니다. 오늘의 운과 궁합, 그리고 기상청 날씨에 내 사주의 기운을 겹친 오늘의 옷차림까지. 사주 계산은 전부 기기 안에서 끝납니다.
     </p>
     <div class="phone rise">
       <img src="../img/saju.png" width="1170" height="2532" alt="사주 여덟 글자 시작 화면. 오늘의 일진과 절기 기준 만세력 설명." decoding="async">
@@ -49,6 +48,94 @@
     </ul>
     <a class="open rise" href="intoss://saju-eight">토스에서 열기</a>
     <p class="hint rise">날씨만 기상청에서 받아오고 위치 정보는 쓰지 않습니다. 검색창에 ‘사주 여덟 글자’</p>
+  </div>
+</section>
+
+<!-- 화면 둘러보기. 스토어에 올린 스크린샷 그대로 — 옆으로 넘긴다 -->
+<section class="sec shots" style="--tint:var(--saju)">
+  <div class="inner">
+    <div class="shots-head">
+      <p class="eyebrow rise">화면 둘러보기</p>
+      <h2 class="rise">앱 안은 이렇게 생겼습니다</h2>
+    </div>
+    <ul class="strip">
+      <li class="rise"><img src="../img/shots/saju-1.webp" width="636" height="1048" alt="생년월일을 넣는 시작 화면" loading="lazy" decoding="async"></li>
+      <li class="rise"><img src="../img/shots/saju-2.webp" width="636" height="1048" alt="여덟 글자가 세워진 나의 명식" loading="lazy" decoding="async"></li>
+      <li class="rise"><img src="../img/shots/saju-3.webp" width="636" height="1048" alt="재물·애정·일·건강 오늘의 운세와 옷차림" loading="lazy" decoding="async"></li>
+    </ul>
+    <p class="strip-hint rise">옆으로 넘기세요</p>
+  </div>
+</section>
+
+<!-- 특징. 숫자 하나 + 제목 + 두 줄. 길게 쓰면 안 읽는다 -->
+<section class="sec" style="--tint:var(--saju)">
+  <div class="inner">
+    <p class="eyebrow rise">특징</p>
+    <h2 class="rise">절기로 세우고<br>기기 안에서 끝냅니다</h2>
+    <p class="lead rise">사주는 태어난 순간의 하늘을 여덟 글자로 적는 것입니다. 그 계산에 서버가 필요하지 않아서, 보내지 않습니다.</p>
+    <ul class="feats">
+      <li class="rise"><b>5초</b><h3>생년월일만</h3><p>시간을 모르면 몰라도 됩니다. 여덟 글자가 바로 세워집니다.</p></li>
+      <li class="rise"><b>절기</b><h3>만세력 기준</h3><p>태양황경으로 절기를 계산합니다. 1987·1988년 서머타임과 1954~1961년 표준시 차이까지 보정합니다.</p></li>
+      <li class="rise"><b>오늘</b><h3>재물 · 애정 · 일 · 건강</h3><p>오늘의 일진과 내 명식을 겹쳐 네 갈래로 봅니다. 이번 주 흐름도 같이.</p></li>
+      <li class="rise"><b>날씨</b><h3>오늘의 옷차림</h3><p>기상청 예보에 내 사주의 기운을 얹어 오늘 뭘 입을지 색과 소재로 권합니다.</p></li>
+      <li class="rise"><b>둘</b><h3>궁합</h3><p>상대 생년월일을 넣으면 두 명식을 나란히 놓고 봅니다. 상대 정보도 기기 안에만 있습니다.</p></li>
+      <li class="rise"><b>0건</b><h3>서버로 나가는 개인정보</h3><p>생년월일·명식·궁합 상대 모두 폰 안에서만. 밖으로 나가는 건 날씨 요청 하나입니다.</p></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 사주는 랭킹 대신 "무엇이 나가고 무엇이 남는지"를 보여준다. 이 앱의 약속이다 -->
+<section class="sec" style="--tint:var(--saju)">
+  <div class="inner">
+    <p class="eyebrow rise">약속</p>
+    <h2 class="rise">폰 밖으로 나가는 것,<br>안 나가는 것</h2>
+    <div class="inout rise">
+      <div>
+        <h3 class="stay">폰 안에만</h3>
+        <ul>
+          <li>생년월일과 태어난 시간</li>
+          <li>세워진 여덟 글자(명식)</li>
+          <li>궁합 상대의 생년월일</li>
+          <li>오늘의 운·옷차림 결과</li>
+        </ul>
+      </div>
+      <div>
+        <h3>밖으로 나가는 것</h3>
+        <ul>
+          <li>기상청 날씨 요청 <span>— 사용자가 고른 지역명만</span></li>
+          <li>광고 배너 요청 <span>— 토스 광고 SDK 가 보냄</span></li>
+          <li>그 외 <span>— 없음</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 여는 법 — 밝은 구간 -->
+<section class="stage light-stage" style="--tint:var(--saju)">
+  <div class="inner">
+    <p class="eyebrow rise" style="color:var(--muted-light)">여는 법</p>
+    <h2 class="rise">세 번이면 됩니다</h2>
+    <ol class="steps">
+      <li class="rise"><i>1</i><h3>토스 앱을 엽니다</h3><p>따로 설치할 게 없습니다. 토스가 이미 있으면 끝입니다.</p></li>
+      <li class="rise"><i>2</i><h3>검색창에 이름을 칩니다</h3><p>‘사주 여덟 글자’ 또는 ‘사주’.</p></li>
+      <li class="rise"><i>3</i><h3>생년월일을 넣습니다</h3><p>입력한 값은 이 폰에만 저장됩니다. 지우면 끝입니다.</p></li>
+    </ol>
+    <a class="open rise" href="intoss://saju-eight">토스에서 열기</a>
+  </div>
+</section>
+
+<!-- 알아둘 것. 작게 쓰지만 빼지 않는다 -->
+<section class="sec" style="--tint:var(--saju)">
+  <div class="inner">
+    <p class="eyebrow rise">알아둘 것</p>
+    <h2 class="rise">먼저 말씀드립니다</h2>
+    <ul class="notes">
+      <li class="rise"><strong>재미로 보세요.</strong> 운세는 결정을 대신하지 않습니다.</li>
+      <li class="rise">날씨는 기상청 공개 예보를 받습니다. 위치 정보는 쓰지 않고, 지역은 사용자가 고릅니다.</li>
+      <li class="rise">생년월일·명식·궁합 상대 정보는 서버로 보내지 않습니다. 앱을 지우면 같이 지워집니다.</li>
+      <li class="rise">광고는 배너 하나뿐이고, 어떤 기능도 광고를 봐야 열리지 않습니다.</li>
+    </ul>
   </div>
 </section>
 
