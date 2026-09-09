@@ -387,6 +387,20 @@
   }
   .sti.off { opacity: .22; filter: grayscale(1); }
 
+  /*
+   * 끝없는 출격 칸.
+   *
+   * 판 목록 아래에 따로 둔다. 목록 안에 섞으면 스물한 번째 판으로
+   * 읽히는데, 이건 판이 아니라 다른 놀이다.
+   */
+  .card.zone { margin-top: 16px; border-color: rgba(255,200,90,.42); }
+  .card.zone .nm { color: var(--gold, #ffd98a); }
+  .card.zone .up { display: flex; align-items: center; gap: 10px; }
+  .card.zone .up .lvl { flex: 1; }
+  .card.zone button.small { padding: 8px 18px; font-size: 13px; }
+  .card.zone.lock { opacity: .5; border-color: var(--line); }
+  .card.zone.lock .nm { color: var(--dim); }
+
   /* ==============================================================
    * 결과 화면
    *
@@ -1315,7 +1329,7 @@ function load() {
     shardP: {},                     // 기체 조각. 기체 id -> 개수
     shardG: {},                     // 파일럿 조각. 등급 -> 개수
     pull: { plane: 0, pilot: 0 },   // 뽑은 횟수. 천장 계산용
-    stats: { runs: 0, kills: 0, best: 0, clears: 0 },
+    stats: { runs: 0, kills: 0, best: 0, clears: 0, zoneBest: 0 },
     scores: [],
     chapter: 0,                     // 지금 고른 챕터
     sub: 1,                         // 지금 고른 단계
@@ -3595,9 +3609,25 @@ function renderStage() {
     `<div class="nm">${ch.id}. ${ch.name}</div><div class="de">${ch.sub}</div>` +
     `<div class="up"><span class="lvl">적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}` +
     ` · 별 ${chapterStars(mapCh)}/${SUBS * 3}</span></div></div>` +
-    `<div class="nodes">${nodes}</div>`
+    `<div class="nodes">${nodes}</div>` +
+    /*
+     * 끝없는 출격.
+     *
+     * 1챕터를 끝까지 깨야 열린다. 규칙을 다 배우기 전에 열어 두면
+     * 여기부터 눌러 보고 죽어서, 판 진행이 시작도 안 된다.
+     */
+    (zoneOpen()
+      ? `<div class="card zone" id="zoneCard">` +
+        `<div class="nm">끝없는 출격</div>` +
+        `<div class="de">구역이 끝나면 다음 구역이 이어집니다. 죽을 때까지.</div>` +
+        `<div class="up"><span class="lvl">최고 기록 제 ${prog.stats.zoneBest || 0} 구역</span>` +
+        `<button class="small" id="zoneGo">출격</button></div></div>`
+      : `<div class="card zone lock"><div class="nm">끝없는 출격</div>` +
+        `<div class="de">${CHAPTERS[0].name} ${SUBS}단계를 깨면 열립니다.</div></div>`)
 
   paintStage(el.querySelector('.pv'), ch)
+  const zg = document.getElementById('zoneGo')
+  if (zg) zg.onclick = (e) => { e.stopPropagation(); doLaunch(true) }
 
   el.querySelectorAll('[data-ch]').forEach((b) => {
     const i = +b.dataset.ch
@@ -3914,7 +3944,10 @@ function newState() {
     boss: null, waveIdx: 0, banner: null, bannerT: 0, cleared: false,
     /* 총구 불꽃과 피격 불똥. 아주 짧게 떴다 사라지므로 따로 담는다 */
     muzzles: [], sparks: [],
-    stage: curStage(), theme: THEMES[curStage().theme],
+    /* 끝없는 출격이면 첫 구역, 아니면 고른 판 */
+    zone: zoneRun ? 1 : 0,
+    stage: zoneRun ? zoneStage(1) : curStage(),
+    theme: THEMES[(zoneRun ? zoneStage(1) : curStage()).theme],
   }
 }
 /* 땅. 슬래브가 흘러가야 지상 유닛이 떠 있지 않고 붙어 보인다. */
@@ -4673,6 +4706,100 @@ function curStage() {
     fireMul: (ch.fireMul || 1) * (1 - (sub - 1) * 0.006),
   }
 }
+/* ================================================================
+ * 끝없는 출격
+ *
+ * 예순 판을 다 깨면 할 것이 없어진다. 랭킹은 「내 최고 점수」인데 그
+ * 점수를 올릴 자리가 3-20 반복밖에 없었다 - 이미 깬 판을 또 깨는 것은
+ * 기록 경신이 아니라 노동이다.
+ *
+ * 구역이 끝나면 다음 구역을 이어 붙인다. 죽을 때까지 간다. 웨이브도
+ * 보스도 적도 이미 있는 것을 그대로 쓴다 - 새로 만드는 것은 「언제
+ * 끝내는가」 하나뿐이다.
+ *
+ * 예순 구역을 넘으면 처음으로 돌아가되 한 바퀴마다 배수가 곱해진다.
+ * 무한히 어려워지므로 어디까지 갔는지가 곧 실력이다.
+ * ================================================================ */
+
+/** 한 바퀴는 세 챕터 × 스무 판 */
+const ZONE_LOOP = CHAPTERS.length * SUBS
+
+/**
+ * n 번째 구역.
+ *
+ * curStage() 와 같은 모양을 돌려준다. 판 안에서는 이 둘을 구분하지 않으므로
+ * 필드가 하나라도 빠지면 그 자리에서 터진다.
+ *
+ * **겉모습과 난이도를 떼어 놓는다.** 챕터를 그냥 돌리면 난이도가 톱니가
+ * 된다 - 처음에 그렇게 했더니 60구역 적 체력이 3.26 인데 61구역이 0.69 로
+ * 떨어졌다. 한 바퀴 안에서 여섯 배가 오르는데 바퀴 배수는 1.32 뿐이라,
+ * 예순 구역을 버틴 사람이 예순한 구역에서 쉬어 가는 꼴이었다.
+ *
+ * 그래서 챕터는 배경과 웨이브 구성(어떤 적이 나오는가)에만 쓰고, 세기는
+ * 구역 번호 하나로만 매긴다. 그러면 한 번도 안 쉬고 오른다.
+ */
+function zoneStage(n) {
+  const loop = Math.floor((n - 1) / ZONE_LOOP)
+  const idx = (n - 1) % ZONE_LOOP
+  let ci = Math.floor(idx / SUBS)
+  /*
+   * 두 바퀴째부터는 1챕터를 건너뛴다.
+   *
+   * 폭격과 직선 미사일이 2챕터부터 나온다. 되돌아가면 세기는 올랐는데
+   * 위협 종류가 줄어서, 더 어려운데 더 심심해진다.
+   */
+  if (loop > 0) ci = 1 + (ci % (CHAPTERS.length - 1))
+  const sub = (idx % SUBS) + 1
+  const ch = CHAPTERS[ci]
+
+  /* 구역마다 5.8%. 서른 구역에 다섯 배, 예순 구역에 스물일곱 배 */
+  const d = Math.pow(1.058, n - 1)
+
+  return {
+    id: ch.id, sub, name: '제 ' + n + ' 구역', chapter: ch.name, theme: ch.theme,
+    waves: buildWaves(ch, sub),
+    /*
+     * 보스는 다섯 구역에 한 번 선다. 챕터 끝 보스만큼 두꺼우면 거기서
+     * 매번 멈추므로 얇게 시작해서 같이 오른다.
+     */
+    bossHp: Math.round(CHAPTERS[0].bossHp * 0.30 * d),
+    hpMul: 0.52 * d,
+    /* 속도와 사격은 상·하한을 둔다. 곱하기로 끝까지 가면 피할 자리가 없어진다 */
+    spMul: Math.min(2.4, 1.14 * Math.pow(1.009, n - 1)),
+    fireMul: Math.max(0.42, 3.1 * Math.pow(0.972, n - 1)),
+  }
+}
+
+/** 끝없는 출격으로 들어가는가. start() 가 이걸 보고 첫 구역을 만든다 */
+let zoneRun = false
+
+/** 1챕터를 끝까지 깨야 열린다. 규칙을 다 배운 뒤에 오는 자리다 */
+function zoneOpen() { return starOf(0, SUBS) > 0 }
+
+/**
+ * 다음 구역으로 넘어간다.
+ *
+ * 판을 새로 시작하지 않는다 - 체력도 개조도 궁극기도 그대로 안고 간다.
+ * 그래야 「얼마나 아껴 왔는가」가 다음 구역의 밑천이 된다.
+ */
+function nextZone() {
+  const s = state
+  s.zone = (s.zone || 1) + 1
+  s.stage = zoneStage(s.zone)
+  s.theme = THEMES[s.stage.theme]
+  s.waveIdx = 0
+  s.t = 0
+  s.clearWait = 0
+  s.cleared = false
+  /* 구역을 넘을 때마다 조금 채워 준다. 안 주면 서너 구역에서 무조건 끝난다 */
+  const pl = s.player
+  const before = pl.hp
+  pl.hp = Math.min(pl.maxHp, pl.hp + pl.maxHp * 0.18)
+  banner('제 ' + s.zone + ' 구역')
+  if (pl.hp > before + 1) sfx('pick')
+  if (s.zone > (prog.stats.zoneBest || 0)) { prog.stats.zoneBest = s.zone; save() }
+}
+
 /*
  * 폭격.
  *
@@ -5232,6 +5359,11 @@ function killBoss(bs) {
   boom(bs.x, bs.y, bs.mid ? 46 : 70, '#ffd27a')
   s.score += bs.mid ? 1800 : 4000
   s.boss = null
+  /*
+   * 끝없는 출격은 보스를 잡아도 안 끝난다. 잠깐 두고 다음 구역으로 넘어간다.
+   * 바로 넘기면 터지는 그림이 잘려서 잡은 실감이 안 난다.
+   */
+  if (s.zone) { setTimeout(() => { if (s.running) nextZone() }, 900); return }
   s.cleared = true
   setTimeout(() => end(true), 900)
 }
@@ -5905,6 +6037,8 @@ function update(dt) {
   if (!s.cleared && !s.boss && s.waveIdx >= wv.length && s.enemies.length === 0) {
     s.clearWait = (s.clearWait || 0) + dt
     if (s.clearWait > 1.2) {
+      /* 끝없는 출격은 여기서 안 끝난다. 다음 구역을 이어 붙인다 */
+      if (s.zone) { nextZone(); return }
       s.cleared = true
       banner('작전 완료')
       setTimeout(() => { if (s.running) end(true) }, 800)
@@ -8554,12 +8688,21 @@ function end(win) {
 
   const sg = state.stage
   /*
+   * 끝없는 출격은 판 진행과 아무 상관이 없다.
+   *
+   * 별도, 다음 단계 열기도, 최고 점수 기록도 판 번호에 묶여 있는데
+   * 구역은 그 번호를 갖지 않는다. 그대로 두면 3챕터 20단계 칸에
+   * 엉뚱한 별이 박힌다.
+   */
+  const zone = state.zone || 0
+
+  /*
    * 단계 평가.
    *
    * 깨면 별 하나, 한 대도 안 잃으면 둘, 체력까지 70% 넘게 남기면 셋.
    * 최고 기록만 남는다 - 두 번째부터는 별이 줄지 않는다.
    */
-  const key = stageKey(prog.chapter || 0, curSub())
+  const key = zone ? null : stageKey(prog.chapter || 0, curSub())
   /*
    * 별은 맞은 횟수로 준다.
    *
@@ -8579,13 +8722,13 @@ function end(win) {
     if (state.hitCount <= 12) rate++
     if (state.hitCount <= 4) rate++
   }
-  const before = prog.stars[key] || 0
-  if (rate > before) prog.stars[key] = rate
+  const before = key ? (prog.stars[key] || 0) : 0
+  if (key && rate > before) prog.stars[key] = rate
   bumpMissions(win, rate, true)
-  if (state.score > (prog.stageBest[key] || 0)) prog.stageBest[key] = state.score
+  if (key && state.score > (prog.stageBest[key] || 0)) prog.stageBest[key] = state.score
   /* 깼으면 다음 단계를 미리 골라 둔다. 매번 지도로 돌아가지 않아도 되게 */
   const nextSub = curSub() + 1
-  if (win && nextSub <= SUBS) prog.sub = nextSub
+  if (!zone && win && nextSub <= SUBS) prog.sub = nextSub
 
   const stars = win ? STAR_CLEAR : STAR_FAIL
   prog.star += stars
@@ -8609,7 +8752,7 @@ function end(win) {
   save()
 
   document.getElementById('overTitle').textContent =
-    win ? `${sg.chapter} ${sg.sub}단계 클리어` : '격추됨'
+    zone ? `제 ${zone} 구역에서 격추` : win ? `${sg.chapter} ${sg.sub}단계 클리어` : '격추됨'
 
   /*
    * 보상은 칸으로 낸다.
@@ -8675,17 +8818,25 @@ function end(win) {
       (state.score >= st.best ? ' · 최고 기록' : '') +
       ' · 누적 ' + prog.total.toLocaleString('ko-KR') + '점</div>' +
     '<div class="rgrid">' + cells + '</div>' +
-    (win
+    (zone
+      ? '<div class="rrate"><span class="stars" style="font-size:30px">제 ' + zone + ' 구역</span>' +
+        '<span class="note">' +
+          (zone >= (prog.stats.zoneBest || 0) ? '가장 멀리 갔습니다' :
+           '최고 기록 제 ' + (prog.stats.zoneBest || 0) + ' 구역') +
+          ' · 맞은 횟수 ' + state.hitCount +
+        '</span></div>'
+      : '') +
+    (win && !zone
       ? '<div class="rrate"><span class="stars">' +
           '<i class="sti"></i>'.repeat(rate) + '<i class="sti off"></i>'.repeat(3 - rate) +
         '</span><span class="note">' + rateNote + '</span></div>'
       : '') +
     lvBox +
-    (win && nextSub <= SUBS ? '<div class="rnext"><b>' + nextSub + '단계</b>가 열렸습니다</div>' : '') +
-    (win && nextSub > SUBS && CHAPTERS[(prog.chapter || 0) + 1]
+    (!zone && win && nextSub <= SUBS ? '<div class="rnext"><b>' + nextSub + '단계</b>가 열렸습니다</div>' : '') +
+    (!zone && win && nextSub > SUBS && CHAPTERS[(prog.chapter || 0) + 1]
       ? '<div class="rnext"><b>' + CHAPTERS[(prog.chapter || 0) + 1].name + '</b> 이 열렸습니다</div>' : '')
   const rv = document.getElementById('revive')
-  rv.hidden = win || state.adUsed.revive >= AD_LIMIT.revive
+  rv.hidden = (win && !zone) || state.adUsed.revive >= AD_LIMIT.revive
   scOver.hidden = false
   sfx(win ? 'clear' : 'down')
 
@@ -8714,7 +8865,13 @@ function end(win) {
 }
 
 /* 출격은 두 화면에서 부를 수 있다. 처리는 한 곳에만 둔다 */
-function doLaunch() {
+/**
+ * 출격.
+ *
+ * @param zoneMode 끝없는 출격인가. start() 가 이 값을 보고 첫 구역을 만든다
+ */
+function doLaunch(zoneMode) {
+  zoneRun = zoneMode === true
   if (energy() > 0) { energySpend(); start(); return }
   if (adDayLeft() <= 0) {
     alert('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.')
@@ -8722,8 +8879,8 @@ function doLaunch() {
   }
   showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
 }
-document.getElementById('launch').onclick = doLaunch
-document.getElementById('launch2').onclick = doLaunch
+document.getElementById('launch').onclick = () => doLaunch(false)
+document.getElementById('launch2').onclick = () => doLaunch(false)
 document.getElementById('again').onclick = () => { scOver.hidden = true; go('squad'); music('hangar') }
 elTabs.querySelectorAll('button').forEach((b) => { b.onclick = () => go(b.dataset.go) })
 document.getElementById('revive').onclick = reviveByAd
