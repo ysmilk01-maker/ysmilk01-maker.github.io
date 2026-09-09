@@ -354,6 +354,42 @@
   }
   .setrow .sw.on::after { left: 23px; }
 
+  /* ================================================================
+   * 상단 자원 줄
+   *
+   * 출격권·부품·가챠권이 각자 한 줄을 차지하고 있었다. 세 줄이면 화면
+   * 위쪽을 다 먹는데 정작 담긴 정보는 숫자 셋뿐이다. 한 줄로 모은다.
+   * ================================================================ */
+  .res {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden; margin-bottom: 12px;
+  }
+  .res > div {
+    background: var(--panel-2); padding: 9px 6px 8px; text-align: center;
+  }
+  .res .k { font-size: 10px; color: var(--dim); letter-spacing: .02em; }
+  .res .v {
+    font-size: 15px; font-weight: 800; margin-top: 2px;
+    font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+  }
+  .res .sub2 { font-size: 9.5px; color: var(--muted); margin-top: 1px; }
+
+  /* 파일럿 한 줄 */
+  .pilotbar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; margin-bottom: 12px;
+  }
+  .pilotbar canvas { width: 30px; height: 30px; flex: none; }
+  .pilotbar .nm { font-size: 13.5px; font-weight: 700; }
+  .pilotbar .de { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+  .pilotbar .xp { margin-left: auto; text-align: right; }
+  .pilotbar .xp .t { font-size: 10px; color: var(--dim); }
+  .pilotbar .xp .b { width: 68px; height: 5px; border-radius: 3px;
+                     background: #1c2029; overflow: hidden; margin-top: 4px; }
+  .pilotbar .xp .b i { display: block; height: 100%; background: var(--accent); }
+
   /* 뽑기 */
   .gbox {
     background: var(--panel); border: 1px solid var(--line-2); border-radius: 18px;
@@ -412,6 +448,8 @@
   <h1>편대</h1>
   <p class="sub" id="squadSub"></p>
   <div class="body">
+    <div class="res" id="resBar"></div>
+    <div class="pilotbar" id="pilotBar"></div>
     <div class="slots" id="slots"></div>
     <div class="sum" id="squadSum"></div>
     <div class="lab">오늘의 임무</div>
@@ -1368,11 +1406,8 @@ function row(k, v, gold) {
 function renderSquad() {
   const legend = isLegend()
   document.getElementById('squadSub').innerHTML =
-    `메인이 <b>화력 100%</b>` +
-    (slotOpen(0) || slotOpen(2) ? ', 윙맨이 각 30%' : '') +
-    (legend ? `, 후방이 ${Math.round(slotMul(3) * 100)}%` : '') + `입니다.<br>` +
     (slotOpen(0) && slotOpen(2)
-      ? `자리를 누르면 기체 화면으로 갑니다.`
+      ? `자리를 누르면 기체를 바꿉니다.`
       : `파일럿 레벨이 오르면 자리가 하나씩 열립니다.`)
 
   elSlots.innerHTML = ''
@@ -1407,16 +1442,36 @@ function renderSquad() {
     st.hp ? `내구 +${st.hp * STATS.hp.per}` : '',
   ].filter(Boolean).join(' · ')
 
+  /* 자원 한 줄 */
+  const n = energy(), M = enMax()
+  document.getElementById('resBar').innerHTML =
+    `<div><div class="k">출격권</div>` +
+    `<div class="v" style="color:var(--warn)">${n}${n > M ? '' : ' / ' + M}</div>` +
+    `<div class="sub2" id="enWait">${n < M ? mmss(energyWait()) : '가득'}</div></div>` +
+    `<div><div class="k">부품</div>` +
+    `<div class="v">${prog.parts.toLocaleString('ko-KR')}</div>` +
+    `<div class="sub2">강화에 씁니다</div></div>` +
+    `<div><div class="k">가챠권</div>` +
+    `<div class="v" style="color:var(--gold)">${prog.ticket}</div>` +
+    `<div class="sub2">별 ${prog.star}/${STAR_TICKET}</div></div>`
+
+  /* 파일럿 한 줄 */
+  const pt = prog.pilot
+  const need = xpNeed(pt.lv)
+  const maxed = pt.lv >= PILOT_MAX
+  document.getElementById('pilotBar').innerHTML =
+    `<canvas id="pbMark" width="60" height="60"></canvas>` +
+    `<div><div class="nm">${pilotName()} · ${grade().name}</div>` +
+    `<div class="de">${boost || '스탯을 아직 안 찍었습니다'}</div></div>` +
+    `<div class="xp"><div class="t">Lv.${pt.lv}${maxed ? ' 만렙' : ''}</div>` +
+    (maxed ? '' : `<div class="b"><i style="width:${Math.min(100, (pt.xp / need) * 100).toFixed(0)}%"></i></div>`) +
+    `</div>`
+  drawMark(document.getElementById('pbMark'), pt.mark)
+
   document.getElementById('squadSum').innerHTML =
-    `<div class="row" id="enRow"></div>` +
     row('출격지', `${curChapter().name} ${curSub()}단계`) +
-    row('별', '★'.repeat(prog.star) + '☆'.repeat(STAR_TICKET - prog.star) +
-        `  가챠권 ${prog.ticket}장`, prog.ticket > 0) +
     row('편대 화력 합계', Math.round(sum * 100) + '%', true) +
-    row('파일럿', `${pilotName()} · ${grade().name} Lv.${prog.pilot.lv}`) +
-    row('파일럿 보정', boost || '아직 없음') +
     row('누적 점수', prog.total.toLocaleString('ko-KR') + '점')
-  paintEnergy()
   renderMissions()
 }
 
@@ -1427,6 +1482,11 @@ function renderSquad() {
  * 네 장을 매초 새로 그리게 된다. 바뀌는 줄만 갈아 끼운다.
  */
 function paintEnergy() {
+  const w = document.getElementById('enWait')
+  if (w) {
+    const n = energy()
+    w.textContent = n < enMax() ? mmss(energyWait()) : '가득'
+  }
   const el = document.getElementById('enRow')
   if (!el) return
   const n = energy()
