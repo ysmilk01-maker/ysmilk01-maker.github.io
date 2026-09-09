@@ -502,6 +502,42 @@
   .rcell .ic.star { background-image: var(--ui-resStar); }
   .rcell .ic.tk { background-image: var(--ui-resTicket); }
   .rcell .ic.xp { background-image: var(--ui-resFuel); }
+  /* 하드코어 몫은 그림이 따로 없다. 붉은 해골 자리를 글자로 대신한다 */
+  .rcell .ic.hard {
+    background: #40151d; border: 1px solid #a8324a; border-radius: 6px;
+    color: #ff8ba3; font-size: 13px; font-weight: 900; line-height: 24px;
+    text-align: center;
+  }
+  .rcell .ic.hard::before { content: '⚠'; }
+
+  /*
+   * 하드코어 스위치.
+   *
+   * 켜면 판 전체가 붉게 물든다 - 다른 규칙으로 들어간다는 것이 출격
+   * 단추를 누르기 전에 보여야 한다.
+   */
+  .hard {
+    display: flex; align-items: center; gap: 10px; margin-top: 10px;
+    padding: 11px 12px; border-radius: 10px;
+    background: rgba(255,84,112,.07); border: 1px solid rgba(255,84,112,.28);
+  }
+  .hard.off { background: rgba(255,255,255,.035); border-color: var(--line); }
+  .hard.lock { opacity: .5; }
+  .hard .tx { flex: 1; min-width: 0; }
+  .hard .tt { font-size: 12.5px; font-weight: 800; color: #ff8ba3; }
+  .hard.off .tt { color: var(--ink); }
+  .hard .ds { font-size: 10.5px; color: var(--dim); margin-top: 2px; }
+  .hard .sw {
+    flex: none; width: 46px; height: 26px; border-radius: 13px; border: 0;
+    background: #2a3346; position: relative; transition: background .12s;
+  }
+  .hard .sw.on { background: #d63a58; }
+  .hard .sw::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 20px; height: 20px; border-radius: 10px; background: #e8edf7;
+    transition: transform .12s;
+  }
+  .hard .sw.on::after { transform: translateX(20px); }
   .rcell .nm { font-size: 11px; color: var(--dim); letter-spacing: .02em; }
   .rcell .vl { font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; }
   .rcell .hv { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; }
@@ -1427,6 +1463,21 @@ function takeMission(i) {
   return { kind, n }
 }
 
+/*
+ * 하드코어.
+ *
+ * 한 대 맞으면 그 판이 끝난다(체력 1). 대신 판마다 가챠권 세 장.
+ *
+ * **판별 최초 클리어에만 준다.** 매번 주면 1-1 이 제일 효율 좋은 판이
+ * 된다 - 잡졸 몇 마리에 스무 초면 끝나는데 4-20 과 같은 세 장이면
+ * 아무도 어려운 판에서 안 한다. 그러면 하드코어를 만든 뜻이 없다.
+ * 최초 1회로 묶으면 총량이 80판 x 3 = 240장으로 닫히고, 어려운 판을
+ * 여는 수밖에 없어진다.
+ *
+ * 일반으로 이미 깬 판만 열린다. 규칙도 모르는 판을 한 대 맞으면 죽는
+ * 상태로 처음 만나는 것은 도전이 아니라 벽이다.
+ */
+const HARD_TICKET = 3
 const STAR_FAIL = 1
 const STAR_CLEAR = 3
 const STAR_TICKET = 3
@@ -1476,6 +1527,7 @@ function load() {
     chapter: 0,                     // 지금 고른 챕터
     sub: 1,                         // 지금 고른 단계
     stars: {},                      // '1-3' -> 0~3. 단계 평가, 최고 기록만 남는다
+    hard: {},                       // '1-3' -> true. 하드코어로 깬 판. 보상은 여기 없을 때만
     stageBest: {},                  // 단계별 최고 점수
     energy: { n: EN_MAX, t: 0 },    // 출격권과 마지막 정산 시각
     login: { last: '', streak: 0 }, // 접속 보상
@@ -1500,6 +1552,7 @@ function load() {
         stats: { ...base.stats, ...(got.stats || {}) },
         scores: got.scores || [],
         stars: got.stars || {},
+        hard: got.hard || {},
         stageBest: got.stageBest || {},
         energy: { ...base.energy, ...(got.energy || {}) },
         login: { ...base.login, ...(got.login || {}) },
@@ -3402,8 +3455,15 @@ function paintEnergy() {
     `<span class="k">출격권</span>` +
     `<span class="hearts" style="margin-left:8px">${hearts}</span>` +
     `<span class="v">${n < M ? mmss(wait) : '가득'}</span>`
+  /*
+   * 편대 화면의 출격 단추에도 하드코어를 적는다.
+   *
+   * 스위치는 스테이지 화면에 있는데 출격은 여기서도 된다. 안 적으면
+   * 켜 둔 것을 잊고 눌러서 한 대에 죽는다 - 그건 규칙이 아니라 함정이다.
+   */
+  const hd = hardRun && hardOpen() ? '하드코어 ' : ''
   const btn = document.getElementById('launch')
-  if (btn) btn.textContent = n > 0 ? '출격' : '광고 보고 출격'
+  if (btn) btn.textContent = n > 0 ? hd + '출격' : '광고 보고 ' + hd + '출격'
 }
 setInterval(() => { if (curScreen === 'squad' && !elTabs.hidden) paintEnergy() }, 1000)
 
@@ -3937,6 +3997,35 @@ function openTossRank() {
 
 let mapCh = null
 
+/** 지금 고른 판을 하드코어로 갈 수 있나 - 일반으로 한 번은 깼어야 한다 */
+function hardOpen() { return starOf(prog.chapter || 0, curSub()) > 0 }
+/** 지금 고른 판을 하드코어로 이미 깼나 */
+function hardDone() { return !!prog.hard[stageKey(prog.chapter || 0, curSub())] }
+/** 하드코어로 깬 판이 몇 개인가 */
+function hardCount() { return Object.keys(prog.hard || {}).length }
+
+/*
+ * 스테이지 화면의 하드코어 스위치.
+ *
+ * 판을 고른 뒤에 놓는다 - 어느 판을 하드코어로 갈지가 먼저고, 스위치는
+ * 그 판에 붙는 것이기 때문이다. 잠겨 있으면 왜 잠겼는지 그 자리에 적는다.
+ */
+function hardBox() {
+  const open = hardOpen()
+  if (!open) hardRun = false
+  const done = hardDone()
+  const on = hardRun && open
+  const ds = !open
+    ? '일반으로 한 번 깨면 열립니다'
+    : done
+      ? `이미 깬 판입니다 · 가챠권은 처음 깰 때만 (${hardCount()}판 완료)`
+      : `한 대 맞으면 그 판은 끝납니다 · 처음 깨면 가챠권 ${HARD_TICKET}장`
+  return `<div class="hard${on ? '' : ' off'}${open ? '' : ' lock'}">` +
+    `<div class="tx"><div class="tt">하드코어${done ? ' ✓' : ''}</div>` +
+    `<div class="ds">${ds}</div></div>` +
+    `<button class="sw${on ? ' on' : ''}" id="hardSw"></button></div>`
+}
+
 function renderStage() {
   if (mapCh == null) mapCh = prog.chapter || 0
   if (!chapterOpen(mapCh)) mapCh = 0
@@ -3971,6 +4060,7 @@ function renderStage() {
     `<div class="up"><span class="lvl">적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}` +
     ` · 별 ${chapterStars(mapCh)}/${SUBS * 3}</span></div></div>` +
     `<div class="nodes">${nodes}</div>` +
+    hardBox() +
     /*
      * 끝없는 출격.
      *
@@ -3987,6 +4077,16 @@ function renderStage() {
         `<div class="de">${CHAPTERS[0].name} ${SUBS}단계를 깨면 열립니다.</div></div>`)
 
   paintStage(el.querySelector('.pv'), ch)
+  const hb = document.getElementById('hardSw')
+  if (hb) hb.onclick = (e) => {
+    e.stopPropagation()
+    if (!hardOpen()) {
+      alert('일반으로 한 번 깬 판만 하드코어로 갈 수 있습니다.')
+      return
+    }
+    hardRun = !hardRun
+    renderStage()
+  }
   const zg = document.getElementById('zoneGo')
   if (zg) zg.onclick = (e) => { e.stopPropagation(); doLaunch(true) }
 
@@ -4009,9 +4109,11 @@ function renderStage() {
   })
 
   const n = energy()
-  document.getElementById('launch2').textContent = n > 0 ? '출격' : '광고 보고 출격'
+  const hd = hardRun && hardOpen() ? '하드코어 ' : ''
+  document.getElementById('launch2').textContent =
+    n > 0 ? hd + '출격' : '광고 보고 ' + hd + '출격'
   document.getElementById('stageHint').textContent =
-    `${curChapter().name} ${curSub()}단계 · 출격권 ${n}`
+    `${hd}${curChapter().name} ${curSub()}단계 · 출격권 ${n}`
 }
 
 /* ── 랭킹 ───/* ── 랭킹 ───────────────────────────────────────────────────────── */
@@ -4503,8 +4605,19 @@ function newState() {
   })
   return {
     t: 0, running: false,
+    /*
+     * 하드코어면 체력이 1 이다.
+     *
+     * 「한 대 맞으면 죽는다」를 데미지 판정에 특례로 넣지 않고 체력으로
+     * 표현한다. 그러면 피격·격추·체력바·부활이 전부 원래 길을 그대로
+     * 타서, 어느 한 군데 빠뜨릴 자리가 없다.
+     *
+     * 파일럿 체력 특성(pilotHp)과 편대 단계의 +20 도 안 붙는다 -
+     * 붙이면 「한 대」가 사람마다 달라진다.
+     */
     player: { x: W / 2, y: H - 120, lv: 1, inv: 0,
-              hp: PLAYER_HP + pilotHp(), maxHp: PLAYER_HP + pilotHp() },
+              hp: hardRun && !zoneRun ? 1 : PLAYER_HP + pilotHp(),
+              maxHp: hardRun && !zoneRun ? 1 : PLAYER_HP + pilotHp() },
     ult: 0, ultT: 0, ultKind: null, escorts: [], shards: [], sweeps: [],
     adUsed: { revive: 0 },
     squad, lives: LIVES, score: 0, kills: 0, ultUsed: 0, hitCount: 0, clearWait: 0,
@@ -4533,6 +4646,7 @@ function newState() {
     muzzles: [], sparks: [],
     /* 끝없는 출격이면 첫 구역, 아니면 고른 판 */
     zone: zoneRun ? 1 : 0,
+    hard: hardRun && !zoneRun,
     stage: zoneRun ? zoneStage(1) : curStage(),
     theme: THEMES[(zoneRun ? zoneStage(1) : curStage()).theme],
   }
@@ -5501,6 +5615,8 @@ function zoneStage(n) {
 
 /** 끝없는 출격으로 들어가는가. start() 가 이걸 보고 첫 구역을 만든다 */
 let zoneRun = false
+/* 이번 출격이 하드코어인가. 끝없는 출격에는 붙지 않는다 */
+let hardRun = false
 
 /** 1챕터를 끝까지 깨야 열린다. 규칙을 다 배운 뒤에 오는 자리다 */
 function zoneOpen() { return starOf(0, SUBS) > 0 }
@@ -6624,7 +6740,8 @@ function showAd(title, onDone) {
 
 /** 격추된 자리에서 이어한다 */
 function reviveByAd() {
-  if (!state || state.adUsed.revive >= AD_LIMIT.revive) return
+  /* 하드코어는 되살아나지 않는다. 광고로 규칙을 지우면 규칙이 아니다 */
+  if (!state || state.hard || state.adUsed.revive >= AD_LIMIT.revive) return
   showAd('이어하기', () => {
     state.adUsed.revive++
     const pl = state.player
@@ -6888,7 +7005,8 @@ function levelUp() {
   const pl = state.player
   if (pl.lv < 5) {
     pl.lv++
-    pl.maxHp += 20
+    /* 하드코어에서는 그릇도 안 커진다. 끝까지 한 대다 */
+    if (!state.hard) pl.maxHp += 20
     banner('편대 ' + pl.lv + '단계')
   } else {
     state.score += 500                          // 만렙이면 점수로
@@ -7488,7 +7606,7 @@ function update(dt) {
   for (const bm of s.beams) {
     bm.age += dt
     if (bm.age > bm.life) bm.dead = true
-    else if (bm.age > bm.warn && Math.abs(pl.x - bm.x) < bm.w / 2 + PLAYER_R && pl.y < bm.y) hitPlayer(DMG.beam)
+    else if (bm.age > bm.warn && Math.abs(pl.x - bm.x) < bm.w / 2 + PLAYER_R && pl.y > bm.y) hitPlayer(DMG.beam)
   }
   s.beams = s.beams.filter((b) => !b.dead)
 
@@ -9125,11 +9243,17 @@ function drawGround(u) {
   }
 
   if (u.kind === 'laser' && u.phase === 'aim') {
-    /* 겨냥선. 굵기가 자라면서 "곧 온다"를 알린다. */
+    /*
+     * 겨냥선. 굵기가 자라면서 "곧 온다"를 알린다.
+     *
+     * **아래로 긋는다.** 전에는 -H 에서 0 까지, 즉 포탑에서 화면 위쪽으로
+     * 뻗었다. 지상 포탑은 위에서 내려오고 기체는 아래에 있으니 그건
+     * 사람 반대쪽을 겨눈 것이다 - 겨냥선도 빔도 등 뒤로 나갔다.
+     */
     const k = 1 - u.ph / 0.9
     g.strokeStyle = 'rgba(255,84,112,' + (.35 + k * .5) + ')'
     g.lineWidth = 1 + k * 4
-    g.beginPath(); g.moveTo(u.aimX - u.x, -H); g.lineTo(u.aimX - u.x, 0); g.stroke()
+    g.beginPath(); g.moveTo(u.aimX - u.x, 0); g.lineTo(u.aimX - u.x, H); g.stroke()
   }
 
   const art = groundArt(u.kind)
@@ -9277,12 +9401,14 @@ function draw() {
   }
   for (const u of s.grounds) drawGround(u)
   /* 방공 빔 */
+  /* 포탑에서 **아래로** 뻗는다. 겨냥선과 판정도 같은 쪽이다 */
   for (const bm of s.beams) {
     const a = 1 - bm.age / bm.life
+    const len = H - bm.y
     g.fillStyle = 'rgba(255,120,150,' + (.35 + a * .5) + ')'
-    g.fillRect(bm.x - bm.w / 2, 0, bm.w, bm.y)
+    g.fillRect(bm.x - bm.w / 2, bm.y, bm.w, len)
     g.fillStyle = 'rgba(255,255,255,' + (a * .8) + ')'
-    g.fillRect(bm.x - 3, 0, 6, bm.y)
+    g.fillRect(bm.x - 3, bm.y, 6, len)
   }
   for (const it of s.items) {
     const k = 1 + Math.sin(it.t * 8) * .12
@@ -9654,6 +9780,17 @@ function draw() {
   g.fillStyle = '#e8edf7'; g.font = 'bold 15px system-ui'
   g.textAlign = 'left'; g.textBaseline = 'top'
   g.fillText(String(s.score).padStart(6, '0'), 14, 30)
+  /* 하드코어는 화면에 계속 떠 있어야 한다 - 규칙이 다르다는 걸 잊으면 안 된다 */
+  if (s.hard) {
+    g.save()
+    g.font = 'bold 10px system-ui'
+    const tw = g.measureText('하드코어').width + 12
+    g.fillStyle = 'rgba(168,50,74,.9)'
+    g.fillRect(14, 50, tw, 17)
+    g.fillStyle = '#ffc9d4'
+    g.fillText('하드코어', 20, 54)
+    g.restore()
+  }
   g.textAlign = 'right'; g.fillStyle = '#4fd1ff'
   g.fillText('편대 ' + s.player.lv, W - 14, 30)
   for (let i = 0; i < s.lives; i++) {
@@ -9669,12 +9806,26 @@ function draw() {
    * 양에 따라 초록에서 빨강으로 넘어가서, 숫자를 읽지 않아도 위험한 줄 안다.
    */
   {
-    const r = Math.max(0, s.player.hp / s.player.maxHp)
     const bw = 42, bx = s.player.x - bw / 2, by = s.player.y + 26
-    g.fillStyle = 'rgba(0,0,0,.45)'
-    g.fillRect(bx - 1, by - 1, bw + 2, 6)
-    g.fillStyle = r > .55 ? '#5fd48a' : r > .28 ? '#ffcf5c' : '#ff5470'
-    g.fillRect(bx, by, bw * r, 4)
+    if (s.hard) {
+      /*
+       * 하드코어에는 막대를 안 그린다.
+       *
+       * 체력이 1/1 이라 비율로 그리면 **끝까지 가득 찬 초록 막대**가
+       * 된다 - 한 대면 죽는 판에서 제일 안전해 보이는 표시다. 대신
+       * 붉은 심지 하나를 둔다. 줄어들 것이 없다는 뜻이다.
+       */
+      g.fillStyle = 'rgba(0,0,0,.45)'
+      g.fillRect(bx - 1, by - 1, bw + 2, 6)
+      g.fillStyle = '#ff5470'
+      g.fillRect(s.player.x - 5, by, 10, 4)
+    } else {
+      const r = Math.max(0, s.player.hp / s.player.maxHp)
+      g.fillStyle = 'rgba(0,0,0,.45)'
+      g.fillRect(bx - 1, by - 1, bw + 2, 6)
+      g.fillStyle = r > .55 ? '#5fd48a' : r > .28 ? '#ffcf5c' : '#ff5470'
+      g.fillRect(bx, by, bw * r, 4)
+    }
   }
   /* ---- 필살기 버튼 ---- */
   {
@@ -10217,6 +10368,20 @@ function end(win) {
   let tickets = 0
   while (prog.star >= STAR_TICKET) { prog.star -= STAR_TICKET; prog.ticket++; tickets++ }
 
+  /*
+   * 하드코어 몫.
+   *
+   * 그 판을 하드코어로 **처음** 깼을 때만 세 장이다. 두 번째부터는
+   * 일반과 똑같이 별만 쌓인다 - 안 그러면 제일 쉬운 판을 반복하는 것이
+   * 최선의 수가 되어 버린다.
+   */
+  let hardGot = 0
+  if (state.hard && win && key && !prog.hard[key]) {
+    prog.hard[key] = true
+    prog.ticket += HARD_TICKET
+    hardGot = HARD_TICKET
+  }
+
   const st = prog.stats
   st.kills += state.kills
   if (win) st.clears++
@@ -10233,8 +10398,11 @@ function end(win) {
   const rankAfter = pilotRank()
   save()
 
+  const hardTag = state.hard ? '하드코어 · ' : ''
   document.getElementById('overTitle').textContent =
-    zone ? `제 ${zone} 구역에서 격추` : win ? `${sg.chapter} ${sg.sub}단계 클리어` : '격추됨'
+    zone ? `제 ${zone} 구역에서 격추`
+         : win ? `${hardTag}${sg.chapter} ${sg.sub}단계 클리어`
+               : `${hardTag}격추됨`
 
   /*
    * 보상은 칸으로 낸다.
@@ -10260,9 +10428,17 @@ function end(win) {
          prog.parts.toLocaleString('ko-KR')) +
     cell('star', '별', '+' + stars, prog.star + '/' + STAR_TICKET) +
     cell('xp', '파일럿 경험치', '+' + gained.toLocaleString('ko-KR'), 'Lv.' + prog.pilot.lv) +
-    (tickets
-      ? cell('tk', '가챠권', '+' + tickets, '보유 ' + prog.ticket, true)
-      : cell('tk', '가챠권', STAR_TICKET - prog.star + '별 남음', ''))
+    (hardGot
+      ? cell('tk', '가챠권', '+' + (tickets + hardGot), '보유 ' + prog.ticket, true)
+      : tickets
+        ? cell('tk', '가챠권', '+' + tickets, '보유 ' + prog.ticket, true)
+        : cell('tk', '가챠권', STAR_TICKET - prog.star + '별 남음', '')) +
+    /* 하드코어 첫 클리어는 따로 한 칸을 준다. 별에 섞이면 뭘로 받았는지 모른다 */
+    (hardGot
+      ? cell('hard', '하드코어 첫 클리어', '가챠권 +' + hardGot, '', true)
+      : state.hard && win
+        ? cell('hard', '하드코어', '이미 깬 판입니다', '')
+        : '')
 
   /*
    * 승급 띠.
@@ -10318,7 +10494,7 @@ function end(win) {
     (!zone && win && nextSub > SUBS && CHAPTERS[(prog.chapter || 0) + 1]
       ? '<div class="rnext"><b>' + CHAPTERS[(prog.chapter || 0) + 1].name + '</b> 이 열렸습니다</div>' : '')
   const rv = document.getElementById('revive')
-  rv.hidden = (win && !zone) || state.adUsed.revive >= AD_LIMIT.revive
+  rv.hidden = (win && !zone) || state.hard || state.adUsed.revive >= AD_LIMIT.revive
   scOver.hidden = false
   sfx(win ? 'clear' : 'down')
 
@@ -10355,6 +10531,14 @@ function end(win) {
  */
 function doLaunch(zoneMode) {
   zoneRun = zoneMode === true
+  /*
+   * 아직 안 깬 판에 하드코어로 들어가지 않게 한다.
+   *
+   * 스위치를 켜 둔 채 다른 판을 고르면 그 판은 안 깬 판일 수 있다.
+   * 화면 그리는 쪽에서도 끄지만, 출격은 편대 화면의 단추로도 들어오므로
+   * 마지막 관문을 여기 둔다.
+   */
+  if (zoneRun || !hardOpen()) hardRun = false
   if (energy() > 0) { energySpend(); start(); return }
   if (adDayLeft() <= 0) {
     alert('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.')
