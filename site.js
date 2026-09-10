@@ -180,11 +180,59 @@
      * 글이 아래 무대보다 느리게 올라가며 옅어진다. 배경 빛은 그보다 더
      * 느리게. 그래서 겹이 생긴다 — 앞의 것이 먼저 가고 뒤의 것이 남는다.
      */
+    var sculpt = hero.querySelector('.sculpt');
+    var layers = sculpt ? gsap.utils.toArray(sculpt.querySelectorAll('img')) : [];
+    var depth = function (el) { return parseFloat(el.getAttribute('data-depth')) || 1; };
+
     gsap.timeline({
       scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }
     })
-      .to(hero.querySelector('.inner'), { y: 140, opacity: 0, ease: 'none' }, 0)
-      .to(hero.querySelector('.light'), { y: 90, ease: 'none' }, 0);
+      .to(hero.querySelector('.hero-text'), { y: 140, opacity: 0, ease: 'none' }, 0)
+      .to(hero.querySelector('.light'), { y: 90, ease: 'none' }, 0)
+      .to(layers, {
+        // 앞에 있는 조각일수록 빨리 흩어진다
+        y: function (i, el) { return -80 * depth(el); },
+        opacity: 0,
+        ease: 'none'
+      }, 0);
+
+    /*
+     * 조형물.
+     *
+     * 세 겹의 움직임이 서로 다른 속성을 쓴다. 떠다니기는 y·rotation, 마우스
+     * 따라가기는 xPercent·yPercent, 스크롤 흩어짐은 위의 y 스크럽. 같은 속성을
+     * 둘이 건드리면 하나가 다른 하나를 지운다.
+     */
+    if (layers.length) gsap.set(layers, { opacity: 0, scale: 0.72, transformOrigin: '50% 50%' });
+
+    function floatLayers() {
+      layers.forEach(function (el, i) {
+        var d = depth(el);
+        gsap.to(el, {
+          y: '+=' + (9 + 7 * d),
+          rotation: (i % 2 ? 1 : -1) * 1.6 * d,
+          duration: 4.2 + i * 0.7,
+          ease: 'sine.inOut',
+          yoyo: true,
+          repeat: -1
+        });
+      });
+    }
+
+    /* 마우스가 있는 기기에서만 — 손가락 화면에서는 따라갈 포인터가 없다 */
+    if (layers.length && window.matchMedia('(hover: hover)').matches) {
+      var qx = layers.map(function (el) { return gsap.quickTo(el, 'xPercent', { duration: 0.9, ease: 'power3' }); });
+      var qy = layers.map(function (el) { return gsap.quickTo(el, 'yPercent', { duration: 0.9, ease: 'power3' }); });
+      hero.addEventListener('pointermove', function (e) {
+        var nx = e.clientX / window.innerWidth - 0.5;
+        var ny = e.clientY / window.innerHeight - 0.5;
+        layers.forEach(function (el, i) {
+          var d = depth(el);
+          qx[i](nx * 16 * d);
+          qy[i](ny * 12 * d);
+        });
+      });
+    }
 
     /* 스크롤 안내선 — 위에서 아래로 한 번씩 흘러내린다 */
     var cue = hero.querySelector('.scroll-cue');
@@ -240,6 +288,10 @@
       tl.to(hero.querySelector('.sub'), { opacity: 1, y: 0, duration: 0.8 }, 0.45)
         .to(hero.querySelector('.cta'), { opacity: 1, y: 0, duration: 0.8 }, 0.6)
         .to(hero.querySelector('.scroll-cue'), { opacity: 1, y: 0, duration: 0.8 }, 0.9);
+      if (layers.length) {
+        // 뒤에서 앞으로 한 겹씩 서고, 다 서면 떠다니기 시작
+        tl.to(layers, { opacity: 1, scale: 1, duration: 1.3, stagger: 0.09, ease: 'power3.out', onComplete: floatLayers }, 0.25);
+      }
     };
   }
 })();
