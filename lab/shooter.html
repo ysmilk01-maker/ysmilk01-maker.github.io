@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>편대 슈팅 프로토타입</title>
+<title>오늘도 출격</title>
 
 <!--
   편대 종스크롤 슈팅 프로토타입
@@ -292,6 +292,54 @@
   button.off { opacity: .45; }
   .bar .grow { flex: 1; }
   .hint { font-size: 11px; color: var(--dim); }
+
+  /* ================================================================
+   * 타이틀
+   *
+   * 회사 로고(.boot)보다 낮고 덮개(.panel, 20)보다 높다. 로고가 사라진
+   * 뒤에 서고, 시작을 누르면 없어진다.
+   * ================================================================ */
+  #title {
+    position: fixed; inset: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: center;
+    background: #06070a;
+  }
+  #title[hidden] { display: none !important; }
+  /*
+   * 배경 그림(title-bg)이 들어오면 has 가 붙어 그것을 깐다. 아직 없으면
+   * 아래 그라데이션만 보인다 - 그림이 없다고 화면이 비지는 않는다.
+   */
+  #title .tbg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 80% at 50% 8%, rgba(60,110,190,.30), rgba(6,7,10,0) 62%),
+      linear-gradient(180deg, #0a1424 0%, #070a12 55%, #06070a 100%);
+  }
+  #title .tbg.has { background: var(--ui-titlebg) center/cover no-repeat, #06070a; }
+  #title .tbg::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(6,7,10,.55) 0%, rgba(6,7,10,.12) 38%, rgba(6,7,10,.9) 100%);
+  }
+  #title .tin {
+    position: relative; text-align: center; padding: 0 26px;
+    animation: tIn .55s ease both;
+  }
+  @keyframes tIn { from { opacity: 0; transform: translateY(10px); } }
+  @media (prefers-reduced-motion: reduce) { #title .tin { animation: none; } }
+  #title .tsub {
+    font-size: 11px; font-weight: 800; letter-spacing: .28em;
+    color: #5f7a99; text-indent: .28em;
+  }
+  #title .tlogo {
+    margin: 10px 0 0; font-size: 44px; font-weight: 900; letter-spacing: -.02em;
+    color: #eef4ff; text-shadow: 0 6px 26px rgba(0,0,0,.7);
+  }
+  #title .tline { margin-top: 10px; font-size: 12.5px; color: #8ea3c0; }
+  #title button {
+    margin-top: 30px; padding: 15px 54px; font-size: 17px; font-weight: 900;
+    border-radius: 13px; box-shadow: 0 8px 24px rgba(79,209,255,.24);
+  }
+  #title .tver { margin-top: 18px; font-size: 10.5px; color: #4a5568; }
 
   /*
    * 덮개.
@@ -1096,6 +1144,25 @@
   <div class="pick" id="pickNow"></div>
   <div class="filters" id="planeFilters"></div>
   <div class="body"><div class="grid" id="planes"></div></div>
+</div>
+
+<!--
+  타이틀 화면.
+
+  회사 로고 연출(.boot)은 이미 있었다 - 2.4초 뒤 스스로 사라진다.
+  그런데 그 뒤가 곧바로 편대 화면이었다. 미니앱은 목록에서 눌러
+  들어오는 것이라, 로고가 지나가고 나면 「무엇을 연 것인가」를 한 번은
+  말해 줘야 한다. 로고 다음에 이 화면을 세우고, 시작을 눌러야 들어간다.
+-->
+<div id="title" hidden>
+  <div class="tbg"></div>
+  <div class="tin">
+    <div class="tsub">나인투식스랩</div>
+    <h1 class="tlogo">오늘도 출격</h1>
+    <div class="tline">편대를 몰고 나가는 비행 슈팅</div>
+    <button id="tGo">시작</button>
+    <div class="tver" id="tVer"></div>
+  </div>
 </div>
 
 <!-- 기체 상세 -->
@@ -1909,6 +1976,8 @@ const AD_ENERGY_DAY = 10               // 하루에 광고로 채울 수 있는 
  * 않고 스위치로 둔 이유가 그것이다. 지우면 되돌릴 때 세 곳을 다시
  * 찾아야 하고 하나를 빠뜨린다.
  * ================================================================ */
+/* 화면 아래에 적어 두는 판 번호. 무엇을 보고 있는지 물을 때 쓴다 */
+const BUILD_TAG = '0.9.1'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -2226,6 +2295,22 @@ for (const k in GACHA_B64) {
                    'plH1', 'plH2', 'plH3', 'plL1', 'plL2', 'plL3',
                    'bgN', 'bgM', 'bgH', 'bgL']) {
     r.setProperty('--gc-' + k, "url('data:image/webp;base64," + GACHA_B64[k] + "')")
+  }
+}
+
+/*
+ * 부트 화면이 쓰는 그림을 CSS 변수로 내보낸다.
+ *
+ * 마크는 이미 ICON_B64 에 있고, 타이틀 배경(title-bg)은 아직 안 왔다.
+ * 없는 것은 변수를 안 만들고 클래스도 안 붙인다 - 그러면 CSS 의
+ * 기본 그라데이션이 그대로 보인다. 그림이 없다고 화면이 비지 않는다.
+ */
+{
+  const r = document.documentElement.style
+  if (ICON_B64.titlebg) {
+    r.setProperty('--ui-titlebg', "url('data:image/webp;base64," + ICON_B64.titlebg + "')")
+    const el = document.querySelector('#title .tbg')
+    if (el) el.classList.add('has')
   }
 }
 
@@ -12746,9 +12831,40 @@ document.getElementById('again').onclick = () => {
 elTabs.querySelectorAll('button').forEach((b) => { b.onclick = () => go(b.dataset.go) })
 document.getElementById('revive').onclick = reviveByAd
 
+/* ================================================================
+ * 부트
+ *
+ * 로고 -> 타이틀 -> 게임. 로고는 1.5초 뒤 저절로 넘어가고, 그 전에
+ * 화면을 누르면 바로 넘어간다 - 두 번째부터는 기다릴 이유가 없다.
+ *
+ * 접속 보상은 **시작을 누른 뒤에** 띄운다. 타이틀 위에 겹쳐 뜨면
+ * 무엇을 먼저 봐야 하는지 알 수 없다.
+ * ================================================================ */
 go('squad')
 auPaint()
-music('hangar')
-const daily = claimDaily()
-if (daily) showDaily(daily)
+
+/*
+ * 로고가 사라지면 타이틀을 세운다.
+ *
+ * 로고 연출은 위(시작 연출)에서 2.4초 뒤 스스로 제거된다. 그보다
+ * 조금 뒤에 세워서 겹치지 않게 한다. 로고를 건드려 순서를 바꾸지
+ * 않는 이유는, 그 값이 광택 애니메이션 길이와 맞춰져 있어서다.
+ */
+const elTitle = document.getElementById('title')
+let titleDone = false
+function titleShow() {
+  elTitle.hidden = false
+  const v = document.getElementById('tVer')
+  if (v) v.textContent = 'v' + BUILD_TAG
+}
+function titleStart() {
+  if (titleDone) return
+  titleDone = true
+  elTitle.hidden = true
+  music('hangar')
+  const daily = claimDaily()
+  if (daily) showDaily(daily)
+}
+setTimeout(titleShow, 2500)
+document.getElementById('tGo').onclick = titleStart
 </script>
