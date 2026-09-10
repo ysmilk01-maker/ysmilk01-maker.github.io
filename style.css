@@ -394,6 +394,56 @@ html.boot-done body { overflow: visible; }
   .hero .sheet { animation: none; }
 }
 
+/*
+ * 글과 조형물.
+ *
+ * 폰에서는 글 아래에 조형물이 선다. 넓으면 둘이 나란히 — 글은 왼쪽, 조형물은
+ * 오른쪽. 그래서 넓은 화면에서만 글이 왼쪽 정렬이다.
+ */
+.hero .inner {
+  display: grid;
+  gap: 44px;
+  align-items: center;
+  justify-items: center;
+}
+
+.hero-text { max-width: 620px; }
+
+@media (min-width: 900px) {
+  .hero .inner {
+    grid-template-columns: 1.12fr 0.88fr;
+    gap: 32px;
+    max-width: 1120px;
+    text-align: left;
+    justify-items: stretch;
+  }
+  /* 두 줄에 들어가야 한다. 세 줄이 되면 "앱" 하나가 외따로 남는다 */
+  .hero h1 { font-size: clamp(2.75rem, 5.4vw, 5.1rem); }
+  .hero .hero-text .sub { margin-inline: 0; }
+  /* 빛 번짐은 조형물 뒤로 옮긴다 */
+  .hero .bloom { left: 74%; top: 50%; width: 64vmax; height: 64vmax; }
+}
+
+.sculpt {
+  position: relative;
+  width: min(520px, 100%);
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
+@media (max-width: 899px) {
+  .sculpt { width: min(340px, 72vw); }
+}
+
+.sculpt img {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  height: auto;
+  will-change: transform;
+}
+
 .hero .sub {
   text-wrap: pretty;
   margin: 26px auto 0;
