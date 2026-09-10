@@ -301,10 +301,22 @@
    * 회사 로고(.boot)보다 낮고 덮개(.panel, 20)보다 높다. 로고가 사라진
    * 뒤에 서고, 시작을 누르면 없어진다.
    * ================================================================ */
+  /*
+   * z 를 39 로 내린다 - 회사 로고(.boot, 40)보다 **아래**다.
+   *
+   * 전에는 둘 다 40 이었고, 로고가 다 사라진 0.26초 뒤에 이 화면이
+   * 튀어나왔다. 그 0.26초 동안 뒤에 있던 격납고 화면이 번쩍 보였다가
+   * 덮였다 - 「로고 → 격납고 → 타이틀」로 세 번 끊긴 셈이다.
+   *
+   * 이제 로고가 아직 떠 있는 동안 이 화면을 그 밑에 세워 둔다. 로고가
+   * 옅어지면서 노을 배경이 그대로 드러나므로 한 번의 디졸브가 된다.
+   * 두 화면의 바탕색을 같은 검정으로 맞춘 것도 그래서다.
+   */
   #title {
-    position: fixed; inset: 0; z-index: 40;
-    display: flex; align-items: center; justify-content: center;
-    background: #06070a;
+    position: fixed; inset: 0; z-index: 39;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end;
+    background: #05070d;
   }
   #title[hidden] { display: none !important; }
   /*
@@ -322,18 +334,49 @@
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(180deg, rgba(6,7,10,.55) 0%, rgba(6,7,10,.12) 38%, rgba(6,7,10,.9) 100%);
   }
+  /*
+   * 글 덩어리를 아래로 내린다.
+   *
+   * 가운데 정렬이었을 때, 배경 그림에서 제일 볼 만한 곳(왼쪽 위로
+   * 멀어지는 편대)이 글자에 눌려 있었다. 위 절반을 비워 주면 편대가
+   * 살고, 글 덩어리는 엄지가 닿는 아래쪽에 모인다 - 누를 것이 아래에
+   * 있는 것이 세로 화면에서 맞다.
+   */
   #title .tin {
-    position: relative; text-align: center; padding: 0 26px;
-    animation: tIn .55s ease both;
+    position: relative; text-align: center; padding: 0 26px 9vh;
   }
-  @keyframes tIn { from { opacity: 0; transform: translateY(10px); } }
-  @media (prefers-reduced-motion: reduce) { #title .tin { animation: none; } }
+  #title .tin > * { animation: tIn .6s cubic-bezier(.16,1,.3,1) both; }
+  /*
+   * 차례로 세운다.
+   *
+   * 회사 로고가 0.62초에 걸쳐 사라지는데(boot-out), 이 화면은 그보다
+   * 0.2초 먼저 뜬다. 그래서 첫 지연을 .62 로 잡았다 - 로고가 다 걷힌
+   * 바로 그 순간부터 하나씩 올라온다.
+   */
+  #title .tem { animation-delay: calc(var(--tD, 0s) + .00s); }
+  #title .tlogo { animation-delay: calc(var(--tD, 0s) + .12s); }
+  #title .tline { animation-delay: calc(var(--tD, 0s) + .26s); }
+  #title button { animation-delay: calc(var(--tD, 0s) + .38s); }
+  #title .tver { animation-delay: calc(var(--tD, 0s) + .52s); }
+  @keyframes tIn { from { opacity: 0; transform: translateY(14px); } }
+  @media (prefers-reduced-motion: reduce) {
+    #title .tin > * { animation: none; }
+  }
+  /*
+   * 회사 이름은 맨 위로 뺀다.
+   *
+   * 엠블럼과 제목 사이에 끼어 있어서, 하나로 읽혀야 할 둘(엠블럼 + 제목)을
+   * 갈라 놓고 있었다. 위쪽 귀퉁이는 어차피 비어 있다.
+   */
   #title .tsub {
-    font-size: 11px; font-weight: 800; letter-spacing: .28em;
-    color: #5f7a99; text-indent: .28em;
+    position: absolute; top: max(26px, 5.5vh); left: 0; right: 0;
+    font-size: 11px; font-weight: 800; letter-spacing: .3em;
+    color: #86a2c4; text-indent: .3em; text-align: center;
+    text-shadow: 0 2px 12px rgba(0,0,0,.8);
+    animation: tIn .8s ease var(--tD, 0s) both;
   }
   #title .tlogo {
-    margin: 10px 0 0; font-size: 44px; font-weight: 900; letter-spacing: -.02em;
+    margin: 6px 0 0; font-size: 46px; font-weight: 900; letter-spacing: -.02em;
     color: #eef4ff; text-shadow: 0 6px 26px rgba(0,0,0,.7);
   }
   /*
@@ -343,22 +386,60 @@
    * 한다. 그림이 안 오면 이 규칙이 안 붙으므로 글자가 그대로 보인다.
    */
   #title.haslogo .tlogo {
-    height: 104px; margin-top: 6px; text-indent: -200vw; overflow: hidden;
+    height: 118px; margin-top: -6px; text-indent: -200vw; overflow: hidden;
     background: var(--ui-titlelogo) center/contain no-repeat;
+    filter: drop-shadow(0 8px 22px rgba(0,0,0,.75));
   }
+  /*
+   * 엠블럼과 제목을 겹쳐 하나로 만든다.
+   *
+   * 사이를 띄우면 「표식 하나, 제목 하나」 둘로 읽힌다. 아래를 -6 만큼
+   * 물려 두 개가 한 덩어리(로크업)로 서게 한다.
+   */
   #title .tem {
-    width: 92px; height: 92px; margin: 0 auto 4px;
+    width: 104px; height: 104px; margin: 0 auto -6px;
     background: var(--ui-titleem) center/contain no-repeat;
-    animation: tEmIn .7s ease both;
+    filter: drop-shadow(0 6px 18px rgba(0,0,0,.6));
   }
-  @keyframes tEmIn { from { opacity: 0; transform: scale(.86); } }
-  @media (prefers-reduced-motion: reduce) { #title .tem { animation: none; } }
-  #title .tline { margin-top: 10px; font-size: 12.5px; color: #8ea3c0; }
+  #title .tline {
+    margin-top: 12px; font-size: 12.5px; color: #b3c4da;
+    text-shadow: 0 2px 10px rgba(0,0,0,.7);
+  }
+  /*
+   * 단추를 놋쇠로 바꾼다.
+   *
+   * 하늘색 알약 단추는 게임 안쪽 UI 의 색인데, 여기서는 노을과 금색
+   * 엠블럼 위에 홀로 차갑게 떠 있었다. 이 화면에서 색을 쥐고 있는 것은
+   * 노을과 엠블럼이므로 단추가 그쪽에 붙는 것이 맞다.
+   *
+   * 「시작」 대신 「출격」이라고 쓴다 - 제목이 「오늘도 출격」이니 단추가
+   * 그 문장을 끝맺는다.
+   */
   #title button {
-    margin-top: 30px; padding: 15px 54px; font-size: 17px; font-weight: 900;
-    border-radius: 13px; box-shadow: 0 8px 24px rgba(79,209,255,.24);
+    margin-top: 34px; padding: 16px 62px; font-size: 17px; font-weight: 900;
+    letter-spacing: .1em; text-indent: .1em; border-radius: 12px;
+    color: #2b1d06;
+    background: linear-gradient(180deg, #f4cd72 0%, #d9a13c 52%, #b8801f 100%);
+    box-shadow: 0 10px 30px rgba(0,0,0,.5),
+                0 0 0 1px rgba(255,226,160,.5),
+                inset 0 1px 0 rgba(255,255,255,.55);
+    animation: tIn .6s cubic-bezier(.16,1,.3,1) calc(var(--tD, 0s) + .38s) both,
+               tGlow 2.6s ease-in-out calc(var(--tD, 0s) + 1.0s) infinite;
   }
-  #title .tver { margin-top: 18px; font-size: 10.5px; color: #4a5568; }
+  /* 숨 쉬듯 옅게. 「눌러도 된다」만 말하면 되므로 세게 하지 않는다 */
+  @keyframes tGlow {
+    0%, 100% { box-shadow: 0 10px 30px rgba(0,0,0,.5),
+                           0 0 0 1px rgba(255,226,160,.5),
+                           inset 0 1px 0 rgba(255,255,255,.55); }
+    50%      { box-shadow: 0 10px 34px rgba(0,0,0,.5),
+                           0 0 22px 2px rgba(244,205,114,.34),
+                           0 0 0 1px rgba(255,236,186,.75),
+                           inset 0 1px 0 rgba(255,255,255,.6); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #title button { animation: none; }
+  }
+  #title .tver { margin-top: 20px; font-size: 10.5px; color: #6b7d92; }
 
   /*
    * 덮개.
@@ -1176,12 +1257,12 @@
 -->
 <div id="title" hidden>
   <div class="tbg"></div>
+  <div class="tsub">나인투식스랩</div>
   <div class="tin">
     <div class="tem" id="tEm" hidden></div>
-    <div class="tsub">나인투식스랩</div>
     <h1 class="tlogo">오늘도 출격</h1>
     <div class="tline">편대를 몰고 나가는 비행 슈팅</div>
-    <button id="tGo">시작</button>
+    <button id="tGo">출격</button>
     <div class="tver" id="tVer"></div>
   </div>
 </div>
@@ -13116,8 +13197,37 @@ auPaint()
  */
 const elTitle = document.getElementById('title')
 let titleDone = false
+/*
+ * 회사 로고 뒤에 미리 세우고, 로고가 걷히는 **그 순간**에 맞춰 올린다.
+ *
+ * 전에는 `setTimeout(titleShow, 2500)` 이었다. 그런데 두 연출이 서로 다른
+ * 시계를 본다 - 로고의 사라짐은 CSS 라 그 마크업이 그려질 때 시작하고,
+ * 이 타이머는 4MB 짜리 스크립트를 **다 읽은 뒤**에야 걸린다. 그 사이
+ * 간격은 기기마다 다르다. 빠른 기기에서는 로고가 사라지고 0.3초 동안
+ * 뒤에 있던 격납고 화면이 번쩍인 뒤 타이틀이 튀어나왔고, 느린 기기에서는
+ * 그 틈이 더 벌어졌다. 고정 숫자로는 못 맞춘다.
+ *
+ * 그래서 숫자를 버리고 **로고에게 직접 묻는다.** 아직 몇 초 남았는지를
+ * 재서 그만큼을 --tD 로 넘기면, 안쪽 것들이 로고가 다 걷힌 바로 그
+ * 프레임부터 차례로 올라온다. 로고가 이미 없으면 0 이 되어 곧바로 뜬다.
+ *
+ * 화면 자체는 지금 바로 세운다 - z 가 로고보다 낮아서 로고가 덮고 있는
+ * 동안에는 안 보이고, 로고가 옅어지면 노을이 배어 나온다. 이 배어 나옴이
+ * 두 연출을 잇는 유일한 이음매다.
+ */
 function titleShow() {
   elTitle.hidden = false
+  let wait = 0
+  const boot = document.getElementById('boot')
+  if (boot && boot.getAnimations) {
+    for (const an of boot.getAnimations()) {
+      if (an.animationName !== 'boot-out') continue
+      const tm = an.effect.getTiming()
+      const left = (tm.delay + tm.duration) - (an.currentTime || 0)
+      if (left > wait) wait = left
+    }
+  }
+  elTitle.style.setProperty('--tD', (wait / 1000).toFixed(2) + 's')
   const em = document.getElementById('tEm')
   if (em && ICON_B64.titleem) em.hidden = false
   const v = document.getElementById('tVer')
@@ -13131,6 +13241,6 @@ function titleStart() {
   const daily = claimDaily()
   if (daily) showDaily(daily)
 }
-setTimeout(titleShow, 2500)
+titleShow()
 document.getElementById('tGo').onclick = titleStart
 </script>
