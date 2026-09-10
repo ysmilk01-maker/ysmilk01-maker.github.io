@@ -11640,26 +11640,162 @@ function drawGround(u) {
   g.restore()
 }
 
-function draw() {
-  const s = state
-  const now = performance.now() / 1000
-  g.clearRect(0, 0, W, H)
+/*
+ * 전투 배경의 시각 레이어.
+ *
+ * 지형 이미지가 있는 동안에는 그 이미지가 지면을 맡는다. 옛 물결 선·
+ * 반짝이·타원 섬·넓은 지형 띠를 함께 얹으면 서로 다른 표현이 겹쳐
+ * 얼룩처럼 보인다. 옛 지형은 이미지 로딩 실패 때만 사용한다.
+ *
+ * 아래 함수는 그리기만 한다. seedGround/update의 배열·난수·이동 속도와
+ * 적 생성·피격·보상은 그대로 둔다. 캐시는 화면용 캔버스만 보관한다.
+ */
+const BATTLE_LOOK = {
+  sea:    { brightness: 1.12, saturation: .82, shade: .02 },
+  sea_b:  { brightness: 1.16, saturation: .90, shade: .00 },
+  sand:   { brightness: .94, saturation: .60, shade: .31 },
+  sand_b: { brightness: 1.24, saturation: .78, shade: .02 },
+  snow:   { brightness: .94, saturation: .68, shade: .22 },
+  snow_b: { brightness: 1.22, saturation: .78, shade: .03 },
+  ash:    { brightness: 1.18, saturation: .80, shade: .00 },
+  ash_b:  { brightness: 1.24, saturation: .80, shade: .00 },
+}
+const BATTLE_TILE_CACHE = new Map()
+const BATTLE_CLOUD_CACHE = new Map()
+const BATTLE_AIR_CACHE = new Map()
 
-  /*
-   * 화면 흔들림.
-   *
-   * 여기서 한 번 밀면 배경부터 UI 앞까지 다 같이 흔들린다. 기체만
-   * 흔들면 기체가 떨리는 것이지 「맞았다」가 아니다.
-   *
-   * 마지막에 restore 한 뒤 붉은 비네트를 얹는다 - 그건 화면에 붙어
-   * 있어야지 같이 흔들리면 어지럽다.
-   */
-  const shk = s.shake || 0
-  g.save()
-  if (shk > 0.4) {
-    g.translate((Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk)
+/** 색 보정과 이음매 마스크는 로딩 후 한 번만 만든다. */
+function battleTile(key, im) {
+  const old = BATTLE_TILE_CACHE.get(key)
+  if (old && old.image === im) return old
+  const cv = document.createElement('canvas')
+  cv.width = im.naturalWidth; cv.height = im.naturalHeight
+  const c = cv.getContext('2d')
+  const look = BATTLE_LOOK[key] || BATTLE_LOOK.sea
+  c.filter = 'brightness(' + look.brightness + ') saturate(' + look.saturation + ')'
+  c.drawImage(im, 0, 0)
+  c.filter = 'none'
+  if (look.shade) {
+    c.fillStyle = 'rgba(7,12,19,' + look.shade + ')'
+    c.fillRect(0, 0, cv.width, cv.height)
   }
+  /* 위 12%를 아래 타일과 겹쳐 섞는다. 그림을 뒤집지 않아 지형 방향도 유지된다. */
+  const overlap = Math.round(cv.height * .12)
+  const seam = c.createLinearGradient(0, 0, 0, overlap)
+  seam.addColorStop(0, 'rgba(0,0,0,0)')
+  seam.addColorStop(1, 'rgba(0,0,0,1)')
+  c.globalCompositeOperation = 'destination-in'
+  c.fillStyle = seam; c.fillRect(0, 0, cv.width, cv.height)
+  const tile = { image: im, canvas: cv, overlap }
+  BATTLE_TILE_CACHE.set(key, tile)
+  return tile
+}
 
+/** 구름 중앙을 비워 기체와 탄을 읽을 공간을 남긴다. */
+function battleCloud(key, im) {
+  const old = BATTLE_CLOUD_CACHE.get(key)
+  if (old && old.image === im) return old.canvas
+  const cv = document.createElement('canvas')
+  cv.width = im.naturalWidth; cv.height = im.naturalHeight
+  const c = cv.getContext('2d')
+  c.drawImage(im, 0, 0)
+  const edge = c.createLinearGradient(0, 0, cv.width, 0)
+  edge.addColorStop(0, 'rgba(0,0,0,.85)')
+  edge.addColorStop(.22, 'rgba(0,0,0,.48)')
+  edge.addColorStop(.40, 'rgba(0,0,0,.08)')
+  edge.addColorStop(.60, 'rgba(0,0,0,.08)')
+  edge.addColorStop(.78, 'rgba(0,0,0,.48)')
+  edge.addColorStop(1, 'rgba(0,0,0,.85)')
+  c.globalCompositeOperation = 'destination-in'
+  c.fillStyle = edge; c.fillRect(0, 0, cv.width, cv.height)
+  BATTLE_CLOUD_CACHE.set(key, { image: im, canvas: cv })
+  return cv
+}
+
+function paintBattleClouds(theme, now) {
+  const im = ic('sky_' + theme)
+  if (!im) return
+  const cloud = battleCloud(theme, im)
+  /* 짧게 반복되던 구름 띠를 넓혀 원경 하나로 읽히게 한다. */
+  const tw = W * 1.65, th = im.naturalHeight * tw / im.naturalWidth
+  const period = th * 2, off = (now * SKY_SPEED) % period
+  const x = (W - tw) / 2
+  g.save()
+  g.globalAlpha = theme === 'ash' ? .14 : .20
+  for (let y = off - period; y < H; y += period) {
+    g.drawImage(cloud, x, y, tw, th)
+    g.save(); g.translate(x, y + period); g.scale(1, -1)
+    g.drawImage(cloud, 0, 0, tw, th)
+    g.restore()
+  }
+  g.restore()
+}
+
+function paintBattleScenery(s) {
+  for (const sl of s.slabs) {
+    if (sl.far || !sl.obj) continue
+    const im = ga(sl.obj)
+    if (!im) continue
+    const cx = sl.x + sl.w / 2, cy = sl.y + sl.h / 2
+    if (cy < -130 || cy > H + 130) continue
+    const sz = Math.max(sl.w, sl.h) * 1.65
+    const alpha = OBJ_ALPHA[sl.obj] != null ? OBJ_ALPHA[sl.obj] : .44
+    g.save(); g.translate(cx, cy); g.rotate(sl.seed * .43)
+    /* 소품은 실체가 보이게, 발광 지형은 원래의 낮은 알파를 지킨다. */
+    g.globalAlpha = Math.min(.62, alpha * 1.25)
+    g.drawImage(im, -sz / 2, -sz / 2, sz, sz)
+    g.restore()
+  }
+}
+
+/** 명암은 지면에만 적용한다. 적·피격 예고·아이템·HUD 위에는 씌우지 않는다. */
+function battleAir(theme) {
+  const key = theme + ':' + W + ':' + H
+  if (BATTLE_AIR_CACHE.has(key)) return BATTLE_AIR_CACHE.get(key)
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H
+  const c = cv.getContext('2d')
+  const tone = theme === 'sand' ? '16,13,14' : theme === 'ash' ? '12,8,13' : '3,10,20'
+  const depth = c.createLinearGradient(0, 0, 0, H)
+  depth.addColorStop(0, 'rgba(' + tone + ',.28)')
+  depth.addColorStop(.42, 'rgba(' + tone + ',.02)')
+  depth.addColorStop(1, 'rgba(' + tone + ',.10)')
+  c.fillStyle = depth; c.fillRect(0, 0, W, H)
+  const edge = c.createLinearGradient(0, 0, W, 0)
+  edge.addColorStop(0, 'rgba(' + tone + ',.20)')
+  edge.addColorStop(.25, 'rgba(' + tone + ',0)')
+  edge.addColorStop(.75, 'rgba(' + tone + ',0)')
+  edge.addColorStop(1, 'rgba(' + tone + ',.20)')
+  c.fillStyle = edge; c.fillRect(0, 0, W, H)
+  BATTLE_AIR_CACHE.set(key, cv)
+  return cv
+}
+
+function paintBattleBackground(s, now) {
+  const theme = (s.stage && s.stage.theme) || 'sea'
+  let key = theme
+  if (curSub() % 2 === 0 && ic('tile_' + theme + '_b')) key += '_b'
+  const im = ic('tile_' + key)
+  if (!im) return false
+  const tile = battleTile(key, im)
+  const scale = W / tile.canvas.width
+  const height = tile.canvas.height * scale
+  const step = (tile.canvas.height - tile.overlap) * scale
+  const off = (now * TERRAIN_SPEED) % step
+  g.save()
+  g.imageSmoothingEnabled = true
+  g.imageSmoothingQuality = 'high'
+  g.fillStyle = '#080e17'; g.fillRect(0, 0, W, H)
+  for (let y = off - height - step; y < H; y += step) {
+    g.drawImage(tile.canvas, 0, y, W, height)
+  }
+  paintBattleScenery(s)
+  paintBattleClouds(theme, now)
+  g.drawImage(battleAir(theme), 0, 0)
+  g.restore()
+  return true
+}
+
+function paintLegacyBattleBackground(s, now) {
   /*
    * 지면.
    *
@@ -11816,9 +11952,33 @@ function draw() {
     g.fillStyle = hz
     g.fillRect(0, 0, W, H * 0.55)
   }
+  drawSky(now)
+}
+
+function draw() {
+  const s = state
+  const now = performance.now() / 1000
+  g.clearRect(0, 0, W, H)
+
+  /*
+   * 화면 흔들림.
+   *
+   * 여기서 한 번 밀면 배경부터 UI 앞까지 다 같이 흔들린다. 기체만
+   * 흔들면 기체가 떨리는 것이지 「맞았다」가 아니다.
+   *
+   * 마지막에 restore 한 뒤 붉은 비네트를 얹는다 - 그건 화면에 붙어
+   * 있어야지 같이 흔들리면 어지럽다.
+   */
+  const shk = s.shake || 0
+  g.save()
+  if (shk > 0.4) {
+    g.translate((Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk)
+  }
+
+  /* 타일이 준비됐으면 이미지 지형만, 실패했으면 기존 코드 지형만 그린다. */
+  if (!paintBattleBackground(s, now)) paintLegacyBattleBackground(s, now)
   for (const u of s.grounds) drawGround(u)
 
-  drawSky(now)
 
   /* 방공 빔 */
   /* 포탑에서 **아래로** 뻗는다. 겨냥선과 판정도 같은 쪽이다 */
