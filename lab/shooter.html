@@ -278,6 +278,8 @@
     padding-top: 7px; border-top: 1px solid var(--line);
   }
   .card .up .lvl { display: block; font-size: 10.5px; color: var(--muted); font-weight: 700; }
+  .card .up .need { font-size: 10.5px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+  .card .up .need .no { color: var(--warn); }
   .card .up button {
     display: block; width: 100%; margin-top: 5px; padding: 7px 0; font-size: 11px;
     border-radius: 7px; background: #24406b; color: #cfe6ff; font-weight: 700; border: 0;
@@ -4656,10 +4658,17 @@ function renderPlanes() {
       (ok
         ? `<div class="up"><span class="lvl">강화 ${lv}/${UPG_MAX}` +
           (lv ? ` · 화력 +${Math.round((upgPower(p.id) - 1) * 100)}%` : '') + `</span>` +
+          /*
+           * 단추에 재화를 다 적으면(「부품 888 · 조각 240」) 좁은 카드에서
+           * 넘친다. 단추는 「강화하기」만, 필요한 것은 윗줄에 - 모자란 쪽을
+           * 붉게 적어 무엇이 없어서 못 누르는지 보이게 한다.
+           */
           (lv >= UPG_MAX
             ? `<button disabled>최대</button>`
-            : `<button ${prog.parts < cost || shardOf(p.id) < shardUpg(p, lv) ? 'disabled' : ''}>` +
-              `부품 ${cost} · 조각 ${shardUpg(p, lv)}</button>`) +
+            : `<div class="need">` +
+              `<span class="${prog.parts < cost ? 'no' : ''}">부품 ${cost.toLocaleString('ko-KR')}</span> · ` +
+              `<span class="${shardOf(p.id) < shardUpg(p, lv) ? 'no' : ''}">조각 ${shardUpg(p, lv)}</span></div>` +
+              `<button ${prog.parts < cost || shardOf(p.id) < shardUpg(p, lv) ? 'disabled' : ''}>강화하기</button>`) +
           `</div>`
         : '')
 
@@ -6866,6 +6875,12 @@ function buildWaves(ch, sub) {
    * 이제 1-20 이 dens 11 (2-1 은 9.5) 이라 챕터가 밀도를 주도한다. 2챕터
    * 첫 판이 1-20 보다 아주 조금 성기지만, 2챕터는 발사 빈도가 두 배라
    * (3.1 -> 1.55) 체감은 더 세다.
+   */
+  /*
+   * 0.40 도 재 봤다(2026-09-10). 광선 44 -> 40, 산탄 59 -> 50 /80 - 잡음
+   * 안이고 후반은 그대로였다. 밀도는 더 이상 레버가 아니다. 몸 쪽(우
+   * 윙맨 Lv.3, solo 계수, 조각 2배)도 마찬가지였다. 남은 후보는 판 길이
+   * (42 + sub*1.4 라 1-20 이 1-1 의 1.6배)와 절정 구간의 세기다.
    */
   const dens = sub * 0.55 + (ch.id - 1) * 9
   /*
@@ -12105,6 +12120,21 @@ function draw() {
       const hh = 3 + (i % 3) * 2
       g.fillStyle = 'rgba(255,255,255,.30)'
       g.fillRect(sw.x - sw.half * .9, py - yy, sw.half * 1.8, hh)
+    }
+    /*
+     * 그림 결(fxBeam, 12차)을 위로 흘려 얹는다.
+     *
+     * 코드 네 겹은 「띠」까지는 만드는데 「에너지가 흐른다」는 질감이 없었다.
+     * 한 장짜리 결을 세로로 이어 붙여 위로 흘리면 그 질감이 생긴다. 더하기
+     * 합성이라 아래 색을 덮지 않고 밝기만 얹는다.
+     */
+    const bim = ga('fxBeam')
+    if (bim) {
+      const bw = sw.half * 2.4, bh = bw
+      const off = (s.t * 700) % bh
+      g.globalAlpha = 0.5 * puls
+      for (let y = py + off; y > -bh; y -= bh) g.drawImage(bim, sw.x - bw / 2, y - bh, bw, bh)
+      g.globalAlpha = 1
     }
     /* 부딪는 자리 */
     const hg = g.createRadialGradient(sw.x, 0, 0, sw.x, 0, sw.half * 3.4)
