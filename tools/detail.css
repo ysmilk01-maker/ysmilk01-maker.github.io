@@ -62,7 +62,8 @@
 
 .strip img {
   width: 100%;
-  aspect-ratio: 636 / 1048;
+  /* 스토어 샷과 게임의 실제 캡처 비율을 각각 유지한다. */
+  height: auto;
   border-radius: 22px;
   border: 1px solid var(--line-dark);
   background: var(--stage);

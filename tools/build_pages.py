@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-apps/*.html 다섯 장을 한 틀에서 뽑는다.
+apps/*.html 상세 페이지를 한 틀에서 뽑는다.
 
   python tools/build_pages.py
 
@@ -47,7 +47,7 @@ APPS = {
            '<strong>투자 조언이 아닙니다.</strong> 랭킹의 수익률은 연습 계좌의 결과일 뿐입니다.',
            '시세는 거래소가 공개하는 값을 그대로 받습니다. 표시가 잠깐 늦어질 수 있습니다.',
            '서버에 저장되는 것은 토스가 주는 익명 키, 닉네임, 성적뿐입니다. 이름·전화번호·생년월일은 받지 않습니다.'],
-    others=['krx', 'saju', 'ai', 'sudoku'],
+    others=['beatwave', 'shooter', 'krx', 'ai', 'sudoku'],
   ),
   'krx': dict(
     slug='krx', name='국내주식 롱숏 챌린지', tint='krx', glow='var(--krx-glow)',
@@ -80,7 +80,7 @@ APPS = {
            '<strong>가상 자금입니다.</strong> 실제 증권 계좌와 연결되지 않고, 실제 공매도가 일어나지 않습니다.',
            '<strong>투자 조언이 아닙니다.</strong> 종목·방향·배수는 전부 사용자가 고르는 연습입니다.',
            '서버에 저장되는 것은 토스가 주는 익명 키, 닉네임, 성적, 게시판에 쓴 글뿐입니다.'],
-    others=['coin', 'saju', 'ai', 'sudoku'],
+    others=['beatwave', 'shooter', 'coin', 'ai', 'sudoku'],
   ),
   'saju': dict(
     slug='saju', name='사주 여덟 글자', tint='saju', glow='var(--saju-glow)',
@@ -111,7 +111,7 @@ APPS = {
            '날씨는 기상청 공개 예보를 받습니다. 위치 정보는 쓰지 않고, 지역은 사용자가 고릅니다.',
            '생년월일·명식·궁합 상대 정보는 서버로 보내지 않습니다. 앱을 지우면 같이 지워집니다.',
            '광고는 배너 하나뿐이고, 어떤 기능도 광고를 봐야 열리지 않습니다.'],
-    others=['coin', 'krx', 'ai', 'sudoku'],
+    others=['beatwave', 'shooter', 'coin', 'krx', 'ai', 'sudoku'],
   ),
   'ai': dict(
     slug='ai', name='내 AI 활용 점수는?', tint='ai', glow='var(--ai-glow)',
@@ -143,7 +143,7 @@ APPS = {
            '답한 내용은 기기 안에만 저장되고 서버로 보내지 않습니다. 앱을 지우면 같이 지워집니다.',
            '일부 처방은 보상형 광고를 시청한 뒤 열립니다. 열리는 조건은 앱 안의 안내를 확인해 주세요.',
            '단계 이름은 공개 연구(arXiv 2608.07779)의 틀을 참고했고, 이 앱이 정한 것입니다.'],
-    others=['coin', 'krx', 'saju', 'sudoku'],
+    others=['beatwave', 'shooter', 'coin', 'krx', 'sudoku'],
   ),
   'sudoku': dict(
     slug='sudoku', name='오늘도 무료 스도쿠', tint='sudoku', glow='var(--sudoku-glow)',
@@ -175,11 +175,86 @@ APPS = {
     notes=['<strong>웹 버전은 앱과 판이 같습니다.</strong> 토스 광고와 랭킹은 지원하지 않습니다. 진동은 Android Chrome 등 지원하는 브라우저에서만 동작합니다.',
            '기록은 이 브라우저에만 남습니다. 브라우저 데이터를 지우면 같이 지워집니다.',
            '앱은 원스토어와 구글플레이에 순서대로 냅니다. 이 페이지가 먼저 알려드립니다.'],
-    others=['coin', 'krx', 'saju', 'ai'],
+    others=['beatwave', 'shooter', 'coin', 'krx', 'ai'],
+  ),
+  'beatwave': dict(
+    slug='beatwave',
+    name='비트웨이브',
+    tint='beatwave',
+    glow='var(--beatwave-glow)',
+    title='비트웨이브 · 나인투식스랩',
+    meta='음악에 맞춰 내려오는 노트를 누르는 리듬게임. 4~8레인과 난이도를 고르고 브라우저에서 바로 플레이합니다. 웹 체험 버전입니다.',
+    og='비트를 따라, 나만의 한 판. 브라우저에서 즐기는 리듬게임 비트웨이브.',
+    badge='웹 체험 · 개발 중',
+    h1='비트를 따라,<br>나만의 한 판.',
+    desc='음악에 맞춰 내려오는 노트를 눌러보세요. 레인 수와 난이도를 고르고, 익숙해질 때까지 연습합니다.',
+    hero_img='games/beatwave.webp',
+    hero_alt='비트웨이브 실제 시작 화면. 초록빛 노트와 게임 시작 버튼.',
+    hero_width=780,
+    hero_height=1688,
+    how=['리듬게임', '4~8레인', '터치 · 키보드', '연습 모드'],
+    open_href='https://beatwave-james-k.wjpeain.chatgpt.site/',
+    open_label='비트웨이브 플레이',
+    hint='설치·로그인 없이 외부 웹 플레이 페이지로 이동합니다. 개발 중인 체험 버전입니다.',
+    shots=[('beatwave-select', '비트웨이브 실제 곡 선택 화면. 레인과 난이도, 노트 낙하 속도를 고릅니다.'),
+           ('beatwave-play', '비트웨이브 실제 연습 플레이 화면. 음악에 맞춰 내려오는 노트를 누릅니다.')],
+    shot_width=780,
+    shot_height=1688,
+    feats_h2='내 손에 맞는 속도로<br>리듬을 익혀보세요',
+    feats_lead='레인과 난이도를 직접 고르고, 연습한 뒤 같은 곡에 다시 도전합니다.',
+    feats=[('4~8', '레인을 고릅니다', '이지·노멀·하드 중 난이도를 고릅니다. 노트 낙하 속도도 따로 조절합니다.'),
+           ('연습', '끝까지 들어보세요', '실패 없이 수록 구간을 끝까지 연습합니다. 도전 모드에서는 게이지가 소진되면 종료됩니다.'),
+           ('기록', '다시 도전할 이유', '단계·레인·난이도별 개인 기록을 남깁니다. 웹 기록은 플레이한 브라우저에 저장됩니다.')],
+    steps=[('플레이 버튼을 누릅니다', '웹 페이지에서 ‘게임 시작’을 누릅니다.'),
+           ('레인과 난이도를 고릅니다', '처음이라면 이지와 연습 모드부터 시작해 보세요.'),
+           ('박자에 맞춰 누릅니다', '터치나 화면에 안내된 키보드 키로 노트를 맞힙니다.')],
+    notes=['<strong>개발 중인 웹 체험 버전입니다.</strong> 기능과 화면은 업데이트에 따라 바뀔 수 있습니다. 토스·스토어 정식 출시 버전은 아닙니다.',
+           '웹 기록과 설정은 이용한 브라우저에 저장됩니다. 기기 간 동기화는 없으며 브라우저 데이터를 지우면 기록도 지워집니다.',
+           '현재 웹 버전에는 실제 광고·유료 결제가 연결되어 있지 않습니다.',
+           '기기와 오디오 환경에 따라 입력감이 다를 수 있습니다. 앱 안의 입력 타이밍 보정 설정을 확인해 주세요.'],
+    others=['shooter', 'sudoku', 'coin', 'krx', 'ai'],
+  ),
+  'shooter': dict(
+    slug='shooter',
+    name='오늘도 출격',
+    tint='shooter',
+    glow='var(--shooter-glow)',
+    title='오늘도 출격 · 나인투식스랩',
+    meta='기체를 움직여 적의 탄을 피하고 자동 사격으로 전선을 돌파하는 편대 슈팅게임. 브라우저에서 바로 시작하는 웹 체험 버전입니다.',
+    og='피하고, 맞히고. 오늘도 출격. 브라우저에서 바로 시작하는 편대 슈팅게임.',
+    badge='웹 체험 · 개발 중',
+    h1='피하고, 맞히고.<br>오늘도 출격.',
+    desc='기체를 움직여 적의 탄을 피하고, 자동 사격으로 전선을 돌파합니다. 보유한 기체를 골라 나만의 편대를 꾸려보세요.',
+    hero_img='games/shooter.webp',
+    hero_alt='오늘도 출격 실제 시작 화면. 비행 편대와 부대 문장, 출격 버튼.',
+    hero_width=780,
+    hero_height=1688,
+    how=['편대 슈팅', '드래그 이동', '자동 사격', '기체 성장'],
+    open_href='../lab/shooter.html',
+    open_label='오늘도 출격 플레이',
+    hint='설치 없이 이 사이트의 게임 화면에서 열립니다. 개발 중인 웹 체험 버전입니다.',
+    shots=[('shooter-play', '오늘도 출격 실제 전투 화면. 바다 위 기체와 적탄, 자동 사격.'),
+           ('shooter-squad', '오늘도 출격 실제 편대 준비 화면. 기체 편성과 출격 버튼.')],
+    shot_width=780,
+    shot_height=1688,
+    feats_h2='손끝으로 피하고,<br>편대로 돌파합니다',
+    feats_lead='먼저 출격해 움직임을 익혀보세요. 보유 기체를 바꾸고 강화하며 다시 도전합니다.',
+    feats=[('이동', '드래그로 조종', '화면을 누른 채 손가락을 움직여 조종합니다. PC에서는 방향키도 지원합니다.'),
+           ('자동', '사격은 맡기세요', '기체가 자동으로 사격합니다. 적의 탄과 이동 경로를 보며 피해 보세요.'),
+           ('편대', '기체를 고르는 재미', '보유 기체를 편성하고 강화합니다. 진행에 따라 편대 구성을 넓혀갑니다.')],
+    steps=[('플레이 버튼을 누릅니다', '게임 시작 화면에서 ‘출격’을 누릅니다.'),
+           ('준비 화면에서 출격합니다', '보유한 기체를 확인하고 아래 ‘출격’ 버튼을 누릅니다.'),
+           ('기체를 움직입니다', '손가락으로 드래그하거나 방향키로 이동합니다. 사격은 자동입니다.')],
+    notes=['<strong>개발 중인 웹 체험 버전입니다.</strong> 난이도·보상·화면은 업데이트에 따라 바뀔 수 있습니다.',
+           '게임 진행과 설정은 이용한 브라우저에 저장됩니다. 브라우저 데이터를 지우면 함께 지워집니다.',
+           '체험 버전의 광고·보상 표시는 테스트용입니다. 실제 광고 수익이나 유료 결제가 발생하는 정식 서비스가 아닙니다.'],
+    others=['beatwave', 'sudoku', 'coin', 'krx', 'ai'],
   ),
 }
 
 BLURB = {
+  'beatwave': ('비트웨이브', '비트를 따라, 나만의 한 판'),
+  'shooter': ('오늘도 출격', '피하고, 맞히고. 오늘도 출격'),
   'coin': ('해외 코인 선물 챌린지', '잃어도 계좌는 그대로'),
   'krx': ('국내주식 롱숏 챌린지', '국장에서 숏을 쳐봅니다'),
   'saju': ('사주 여덟 글자', '생년월일은 폰 밖으로 안 나갑니다'),
@@ -196,10 +271,10 @@ def page(a):
   shots = ''
   if a['shots']:
     items = '\n'.join(
-      '      <li class="rise"><img src="../img/shots/%s.webp" width="636" height="1048" alt="%s" loading="lazy" decoding="async"></li>'
-      % (f, alt) for f, alt in a['shots'])
+      '      <li class="rise"><img src="../img/shots/%s.webp" width="%s" height="%s" alt="%s" loading="lazy" decoding="async"></li>'
+      % (f, a.get("shot_width", 636), a.get("shot_height", 1048), alt) for f, alt in a['shots'])
     shots = '''
-<!-- 화면 둘러보기. 스토어에 올린 스크린샷 그대로 — 옆으로 넘긴다 -->
+<!-- 화면 둘러보기. 실제 앱 화면 — 옆으로 넘긴다 -->
 <section class="sec shots" style="--tint:%s">
   <div class="inner">
     <div class="shots-head">
@@ -363,7 +438,7 @@ def page(a):
       </ul>
     </div>
     <div class="phone rise">
-      <img src="../img/%(hero_img)s" width="1170" height="2532" alt="%(hero_alt)s" decoding="async">
+      <img src="../img/%(hero_img)s" width="%(hero_width)s" height="%(hero_height)s" alt="%(hero_alt)s" decoding="async">
     </div>
   </div>
 </section>
@@ -431,7 +506,7 @@ def page(a):
 <script src="../site.js"></script>%(appjs)s
 </body>
 </html>
-''' % dict(a, tintvar=tint, how=how, shots=shots, feats=feats, mid=mid, steps=steps, notes=notes, others=others, appjs=appjs)
+''' % dict(a, hero_width=a.get("hero_width", 1170), hero_height=a.get("hero_height", 2532), tintvar=tint, how=how, shots=shots, feats=feats, mid=mid, steps=steps, notes=notes, others=others, appjs=appjs)
 
 
 def main():

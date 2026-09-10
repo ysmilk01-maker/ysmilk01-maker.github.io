@@ -1,4 +1,4 @@
-/* 토스 미니앱과 웹 스도쿠를 소개한다. 검정 바탕과 유리 조형물을 유지하고,
+/* 토스 미니앱과 웹 게임을 소개한다. 검정 바탕과 유리 조형물을 유지하고,
  * 실제 화면·실행 경로·사용 조건을 한눈에 비교할 수 있게 배치한다. */
 
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
@@ -28,6 +28,11 @@
   --saju-glow: rgba(247, 108, 130, 0.10);
   --ai-glow: rgba(78, 156, 245, 0.11);
   --sudoku-glow: rgba(79, 158, 119, 0.10);
+
+  --beatwave: #a9f96a;
+  --shooter: #72d6ed;
+  --beatwave-glow: rgba(169, 249, 106, 0.10);
+  --shooter-glow: rgba(114, 214, 237, 0.11);
 
   --coin: #f0b90b;
   --saju: #f76c82;
@@ -435,7 +440,7 @@ html.boot-done body { overflow: visible; }
   .sculpt { width: 100%; }
 }
 
-/* 실제 앱 화면을 곁들인 목록. 넓을 때는 두 개 + 세 개, 폰에서는 한 줄씩. */
+/* 실제 앱 화면을 곁들인 목록. 여섯 앱을 넓을 때 두 열, 폰에서는 한 줄씩. */
 .apps { background: var(--black); padding: 72px 24px 96px; border-top: 1px solid var(--line-dark); }
 .apps .inner { max-width: 1120px; }
 .apps-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; }
@@ -466,23 +471,17 @@ html.boot-done body { overflow: visible; }
 }
 @media (min-width: 760px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .grid > li:last-child { grid-column: span 2; }
   .tile { min-height: 320px; padding: 30px 0 30px 28px; }
   .tile-phone { height: 240px; margin-bottom: -30px; }
 }
 @media (min-width: 1000px) {
   .apps { padding-block: 88px 112px; }
-  .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; margin-top: 40px; }
-  .grid > li, .grid > li:last-child { grid-column: span 2; }
-  .grid > li:nth-child(-n+2) { grid-column: span 3; }
-  .tile { display: flex; flex-direction: column; align-items: stretch; padding: 28px 28px 0; gap: 28px; }
+  .grid { gap: 20px; margin-top: 40px; }
+  .tile { grid-template-columns: minmax(0, 1fr) 35%; padding: 32px 0 32px 32px; gap: 24px; min-height: 344px; }
   .tile h3 { font-size: var(--card-title-wide); }
-  .tile p { min-height: 72px; }
-  .tile-phone { align-self: center; margin: auto auto 0; width: 62%; height: 192px; border-radius: 28px 28px 0 0; padding: 6px 6px 0; }
+  .tile-phone { align-self: end; width: 110%; height: 260px; margin: 0 0 -32px; border-radius: 28px 28px 0 0; padding: 6px 6px 0; }
   .tile-phone img { border-radius: 22px 22px 0 0; }
-  .grid > li:nth-child(-n+2) .tile { display: grid; grid-template-columns: minmax(0, 1fr) 35%; padding: 32px 0 32px 32px; gap: 24px; min-height: 344px; }
-  .grid > li:nth-child(-n+2) .tile-phone { align-self: end; width: 110%; height: 260px; margin: 0 0 -32px; }
-  .grid > li:nth-child(-n+2) .tile p { min-height: 0; }
+  .tile-game .tile-phone { height: 320px; }
 }
 @media (max-width: 359px) {
   .hero { padding-top: 48px; }
@@ -982,7 +981,8 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 
 .strip img {
   width: 100%;
-  aspect-ratio: 636 / 1048;
+  /* 스토어 샷과 게임의 실제 캡처 비율을 각각 유지한다. */
+  height: auto;
   border-radius: 22px;
   border: 1px solid var(--line-dark);
   background: var(--stage);
