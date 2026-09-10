@@ -51,6 +51,22 @@
 - 구역은 얇은 선 하나로 나눈다. 카드를 겹겹이 쌓지 않는다
 - 움직임은 「있어야 이유가 설명되는」 것만. 고빈도 인터랙션엔 150ms 이하
 
+## 공통 파일 버전 갱신
+
+`style.css`·`site.js`·`app.js`를 바꾼 뒤에는 아래 명령을 실행한다. 파일 내용의
+SHA-256 앞 12자리를 `?v=`에 붙여 인앱 브라우저가 새 파일을 받게 한다.
+
+```bash
+python tools/cache_bust.py
+```
+
+상세 내용이나 `tools/detail.css`를 고쳤다면 `python tools/build_pages.py`를 실행한다.
+이 빌드는 CSS를 합친 뒤 버전 갱신까지 한다. 메인·개인정보·상세 다섯 장이 대상이며
+`lab/`과 외부 CDN 주소는 건드리지 않는다. 같은 내용이면 버전도 그대로다.
+
+푸시 직전, `git pull --rebase` 뒤에도 `python tools/cache_bust.py --check`로 확인한다.
+이 명령은 파일을 고치지 않으며, 갱신이 필요하면 종료 코드 1을 돌려준다.
+
 ## 고치고 나서 확인하는 법
 
 ```bash
@@ -69,6 +85,7 @@ playwright-cli -s=chk close
 ```
 
 푸시 전 체크리스트:
+- [ ] `python tools/cache_bust.py --check` 통과
 - [ ] 콘솔 오류·경고 0 (메인 + 상세 하나)
 - [ ] 320·390·1280px 에서 가로 넘침 0
 - [ ] Tab 만으로 앱 카드까지 닿고 포커스 링이 보인다
