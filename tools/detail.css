@@ -1,0 +1,368 @@
+
+
+/* ---------- 상세 페이지 · 본문 ---------- */
+
+/*
+ * 상세는 스토어 목록처럼 읽힌다 — 화면 둘러보기, 특징, 지금 숫자, 여는 법,
+ * 알아둘 것. 각 구역은 검정 위에 얇은 선 하나로만 나뉜다. 카드를 쌓으면
+ * 앱 안이 아니라 앱 소개서처럼 보인다.
+ */
+.sec {
+  background: var(--black);
+  border-top: 1px solid var(--line-dark);
+  padding: clamp(72px, 9vw, 120px) 24px;
+}
+
+.sec .inner { max-width: 980px; }
+
+.sec h2 {
+  font-size: clamp(1.6rem, 3.6vw, 2.4rem);
+  line-height: 1.16;
+  letter-spacing: -0.03em;
+  max-width: 20ch;
+}
+
+.sec .lead {
+  text-wrap: pretty;
+  margin: 14px 0 0;
+  max-width: 44ch;
+  color: var(--muted-dark);
+  font-size: 15.5px;
+  letter-spacing: -0.01em;
+}
+
+/* 화면 둘러보기 — 옆으로 넘기는 띠 */
+
+.shots { overflow: hidden; }
+
+.shots .inner { max-width: none; }
+
+.shots-head { max-width: 980px; margin: 0 auto 30px; }
+
+.strip {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0 max(24px, calc((100vw - 980px) / 2)) 18px;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: max(24px, calc((100vw - 980px) / 2));
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar { display: none; }
+
+.strip li {
+  flex: none;
+  width: min(280px, 68vw);
+  scroll-snap-align: start;
+}
+
+.strip img {
+  width: 100%;
+  aspect-ratio: 636 / 1048;
+  border-radius: 22px;
+  border: 1px solid var(--line-dark);
+  background: var(--stage);
+}
+
+.strip-hint {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--muted-dim);
+  text-align: center;
+}
+
+/* 특징 */
+
+.feats {
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--line-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) { .feats { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px) { .feats { grid-template-columns: repeat(3, 1fr); } }
+
+.feats li {
+  background: var(--stage);
+  padding: 26px 24px 28px;
+}
+
+.feats b {
+  display: block;
+  font-size: clamp(1.5rem, 2.6vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--tint, var(--ink-on-dark));
+  font-variant-numeric: tabular-nums;
+}
+
+.feats h3 {
+  margin: 12px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.feats p {
+  text-wrap: pretty;
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--muted-dark);
+  letter-spacing: -0.008em;
+}
+
+/* 지금 숫자 — Supabase 에서 읽는다(app.js). 못 읽으면 구역이 사라진다 */
+
+.live {
+  display: grid;
+  gap: 1px;
+  margin: 34px 0 0;
+  background: var(--line-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+@media (min-width: 560px) { .live { grid-template-columns: repeat(3, 1fr); } }
+
+.live > div { background: var(--stage); padding: 20px 22px 22px; }
+
+.live b {
+  display: block;
+  font-size: clamp(1.7rem, 3.4vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tint, var(--ink-on-dark));
+}
+
+.live span {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted-dark);
+}
+
+.rank {
+  width: 100%;
+  margin: 26px 0 0;
+  border-collapse: collapse;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rank th, .rank td {
+  padding: 13px 8px;
+  border-bottom: 1px solid var(--line-dark);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.rank th {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted-dim);
+  text-transform: uppercase;
+}
+
+.rank .r { width: 40px; color: var(--muted-dark); }
+.rank tbody tr:first-child .r { color: var(--tint); font-weight: 800; }
+/* 닉네임만 줄바꿈을 허용한다 — 320px 에서 표가 칸을 넘지 않게 */
+.rank .n { white-space: normal; overflow-wrap: anywhere; }
+.rank .p { text-align: right; font-weight: 700; }
+.rank .t { text-align: right; color: var(--muted-dark); }
+.rank .up { color: #f0616d; }
+.rank .down { color: #4d8bf5; }
+
+.rank-note {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--muted-dim);
+}
+
+/* 밖으로 나가는 것 / 안 나가는 것 — 사주 */
+
+.inout {
+  display: grid;
+  gap: 1px;
+  margin: 34px 0 0;
+  background: var(--line-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) { .inout { grid-template-columns: 1fr 1fr; } }
+
+.inout > div { background: var(--stage); padding: 24px 24px 26px; }
+
+.inout h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-dark);
+}
+
+.inout h3.stay { color: var(--tint); }
+
+.inout ul { margin: 0; padding: 0; list-style: none; }
+
+.inout li {
+  padding: 9px 0;
+  border-top: 1px solid var(--line-dark);
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+
+.inout li:first-child { border-top: 0; }
+.inout li span { color: var(--muted-dark); }
+
+/* 여는 법 — 밝은 구간 */
+
+.steps {
+  margin: 40px auto 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 14px;
+  text-align: left;
+  max-width: 860px;
+}
+
+@media (min-width: 700px) { .steps { grid-template-columns: repeat(3, 1fr); } }
+
+.steps li {
+  background: #fff;
+  border: 1px solid var(--line-light);
+  border-radius: 18px;
+  padding: 22px 22px 24px;
+}
+
+.steps i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink-on-light);
+  color: #fff;
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.steps h3 {
+  margin: 14px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.steps p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted-light);
+}
+
+.light-stage .open { margin-top: 36px; }
+
+/* 알아둘 것 */
+
+.notes {
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+  max-width: 62ch;
+}
+
+.notes li {
+  position: relative;
+  padding: 12px 0 12px 22px;
+  border-top: 1px solid var(--line-dark);
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #a4a4ac;
+  letter-spacing: -0.008em;
+}
+
+.notes li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 21px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tint, #666);
+}
+
+.notes li:first-child { border-top: 0; }
+.notes strong { color: var(--ink-on-dark); font-weight: 600; }
+
+/* 여섯 단계 사다리 — AI 진단. 위가 높은 칸이다 */
+
+.ladder {
+  margin: 34px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line-dark);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.ladder li {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 4px 16px;
+  padding: 18px 22px;
+  background: var(--stage);
+  border-top: 1px solid var(--line-dark);
+}
+
+.ladder li:first-child { border-top: 0; }
+
+.ladder b {
+  grid-row: span 2;
+  align-self: start;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--tint);
+  font-variant-numeric: tabular-nums;
+  padding-top: 2px;
+}
+
+.ladder li:nth-child(n+4) b { color: var(--muted-dark); }
+
+.ladder h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ladder p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted-dark);
+  letter-spacing: -0.008em;
+}
