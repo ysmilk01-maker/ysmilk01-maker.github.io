@@ -20,6 +20,8 @@
   --ink-on-light: #101012;
   --muted-dark: #8b8b93;
   --muted-light: #6c6c74;
+  /* 캡션·안내·저작권. 검정 위 4.94:1, 무대색 위 4.71:1 — 본문 기준(4.5) 통과 */
+  --muted-dim: #7a7a83;
   --line-dark: #202026;
   --line-light: #e2e2e6;
 
@@ -71,6 +73,25 @@ img { max-width: 100%; height: auto; display: block; }
 
 a { color: inherit; }
 
+/* ---------- 본문으로 건너뛰기 ---------- */
+
+/* 키보드로 들어온 사람에게만 보인다. 첫 Tab 에 나타나고, 누르면 본문으로 */
+.skip {
+  position: absolute;
+  top: 10px;
+  left: -999px;
+  z-index: 300;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-on-light);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip:focus-visible { left: 12px; }
+
 /* ---------- 상단 바 ---------- */
 
 .nav {
@@ -92,6 +113,9 @@ a { color: inherit; }
 }
 
 .nav a { text-decoration: none; color: var(--muted-dark); transition: color 0.2s; }
+
+/* 글자는 13px 이지만 누르는 영역은 40px 이상 — 폰에서 첫 시도에 눌리게 */
+.nav ul a { display: inline-block; padding: 12px 6px; margin: 0 -6px; }
 .nav a:hover, .nav a:focus-visible { color: var(--ink-on-dark); }
 
 /*
@@ -371,6 +395,7 @@ html.boot-done body { overflow: visible; }
 }
 
 .hero .sub {
+  text-wrap: pretty;
   margin: 26px auto 0;
   max-width: 34ch;
   font-size: clamp(1.02rem, 1.9vw, 1.3rem);
@@ -402,7 +427,7 @@ html.boot-done body { overflow: visible; }
   transform: translateX(-50%);
   font-size: 11.5px;
   letter-spacing: 0.1em;
-  color: #55555d;
+  color: var(--muted-dim);
 }
 
 .scroll-cue span {
@@ -471,8 +496,10 @@ html.boot-done body { overflow: visible; }
 .tile:hover, .tile:focus-visible {
   transform: translateY(-5px);
   border-color: #2c2c34;
-  outline: none;
 }
+
+/* 키보드 포커스 링은 브라우저 것을 그대로 쓴다. 카드가 overflow: hidden 이라 안쪽에 그린다 */
+.tile:focus-visible { outline-offset: -3px; }
 
 .tile-text {
   position: relative;
@@ -511,6 +538,7 @@ html.boot-done body { overflow: visible; }
 }
 
 .tile p {
+  text-wrap: pretty;
   margin: 10px 0 0;
   max-width: 30ch;
   font-size: 15px;
@@ -605,7 +633,8 @@ html.gsap .tile-phone img { transition-duration: 0.25s; }
 .back {
   display: block;
   width: fit-content;
-  margin: 0 auto 30px;
+  margin: 0 auto 22px;
+  padding: 8px 0;
   font-size: 13px;
   color: var(--muted-dark);
   text-decoration: none;
@@ -639,6 +668,7 @@ html.gsap .tile-phone img { transition-duration: 0.25s; }
 .app-stage h1 { font-size: var(--d2); line-height: 1.14; letter-spacing: -0.032em; }
 
 .app-stage .desc {
+  text-wrap: pretty;
   margin: 20px auto 0;
   max-width: 42ch;
   color: var(--muted-dark);
@@ -708,7 +738,7 @@ html.gsap .tile-phone img { transition-duration: 0.25s; }
 .hint {
   margin: 14px 0 0;
   font-size: 12.5px;
-  color: #5c5c65;
+  color: var(--muted-dim);
 }
 
 /* 상세 아래 — 다른 앱들 */
@@ -788,6 +818,7 @@ html.gsap .tile-phone img { transition-duration: 0.25s; }
 .light-stage h2 { max-width: 18ch; margin-inline: auto; }
 
 .light-stage .desc {
+  text-wrap: pretty;
   margin: 20px auto 0;
   max-width: 40ch;
   color: var(--muted-light);
@@ -826,6 +857,7 @@ html.gsap .tile-phone img { transition-duration: 0.25s; }
 }
 
 .principles p {
+  text-wrap: pretty;
   margin: 0;
   font-size: 14.5px;
   line-height: 1.62;
@@ -859,7 +891,7 @@ html.gsap .tile-phone img { transition-duration: 0.25s; }
 }
 
 .biz div { display: flex; gap: 12px; }
-.biz dt { flex: none; width: 62px; color: #5c5c65; margin: 0; }
+.biz dt { flex: none; width: 62px; color: var(--muted-dim); margin: 0; }
 .biz dd { margin: 0; color: var(--ink-on-dark); }
 
 .foot-links {
@@ -870,10 +902,10 @@ html.gsap .tile-phone img { transition-duration: 0.25s; }
   border-top: 1px solid var(--line-dark);
 }
 
-.foot-links a { text-decoration: none; transition: color 0.2s; }
+.foot-links a { display: inline-block; padding: 8px 0; text-decoration: none; transition: color 0.2s; }
 .foot-links a:hover, .foot-links a:focus-visible { color: var(--ink-on-dark); }
 
-.copy { margin: 22px 0 0; color: #4e4e56; font-size: 12.5px; }
+.copy { margin: 22px 0 0; color: var(--muted-dim); font-size: 12.5px; }
 
 /* ---------- 등장 ---------- */
 
@@ -938,7 +970,7 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 
 .doc th { color: var(--ink-on-dark); font-weight: 600; }
 
-.doc .updated { color: #5c5c65; font-size: 13px; }
+.doc .updated { color: var(--muted-dim); font-size: 13px; }
 
 .doc a { color: #8ab4f8; }
 
@@ -956,7 +988,7 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 }
 
 .doc .rows div { display: flex; gap: 12px; }
-.doc .rows dt { flex: none; width: 62px; color: #5c5c65; margin: 0; }
+.doc .rows dt { flex: none; width: 62px; color: var(--muted-dim); margin: 0; }
 .doc .rows dd { margin: 0; color: var(--ink-on-dark); }
 
 .doc .lead {
@@ -970,11 +1002,11 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
   margin-top: 64px;
   padding-top: 24px;
   border-top: 1px solid var(--line-dark);
-  color: #5c5c65;
+  color: var(--muted-dim);
   font-size: 13px;
 }
 
-.doc footer p { margin: 4px 0; color: #5c5c65; font-size: 13px; }
+.doc footer p { margin: 4px 0; color: var(--muted-dim); font-size: 13px; }
 
 
 /* ---------- 상세 페이지 · 본문 ---------- */
@@ -1000,6 +1032,7 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 }
 
 .sec .lead {
+  text-wrap: pretty;
   margin: 14px 0 0;
   max-width: 44ch;
   color: var(--muted-dark);
@@ -1047,7 +1080,7 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 .strip-hint {
   margin: 4px 0 0;
   font-size: 12.5px;
-  color: #5c5c65;
+  color: var(--muted-dim);
   text-align: center;
 }
 
@@ -1091,6 +1124,7 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 }
 
 .feats p {
+  text-wrap: pretty;
   margin: 8px 0 0;
   font-size: 14.5px;
   line-height: 1.6;
@@ -1150,13 +1184,14 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: #5c5c65;
+  color: var(--muted-dim);
   text-transform: uppercase;
 }
 
 .rank .r { width: 40px; color: var(--muted-dark); }
 .rank tbody tr:first-child .r { color: var(--tint); font-weight: 800; }
-.rank .n { overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+/* 닉네임만 줄바꿈을 허용한다 — 320px 에서 표가 칸을 넘지 않게 */
+.rank .n { white-space: normal; overflow-wrap: anywhere; }
 .rank .p { text-align: right; font-weight: 700; }
 .rank .t { text-align: right; color: var(--muted-dark); }
 .rank .up { color: #f0616d; }
@@ -1165,7 +1200,7 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 .rank-note {
   margin: 16px 0 0;
   font-size: 13px;
-  color: #5c5c65;
+  color: var(--muted-dim);
 }
 
 /* 밖으로 나가는 것 / 안 나가는 것 — 사주 */
