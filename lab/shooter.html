@@ -1445,11 +1445,17 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 
 <div class="panel" id="setting" hidden>
   <div class="gbox">
-    <h2>설정</h2>
+    <h2 id="setTitle">설정</h2>
     <div class="sum" id="setBody"></div>
     <div class="bar" style="justify-content:center">
       <button id="setClose">닫기</button>
     </div>
+    <!--
+      테스트용 초기화. 제목 「설정」을 다섯 번 두드리면 나온다.
+      저장(shooter-proto-v3)을 지우고 새로고침한다. 소리 설정은 남긴다.
+      출시 전에 뺀다.
+    -->
+    <button id="setReset" hidden style="margin:6px auto 0;display:block;font-size:11px;color:#9fb9c5;background:transparent;border:1px dashed #4d626b;border-radius:8px;padding:6px 12px">처음부터 다시 (테스트 · 저장 삭제)</button>
   </div>
 </div>
 
@@ -4562,7 +4568,16 @@ function renderSet() {
     }
   })
 }
-document.getElementById('btnSet').onclick = () => { elSet.hidden = false; renderSet(); modalOn(elSet, () => document.getElementById('setClose').click()) }
+document.getElementById('btnSet').onclick = () => { elSet.hidden = false; renderSet(); setTaps = 0; document.getElementById('setReset').hidden = true; modalOn(elSet, () => document.getElementById('setClose').click()) }
+/* 테스트용 초기화 - 제목 다섯 번 두드리면 버튼이 나온다 */
+let setTaps = 0
+document.getElementById('setTitle').onclick = () => { if (++setTaps >= 5) document.getElementById('setReset').hidden = false }
+document.getElementById('setReset').onclick = () => {
+  if (!confirm('저장을 전부 지우고 처음부터 시작합니다. 기체·파일럿·레벨·진행이 모두 사라집니다.')) return
+  if (!confirm('정말 지웁니까?')) return
+  try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(OLD_KEY) } catch {}
+  location.reload()
+}
 document.getElementById('setClose').onclick = () => { elSet.hidden = true; modalOff(); render() }
 
 /* ── 기체 ───────────────────────────────────────────────────────── */
