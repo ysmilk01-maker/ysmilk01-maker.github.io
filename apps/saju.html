@@ -13,7 +13,8 @@
 <meta property="og:image" content="https://ysmilk01-maker.github.io/img/og.png">
 <link rel="icon" href="../favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<link rel="stylesheet" href="../style.css?v=74c3ce51dbac">
+<link rel="stylesheet" href="../style.css?v=28107fa0017f">
+<noscript><style>.rise, .phone.rise { opacity: 1; transform: none; }</style></noscript>
 </head>
 <body>
 
@@ -31,27 +32,27 @@
 </nav>
 
 <main id="main">
-<!-- 첫 화면. 폰이 가운데 서고 글은 위, 여는 버튼은 아래 -->
-<section class="stage app-stage" style="--tint:var(--saju); --glow:rgba(247,108,130,0.10)">
+<!-- 설명과 실행 버튼을 먼저 읽고, 실제 화면으로 이어진다. -->
+<section class="stage app-stage" style="--tint:var(--saju); --glow:var(--saju-glow)">
   <div class="inner">
-    <a class="back rise" href="../index.html#apps">← 모든 앱</a>
-    <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
-    <h1 class="rise">생년월일은<br>폰 밖으로 안 나갑니다</h1>
-    <p class="desc rise">
-      태양황경으로 절기를 계산해 사주 여덟 글자를 세웁니다. 오늘의 운과 궁합, 그리고 기상청 날씨에 내 사주의 기운을 겹친 오늘의 옷차림까지. 사주 계산은 전부 기기 안에서 끝납니다.
-    </p>
-    <div class="phone rise">
-      <img src="../img/saju.png" width="1170" height="2532" alt="사주 여덟 글자 시작 화면. 오늘의 일진과 절기 기준 만세력 설명." decoding="async">
-    </div>
-    <ul class="how rise">
+    <div class="app-intro">
+      <a class="back rise" href="../index.html#apps">← 모든 앱</a>
+      <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
+      <h1 class="rise">생년월일은<br>폰 밖으로 안 나갑니다</h1>
+      <p class="desc rise">태양황경으로 절기를 계산해 사주 여덟 글자를 세웁니다. 오늘의 운과 궁합, 그리고 기상청 날씨에 내 사주의 기운을 겹친 오늘의 옷차림까지. 사주 계산은 전부 기기 안에서 끝납니다.</p>
+      <a class="open rise" href="intoss://saju-eight">토스에서 열기 <span aria-hidden="true">↗</span></a>
+      <p class="hint rise">생년월일은 기기에 저장됩니다. 날씨 조회와 광고 요청은 별도로 발생합니다. 검색창에 ‘사주 여덟 글자’</p>
+      <ul class="how rise">
       <li>절기 기준 만세력</li>
       <li>오늘의 운</li>
       <li>오늘의 코디</li>
       <li>이번 주 흐름</li>
       <li>궁합</li>
-    </ul>
-    <a class="open rise" href="intoss://saju-eight">토스에서 열기</a>
-    <p class="hint rise">날씨만 기상청에서 받아오고 위치 정보는 쓰지 않습니다. 검색창에 ‘사주 여덟 글자’</p>
+      </ul>
+    </div>
+    <div class="phone rise">
+      <img src="../img/saju.png" width="1170" height="2532" alt="사주 여덟 글자 시작 화면. 오늘의 일진과 절기 기준 만세력 설명." decoding="async">
+    </div>
   </div>
 </section>
 
@@ -83,7 +84,7 @@
       <li class="rise"><b>오늘</b><h3>재물 · 애정 · 일 · 건강</h3><p>오늘의 일진과 내 명식을 겹쳐 네 갈래로 봅니다. 이번 주 흐름도 같이.</p></li>
       <li class="rise"><b>날씨</b><h3>오늘의 옷차림</h3><p>기상청 예보에 내 사주의 기운을 얹어 오늘 뭘 입을지 색과 소재로 권합니다.</p></li>
       <li class="rise"><b>둘</b><h3>궁합</h3><p>상대 생년월일을 넣으면 두 명식을 나란히 놓고 봅니다. 상대 정보도 기기 안에만 있습니다.</p></li>
-      <li class="rise"><b>0건</b><h3>서버로 나가는 개인정보</h3><p>생년월일·명식·궁합 상대 모두 폰 안에서만. 밖으로 나가는 건 날씨 요청 하나입니다.</p></li>
+      <li class="rise"><b>기기 안</b><h3>사주 입력과 계산</h3><p>생년월일·명식·궁합 상대 정보는 기기에 남습니다. 날씨 조회와 토스 광고 요청은 별도로 발생합니다.</p></li>
     </ul>
   </div>
 </section>
@@ -171,6 +172,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
-<script src="../site.js?v=f507bf87bdc8"></script>
+<script src="../site.js?v=7aaf69515d38"></script>
 </body>
 </html>

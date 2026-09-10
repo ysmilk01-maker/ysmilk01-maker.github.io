@@ -13,7 +13,8 @@
 <meta property="og:image" content="https://ysmilk01-maker.github.io/img/og.png">
 <link rel="icon" href="../favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<link rel="stylesheet" href="../style.css?v=74c3ce51dbac">
+<link rel="stylesheet" href="../style.css?v=28107fa0017f">
+<noscript><style>.rise, .phone.rise { opacity: 1; transform: none; }</style></noscript>
 </head>
 <body>
 
@@ -31,27 +32,27 @@
 </nav>
 
 <main id="main">
-<!-- 첫 화면. 폰이 가운데 서고 글은 위, 여는 버튼은 아래 -->
-<section class="stage app-stage" style="--tint:var(--ai); --glow:rgba(78,156,245,0.11)">
+<!-- 설명과 실행 버튼을 먼저 읽고, 실제 화면으로 이어진다. -->
+<section class="stage app-stage" style="--tint:var(--ai); --glow:var(--ai-glow)">
   <div class="inner">
-    <a class="back rise" href="../index.html#apps">← 모든 앱</a>
-    <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
-    <h1 class="rise">점수만<br>주지 않습니다</h1>
-    <p class="desc rise">
-      쓰긴 쓰는데 잘 쓰고 있는 건지 모르겠다면. 열여덟 문항으로 지금 어디쯤인지 재고, 어느 칸에서 막혀 있는지 짚고, 오늘 30분 안에 뭘 해보면 되는지까지 적어 드립니다.
-    </p>
-    <div class="phone rise">
-      <img src="../img/ai.png" width="1170" height="2532" alt="내 AI 활용 점수는? 시작 화면. 여섯 영역 — 묻기·읽히기·확인·잇기·굴리기·만들기." decoding="async">
-    </div>
-    <ul class="how rise">
+    <div class="app-intro">
+      <a class="back rise" href="../index.html#apps">← 모든 앱</a>
+      <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
+      <h1 class="rise">점수만<br>주지 않습니다</h1>
+      <p class="desc rise">쓰긴 쓰는데 잘 쓰고 있는 건지 모르겠다면. 열여덟 문항으로 지금 어디쯤인지 재고, 어느 칸에서 막혀 있는지 짚고, 오늘 30분 안에 뭘 해보면 되는지까지 적어 드립니다.</p>
+      <a class="open rise" href="intoss://ai-level">토스에서 열기 <span aria-hidden="true">↗</span></a>
+      <p class="hint rise">토스 앱에서 열립니다. 검색창에 ‘AI 활용 점수’</p>
+      <ul class="how rise">
       <li>18문항 · 4분</li>
       <li>여섯 영역</li>
       <li>여섯 단계</li>
       <li>오늘 할 일 3가지</li>
       <li>기기 안에만</li>
-    </ul>
-    <a class="open rise" href="intoss://ai-level">토스에서 열기</a>
-    <p class="hint rise">토스 앱에서 열립니다. 검색창에 ‘AI 활용 점수’</p>
+      </ul>
+    </div>
+    <div class="phone rise">
+      <img src="../img/ai.png" width="1170" height="2532" alt="내 AI 활용 점수는? 시작 화면. 여섯 영역 — 묻기·읽히기·확인·잇기·굴리기·만들기." decoding="async">
+    </div>
   </div>
 </section>
 
@@ -83,7 +84,7 @@
       <li class="rise"><b>6</b><h3>영역</h3><p>묻기 · 읽히기 · 확인 · 잇기 · 굴리기 · 만들기. 앞이 안 되면 뒤도 흔들리는 순서입니다.</p></li>
       <li class="rise"><b>6</b><h3>단계</h3><p>구경꾼부터 여럿 굴리기까지. 사람이 얼마나 감독해야 하는지를 기준으로 나눈 공개 연구 틀을 참고했습니다.</p></li>
       <li class="rise"><b>처음</b><h3>막힌 칸을 짚습니다</h3><p>제일 낮은 영역이 아니라, 순서에서 처음 막힌 영역을 찾습니다. 거기부터 풀어야 뒤가 따라옵니다.</p></li>
-      <li class="rise"><b>3</b><h3>오늘 할 일</h3><p>처방 카드 세 장. 첫 장은 그냥 드리고, 나머지 둘은 광고 한 편을 보면 열립니다.</p></li>
+      <li class="rise"><b>3</b><h3>오늘 할 일</h3><p>오늘 해볼 일을 처방 카드 세 장으로 안내합니다. 일부 처방은 보상형 광고를 시청한 뒤 열립니다.</p></li>
       <li class="rise"><b>0</b><h3>서버로 가는 답</h3><p>답한 내용은 이 기기 안에만 남습니다. 어디로도 보내지 않습니다.</p></li>
     </ul>
   </div>
@@ -128,7 +129,7 @@
     <ul class="notes">
       <li class="rise"><strong>점수는 자기 보고입니다.</strong> 해봤다고 고른 만큼 나옵니다. 후하게 고르면 후하게 나옵니다.</li>
       <li class="rise">답한 내용은 기기 안에만 저장되고 서버로 보내지 않습니다. 앱을 지우면 같이 지워집니다.</li>
-      <li class="rise">처방 두 장을 여는 광고는 보상형이라, 안 보면 첫 장만 보이고 그 외에 막히는 건 없습니다.</li>
+      <li class="rise">일부 처방은 보상형 광고를 시청한 뒤 열립니다. 열리는 조건은 앱 안의 안내를 확인해 주세요.</li>
       <li class="rise">단계 이름은 공개 연구(arXiv 2608.07779)의 틀을 참고했고, 이 앱이 정한 것입니다.</li>
     </ul>
   </div>
@@ -162,6 +163,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
-<script src="../site.js?v=f507bf87bdc8"></script>
+<script src="../site.js?v=7aaf69515d38"></script>
 </body>
 </html>

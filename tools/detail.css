@@ -109,7 +109,7 @@
 
 .feats h3 {
   margin: 12px 0 0;
-  font-size: 16px;
+  font-size: var(--text-body);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -151,7 +151,7 @@
 .live span {
   display: block;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--text-caption);
   color: var(--muted-dark);
 }
 
@@ -159,7 +159,7 @@
   width: 100%;
   margin: 26px 0 0;
   border-collapse: collapse;
-  font-size: 15px;
+  font-size: var(--text-ui);
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
@@ -190,7 +190,7 @@
 
 .rank-note {
   margin: 16px 0 0;
-  font-size: 13px;
+  font-size: var(--text-caption);
   color: var(--muted-dim);
 }
 
@@ -212,7 +212,7 @@
 
 .inout h3 {
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--text-caption);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -264,20 +264,20 @@
   background: var(--ink-on-light);
   color: #fff;
   font-style: normal;
-  font-size: 13px;
+  font-size: var(--text-caption);
   font-weight: 700;
 }
 
 .steps h3 {
   margin: 14px 0 0;
-  font-size: 16px;
+  font-size: var(--text-body);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .steps p {
   margin: 6px 0 0;
-  font-size: 14px;
+  font-size: var(--text-small);
   line-height: 1.6;
   color: var(--muted-light);
 }
@@ -342,7 +342,7 @@
 .ladder b {
   grid-row: span 2;
   align-self: start;
-  font-size: 15px;
+  font-size: var(--text-ui);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--tint);
@@ -354,15 +354,35 @@
 
 .ladder h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--text-body);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .ladder p {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-small);
   line-height: 1.6;
   color: var(--muted-dark);
   letter-spacing: -0.008em;
+}
+
+/* 첫 화면에서 바로 실행할 수 있게 설명과 버튼을 한 덩이로 둔다. */
+.app-stage { padding-block: 48px 64px; text-align: left; }
+.app-stage::before { background: radial-gradient(50% 70% at 85% 40%, var(--glow, transparent), transparent); }
+.app-stage .inner { display: grid; gap: 40px; max-width: 1120px; align-items: center; }
+.app-intro { min-width: 0; }
+.app-stage .back { margin: 0 0 18px; min-height: 40px; }
+.app-stage .badge { font-size: var(--text-caption); }
+.app-stage h1 { font-size: var(--app-title); line-height: 1.18; }
+.app-stage .desc { margin: 22px 0 0; max-width: 42ch; font-size: var(--text-body); color: var(--body-dark); }
+.app-stage .hint { max-width: 48ch; font-size: var(--text-caption); color: var(--muted-dark); }
+.app-stage .how { margin: 24px 0 0; gap: 8px; justify-content: flex-start; }
+.app-stage .how li { padding: 5px 11px; }
+.app-stage .phone { margin: 0 auto; width: min(252px, 68vw); }
+.app-stage .open { margin-top: 26px; }
+.open span { margin-left: 12px; }
+@media (min-width: 800px) {
+  .app-stage { padding-block: 56px 72px; }
+  .app-stage .inner { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 64px; }
 }

@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>나인투식스랩</title>
-<meta name="description" content="설치 없이 토스 안에서 바로 열리는 작은 앱을 만듭니다. 해외 코인 선물 챌린지, 국내주식 롱숏 챌린지, 사주 여덟 글자, 내 AI 활용 점수는?, 오늘도 무료 스도쿠.">
+<meta name="description" content="토스에서 여는 미니앱 네 개와 브라우저에서 푸는 스도쿠. 궁금한 것을 직접 해보는 작은 앱을 만듭니다. 해외 코인 선물 챌린지, 국내주식 롱숏 챌린지, 사주 여덟 글자, 내 AI 활용 점수는?, 오늘도 무료 스도쿠.">
 <meta name="theme-color" content="#000000">
 <meta property="og:title" content="나인투식스랩">
-<meta property="og:description" content="설치 없이 토스 안에서 바로 열리는 작은 앱을 만듭니다.">
+<meta property="og:description" content="토스에서 여는 미니앱 네 개와 브라우저에서 푸는 스도쿠. 궁금한 것을 직접 해보는 작은 앱을 만듭니다.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ysmilk01-maker.github.io/img/og.png">
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=74c3ce51dbac">
+<link rel="stylesheet" href="style.css?v=28107fa0017f">
 <!-- 로고 연출(2.2초) 뒤에 바로 서야 하므로 큰 두 장은 미리 받는다 -->
 <link rel="preload" as="image" href="img/hero/hero-orb.webp" type="image/webp">
 <link rel="preload" as="image" href="img/hero/hero-ring.webp" type="image/webp">
@@ -39,6 +39,7 @@
   }
 })()
 </script>
+<noscript><style>.rise, .phone.rise { opacity: 1; transform: none; }</style></noscript>
 </head>
 <body>
 
@@ -73,14 +74,7 @@
   </ul>
 </nav>
 
-<!--
-  첫 화면.
-
-  배경에 사진을 깔지 않는다. 생성 이미지는 어디서 본 듯한 "혁신" 스톡 사진이
-  되기 쉽고, 그 위에 글을 올리면 글이 죽는다. 대신 빛 한 장을 CSS 로 그린다 —
-  검정 위에 비스듬히 지나가는 얇은 광막 하나. 애플이 키노트 배경에 쓰는 방식과
-  같은 원리다. 가운데는 비워 두어 제목이 산다.
--->
+<!-- 첫 화면은 할 수 있는 일과 실행 경로부터. 유리 조형물은 오른쪽에서 브랜드를 잇는다. -->
 <main id="main">
 <header class="stage hero" id="top">
   <div class="light" aria-hidden="true">
@@ -90,12 +84,18 @@
   </div>
   <div class="inner">
     <div class="hero-text">
-      <p class="eyebrow rise">나인투식스랩</p>
-      <h1 class="rise">받지 않아도<br>이미 켜져 있는 앱</h1>
+      <p class="eyebrow rise">토스 미니앱 · 웹 도구</p>
+      <h1 class="rise">궁금한 건,<br>직접 해보세요.</h1>
       <p class="sub rise">
-        토스 안에서 바로 열립니다. 설치도, 회원가입도, 로그인도 없습니다.
+        가상 자금으로 해보는 거래부터 나를 알아보는 질문, 잠깐의 스도쿠까지. 작은 호기심에서 앱을 만듭니다.
       </p>
-      <a class="cta rise" href="#apps">앱 보기</a>
+      <div class="hero-actions rise">
+        <div class="hero-buttons">
+          <a class="cta" href="#apps">앱 둘러보기 <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#way">만드는 방식 <span aria-hidden="true">→</span></a>
+        </div>
+        <p class="platform-note">토스 앱 4개 · 웹 스도쿠 1개</p>
+      </div>
     </div>
 
     <!--
@@ -117,26 +117,25 @@
   <div class="scroll-cue rise" aria-hidden="true"><span></span></div>
 </header>
 
-<!--
-  앱 격자.
-
-  앱마다 한 화면씩 주던 구성을 버리고 한 자리에 모았다. 카드 전체가 링크라
-  어디를 눌러도 상세로 간다. 폰은 카드 아래에서 올라오다 잘리게 두었다 —
-  다 보여주면 카드가 세로로 너무 길어지고, 잘린 화면은 "더 있다"는 신호가 된다.
--->
-<section class="apps" id="apps">
+<!-- 카드는 소개 페이지로 간다. 실행 플랫폼과 시세 기준을 고르기 전에 알린다. -->
+<section class="apps" id="apps" aria-labelledby="apps-title">
   <div class="inner">
-    <p class="eyebrow rise">지금 토스에서</p>
-    <h2 class="rise">다섯 개의 앱</h2>
-
+    <div class="apps-head">
+      <div>
+        <p class="eyebrow rise">작은 앱, 서로 다른 쓸모</p>
+        <h2 class="rise" id="apps-title">지금 해보고 싶은 건?</h2>
+      </div>
+      <p class="section-note rise">네 앱은 토스에서,<br>스도쿠는 브라우저에서 열립니다.</p>
+    </div>
     <ul class="grid">
       <li class="rise">
-        <a class="tile" href="apps/coin.html" style="--tint:var(--coin); --glow:rgba(240,185,11,0.16)">
+        <a class="tile" href="apps/coin.html" aria-label="해외 코인 선물 챌린지 소개 보기" style="--tint:var(--coin); --glow:var(--coin-glow)">
           <div class="tile-text">
-            <span class="tile-badge"><i></i>출시됨</span>
+            <div class="tile-labels"><span class="tile-category">모의 투자</span><span class="tile-badge"><i></i>토스에서</span></div>
             <h3>해외 코인 선물 챌린지</h3>
-            <p>잃어도 계좌는 그대로. 실시간 시세로 롱과 숏을 연습합니다.</p>
-            <span class="tile-more">자세히 보기</span>
+            <p>실시간 코인 시세로 롱과 숏을 연습합니다. 거래에 쓰는 돈은 가상입니다.</p>
+            <span class="tile-meta">실시간 시세 · 가상 자금</span>
+            <span class="tile-more">앱 알아보기</span>
           </div>
           <div class="tile-phone">
             <img src="img/coin.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
@@ -145,12 +144,13 @@
       </li>
 
       <li class="rise">
-        <a class="tile" href="apps/krx.html" style="--tint:var(--krx); --glow:rgba(49,130,246,0.16)">
+        <a class="tile" href="apps/krx.html" aria-label="국내주식 롱숏 챌린지 소개 보기" style="--tint:var(--krx); --glow:var(--krx-glow)">
           <div class="tile-text">
-            <span class="tile-badge"><i></i>출시됨</span>
+            <div class="tile-labels"><span class="tile-category">모의 투자</span><span class="tile-badge"><i></i>토스에서</span></div>
             <h3>국내주식 롱숏 챌린지</h3>
-            <p>국장에서 숏을 쳐봅니다. 코스피·코스닥 전 종목, 가상 1,000만원.</p>
-            <span class="tile-more">자세히 보기</span>
+            <p>가상 1,000만원으로 국내주식 롱과 숏을 연습합니다. 시세는 최근 영업일 종가입니다.</p>
+            <span class="tile-meta">종가 기준 · 가상 자금</span>
+            <span class="tile-more">앱 알아보기</span>
           </div>
           <div class="tile-phone">
             <img src="img/krx.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
@@ -159,12 +159,13 @@
       </li>
 
       <li class="rise">
-        <a class="tile" href="apps/saju.html" style="--tint:var(--saju); --glow:rgba(247,108,130,0.15)">
+        <a class="tile" href="apps/saju.html" aria-label="사주 여덟 글자 소개 보기" style="--tint:var(--saju); --glow:var(--saju-glow)">
           <div class="tile-text">
-            <span class="tile-badge"><i></i>출시됨</span>
+            <div class="tile-labels"><span class="tile-category">오늘의 운세</span><span class="tile-badge"><i></i>토스에서</span></div>
             <h3>사주 여덟 글자</h3>
-            <p>생년월일은 폰 밖으로 안 나갑니다. 오늘의 운, 오늘의 옷차림, 궁합까지.</p>
-            <span class="tile-more">자세히 보기</span>
+            <p>오늘의 운과 옷차림, 두 사람의 궁합을 봅니다. 생년월일은 기기에만 남습니다.</p>
+            <span class="tile-meta">운세 · 옷차림 · 궁합</span>
+            <span class="tile-more">앱 알아보기</span>
           </div>
           <div class="tile-phone">
             <img src="img/saju.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
@@ -173,12 +174,13 @@
       </li>
 
       <li class="rise">
-        <a class="tile" href="apps/ai.html" style="--tint:var(--ai); --glow:rgba(78,156,245,0.16)">
+        <a class="tile" href="apps/ai.html" aria-label="내 AI 활용 점수는? 소개 보기" style="--tint:var(--ai); --glow:var(--ai-glow)">
           <div class="tile-text">
-            <span class="tile-badge"><i></i>출시됨</span>
+            <div class="tile-labels"><span class="tile-category">자기 진단</span><span class="tile-badge"><i></i>토스에서</span></div>
             <h3>내 AI 활용 점수는?</h3>
-            <p>열여덟 문항, 4분. 점수 말고 오늘 30분 안에 할 일을 줍니다.</p>
-            <span class="tile-more">자세히 보기</span>
+            <p>18개 질문으로 AI를 쓰는 습관을 돌아보고, 오늘 해볼 일을 찾습니다.</p>
+            <span class="tile-meta">18문항 · 여섯 영역</span>
+            <span class="tile-more">앱 알아보기</span>
           </div>
           <div class="tile-phone">
             <img src="img/ai.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
@@ -187,12 +189,13 @@
       </li>
 
       <li class="rise">
-        <a class="tile" href="apps/sudoku.html" style="--tint:var(--sudoku); --glow:rgba(79,158,119,0.15)">
+        <a class="tile" href="apps/sudoku.html" aria-label="오늘도 무료 스도쿠 소개 보기" style="--tint:var(--sudoku); --glow:var(--sudoku-glow)">
           <div class="tile-text">
-            <span class="tile-badge"><i></i>웹에서 바로</span>
+            <div class="tile-labels"><span class="tile-category">퍼즐</span><span class="tile-badge"><i></i>웹에서</span></div>
             <h3>오늘도 무료 스도쿠</h3>
-            <p>답이 하나뿐인 판만 냅니다. 연결이 끊겨도 계속 풀립니다.</p>
-            <span class="tile-more">자세히 보기</span>
+            <p>답이 하나인 퍼즐을 풀어보세요. 풀던 판과 기록은 이 브라우저에 남습니다.</p>
+            <span class="tile-meta">웹 공개 · 스토어 준비 중</span>
+            <span class="tile-more">앱 알아보기</span>
           </div>
           <div class="tile-phone">
             <img src="img/sudoku.png" width="1170" height="2532" alt="" loading="lazy" decoding="async">
@@ -203,27 +206,27 @@
   </div>
 </section>
 
-<!-- 만드는 방식 -->
-<section class="stage light-stage" id="way">
+<!-- 만드는 방식: 앱마다 다른 저장·시세·광고 조건을 구체적으로 설명한다. -->
+<section class="stage light-stage studio" id="way" aria-labelledby="way-title">
   <div class="inner">
-    <h2 class="rise">혼자 만듭니다.<br>그래서 적게 넣습니다.</h2>
-    <p class="desc rise">
-      기능을 늘리는 대신 넣은 것을 끝까지 다듬습니다. 아래 셋은 앱을 만들 때마다 지키는 것입니다.
-    </p>
-    <ul class="principles rise">
-      <li>
-        <h3>기록은 기기에</h3>
-        <p>서버로 보내야 할 이유가 없으면 보내지 않습니다. 사주와 스도쿠는 개인 정보가 밖으로 나가지 않습니다.</p>
+    <p class="eyebrow rise">나인투식스랩이 만드는 방식</p>
+    <h2 class="rise" id="way-title">작게 만들고,<br>하나씩 다듬습니다.</h2>
+    <p class="desc rise">혼자 만드는 작은 스튜디오입니다.<br>직접 써보고 싶은 것을 만들고, 쓰는 데 필요한 설명을 함께 적습니다.</p>
+    <ul class="principles">
+      <li class="rise">
+        <h3>저장되는 곳을 분명하게</h3>
+        <p>사주 입력과 AI 진단 답은 기기에 남습니다. 랭킹 저장, 날씨 조회, 광고 요청은 앱별 개인정보 안내에 구분해 적습니다.</p>
       </li>
-      <li>
-        <h3>인터넷 없이도</h3>
-        <p>스도쿠는 판을 기기 안에서 만듭니다. 지하철에서 연결이 끊겨도 하던 판이 그대로 이어집니다.</p>
+      <li class="rise">
+        <h3>연습은 가상 자금으로</h3>
+        <p>코인과 주식 앱은 실제 계좌에 연결하지 않습니다. 국내주식 시세는 실시간이 아닌 최근 영업일 종가입니다.</p>
       </li>
-      <li>
-        <h3>광고로 막지 않기</h3>
-        <p>광고를 봐야 다음 판이 열리는 구조는 만들지 않습니다. 광고는 보고 싶은 사람만 봅니다.</p>
+      <li class="rise">
+        <h3>시작 전에 알 수 있도록</h3>
+        <p>앱을 여는 곳, 광고로 열리는 기능, 출시 준비 중인 버전을 소개 페이지에 함께 안내합니다.</p>
       </li>
     </ul>
+    <a class="studio-link rise" href="privacy.html">앱별 개인정보 안내 <span aria-hidden="true">→</span></a>
   </div>
 </section>
 </main>
@@ -250,7 +253,7 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/SplitText.min.js"></script>
-<script src="site.js?v=f507bf87bdc8"></script>
+<script src="site.js?v=7aaf69515d38"></script>
 
 </body>
 </html>
