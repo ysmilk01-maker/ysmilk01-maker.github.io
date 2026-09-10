@@ -1461,7 +1461,7 @@
     <button id="revive" hidden>광고 보고 이어하기</button>
     <!-- 이기면 다음 단계, 지면 다시 도전이 주 단추다. 격납고는 보조 -->
     <button id="nextGo" hidden>다음 단계 출격</button>
-    <button id="retry" hidden>다시 도전</button>
+    <button id="retry" class="ghost" hidden>다시 도전</button>
     <button id="again" class="ghost">격납고로</button>
   </div>
 </div>
@@ -4197,6 +4197,8 @@ function modalOn(panel, close) {
    */
   const reopen = MODAL.el === panel
   if (!reopen) MODAL.back = document.activeElement
+  /* 열려 있는 동안 뒤 화면은 초점을 못 받는다. 가두기가 새도 뒤로는 못 간다 */
+  titleInert(true)
   if (MODAL.key) document.removeEventListener('keydown', MODAL.key)
   MODAL.el = panel; MODAL.close = close
   /*
@@ -4217,12 +4219,20 @@ function modalOn(panel, close) {
     const fs = [...panel.querySelectorAll('button:not([disabled]), [tabindex="0"], input')]
     if (!fs.length) return
     const a = fs[0], z = fs[fs.length - 1]
-    if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus() }
-    else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus() }
+    /*
+     * 제목(H3, tabindex=-1)은 목록에 없다. 첫 초점이 거기 있을 때 Shift+Tab
+     * 을 누르면 뒤의 카드로 빠져 Enter 로 다른 기체가 열렸다(코덱스 2차).
+     * 목록 밖에 있으면 경계로 친다.
+     */
+    const act = document.activeElement
+    const outside = !fs.includes(act)
+    if (e.shiftKey && (act === a || outside)) { e.preventDefault(); z.focus() }
+    else if (!e.shiftKey && (act === z || outside)) { e.preventDefault(); a.focus() }
   }
   document.addEventListener('keydown', MODAL.key)
 }
 function modalOff() {
+  titleInert(false)
   if (MODAL.key) document.removeEventListener('keydown', MODAL.key)
   MODAL.key = null; MODAL.el = null; MODAL.close = null
   /* 원래 카드가 다시 그려져 사라졌으면 같은 자리의 카드를 찾아 준다 */
@@ -4706,11 +4716,22 @@ function showDaily(got) {
       `<div class="n">${r.n.toLocaleString('ko-KR')}${unit[r.kind]}</div></div>`
   }).join('')
   document.getElementById('daily').hidden = false
+  /*
+   * 보상창이 떠 있는 동안 뒤 메뉴가 Tab 에 잡혔다(받기 -> 편대 -> 기체 -> …).
+   * 타이틀과 같은 방식으로 뒤를 잠그고 「받기」에 초점을 준다.
+   */
+  titleInert(true)
+  const ok = document.getElementById('dailyOk')
+  if (ok) ok.focus({ preventScroll: true })
 }
 document.getElementById('dailyOk').onclick = () => {
   document.getElementById('daily').hidden = true
+  titleInert(false)
   sfx('ready')
   render()
+  /* 닫으면 편대의 뜻 있는 자리로 - 출격 단추 */
+  const l = document.getElementById('launch')
+  if (l) l.focus({ preventScroll: true })
 }
 
 /* ── 뽑기 ───────────────────────────────────────────────────────── */
@@ -5088,21 +5109,12 @@ function renderStage() {
     `<div class="up"><span class="lvl">적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}` +
     ` · 별 ${chapterStars(mapCh)}/${SUBS * 3}</span></div></div>` +
     `<div class="nodes">${nodes}</div>` +
-    hardBox() +
+    hardBox()
     /*
-     * 끝없는 출격.
-     *
-     * 1챕터를 끝까지 깨야 열린다. 규칙을 다 배우기 전에 열어 두면
-     * 여기부터 눌러 보고 죽어서, 판 진행이 시작도 안 된다.
+     * 끝없는 출격은 뺐다(2026-09-10). 판 진행·모드·보상과 따로 노는
+     * 갈래라 배울 게 하나 더 늘 뿐이었다. 코드(zoneRun·zoneStage)는
+     * 남겨 두되 화면에서 들어갈 길을 없앤다.
      */
-    (zoneOpen()
-      ? `<div class="card zone" id="zoneCard">` +
-        `<div class="nm">끝없는 출격</div>` +
-        `<div class="de">구역이 끝나면 다음 구역이 이어집니다. 죽을 때까지.</div>` +
-        `<div class="up"><span class="lvl">최고 기록 제 ${prog.stats.zoneBest || 0} 구역</span>` +
-        `<button class="small" id="zoneGo">출격</button></div></div>`
-      : `<div class="card zone lock"><div class="nm">끝없는 출격</div>` +
-        `<div class="de">${CHAPTERS[0].name} ${SUBS}단계를 깨면 열립니다.</div></div>`)
 
   paintStage(el.querySelector('.pv'), ch)
   bindModes(el, renderStage)
@@ -6827,7 +6839,17 @@ function buildWaves(ch, sub) {
    * 버렸다. 혼자 나는 사람에게는 그 증가분이 그대로 얹히면 안 된다 -
    * 화력이 3분의 1이라 못 치우고, 못 치우면 몸으로 막힌다.
    */
-  const solo = slots <= 1 ? 2.4 : slots === 2 ? 1.6 : 1
+  /*
+   * 2.4 / 1.6 / 1.0 이었다. 자리 둘에서 셋으로 가면 화력은 130% -> 160%
+   * (+23%) 인데 적 간격은 1.6 -> 1.0 이라 적이 60% 늘었다 - 세 번째 윙맨을
+   * 채우면 오히려 죽었다. 우 윙맨을 Lv.3 에 열자 캠페인 시뮬이 광선 47 ->
+   * 35/80 으로 떨어져서 알았다.
+   *
+   * 화력 비율에 맞춘다. 셋을 1.25 로 두고 화력 역비로 나눈다:
+   * 둘 1.25 × 160/130 = 1.54, 혼자 1.25 × 160/100 = 2.0. 자리를 채우는 것이
+   * 최소한 손해는 아니게 된다.
+   */
+  const solo = slots <= 1 ? 2.0 : slots === 2 ? 1.54 : 1.25
 
   /*
    * 판 번호의 몫을 0.55 로 눕힌다.
