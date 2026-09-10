@@ -67,6 +67,11 @@
       });
     }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
 
+    document.addEventListener('focusin', function (e) {
+      var el = e.target.closest ? e.target.closest('.rise') : null;
+      if (el) el.classList.add('in');
+    });
+
     items.forEach(function (el, i) {
       // 같은 무대 안에서는 위에서부터 차례로 — 한꺼번에 뜨면 순서가 안 읽힌다
       el.style.transitionDelay = (Math.min(i % 7, 5) * 0.06) + 's';
@@ -108,9 +113,15 @@
       return heroRise.indexOf(el) === -1;
     });
 
-    /* 시작 상태를 인라인으로 박아 둔다. CSS 값과 같지만 GSAP 이 읽기 쉽다 */
-    if (heroRise.length) gsap.set(heroRise, { autoAlpha: 0, y: 26 });
-    if (rest.length) gsap.set(rest, { autoAlpha: 0, y: 26 });
+    /*
+     * 시작 상태를 인라인으로 박아 둔다. CSS 값과 같지만 GSAP 이 읽기 쉽다.
+     *
+     * autoAlpha 가 아니라 opacity 다. autoAlpha 는 visibility: hidden 을 같이 걸어서
+     * 아직 안 올라온 카드는 키보드 Tab 이 건너뛴다 — 그러면 키보드로는 앱에
+     * 닿을 길이 없다. 투명하기만 하면 포커스는 받고, 아래 focusin 이 바로 드러낸다.
+     */
+    if (heroRise.length) gsap.set(heroRise, { opacity: 0, y: 26 });
+    if (rest.length) gsap.set(rest, { opacity: 0, y: 26 });
     var phones = gsap.utils.toArray('.phone.rise');
     if (phones.length) gsap.set(phones, { y: 38, scale: 0.965 });
 
@@ -124,7 +135,7 @@
       once: true,
       onEnter: function (batch) {
         gsap.to(batch, {
-          autoAlpha: 1,
+          opacity: 1,
           y: 0,
           scale: 1,
           duration: 0.9,
@@ -133,6 +144,12 @@
           overwrite: true
         });
       }
+    });
+
+    /* 키보드 포커스가 아직 안 올라온 요소에 들어오면 기다리지 않고 바로 올린다 */
+    document.addEventListener('focusin', function (e) {
+      var el = e.target.closest ? e.target.closest('.rise') : null;
+      if (el) gsap.to(el, { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: ease, overwrite: true });
     });
 
     /*
@@ -166,7 +183,7 @@
     gsap.timeline({
       scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }
     })
-      .to(hero.querySelector('.inner'), { y: 140, autoAlpha: 0, ease: 'none' }, 0)
+      .to(hero.querySelector('.inner'), { y: 140, opacity: 0, ease: 'none' }, 0)
       .to(hero.querySelector('.light'), { y: 90, ease: 'none' }, 0);
 
     /* 스크롤 안내선 — 위에서 아래로 한 번씩 흘러내린다 */
@@ -187,7 +204,7 @@
     function fadeCueOnScroll() {
       if (!cue) return;
       gsap.to(cue, {
-        autoAlpha: 0,
+        opacity: 0,
         ease: 'none',
         scrollTrigger: { trigger: hero, start: 'top top', end: '25% top', scrub: true }
       });
@@ -213,16 +230,16 @@
 
     return function () {
       var tl = gsap.timeline({ defaults: { ease: ease }, onComplete: fadeCueOnScroll });
-      tl.to(hero.querySelector('.eyebrow'), { autoAlpha: 1, y: 0, duration: 0.7 }, 0);
+      tl.to(hero.querySelector('.eyebrow'), { opacity: 1, y: 0, duration: 0.7 }, 0);
       if (words) {
-        tl.set(title, { autoAlpha: 1, y: 0 }, 0.1)
+        tl.set(title, { opacity: 1, y: 0 }, 0.1)
           .to(words, { yPercent: 0, duration: 0.95, stagger: 0.07, ease: 'power4.out' }, 0.1);
       } else {
-        tl.to(title, { autoAlpha: 1, y: 0, duration: 0.9 }, 0.1);
+        tl.to(title, { opacity: 1, y: 0, duration: 0.9 }, 0.1);
       }
-      tl.to(hero.querySelector('.sub'), { autoAlpha: 1, y: 0, duration: 0.8 }, 0.45)
-        .to(hero.querySelector('.cta'), { autoAlpha: 1, y: 0, duration: 0.8 }, 0.6)
-        .to(hero.querySelector('.scroll-cue'), { autoAlpha: 1, y: 0, duration: 0.8 }, 0.9);
+      tl.to(hero.querySelector('.sub'), { opacity: 1, y: 0, duration: 0.8 }, 0.45)
+        .to(hero.querySelector('.cta'), { opacity: 1, y: 0, duration: 0.8 }, 0.6)
+        .to(hero.querySelector('.scroll-cue'), { opacity: 1, y: 0, duration: 0.8 }, 0.9);
     };
   }
 })();
