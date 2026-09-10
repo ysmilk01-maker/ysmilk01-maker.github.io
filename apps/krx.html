@@ -13,7 +13,8 @@
 <meta property="og:image" content="https://ysmilk01-maker.github.io/img/og.png">
 <link rel="icon" href="../favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<link rel="stylesheet" href="../style.css?v=74c3ce51dbac">
+<link rel="stylesheet" href="../style.css?v=28107fa0017f">
+<noscript><style>.rise, .phone.rise { opacity: 1; transform: none; }</style></noscript>
 </head>
 <body>
 
@@ -31,27 +32,27 @@
 </nav>
 
 <main id="main">
-<!-- 첫 화면. 폰이 가운데 서고 글은 위, 여는 버튼은 아래 -->
-<section class="stage app-stage" style="--tint:var(--krx); --glow:rgba(49,130,246,0.11)">
+<!-- 설명과 실행 버튼을 먼저 읽고, 실제 화면으로 이어진다. -->
+<section class="stage app-stage" style="--tint:var(--krx); --glow:var(--krx-glow)">
   <div class="inner">
-    <a class="back rise" href="../index.html#apps">← 모든 앱</a>
-    <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
-    <h1 class="rise">국장에서<br>숏을 쳐봅니다</h1>
-    <p class="desc rise">
-      개인은 공매도가 사실상 막혀 있습니다. 여기서는 코스피·코스닥 전 종목을 내리는 쪽에도 걸어볼 수 있습니다. 가상 자금 1,000만원으로 시작합니다.
-    </p>
-    <div class="phone rise">
-      <img src="../img/krx.png" width="1170" height="2532" alt="국내주식 롱숏 챌린지 주문 화면. 삼성전자 일봉 차트와 롱·숏 버튼, 레버리지 선택과 청산가." decoding="async">
-    </div>
-    <ul class="how rise">
+    <div class="app-intro">
+      <a class="back rise" href="../index.html#apps">← 모든 앱</a>
+      <p class="badge rise"><i></i> 출시됨 · 토스 미니앱</p>
+      <h1 class="rise">국장에서<br>숏을 쳐봅니다</h1>
+      <p class="desc rise">코스피·코스닥 종목의 상승과 하락, 두 방향을 가상 자금 1,000만원으로 연습합니다. 시세는 실시간이 아닌 최근 영업일 종가입니다.</p>
+      <a class="open rise" href="intoss://krx-sim">토스에서 열기 <span aria-hidden="true">↗</span></a>
+      <p class="hint rise">시세는 최근 영업일 종가이며 실시간이 아닙니다. 검색창에 ‘국내주식 롱숏 챌린지’</p>
+      <ul class="how rise">
       <li>코스피 · 코스닥 전 종목</li>
       <li>최대 100배</li>
       <li>롱 · 숏</li>
       <li>수익률 랭킹</li>
       <li>게시판</li>
-    </ul>
-    <a class="open rise" href="intoss://krx-sim">토스에서 열기</a>
-    <p class="hint rise">시세는 최근 영업일 종가이며 실시간이 아닙니다. 검색창에 ‘국내주식 롱숏 챌린지’</p>
+      </ul>
+    </div>
+    <div class="phone rise">
+      <img src="../img/krx.png" width="1170" height="2532" alt="국내주식 롱숏 챌린지 주문 화면. 삼성전자 일봉 차트와 롱·숏 버튼, 레버리지 선택과 청산가." decoding="async">
+    </div>
   </div>
 </section>
 
@@ -75,12 +76,12 @@
 <section class="sec" style="--tint:var(--krx)">
   <div class="inner">
     <p class="eyebrow rise">특징</p>
-    <h2 class="rise">코인은 숏이 되는데<br>국장은 왜 안 될까요</h2>
-    <p class="lead rise">궁금했던 것을 해보는 앱입니다. 실제 시장에서 못 하는 방향에 걸어 보고, 배수가 왜 무서운지 숫자로 봅니다.</p>
+    <h2 class="rise">오르는 쪽도, 내리는 쪽도<br>가상 자금으로 연습합니다</h2>
+    <p class="lead rise">종목과 방향, 레버리지를 직접 고릅니다. 선택에 따라 수익과 손실이 어떻게 달라지는지 살펴보세요.</p>
     <ul class="feats">
       <li class="rise"><b>전 종목</b><h3>코스피 · 코스닥</h3><p>이름으로 검색해서 고릅니다. 상장된 종목은 다 있습니다.</p></li>
-      <li class="rise"><b>숏</b><h3>내리는 쪽에도</h3><p>개인은 막혀 있는 공매도를 여기서는 버튼 하나로. 오를지 내릴지 둘 다 걸어봅니다.</p></li>
-      <li class="rise"><b>100배</b><h3>레버리지</h3><p>0.5%만 반대로 가면 청산됩니다. 그 숫자를 청산가로 미리 보여줍니다.</p></li>
+      <li class="rise"><b>숏</b><h3>내리는 쪽에도</h3><p>오를 것으로 보는 롱과 내릴 것으로 보는 숏. 두 방향을 모의 거래로 연습합니다.</p></li>
+      <li class="rise"><b>100배</b><h3>레버리지</h3><p>배율을 고르면 청산 예상가가 함께 표시됩니다. 배율이 커질수록 손실도 크게 변합니다.</p></li>
       <li class="rise"><b>종가</b><h3>하루 한 번 갱신</h3><p>시세는 금융위원회 공개 데이터의 최근 영업일 종가입니다. 장중 값이 아닙니다.</p></li>
       <li class="rise"><b>주간</b><h3>수익률 랭킹</h3><p>이번 주 수익률로 줄을 섭니다. 닉네임은 자동으로 정해집니다.</p></li>
       <li class="rise"><b>짧게</b><h3>게시판</h3><p>한 줄씩 남깁니다. 신고가 쌓이면 자동으로 가려집니다.</p></li>
@@ -166,7 +167,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
-<script src="../site.js?v=f507bf87bdc8"></script>
+<script src="../site.js?v=7aaf69515d38"></script>
 <script src="../app.js?v=9296605022e3"></script>
 </body>
 </html>

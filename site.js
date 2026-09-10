@@ -286,7 +286,7 @@
         tl.to(title, { opacity: 1, y: 0, duration: 0.9 }, 0.1);
       }
       tl.to(hero.querySelector('.sub'), { opacity: 1, y: 0, duration: 0.8 }, 0.45)
-        .to(hero.querySelector('.cta'), { opacity: 1, y: 0, duration: 0.8 }, 0.6)
+        .to(hero.querySelector('.hero-actions'), { opacity: 1, y: 0, duration: 0.8 }, 0.6)
         .to(hero.querySelector('.scroll-cue'), { opacity: 1, y: 0, duration: 0.8 }, 0.9);
       if (layers.length) {
         // 뒤에서 앞으로 한 겹씩 서고, 다 서면 떠다니기 시작
