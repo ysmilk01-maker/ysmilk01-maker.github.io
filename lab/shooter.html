@@ -774,16 +774,17 @@
     margin-top: 10px; padding: 10px; border-radius: 10px;
     background: rgba(255,255,255,.035); border: 1px solid var(--line);
   }
-  .modes .tabs { display: flex; gap: 6px; }
-  .modes .tabs button {
+  .modes .mtabs { display: flex; gap: 6px; }
+  #squadModes .modes { margin: 4px 0 0; }
+  .modes .mtabs button {
     flex: 1; padding: 9px 0; font-size: 12px; font-weight: 800;
     border-radius: 8px; border: 1px solid var(--line);
     background: rgba(255,255,255,.03); color: var(--dim);
   }
-  .modes .tabs button[disabled] { opacity: .4; }
-  .modes .tabs button.on { background: #2b3a55; color: var(--ink); border-color: #3f5680; }
-  .modes .tabs button.on.crazy { background: #4a3413; color: #ffd79a; border-color: #8a6520; }
-  .modes .tabs button.on.hard { background: #40151d; color: #ff9cb2; border-color: #a8324a; }
+  .modes .mtabs button[disabled] { opacity: .4; }
+  .modes .mtabs button.on { background: #2b3a55; color: var(--ink); border-color: #3f5680; }
+  .modes .mtabs button.on.crazy { background: #4a3413; color: #ffd79a; border-color: #8a6520; }
+  .modes .mtabs button.on.hard { background: #40151d; color: #ff9cb2; border-color: #a8324a; }
   .modes .ds { font-size: 10.5px; color: var(--dim); margin-top: 8px; text-align: center; }
   .rcell .nm { font-size: 11px; color: var(--dim); letter-spacing: .02em; }
   .rcell .vl { font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; }
@@ -1272,6 +1273,14 @@
     <div class="lab">오늘의 임무</div>
     <div class="miss" id="missBody"></div>
   </div>
+  <!--
+    모드 선택기.
+
+    스테이지 화면 스무 노드 밑에만 있어서 「도저히 못 찾겠다」는 말을
+    들었다. 출격은 여기서 누르니 스위치도 여기 있어야 한다. 그리는 건
+    스테이지 쪽과 같은 hardBox() 다 - 두 곳이 다른 말을 하면 안 된다.
+  -->
+  <div id="squadModes"></div>
   <!-- 조작은 둘뿐인데 아무 데도 안 적혀 있었다. 출격 단추 바로 위에 한 줄 -->
   <div class="ophint" id="opHint"><i class="hi hi-drag"></i>손가락으로 움직여 이동 · <i class="hi hi-auto"></i>공격은 자동</div>
   <div class="bar">
@@ -4278,6 +4287,8 @@ function row(k, v, gold) {
 /* ── 편대 ───────────────────────────────────────────────────────── */
 function renderSquad() {
   const legend = isLegend()
+  const mb = document.getElementById('squadModes')
+  if (mb) { mb.innerHTML = hardBox(); bindModes(mb, renderSquad) }
   document.getElementById('squadSub').innerHTML =
     (slotOpen(0) && slotOpen(2)
       ? `자리를 누르면 기체를 바꿉니다.`
@@ -5002,13 +5013,39 @@ function hardBox() {
   const ds = !open && runMode !== 'normal'
     ? '일반으로 한 번 깨면 열립니다'
     : runMode === 'normal'
-      ? (open ? '어려운 모드는 처음 깰 때 가챠권을 줍니다'
-              : '이 판을 깨면 어려운 모드가 열립니다')
+      ? (open ? '하드코어·크레이지는 처음 깰 때 가챠권을 줍니다'
+              : '이 판을 일반으로 깨면 하드코어·크레이지가 열립니다')
       : done
         ? `이미 깬 판입니다 · 가챠권은 처음 깰 때만 (${modeCount(runMode)}판 완료)`
         : `${md[2]} · 처음 깨면 가챠권 ${md[3]}장`
-  return `<div class="modes"><div class="tabs">${tabs}</div>` +
+  /*
+   * 안쪽 줄의 클래스는 mtabs 다. 전에는 tabs 였는데, 하단 내비게이션의
+   * `.tabs { position: fixed; bottom: 0 }` 이 그대로 먹어서 세 단추가 화면
+   * 맨 아래 내비 뒤에 깔렸다 - 모드 선택이 어디에도 안 보였던 이유다.
+   */
+  return `<div class="modes"><div class="mtabs">${tabs}</div>` +
     `<div class="ds">${ds}</div></div>`
+}
+
+/**
+ * 모드 단추에 클릭을 붙인다. 편대 화면과 스테이지 화면이 같이 쓴다.
+ * @param rerender 바꾼 뒤 다시 그릴 함수
+ */
+function bindModes(root, rerender) {
+  root.querySelectorAll('[data-mode]').forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation()
+      const k = b.dataset.mode
+      if (k !== 'normal' && !hardOpen()) {
+        alert('일반으로 한 번 깬 판만 하드코어·크레이지로 갈 수 있습니다.')
+        return
+      }
+      runMode = k
+      rerender()
+      /* 출격 단추 글자(「하드코어 출격」)는 paintEnergy 가 쓴다. 1초 타이머를 기다리게 하지 않는다 */
+      if (typeof paintEnergy === 'function') paintEnergy()
+    }
+  })
 }
 
 function renderStage() {
@@ -5062,18 +5099,7 @@ function renderStage() {
         `<div class="de">${CHAPTERS[0].name} ${SUBS}단계를 깨면 열립니다.</div></div>`)
 
   paintStage(el.querySelector('.pv'), ch)
-  el.querySelectorAll('[data-mode]').forEach((b) => {
-    b.onclick = (e) => {
-      e.stopPropagation()
-      const k = b.dataset.mode
-      if (k !== 'normal' && !hardOpen()) {
-        alert('일반으로 한 번 깬 판만 어려운 모드로 갈 수 있습니다.')
-        return
-      }
-      runMode = k
-      renderStage()
-    }
-  })
+  bindModes(el, renderStage)
   const zg = document.getElementById('zoneGo')
   if (zg) zg.onclick = (e) => { e.stopPropagation(); doLaunch(true) }
 
