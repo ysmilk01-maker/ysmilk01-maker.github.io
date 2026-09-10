@@ -14,7 +14,7 @@
     늘거나 성질이 붙는다 — 같은 유도탄이라도 전설은 두 발이 갈라진다.
 
   해금
-    기본 3기는 무료, 12기는 점수로 열리고, 15기는 유료다.
+    기본 2기는 무료, 13기는 점수로 열리고, 15기는 유료다.
     **결제는 아직 안 붙였다.** 등급분류가 나오기 전이고 인앱결제는 심사가
     따로 무겁다. 지금은 자리만 비워 두고 개발용 스위치로 열어 본다.
 
@@ -1992,7 +1992,8 @@ const PLANES = []
   const TIER_LIST = ['common', 'rare', 'legend']
   const UNLOCK = {
     // 각 무기의 일반형 중 셋만 무료, 나머지 일반형은 점수, 희귀는 점수, 전설은 유료
-    common: (i) => (i < 3 ? { kind: 'free' } : { kind: 'score', v: 2000 + i * 1500 }),
+    /* 무료는 둘(질풍·산개). 셋이면 첫 화면부터 보유 기체가 많아 보였다(2026-09-10). 섬광은 누적 5,000점 */
+    common: (i) => (i < 2 ? { kind: 'free' } : { kind: 'score', v: 2000 + i * 1500 }),
     rare:   (i) => ({ kind: 'score', v: 12000 + i * 4000 }),
     legend: (i) => ({ kind: 'paid', v: 1200 + i * 300 }),
   }
@@ -3610,7 +3611,12 @@ const ST_KEYS = Object.keys(STATS)
  * 다 채우는 데 아흔 판이 아니라 삼백 판이 든다. 스탯까지 예전 속도로
  * 되돌리려면 statCost 를 30% 로 낮추면 된다.
  */
-function xpNeed(lv) { return 770 + 198 * (lv - 1) }
+/*
+ * Lv.2 만 300 (2026-09-10 밤). 첫 윙맨이 Lv.2 에 열리는데 770 이면 1챕터
+ * 초반 한 판 경험치(100~170)로 5~7판이 걸렸다. 다섯 판 안에 보조 기체를
+ * 한 대 붙여 주려면 2~3판째 열려야 한다. Lv.3(우 윙맨) 부터는 원래 식.
+ */
+function xpNeed(lv) { return lv === 1 ? 300 : 770 + 198 * (lv - 1) }
 function xpFromScore(score) { return Math.round(score * 0.03) }
 
 /**
@@ -3768,8 +3774,10 @@ delete prog.__migPilot
 function pilotName() { return prog.pilot.name || '무명' }
 
 /* 기본 편대. 넷째 자리는 전설이 되기 전까지 비어 있다 */
-if (!prog.squad) prog.squad = ['rapid-common', 'spread-common', 'laser-common', null]
+if (!prog.squad) prog.squad = ['rapid-common', 'spread-common', null, null]
 while (prog.squad.length < 4) prog.squad.push(null)
+/* 무료 기체가 셋에서 둘로 줄면서, 옛 저장의 편대에 아직 안 열린 기체가 남을 수 있다. 자리를 비운다 */
+prog.squad = prog.squad.map((id) => { const p = id && planeById(id); return p && unlocked(p) ? id : null })
 
 /* ================================================================
  * 화면 크기
