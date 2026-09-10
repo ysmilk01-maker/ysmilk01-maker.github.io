@@ -5812,6 +5812,25 @@ function shoot(u, i, dt) {
     B.push(b)
   }
 
+  /*
+   * 무기별 한 발의 무게.
+   *
+   * 열한 종을 같은 몸(일반·강화0·편대3단계)으로 재 보니 초당 피해가
+   * 연발탄 26 · 연쇄 23 · 산탄 18 · 광선 15 인데 집속포 3 · 부메랑 2 ·
+   * 위성 1 이었다. **열세 배**다.
+   *
+   * 원인은 `baseRate` 를 아무도 보상하지 않은 것이다. 집속포는 연발탄보다
+   * 8.5배 느리게 쏘는데 한 발이 2.2배밖에 안 무거웠다. 느린 무기는
+   * 「한 방이 큰 무기」여야 하는데 그냥 「덜 쏘는 무기」였다.
+   *
+   * 재서 나온 값으로 다시 맞춘다. 목표는 최고 20~26 - 연발탄을 깎지
+   * 않고 나머지를 거기까지 올린다. 시뮬이 그동안 제일 센 셋(연발·산탄·
+   * 광선)으로 쟀는데도 1챕터 후반이 0/6 이었으므로, 낮출 곳이 아니다.
+   *
+   * 거리는 무기마다 다르게 둔다 - 위성은 ±40, 부메랑은 156 까지밖에
+   * 안 간다. 그건 성격이지 결함이 아니므로 사거리는 그대로 두고 무게로
+   * 갚는다.
+   */
   switch (p.weapon) {
     case 'rapid': {
       const n = 1 + tier + lv.extra + M.extra
@@ -5822,29 +5841,30 @@ function shoot(u, i, dt) {
       const n = 3 + tier * 2 + lv.extra + M.extra
       for (let k = 0; k < n; k++) {
         const a = -Math.PI / 2 + (k - (n - 1) / 2) * 0.17
-        add({ vx: Math.cos(a) * 430, vy: Math.sin(a) * 430, r: 2.6 })
+        add({ vx: Math.cos(a) * 430, vy: Math.sin(a) * 430, r: 2.6, dmg: dmg * 1.22 })
       }
       break
     }
     case 'laser':
       // 굵은 빔 하나 대신 얇은 관통탄을 아주 빠르게 쏜다. 보기엔 이어진
       // 선이고, 충돌 판정은 기존 코드를 그대로 쓴다.
-      add({ vx: 0, vy: -1100, r: 1.8, pierce: 2 + tier, kind: 'laser', dmg: dmg * 0.42 })
+      add({ vx: 0, vy: -1100, r: 1.8, pierce: 2 + tier, kind: 'laser', dmg: dmg * 0.76 })
       break
     case 'homing': {
       const n = 1 + tier + M.extra
       for (let k = 0; k < n; k++)
         add({ vx: (k - (n - 1) / 2) * 90, vy: -300, kind: 'homing',
-              turn: PLAYER_HOMING_TURN + tier, r: 4 })
+              turn: PLAYER_HOMING_TURN + tier, r: 4, dmg: dmg * 4.7 })
       break
     }
     case 'pierce':
-      add({ vx: 0, vy: -700, r: 4.5, pierce: 2 + tier * 2, kind: 'pierce', dmg: dmg * 1.3 })
+      add({ vx: 0, vy: -700, r: 4.5, pierce: 2 + tier * 2, kind: 'pierce', dmg: dmg * 4.1 })
       break
     case 'wave': {
       const n = 1 + tier
       for (let k = 0; k < n; k++)
-        add({ vx: 0, vy: -420, kind: 'wave', amp: 70 + tier * 25, ph: k * Math.PI, x0: pos.x, r: 4 })
+        add({ vx: 0, vy: -420, kind: 'wave', amp: 70 + tier * 25, ph: k * Math.PI,
+              x0: pos.x, r: 4, dmg: dmg * 3.5 })
       break
     }
     case 'orb': {
@@ -5858,7 +5878,7 @@ function shoot(u, i, dt) {
       const n = 2 + tier + M.extra
       for (let k = 0; k < n; k++)
         add({ kind: 'orb', owner: i, a: (k / n) * Math.PI * 2, rad: 40 + tier * 8,
-              x: pos.x, y: pos.y, r: 6, dmg: dmg * 0.5, pierce: 99, life: 2.4 })
+              x: pos.x, y: pos.y, r: 6, dmg: dmg * 7.0, pierce: 99, life: 2.4 })
       break
     }
     case 'mine':
@@ -5880,12 +5900,12 @@ function shoot(u, i, dt) {
         const n = 1 + tier + M.extra
         for (let k = 0; k < n; k++) {
           add({ x: pos.x + (k - (n - 1) / 2) * 15, vx: (k - (n - 1) / 2) * 34,
-                vy: -215, kind: 'mine', r: 7, dmg: dmg * 3.2 })
+                vy: -215, kind: 'mine', r: 7, dmg: dmg * 9.6 })
         }
       }
       break
     case 'beam':
-      add({ vx: 0, vy: -300, kind: 'beam', r: 11 + tier * 3, pierce: 4 + tier * 2, dmg: dmg * 2.2 })
+      add({ vx: 0, vy: -300, kind: 'beam', r: 11 + tier * 3, pierce: 4 + tier * 2, dmg: dmg * 12.0 })
       break
     case 'chain':
       add({ vx: 0, vy: -560, r: 4.5, kind: 'chain', dmg: dmg * 0.9, jumps: 3 })
@@ -5894,7 +5914,7 @@ function shoot(u, i, dt) {
       const n = 1 + tier
       for (let k = 0; k < n; k++)
         add({ vx: (k - (n - 1) / 2) * 140, vy: -520, kind: 'boomer', t0: 0,
-              pierce: 99, r: 5, dmg: dmg * 0.7, home: i })
+              pierce: 99, r: 5, dmg: dmg * 5.9, home: i })
       break
     }
   }
@@ -7649,13 +7669,16 @@ function fireScale() {
    */
   const chf = (s.stage && s.stage.fireMul) || 1
   /*
-   * 1.111 을 곱한다 = 쏘는 횟수가 10% 준다.
+   * 1.234 를 곱한다 = 쏘는 횟수가 10% 씩 두 번, 모두 19% 준다.
    *
-   * 체력을 10% 깎으면서 같이 내린 값이다. 한쪽만 내리면 「무른데 계속
-   * 쏘는 적」이나 「단단한데 조용한 적」이 되는데, 둘 다 지금 원하는
-   * 그림이 아니다.
+   * 처음 1.111 은 체력을 10% 깎으면서 같이 내린 값이었다. 한쪽만
+   * 내리면 「무른데 계속 쏘는 적」이나 「단단한데 조용한 적」이 된다.
+   *
+   * 여기 한 겹을 더 얹는다. 1챕터 스무 판을 뜯어 보니 죽는 이유의
+   * 절반 이상이 잡졸 탄이었다 - 1-19 는 한 판에 16발을 맞았다.
+   * 적 수와 판 길이는 이미 손봤으므로 이제 쏘는 빈도를 줄인다.
    */
-  return (1.9 - 0.9 * warm) * small * chf * 1.111
+  return (1.9 - 0.9 * warm) * small * chf * 1.234
 }
 
 /*
