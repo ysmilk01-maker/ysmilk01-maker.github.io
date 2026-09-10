@@ -1447,7 +1447,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 -->
 <div class="panel" id="unlockPop" hidden>
   <div class="gbox" style="text-align:center">
-    <h2>새 기체 해금</h2>
+    <h2 id="unlockTitle">새 기체 해금</h2>
     <p class="sub" id="unlockSub"></p>
     <div id="unlockList"></div>
     <button id="unlockOk">보러 가기</button>
@@ -2019,15 +2019,20 @@ const PLANES = []
   const UNLOCK = {
     // 각 무기의 일반형 중 셋만 무료, 나머지 일반형은 점수, 희귀는 점수, 전설은 유료
     /*
-     * 일반기는 **파일럿 레벨**로 연다 (2026-09-11).
+     * 일반기는 **셋만** 거저 열린다 (2026-09-11).
      *
-     * 누적 점수로 열었더니 한 판이 5,000~5,800점이라 며칠이 아니라 몇 판
-     * 만에 여덟 대가 쌓였다. 저레벨에 기체가 너무 많아 고를 이유가 없다.
-     * 레벨은 판을 쌓아야 오르므로 속도가 사람 손에 맞는다.
+     *   질풍   처음부터
+     *   산개   파일럿 Lv.3
+     *   섬광   파일럿 Lv.5
+     *   나머지 일곱  뽑기로만. 조각을 모아야 열린다
      *
-     *   질풍 처음부터 · 산개 Lv.3 · 섬광 Lv.5 · 그 뒤로 두 레벨마다 하나
+     * 누적 점수로 열던 때는 한 판이 5,000~5,800점이라 몇 판 만에 여덟
+     * 대가 쌓였다. 레벨로 바꿔도 두 레벨마다 하나면 결국 다 열린다 -
+     * 열 대를 거저 주면 뽑기를 돌릴 이유가 없다.
      */
-    common: (i) => (i === 0 ? { kind: 'free' } : { kind: 'lv', v: 1 + i * 2 }),
+    common: (i) => (i === 0 ? { kind: 'free' }
+                  : i <= 2 ? { kind: 'lv', v: 1 + i * 2 }
+                  : { kind: 'gacha' }),
     rare:   (i) => ({ kind: 'score', v: 12000 + i * 4000 }),
     legend: (i) => ({ kind: 'paid', v: 1200 + i * 300 }),
   }
@@ -3578,6 +3583,7 @@ function unlocked(p) {
 function unlockLabel(p) {
   if (p.unlock.kind === 'free') return ''
   if (prog.owned.includes(p.id)) return ''
+  if (p.unlock.kind === 'gacha') return `뽑기로 조각 ${shardNeed(p)}개`
   if (p.unlock.kind === 'lv') return `파일럿 Lv.${p.unlock.v}`
   if (p.unlock.kind === 'score') return `누적 ${p.unlock.v.toLocaleString('ko-KR')}점`
   return `${p.unlock.v.toLocaleString('ko-KR')}원`
@@ -4469,28 +4475,43 @@ let hangarReturn = 'hgMain'
  * 적어 둔다. 처음부터 가진 기체(free)는 알리지 않는다.
  */
 function showUnlockPop() {
+  const openSlots = () => SLOT_META.map((m, i) => i).filter((i) => i !== MAIN_SLOT && slotOpen(i))
   if (!prog.seenUnlock) {
     /* 첫 실행이면 지금 열린 것을 모두 「본 것」으로 친다. 뒤늦게 몰아 뜨지 않게 */
     prog.seenUnlock = PLANES.filter(unlocked).map((p) => p.id)
+    prog.seenSlot = openSlots()
     save()
     return
   }
+  if (!prog.seenSlot) { prog.seenSlot = openSlots(); save() }
   const fresh = PLANES.filter((p) => unlocked(p) && p.unlock.kind !== 'free' &&
                                      !prog.seenUnlock.includes(p.id))
-  if (!fresh.length) return
+  /* 자리도 같이 알린다 (2026-09-11). Lv.5 는 기체와 자리가 함께 열려서 한 창에 담는다 */
+  const slots = openSlots().filter((i) => !prog.seenSlot.includes(i))
+  if (!fresh.length && !slots.length) return
   prog.seenUnlock.push(...fresh.map((p) => p.id))
+  prog.seenSlot.push(...slots)
   save()
   const el = document.getElementById('unlockPop')
+  document.getElementById('unlockTitle').textContent =
+    !fresh.length ? '새 자리 개방' : !slots.length ? '새 기체 해금' : '새 기체와 자리'
   document.getElementById('unlockSub').textContent =
-    fresh.length > 1 ? fresh.length + '대를 쓸 수 있게 됐습니다' : '편대에 넣어 보세요'
-  document.getElementById('unlockList').innerHTML = fresh.map((p) =>
-    '<div class="rlv"><img src="' + hangarPlaneImage(p) + '" alt="" style="width:56px;height:40px;object-fit:contain">' +
-    '<span><span class="t1">' + p.name + '</span><br><span class="t2">' +
-    WEAPONS[p.weapon].name + ' · ' + GRADES_T(p.tier) + '</span></span></div>').join('')
+    slots.length ? '편대에 기체를 넣어 보세요' : '편대에 넣어 보세요'
+  document.getElementById('unlockList').innerHTML =
+    slots.map((i) =>
+      '<div class="rlv"><span aria-hidden="true" style="font-size:26px">＋</span>' +
+      '<span><span class="t1">' + SLOT_META[i].role + ' 자리</span><br>' +
+      '<span class="t2">화력 ' + Math.round(slotMul(i) * 100) + '% · 기체를 골라 넣으세요</span></span></div>').join('') +
+    fresh.map((p) =>
+      '<div class="rlv"><img src="' + hangarPlaneImage(p) + '" alt="" style="width:56px;height:40px;object-fit:contain">' +
+      '<span><span class="t1">' + p.name + '</span><br><span class="t2">' +
+      WEAPONS[p.weapon].name + ' · ' + GRADES_T(p.tier) + '</span></span></div>').join('')
+  const target = slots.length ? slots[0] : MAIN_SLOT
+  document.getElementById('unlockOk').textContent = '적용하러 가기'
   el.hidden = false
   modalOn(el, () => document.getElementById('unlockClose').click())
   document.getElementById('unlockOk').onclick = () => {
-    el.hidden = true; modalOff(); hangarChoose('planes', MAIN_SLOT, 'hgMain')
+    el.hidden = true; modalOff(); hangarChoose('planes', target, 'hgMain')
   }
   document.getElementById('unlockClose').onclick = () => { el.hidden = true; modalOff() }
 }
@@ -6874,7 +6895,8 @@ const CHAPTERS = [
      * 체력을 내려 싸움을 20초대로 줄인다. 부르는 잡졸도 같이 준다.
      * 2챕터 이후는 안 건드린다 - 2-20 은 이미 29초다.
      */
-    bossHp: 480, hpMul: 0.52, spMul: 1.14, fireMul: 3.1,
+    /* 체력 0.52 -> 0.73 (2026-09-11, +40%). 잡졸이 스치기만 해도 터져서 손맛이 없었다 */
+    bossHp: 480, hpMul: 0.73, spMul: 1.14, fireMul: 3.1,
     pool: [
       [5, (r) => line(2 + ((r() * 4) | 0), 'small')],
       [3, (r) => diagonal('small', r() < .5 ? 1 : -1)],
@@ -7209,10 +7231,12 @@ function buildWaves(ch, sub) {
    *
    * 자리가 하나뿐인 사람에게는 solo 계수(2.0)가 간격을 두 배로 벌린다.
    * 안 죽게 해 주려던 것인데, 처음 온 사람에게는 「한 판 해 봤더니 할 게
-   * 없다」가 됐다. 간격을 0.77 배로 좁혀 수를 30% 늘리고, 1-11 에서
+   * 없다」가 됐다.
+   *
+   * 0.77 로 한 번, 다시 0.59 로 (2026-09-11). 원래의 1.7배다. 1-11 에서
    * 원래대로 돌아온다.
    */
-  const early = ch.id === 1 ? Math.min(1, 0.77 + Math.max(0, sub - 1) * 0.023) : 1
+  const early = ch.id === 1 ? Math.min(1, 0.59 + Math.max(0, sub - 1) * 0.041) : 1
 
   const flavorIdx = Math.floor(r() * ch.pool.length)
   const pool = ch.pool.map(([w, f], i) => [i === flavorIdx ? w * 2.2 : w, f])
