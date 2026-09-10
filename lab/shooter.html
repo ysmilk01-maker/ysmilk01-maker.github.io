@@ -337,6 +337,8 @@
     align-items: center; justify-content: center; pointer-events: none;
   }
   #pauseUI[hidden] { display: none !important; }
+  .rlv.slotnew { color: var(--gold); font-weight: 700; }
+  .rlv.slotnew .t2 { color: var(--muted); font-weight: 500; }
   #ultTip {
     position: fixed; inset: 0; z-index: 31; display: flex;
     align-items: center; justify-content: center;
@@ -1297,6 +1299,12 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #squadModes{position:absolute;bottom:calc(100% + 8px);right:0;width:min(340px,calc(100vw - 40px));z-index:6;background:#12232df5;border:1px solid #58717d;border-radius:13px;box-shadow:0 10px 40px #000b;padding:10px}#squadModes .modes{margin:0;background:none;border:0;padding:0}#squadModes .mtabs{gap:5px}#squadModes .mtabs button{min-height:42px;padding:8px 5px;font-size:12px}#squadModes .ds{font-size:11px;line-height:1.6}
 #scSquad #launch{width:100%;min-height:54px;padding:10px 14px;font-size:21px;font-weight:800;letter-spacing:2px;border:1px solid #e1d4a5;border-radius:12px;background:linear-gradient(#ddc895,#bda66d);color:#18231e;box-shadow:0 4px 0 #64563980;text-shadow:none;background-image:linear-gradient(#ddc895,#bda66d)}
 .hg-hint{font-size:10px;line-height:1.6;text-align:center;color:#9fb9c5;margin-top:9px}
+/* 열렸는데 비어 있는 자리. 눌러야 할 곳이 눈에 띄어야 한다 (2026-09-11) */
+#scSquad .hg-wing.need{border-color:#edc879;background:#2a2517bd;animation:wingNeed 1.6s ease-in-out infinite}
+#scSquad .hg-wing.need span[aria-hidden]{color:#edc879}
+@keyframes wingNeed{0%,100%{box-shadow:0 0 0 0 rgba(237,200,121,.45)}50%{box-shadow:0 0 0 5px rgba(237,200,121,0)}}
+#squadSub.need{color:#edc879;font-weight:700}
+@media(prefers-reduced-motion:reduce){#scSquad .hg-wing.need{animation:none}}
 #tabs{max-width:480px;margin-inline:auto;height:calc(var(--hg-nav) + env(safe-area-inset-bottom,0px));grid-template-columns:repeat(3,1fr);align-items:center;gap:10px;padding:4px 20px calc(4px + env(safe-area-inset-bottom,0px));background:#09131af5;border-top:1px solid #3a515d88}
 #tabs button{position:relative;justify-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:78px;height:65px;padding:3px 6px;font-size:11px;color:#afc5d0;border-radius:13px}#tabs button>svg{width:28px;height:28px}#tabs button>img{width:65px;height:58px;object-fit:contain}#tabs button>img.nav-art{width:44px;height:44px}
 #scSquad #hgPlaneImage{width:100%;height:100%;object-fit:contain;padding:7%;box-sizing:border-box}
@@ -4497,7 +4505,7 @@ function renderSquad() {
     const open = slotOpen(i), m = SLOT_META[i]
     const p = open ? planeById(prog.squad[i]) : null
     const b = document.createElement('button')
-    b.className = 'hg-wing' + (open ? ' open' : '')
+    b.className = 'hg-wing' + (open ? ' open' : '') + (open && !p ? ' need' : '')
     b.id = 'hgWing' + i
     b.setAttribute('aria-label', m.role + ', ' + (open ? (p ? p.name : '비어 있음') + ', 기체 선택' : slotWhy(i) + ' 필요, 파일럿 화면 열기'))
     b.innerHTML = (open ? (p ? '<img alt="" src="' + hangarPlaneImage(p) + '">' : '<span aria-hidden="true">＋</span>') : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>') +
@@ -4506,7 +4514,11 @@ function renderSquad() {
     b.onclick = () => hangarChoose(open ? 'planes' : 'pilot', open ? i : null, b.id)
     elSlots.append(b)
   }
-  $('squadSub').textContent = slotOpen(0) && slotOpen(2) ? '자리를 눌러 기체를 변경합니다' : '파일럿이 성장하면 자리가 열립니다'
+  /* 빈 자리가 있으면 그 말부터 한다. 자리가 열린 것을 모르고 지나가는 사람이 있었다 */
+  const needSlot = anySlotEmpty()
+  $('squadSub').textContent = needSlot ? '빈 자리가 있습니다. 자리를 눌러 기체를 고르세요'
+    : slotOpen(0) && slotOpen(2) ? '자리를 눌러 기체를 변경합니다' : '파일럿이 성장하면 자리가 열립니다'
+  $('squadSub').classList.toggle('need', needSlot)
   $('resBar').innerHTML = '<div><i class="ic fuel" aria-hidden="true"></i><span>출격권</span><b id="hgEnergy"></b><small id="enWait" class="hg-sr"></small></div>' +
     '<div><i class="ic part" aria-hidden="true"></i><span>부품</span><b id="vParts"></b></div>' +
     '<div><i class="ic tk" aria-hidden="true"></i><span>뽑기권</span><b id="vTicket"></b></div>'
@@ -5820,20 +5832,24 @@ function openDetail(p, list) {
       row('조각', ok ? `${shardOf(p.id)}개` : `${shardOf(p.id)} / ${shardNeed(p)}`) +
     `</div>` +
     (ok ? '' : `<div class="note2">아직 잠겨 있습니다. ${lab}</div>`) +
-    `<div class="note2">` +
-      `자리마다 화력 몫이 다릅니다 — 메인 100%, 윙맨 30%, 후방 ` +
-      `${Math.round(REAR_EARNED * 100)}%. 같은 기체라도 어느 자리에 두느냐로 값이 갈립니다.` +
+    /*
+     * 「적용」이 먼저, 그 아래에 이전·다음 (2026-09-11).
+     *
+     * 전에는 자리 몫 설명과 이전·다음을 지나야 단추가 나와서, 폰에서는
+     * 첫 화면에 안 보이고 스크롤해야 찾을 수 있었다. 고르러 들어온
+     * 사람에게 제일 급한 것이 그 단추다. 자리별 화력 몫 설명은 뺐다 -
+     * 편대 화면에 이미 있고, 고르는 자리에서 읽을 글이 아니다.
+     */
+    `<div class="bar">` +
+      (ok ? `<button id="dPick">적용</button>` : '') +
+      `<button class="ghost" id="dClose">닫기</button>` +
     `</div>` +
     /* 팝업 안에서 옮겨 다닌다. 닫고 다시 여는 것보다 훨씬 빠르게 견준다 */
     (list && list.length > 1
       ? `<div class="bar nav"><button class="ghost" id="dPrev">◀ 이전</button>` +
         `<span class="pos">${list.indexOf(p) + 1} / ${list.length}</span>` +
         `<button class="ghost" id="dNext">다음 ▶</button></div>`
-      : '') +
-    `<div class="bar">` +
-      (ok ? `<button id="dPick">이 자리에 넣기</button>` : '') +
-      `<button class="ghost" id="dClose">닫기</button>` +
-    `</div>`
+      : '')
 
   const cv = body.querySelector('canvas.demo')
   const dpr = Math.min(2, window.devicePixelRatio || 1)
@@ -5882,8 +5898,19 @@ function openDetail(p, list) {
 
   const dp = document.getElementById('dPick')
   if (dp) dp.onclick = () => {
-    /* 같은 기체를 두 자리에 넣지 않는다 - 자리를 맞바꾼다 */
+    /*
+     * 같은 기체를 두 자리에 넣지 않는다 - 자리를 맞바꾼다.
+     *
+     * 다만 메인 자리는 비울 수 없다(2026-09-11 버그). 기체를 둘만 가진
+     * 사람이 메인에 태운 기체를 윙맨 자리에 고르면, 맞바꾸기가 메인에
+     * 빈 자리를 넣어 버렸다 - 메인이 없으니 총알이 한 발도 안 나간다.
+     * 화면은 멀쩡히 돌아가서 원인을 알 수가 없다.
+     */
     const dup = prog.squad.indexOf(p.id)
+    if (dup === MAIN_SLOT && activeSlot !== MAIN_SLOT && !prog.squad[activeSlot]) {
+      alert('메인 자리는 비울 수 없습니다. 먼저 메인에 다른 기체를 넣고 옮겨 주세요.')
+      return
+    }
     if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
     prog.squad[activeSlot] = p.id
     save(); close(); renderPlanes()
@@ -6234,6 +6261,17 @@ addEventListener('keyup', (e) => { keys[e.key] = false })
  */
 const SLOT_OFFSET = [{ x: -38, y: 20 }, { x: 0, y: 0 }, { x: 38, y: 20 }, { x: 0, y: 46 }]
 const MAIN_SLOT = 1
+/*
+ * 메인 자리는 비어 있으면 안 된다. 맞바꾸기가 메인을 비워 버린 저장을
+ * 고친다(2026-09-11). 자리에 있던 기체가 있으면 그것을, 없으면 가진 것
+ * 중 하나를 태운다. MAIN_SLOT 이 정의된 뒤여야 하므로 여기에 둔다.
+ */
+if (!prog.squad[MAIN_SLOT]) {
+  const back = prog.squad.findIndex((id, i) => i !== MAIN_SLOT && id)
+  if (back >= 0) { prog.squad[MAIN_SLOT] = prog.squad[back]; prog.squad[back] = null }
+  else { const q = PLANES.find((x) => unlocked(x)); if (q) prog.squad[MAIN_SLOT] = q.id }
+  save()
+}
 
 /*
  * 필살기 버튼 자리.
@@ -13919,16 +13957,20 @@ function end(win) {
             (rankUp ? rankAfter + ' 승급' : '레벨 ' + prog.pilot.lv + ' 달성') +
           '</span><br><span class="t2">' +
             (rankUp ? 'Lv.' + lvBefore + ' → Lv.' + prog.pilot.lv : rankAfter) +
-            /*
-             * 이번 판에 열린 자리를 알린다. 기체를 저절로 넣지 않으므로
-             * 「열렸다」만으로는 부족하다 - 어디서 고르는지까지 적는다.
-             */
-            (SLOT_META.filter((m, i) => m.lv && m.lv > lvBefore && m.lv <= prog.pilot.lv)
-              .map((m) => ' · ' + m.role + ' 자리가 열렸습니다. 편대에서 기체를 고르세요').join('')) +
             (prog.pilot.lv >= PILOT_MAX ? ' · 후방 자리가 열렸습니다' : '') +
           '</span>' +
         '</span>' +
       '</div>'
+    /*
+     * 이번 판에 열린 자리는 줄을 따로 뺀다. 계급 줄 뒤에 붙여 뒀더니
+     * 작은 글씨에 묻혀서 못 보고 지나갔다 (2026-09-11).
+     */
+    const opened = SLOT_META.filter((m) => m.lv && m.lv > lvBefore && m.lv <= prog.pilot.lv)
+    if (opened.length) {
+      lvBox += '<div class="rlv slotnew">＋ ' +
+        opened.map((m) => m.role).join(' · ') +
+        ' 자리가 열렸습니다<br><span class="t2">편대 화면에서 기체를 골라 넣으세요</span></div>'
+    }
   }
 
   const rateNote = win
