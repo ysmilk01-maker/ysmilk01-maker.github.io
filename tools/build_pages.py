@@ -7,8 +7,10 @@ apps/*.html 다섯 장을 한 틀에서 뽑는다.
 내용은 아래 APPS 에만 있다. apps/*.html 은 생성 파일이라 손으로 고치지 않는다 —
 이 파일을 고치고 다시 돌린다. style.css 는 「상세 페이지 · 본문」 표식 아래를
 tools/detail.css 로 갈아 끼우므로, 상세 전용 CSS 는 detail.css 에 쓴다.
+끝나면 cache_bust.py 가 메인·개인정보·상세의 공통 파일 버전까지 갱신한다.
 """
 import io, os, shutil, sys
+from cache_bust import update_asset_versions
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SITE = os.path.dirname(HERE)
@@ -443,6 +445,8 @@ def main():
     css = css[:css.index(marker)].rstrip('\n') + '\n'
   io.open('style.css', 'w', encoding='utf-8', newline='\n').write(css.rstrip('\n') + '\n' + add)
   print('css appended')
+  # 상세 CSS까지 반영한 최종 파일로 해시를 계산해야 이전 버전이 붙지 않는다.
+  update_asset_versions(SITE)
 
 if __name__ == '__main__':
   main()
