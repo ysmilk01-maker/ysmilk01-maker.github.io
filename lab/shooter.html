@@ -337,6 +337,19 @@
     align-items: center; justify-content: center; pointer-events: none;
   }
   #pauseUI[hidden] { display: none !important; }
+  #ultTip {
+    position: fixed; inset: 0; z-index: 31; display: flex;
+    align-items: center; justify-content: center;
+    background: rgba(4,6,10,.62); pointer-events: auto;
+  }
+  #ultTip[hidden] { display: none !important; }
+  #ultTip .pbox {
+    text-align: center; padding: 20px 22px 16px; max-width: 300px;
+    background: rgba(8,9,13,.94); border: 1px solid var(--gold); border-radius: 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #ultTip .pt { font-size: 16px; font-weight: 800; color: var(--gold); }
+  #ultTip .ps { font-size: 12px; line-height: 1.7; color: var(--muted); }
   #pauseUI .pbox {
     pointer-events: auto; text-align: center; padding: 18px 22px 14px;
     background: rgba(8,9,13,.86); border: 1px solid var(--line); border-radius: 14px;
@@ -1496,6 +1509,21 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   「출격 준비로」. 전에는 나가는 길이 없어서 판을 버리려면 앱을 껐다.
   덮개는 pointer-events 를 안 받아서, 단추 밖을 누르면 예전처럼 재개다.
 -->
+<!--
+  필살기를 처음 채운 순간.
+
+  게이지가 찼다는 것을 소리로만 알렸더니 처음 하는 사람은 그냥 지나쳤다.
+  한 번만 판을 멈추고 어디를 누르는지 알린다(prog.tipUlt).
+-->
+<div id="ultTip" hidden>
+  <div class="pbox">
+    <div class="pt">필살기가 찼습니다</div>
+    <div class="ps">오른쪽 아래 둥근 단추를 누르면 터집니다.<br>적을 잡을 때마다 다시 찹니다.</div>
+    <button id="ultTipGo">지금 써보기</button>
+    <button id="ultTipLater" class="ghost">나중에</button>
+  </div>
+</div>
+
 <div id="pauseUI" hidden>
   <div class="pbox">
     <div class="pt">일시정지</div>
@@ -3774,7 +3802,12 @@ delete prog.__migPilot
 function pilotName() { return prog.pilot.name || '무명' }
 
 /* 기본 편대. 넷째 자리는 전설이 되기 전까지 비어 있다 */
-if (!prog.squad) prog.squad = ['rapid-common', 'spread-common', null, null]
+/*
+ * 처음엔 메인 한 대만. 전에는 좌 윙맨 자리에 기체를 미리 넣어 둬서,
+ * Lv.2 가 되는 순간 고르지도 않은 기체가 저절로 붙었다(2026-09-10 밤).
+ * 자리가 열리면 결과 화면이 알리고, 편대에서 직접 고른다.
+ */
+if (!prog.squad) prog.squad = [null, 'rapid-common', null, null]
 while (prog.squad.length < 4) prog.squad.push(null)
 /* 무료 기체가 셋에서 둘로 줄면서, 옛 저장의 편대에 아직 안 열린 기체가 남을 수 있다. 자리를 비운다 */
 prog.squad = prog.squad.map((id) => { const p = id && planeById(id); return p && unlocked(p) ? id : null })
@@ -3816,12 +3849,14 @@ const SLOT_META = [
   { role: '좌 윙맨', mul: 0.3, lv: 2 },
   { role: '메인', mul: 1.0 },
   /*
-   * 5 -> 3. 경험치를 30% 로 줄인 뒤 Lv.5 가 58판이 되어 1챕터(20판)에서
-   * 세 번째 자리가 안 열렸다. 캠페인 시뮬에서 1-13~18 의 몸이 lv3~4 ·
-   * 강화 2 · 자리 2 에 멈춰 있었고, 후반 벽은 판이 아니라 몸이 안 크는
-   * 문제였다. Lv.3 은 15판째 - 후반 직전에 화력 130% -> 160% 가 된다.
+   * 3 -> 5 로 되돌린다 (2026-09-10 밤, 사용자 지정).
+   *
+   * 5 -> 3 으로 내렸던 것은 경험치가 30% 로 줄어 Lv.5 가 58판이나 걸리던
+   * 때의 조치였다. 지금은 Lv.2 가 300(2판째)이라 사정이 다르다 - Lv.5 는
+   * 1챕터 중후반(대략 15~17판째)이고, 두 번째 윙맨이 그 자리에 오면
+   * 후반 직전에 화력이 130% -> 160% 로 오른다.
    */
-  { role: '우 윙맨', mul: 0.3, lv: 3 },
+  { role: '우 윙맨', mul: 0.3, lv: 5 },
   /*
    * 후방은 전설 파일럿만 쓴다.
    *
@@ -3841,6 +3876,10 @@ const SLOT_META = [
 const REAR_BOUGHT = 0.2
 const REAR_EARNED = 0.1
 /** 그 자리를 쓸 수 있나 */
+/** 열려 있는데 비어 있는 자리가 있나. 있으면 편대 탭에 점을 찍는다 */
+function anySlotEmpty() {
+  return SLOT_META.some((m, i) => i !== MAIN_SLOT && slotOpen(i) && !prog.squad[i])
+}
 function slotOpen(i) {
   const m = SLOT_META[i]
   if (m.legend) return isLegend()
@@ -4372,7 +4411,7 @@ function renderTabs() {
   set('gacha', prog.ticket >= GACHA.plane.cost)
   set('planes', anyUpg())
   set('pilot', anyPilotUp())
-  set('squad', anyUpg() || anyPilotUp())
+  set('squad', anyUpg() || anyPilotUp() || anySlotEmpty())
   const navImage = document.getElementById('hgNavPlane')
   if (navImage) navImage.src = hangarPlaneImage(planeById(prog.squad[MAIN_SLOT]))
 }
@@ -6205,12 +6244,37 @@ const ULT_BTN = { x: 0, y: 0, r: 34 }
  */
 const PAUSE_BTN = { x: 0, y: 0, r: 17 }
 /* 멈춤 덮개를 켜고 끈다. 그리는 건 캔버스, 단추만 DOM 이다 */
+/*
+ * 처음 한 번만. 게이지가 막 찬 순간에 판을 세우고 단추 자리를 알린다.
+ * 이미 멈춰 있거나(일시정지) 판이 안 도는 중이면 건너뛴다.
+ */
+function ultTip() {
+  if (prog.tipUlt) return
+  if (!state || !state.running || state.paused) return
+  prog.tipUlt = true
+  save()
+  state.paused = true
+  state.resumeT = 0
+  drag = null
+  const el = document.getElementById('ultTip')
+  if (el) { el.hidden = false; const b = document.getElementById('ultTipGo'); if (b) b.focus() }
+}
+function ultTipClose(fire) {
+  const el = document.getElementById('ultTip')
+  if (el) el.hidden = true
+  if (!state || !state.running) return
+  /* 2초 카운트가 끝나는 순간에 터뜨린다. 세는 중에 쏘면 화면이 겹친다 */
+  state.ultFire = !!fire
+  if (state.resumeT <= 0) { state.resumeT = RESUME_WAIT; sfx('pick') }
+}
 function pauseUI(on) {
   const el = document.getElementById('pauseUI')
   if (!el) return
   el.hidden = !on
   if (on) { const b = document.getElementById('pResume'); if (b) b.focus() }
 }
+document.getElementById('ultTipGo').onclick = () => ultTipClose(true)
+document.getElementById('ultTipLater').onclick = () => ultTipClose(false)
 document.getElementById('pResume').onclick = () => {
   if (!state || !state.paused) return
   if (state.resumeT <= 0) { state.resumeT = RESUME_WAIT; sfx('pick') }
@@ -8278,7 +8342,7 @@ function missileBurst(b) {
     const before = s.ult
     s.ult = Math.min(ultCap(), s.ult +
       (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
-    if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
+    if (before < ULT_MAX && s.ult >= ULT_MAX) { sfx('ready'); ultTip() }
   }
 
   for (const u of s.grounds) {
@@ -10017,7 +10081,7 @@ function collide() {
           // 예전엔 잡졸 열일곱만 잡으면 궁이 찼다. 판이 궁으로만 굴러갔다
           s.ult = Math.min(ultCap(), s.ult +
             (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
-          if (before < ULT_MAX && s.ult >= ULT_MAX) sfx('ready')
+          if (before < ULT_MAX && s.ult >= ULT_MAX) { sfx('ready'); ultTip() }
         }
       }
     }
@@ -13270,7 +13334,10 @@ function frame(now) {
   if (state.paused) {
     if (state.resumeT > 0) {
       state.resumeT -= dt
-      if (state.resumeT <= 0) { state.paused = false; state.resumeT = 0 }
+      if (state.resumeT <= 0) {
+        state.paused = false; state.resumeT = 0
+        if (state.ultFire) { state.ultFire = false; fireUlt() }
+      }
     }
     draw()
     return
@@ -13323,7 +13390,19 @@ function auInit() {
   if (!C) return null
   const c = new C()
   AU.ctx = c
-  AU.master = c.createGain(); AU.master.connect(c.destination)
+  AU.master = c.createGain()
+  /*
+   * 마스터 컴프레서. 폭발음을 키우면서 넣었다 - 잡졸 열 마리가 동시에
+   * 터질 때 합이 1을 넘으면 스피커에서 지직거린다. 눌러 주면 소리를
+   * 키워도 안 깨진다.
+   */
+  AU.comp = c.createDynamicsCompressor()
+  AU.comp.threshold.value = -14
+  AU.comp.knee.value = 24
+  AU.comp.ratio.value = 6
+  AU.comp.attack.value = 0.004
+  AU.comp.release.value = 0.18
+  AU.master.connect(AU.comp); AU.comp.connect(c.destination)
   AU.mus = c.createGain(); AU.mus.gain.value = AU.on.music ? MUS_VOL : 0
   AU.mus.connect(AU.master)
   AU.sfxBus = c.createGain(); AU.sfxBus.gain.value = 0.5
@@ -13529,13 +13608,13 @@ function sfx(kind, arg) {
       const sz = arg == null ? 0.5 : Math.min(1, arg)
       const c = AU.ctx, t0 = c.currentTime
       // 어택 - 깨지는 첫 순간
-      auHiss(9000, 3000, 0.045, 0.10 + sz * 0.08, 'highpass')
+      auHiss(9000, 3000, 0.05, 0.17 + sz * 0.13, 'highpass')
       // 바디 - 찢어지는 소리
-      auHiss(1400 + sz * 1400, 220, 0.22 + sz * 0.34, 0.10 + sz * 0.15, 'bandpass')
+      auHiss(1400 + sz * 1400, 220, 0.24 + sz * 0.34, 0.17 + sz * 0.24, 'bandpass')
       // 꼬리 - 흩어지는 파편
-      auHiss(700, 110, 0.34 + sz * 0.5, 0.05 + sz * 0.07, 'lowpass')
+      auHiss(700, 110, 0.36 + sz * 0.5, 0.09 + sz * 0.11, 'lowpass')
       // 저음 - 배를 울리는 몫. 작은 폭발엔 얕게만
-      auTone('sine', 130 - sz * 35, 34, 0.3 + sz * 0.28, 0.10 + sz * 0.18, t0 + 0.01)
+      auTone('sine', 130 - sz * 35, 34, 0.32 + sz * 0.28, 0.17 + sz * 0.28, t0 + 0.01)
       break
     }
     /*
@@ -13551,8 +13630,9 @@ function sfx(kind, arg) {
     case 'pop': {
       if (!auGate('pop', 0.03)) return
       const sz = arg == null ? 0.5 : Math.min(1, arg)
-      auHiss(5200, 1500, 0.07, 0.045 + sz * 0.035, 'bandpass')
-      auTone('sine', 240, 95, 0.085, 0.04 + sz * 0.03, AU.ctx.currentTime + 0.004)
+      /* 2026-09-10 밤: 안 들린다는 말에 두 배로. 겹쳐도 안 깨지도록 마스터에 컴프레서를 걸었다 */
+      auHiss(5200, 1500, 0.08, 0.10 + sz * 0.07, 'bandpass')
+      auTone('sine', 240, 95, 0.10, 0.09 + sz * 0.06, AU.ctx.currentTime + 0.004)
       break
     }
     case 'pick':
@@ -13822,6 +13902,12 @@ function end(win) {
             (rankUp ? rankAfter + ' 승급' : '레벨 ' + prog.pilot.lv + ' 달성') +
           '</span><br><span class="t2">' +
             (rankUp ? 'Lv.' + lvBefore + ' → Lv.' + prog.pilot.lv : rankAfter) +
+            /*
+             * 이번 판에 열린 자리를 알린다. 기체를 저절로 넣지 않으므로
+             * 「열렸다」만으로는 부족하다 - 어디서 고르는지까지 적는다.
+             */
+            (SLOT_META.filter((m, i) => m.lv && m.lv > lvBefore && m.lv <= prog.pilot.lv)
+              .map((m) => ' · ' + m.role + ' 자리가 열렸습니다. 편대에서 기체를 고르세요').join('')) +
             (prog.pilot.lv >= PILOT_MAX ? ' · 후방 자리가 열렸습니다' : '') +
           '</span>' +
         '</span>' +
