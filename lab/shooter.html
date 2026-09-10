@@ -5380,6 +5380,9 @@ function newState() {
  */
 const TILE_DIM = { sea: 0, sand: 0.48, snow: 0.46, ash: 0.05 }
 
+/* 배경 오브젝트를 얼마나 진하게 그릴까. 안 적힌 것은 0.44 */
+const OBJ_ALPHA = { bgLava: 0.22, bgCrater: 0.34, bgRuin: 0.40 }
+
 const BG_OBJ = {
   sea: ['bgCarrier', 'bgTanker'],
   sand: ['bgRunway', 'bgHangar', 'bgBattery'],
@@ -7189,14 +7192,38 @@ function spawnBoss(mid) {
        *
        * 부위가 넷이라 총량은 요새와 같이 0.74 로 맞춘다.
        */
+      /*
+       * 항모 - 그림에 맞춰 자리를 다시 잡았다.
+       *
+       * 그림이 화면 폭의 35% 로만 그려져 있었다(요청은 3분의 2). 크게
+       * 그리면서 부위도 같은 비율로 벌린다 - 안 벌리면 넷이 가운데
+       * 한 덩어리로 모여서 「흩어 놓은 것」이 무의미해진다.
+       *
+       *   함교      오른쪽에 솟은 아일랜드
+       *   사출기 둘  앞쪽(화면 아래) 좌우
+       *   엘리베이터 뒤쪽(화면 위)
+       */
       carrier: [
-        mk('md', '함교', 34, 2, 25, 0.20, 1.0),
-        mk('lt', '좌 사출기', -30, 42, 22, 0.20, 1.6),
-        mk('rt', '우 사출기', 4, 48, 22, 0.17, 2.2),
-        mk('en', '엘리베이터', -14, -42, 24, 0.17, 2.8),
+        mk('md', '함교', 58, 4, 34, 0.20, 1.0),
+        mk('lt', '좌 사출기', -51, 71, 30, 0.20, 1.6),
+        mk('rt', '우 사출기', 7, 82, 30, 0.17, 2.2),
+        mk('en', '엘리베이터', -24, -71, 32, 0.17, 2.8),
       ],
     }[form],
     core: { hp: base, maxHp: base, open: false },
+  }
+  /*
+   * 탄이 보스를 검사받는 범위.
+   *
+   * 46 + 24 = 70 으로 못 박혀 있었다. 부위가 그 밖에 있으면 **탄이
+   * 검사조차 안 된다** - 항모를 키우면서 사출기가 dy 82 로 나가는데,
+   * 70 으로는 영영 안 닿는다. 부위가 실제로 뻗은 데까지 넓힌다.
+   */
+  {
+    const bs2 = state.boss
+    let reach = bs2.r
+    for (const p of bs2.parts) reach = Math.max(reach, Math.hypot(p.dx, p.dy) + p.r)
+    bs2.reach = reach
   }
   /*
    * 보급.
@@ -9171,7 +9198,15 @@ function collide() {
 
     const bs = s.boss
     /* 부위가 먼저 맞는다. 부위를 다 부수기 전에는 코어가 안 깎인다 */
-    if (bs && !b.dead && !bs.entering && near(b, bs, bs.r + b.r + 24)) {
+    /*
+     * 여유값 24 는 그대로 둔다.
+     *
+     * 10 으로 줄였더니 모선(부위가 ±40, 반지름 17)이 오히려 좁아졌다 -
+     * 예전 46+24=70 보다 작은 57+10=67 이 됐고, 1-10 이 6/14 에서
+     * 3/12 로 떨어졌다. reach 는 「부위가 뻗은 데까지」를 보장하는
+     * 것이지 기존 여유를 뺏는 값이 아니다.
+     */
+    if (bs && !b.dead && !bs.entering && near(b, bs, (bs.reach || bs.r) + b.r + 24)) {
       const r = bossHit(bs, b.x, b.y, b.dmg)
       if (r !== 'block') {
         /*
@@ -9619,7 +9654,18 @@ function drawIsle(sl) {
    * 가장자리로 밀어 놓았으므로 크고 진하게 그려도 전투를 안 가린다 -
    * 가리는 것이 문제였지 크기가 문제였던 게 아니다.
    */
-  if (sl.obj && gaDraw(sl.obj, 0, 0, Math.max(sl.w, sl.h) * 1.9, .44, sl.seed * .18)) {
+  /*
+   * 배경 오브젝트.
+   *
+   * 알파를 0.44 로 못 박아 뒀는데, 4챕터 용암 호수가 들어오면서 문제가
+   * 됐다 - 주황빛 덩어리라 같은 알파에서도 두세 배 밝게 보인다. 화면에
+   * 서너 개 지나가면 그 위의 적탄을 놓친다.
+   *
+   * 그림마다 정한다. 어두운 것(격납고·활주로·갈라진 땅)은 그대로,
+   * 스스로 빛나는 것(용암)은 절반으로.
+   */
+  const oa = OBJ_ALPHA[sl.obj] != null ? OBJ_ALPHA[sl.obj] : 0.44
+  if (sl.obj && gaDraw(sl.obj, 0, 0, Math.max(sl.w, sl.h) * 1.9, oa, sl.seed * .18)) {
     g.restore()
     return
   }
@@ -10154,7 +10200,8 @@ function drawBoss(bs) {
      * 그만큼 크게 그린다.
      */
     const long = bs.form === 'ship'
-    const sz = bs.r * (long ? 2.4 : 3.2)
+    /* 항모는 정사각 그림인데 배다. 화면 폭의 3분의 2 를 채운다 */
+    const sz = bs.r * (long ? 2.4 : bs.form === 'carrier' ? 5.6 : 3.2)
     const sh2 = long ? sz * 2.3 : sz
     if (bs.flash > 0) g.globalAlpha = .6
     g.drawImage(bart, -sz / 2, -sh2 / 2, sz, sh2)
