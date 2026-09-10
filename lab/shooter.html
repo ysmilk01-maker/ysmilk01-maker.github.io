@@ -1458,7 +1458,8 @@
     <p class="sub" id="chapSub"></p>
     <div class="rows" id="chapRows"></div>
     <p class="sub2" id="chapGo"></p>
-    <button id="chapOk">여기로 출격</button>
+    <!-- 누르면 지도로 간다. 「출격」이라고 써 놓고 지도가 열리면 단추가 거짓말이 된다 -->
+    <button id="chapOk">전선 보기</button>
   </div>
 </div>
 
@@ -4146,16 +4147,41 @@ function kbClickable(el) {
   el.setAttribute('role', 'button')
   el.tabIndex = 0
   el.onkeydown = (e) => {
+    /*
+     * 자식 단추(강화)에서 올라온 키는 건드리지 않는다.
+     *
+     * 코덱스 재검증: 강화 단추에 Tab 으로 가서 Enter 를 누르면 카드가
+     * 가로채 상세만 열리고 강화는 0 그대로였다. 마우스로는 됐다. 카드 제
+     * 몸에서 난 키만 받는다.
+     */
+    if (e.target !== el) return
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click() }
   }
 }
 /* 열린 모달 하나. 초점을 안으로 옮기고, Tab 을 가두고, Escape 로 닫고, 돌려준다 */
 const MODAL = { el: null, close: null, back: null, key: null }
 function modalOn(panel, close) {
-  MODAL.back = document.activeElement
+  /*
+   * 「다음·이전」으로 안에서 다시 그릴 때는 복귀 대상을 덮지 않는다.
+   * 덮으면 Escape 뒤 초점이 BODY 로 떨어졌다(코덱스 재검증). 리스너도
+   * 한 번만 - 다시 그릴 때마다 붙이면 Escape 한 번에 close 가 여러 번 돈다.
+   */
+  const reopen = MODAL.el === panel
+  if (!reopen) MODAL.back = document.activeElement
+  if (MODAL.key) document.removeEventListener('keydown', MODAL.key)
   MODAL.el = panel; MODAL.close = close
-  const first = panel.querySelector('button:not([disabled])')
-  if (first) first.focus()
+  /*
+   * 첫 초점은 제목이다.
+   *
+   * 하단 단추(「이전」)로 보내니 320px 에서 시트가 281px 를 저절로 내려가
+   * 기체 이름과 그림을 못 보고 수치부터 봤다. 제목에 초점을 주고
+   * 스크롤은 맨 위에 둔다.
+   */
+  const sheet = panel.querySelector('.dsheet') || panel
+  sheet.scrollTop = 0
+  const h = panel.querySelector('h3')
+  if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) }
+  else { const first = panel.querySelector('button:not([disabled])'); if (first) first.focus({ preventScroll: true }) }
   MODAL.key = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); close(); return }
     if (e.key !== 'Tab') return
@@ -4170,7 +4196,13 @@ function modalOn(panel, close) {
 function modalOff() {
   if (MODAL.key) document.removeEventListener('keydown', MODAL.key)
   MODAL.key = null; MODAL.el = null; MODAL.close = null
-  if (MODAL.back && MODAL.back.focus) MODAL.back.focus()
+  /* 원래 카드가 다시 그려져 사라졌으면 같은 자리의 카드를 찾아 준다 */
+  let back = MODAL.back
+  if (back && !back.isConnected) {
+    const who = back.dataset && (back.dataset.who || back.dataset.id)
+    if (who) back = document.querySelector('[data-who="' + who + '"], [data-id="' + who + '"]')
+  }
+  if (back && back.focus) back.focus({ preventScroll: true })
   MODAL.back = null
 }
 
@@ -13253,6 +13285,8 @@ function end(win) {
   }
   /* 결과 창을 닫을 때 띄운다. 두 판을 한꺼번에 겹치면 둘 다 안 읽힌다 */
   pendingChapter = opened
+  /* 4-20 을 깨면 갈 데가 없다. 그런데도 「다음 단계」를 띄우면 같은 판에 다시 들어간다 */
+  const hasNext = !zone && win && (nextSub <= SUBS || !!CHAPTERS[nextCh])
 
   /*
    * 판을 깨면 **그 판에 태운 기체**의 조각을 준다.
@@ -13327,7 +13361,7 @@ function end(win) {
   save()
 
   /* 주 단추를 상황에 맞게. 구역(끝없는 출격)은 「다음 단계」가 없다 */
-  document.getElementById('nextGo').hidden = !(win && !zone)
+  document.getElementById('nextGo').hidden = !hasNext
   document.getElementById('retry').hidden = !(!win && !zone)
 
   const hardTag = state.hard ? '하드코어 · ' : state.crazy ? '크레이지 · ' : ''
@@ -13476,12 +13510,21 @@ function doLaunch(zoneMode) {
    * 마지막 관문을 여기 둔다.
    */
   if (zoneRun || !hardOpen()) runMode = 'normal'
-  if (energy() > 0) { energySpend(); start(); return }
+  /*
+   * 시작했는지(또는 광고 뒤에 시작할 것인지)를 돌려준다.
+   *
+   * 코덱스 재검증(FREE_PLAY=false 조건): 결과창의 「다시 도전」이 창을 먼저
+   * 숨기고 여기로 왔는데, 출격권 0·광고 한도 0 이면 알림만 내고 끝나서
+   * 결과창도 메뉴도 단추도 없는 멈춘 화면이 남았다. 시작이 안 되면 부른
+   * 쪽이 제 화면을 그대로 둬야 한다.
+   */
+  if (energy() > 0) { energySpend(); start(); return true }
   if (adDayLeft() <= 0) {
     alert('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.')
-    return
+    return false
   }
   showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
+  return true
 }
 document.getElementById('launch').onclick = () => doLaunch(false)
 document.getElementById('launch2').onclick = () => doLaunch(false)
@@ -13520,13 +13563,14 @@ document.getElementById('again').onclick = () => {
  * 출격 조건(출격권·광고 한도)은 doLaunch 가 그대로 본다 - 우회가 아니다.
  * 새 전선이 열렸으면 그 알림이 먼저다.
  */
-document.getElementById('retry').onclick = () => {
-  scOver.hidden = true
-  doLaunch(false)
-}
+/* 결과창은 start() 가 닫는다. 미리 닫으면 출격이 막혔을 때 빈 화면이 남는다 */
+document.getElementById('retry').onclick = () => { doLaunch(false) }
 document.getElementById('nextGo').onclick = () => {
-  scOver.hidden = true
-  if (pendingChapter != null && showChapter(pendingChapter)) { pendingChapter = null; return }
+  if (pendingChapter != null) {
+    scOver.hidden = true
+    if (showChapter(pendingChapter)) { pendingChapter = null; return }
+    scOver.hidden = false
+  }
   doLaunch(false)
 }
 elTabs.querySelectorAll('button').forEach((b) => { b.onclick = () => go(b.dataset.go) })
@@ -13571,8 +13615,18 @@ let titleDone = false
  * 동안에는 안 보이고, 로고가 옅어지면 노을이 배어 나온다. 이 배어 나옴이
  * 두 연출을 잇는 유일한 이음매다.
  */
+/* 타이틀이 덮고 있는 동안 뒤 화면과 탭은 초점을 못 받는다 */
+function titleInert(on) {
+  document.querySelectorAll('.screen, #tabs').forEach((el) => { el.inert = on })
+}
 function titleShow() {
   elTitle.hidden = false
+  /*
+   * 코덱스 재검증: 타이틀이 보이는데 첫 Tab 이 뒤의 좌 윙맨·메인·…·출격을
+   * 돌고 「시작하기」는 일곱 번째였다. 보이지 않는 것에 초점이 가면 지금
+   * 어디인지 알 길이 없다. 뒤를 inert 로 잠그고 시작 단추에 초점을 준다.
+   */
+  titleInert(true)
   let wait = 0
   const boot = document.getElementById('boot')
   if (boot && boot.getAnimations) {
@@ -13584,6 +13638,11 @@ function titleShow() {
     }
   }
   elTitle.style.setProperty('--tD', (wait / 1000).toFixed(2) + 's')
+  /* 로고가 걷힌 뒤에 초점을 준다 - 그 전에 주면 보이지 않는 것에 초점이 간다 */
+  setTimeout(() => {
+    const b = document.getElementById('tGo')
+    if (b && !elTitle.hidden) b.focus({ preventScroll: true })
+  }, wait + 450)
   const em = document.getElementById('tEm')
   if (em && ICON_B64.titleem) em.hidden = false
   const v = document.getElementById('tVer')
@@ -13593,6 +13652,7 @@ function titleStart() {
   if (titleDone) return
   titleDone = true
   elTitle.hidden = true
+  titleInert(false)
   music('hangar')
   const daily = claimDaily()
   if (daily) showDaily(daily)
