@@ -8360,11 +8360,21 @@ function bossDot(bs, dt) {
 }
 
 function bossArea(bs, dmg) {
+  /*
+   * 범위 피해를 살아 있는 부위에 **나눠** 넣는다 (2026-09-11).
+   *
+   * 전에는 부위마다 전액을 넣었다. 부위가 셋이면 피해가 그대로 세 배다 -
+   * 관통 광선(초당 235 × 보스 1.2 × 2.4초)이 부위마다 677 씩, 합 2,031 을
+   * 넣어 1챕터 보스가 한 번에 죽었다. 자리를 못 고르는 대신 여럿을
+   * 친다는 뜻이지, 총량을 늘리라는 뜻이 아니었다.
+   */
+  const n = bs.parts.filter((p) => p.alive).length
+  const each = n > 0 ? dmg / n : dmg
   let any = false
   for (const p of bs.parts) {
     if (!p.alive) continue
     any = true
-    p.hp -= dmg
+    p.hp -= each
     p.flash = .08
     if (p.hp <= 0) {
       p.alive = false
@@ -9008,14 +9018,19 @@ function updateUlt(dt) {
        *   관통 광선  좁다(반폭 16). 한 줄에 몰아넣는 대신 세게
        *   전면 소사  넓고(42) 화면을 훑는다. 여럿을 스치므로 조금 약하게
        */
-      const dps = k === 'laser' ? 235 : 155
+      /*
+       * 235/155 에서 150/120 으로 (2026-09-11). 범위 피해가 부위마다
+       * 전액으로 들어가던 것과 겹쳐 1챕터 보스가 한 번에 죽었다.
+       */
+      const dps = k === 'laser' ? 150 : 120
       for (const e of s.enemies) {
         if (Math.abs(e.x - cx) < half + e.r && e.y < pl.y) { e.hp -= dps * dt; e.flash = .08 }
       }
       for (const u of s.grounds) {
         if (Math.abs(u.x - cx) < half + 14 && u.y < pl.y) { u.hp -= dps * 0.7 * dt; u.flash = .08 }
       }
-      if (s.boss && Math.abs(s.boss.x - cx) < half + s.boss.r) bossArea(s.boss, dps * 1.2 * dt)
+      /* 보스 배수도 1.2 -> 0.9. 광선 한 번이 보스 체력의 절반 안쪽이 되게 */
+      if (s.boss && Math.abs(s.boss.x - cx) < half + s.boss.r) bossArea(s.boss, dps * 0.9 * dt)
     } else if (k === 'pierce') {
       /* 무적으로 위로 뚫는다. 닿는 것은 부순다 */
       pl.y -= 620 * dt
