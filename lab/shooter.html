@@ -1634,7 +1634,16 @@ const WEAPONS = {
   chain:   { name: '연쇄뇌격', desc: '맞은 적에서 번개가 옆으로 튑니다' },
 }
 
-const TIERS = { common: '일반', rare: '희귀', legend: '전설' }
+/*
+ * 기체 등급 (2026-09-11 넷으로).
+ *
+ * 파일럿은 일반·중급·상급·레전드인데 기체만 일반·희귀·전설이라, 같은
+ * 게임 안에서 등급 말이 두 벌이었다. 하나로 맞춘다.
+ *
+ * 저장과 그림 사전이 id(`laser-rare`)를 키로 쓰므로 **내부 키는 그대로
+ * 두고 보이는 이름만 바꿨다.** rare = 중급이다. 새로 생긴 상급은 high.
+ */
+const TIERS = { common: '일반', rare: '중급', high: '상급', legend: '레전드' }
 
 /*
  * 필살기.
@@ -1976,16 +1985,17 @@ const PLANES = []
    */
   const NAMES = {
     /* 뇌전은 뽑기 전용기 「뇌신」과 겹쳐서 비켰다. 바람으로 한 줄을 세운다 */
-    rapid:  ['질풍', '폭우', '태풍'],
-    spread: ['산개', '비산', '노도'],
-    laser:  ['섬광', '백열', '극광'],
-    homing: ['추격', '혈랑', '사신'],
-    pierce: ['예봉', '철창', '파천'],
-    wave:   ['파문', '해일', '심연'],
-    orb:    ['유성', '위성', '쌍성'],
-    mine:   ['화전', '흑룡', '신기전'],
-    beam:   ['철퇴', '거포', '파성포'],
-    boomer: ['반월', '곡도', '환영'],
+    /* 넷째(상급)는 2026-09-11 에 새로 지었다. 중급과 레전드 사이의 무게 */
+    rapid:  ['질풍', '폭우', '삭풍', '태풍'],
+    spread: ['산개', '비산', '쇄도', '노도'],
+    laser:  ['섬광', '백열', '섬전', '극광'],
+    homing: ['추격', '혈랑', '집념', '사신'],
+    pierce: ['예봉', '철창', '관철', '파천'],
+    wave:   ['파문', '해일', '격랑', '심연'],
+    orb:    ['유성', '위성', '삼성', '쌍성'],
+    mine:   ['화전', '흑룡', '비격', '신기전'],
+    beam:   ['철퇴', '거포', '공성포', '파성포'],
+    boomer: ['반월', '곡도', '월륜', '환영'],
   }
   /*
    * 전설의 속성과 성질.
@@ -2026,7 +2036,7 @@ const PLANES = []
     beam:   { big: 1, speed: 2 },     // 파성포 크고 빠르다
     boomer: { bounce: 1, big: 1 },    // 환영   크게 돌아온다
   }
-  const TIER_LIST = ['common', 'rare', 'legend']
+  const TIER_LIST = ['common', 'rare', 'high', 'legend']
   const UNLOCK = {
     // 각 무기의 일반형 중 셋만 무료, 나머지 일반형은 점수, 희귀는 점수, 전설은 유료
     /*
@@ -2053,6 +2063,7 @@ const PLANES = []
      * 전부 조각이다.
      */
     rare:   () => ({ kind: 'gacha' }),
+    high:   () => ({ kind: 'gacha' }),
     legend: (i) => ({ kind: 'paid', v: 1200 + i * 300 }),
   }
   // 연쇄뇌격은 전설만 있다. 격자에 넣으면 일반형·희귀형 빈칸이 생긴다
@@ -2073,8 +2084,9 @@ const PLANES = []
          *
          * 여기에 전설만 붙는 고유 속성과 성질(trait)이 더해진다.
          */
-        power: [1, 1.45, 2.15][ti],      // 화력 배수
-        rate: [1, 0.85, 0.66][ti],       // 사격 간격 배수 (작을수록 빠름)
+        /* 일반 1 · 중급 1.71 · 상급 2.37 · 레전드 3.26 배 (초당 피해 기준) */
+        power: [1, 1.45, 1.78, 2.15][ti],      // 화력 배수
+        rate: [1, 0.85, 0.75, 0.66][ti],       // 사격 간격 배수 (작을수록 빠름)
         el: t === 'legend' ? LEGEND_EL[w] : null,
         trait: t === 'legend' ? LEGEND_TRAIT[w] : null,
         unlock: UNLOCK[t](i),
@@ -2406,7 +2418,7 @@ function load() {
  * 부품은 강화에만 쓴다. 재화 둘이 하는 일이 갈라져 있어야 어느 쪽을
  * 모아야 하는지가 분명해진다.
  * ================================================================ */
-const SHARD_NEED = { common: 20, rare: 40, legend: 80 }      // 기체 해금
+const SHARD_NEED = { common: 20, rare: 40, high: 60, legend: 80 }  // 기체 해금
 /*
  * 강화 단계에 드는 조각. 뒤로 갈수록 가파르다.
  *
@@ -2422,8 +2434,8 @@ const SHARD_UPG = [10, 20, 30, 50, 100, 160, 240]
 const GACHA = {
   plane: {
     name: '기체 뽑기', cost: 1,
-    rates: [['legend', 7], ['rare', 33], ['common', 60]],
-    amount: { legend: [3, 6], rare: [5, 9], common: [8, 14] },
+    rates: [['legend', 5], ['high', 12], ['rare', 28], ['common', 55]],
+    amount: { legend: [3, 6], high: [4, 7], rare: [5, 9], common: [8, 14] },
     jackpot: 1.0,        // 조각이 아니라 기체가 통째로 나올 확률(%)
   },
   pilot: {
@@ -2457,7 +2469,14 @@ const SHOP = [
 ]
 
 /* 천장. 안 나오는 사람이 끝없이 안 나오는 일을 막는다 */
-const PITY = { plane: { at: 40, tier: 'legend' }, pilot: { at: 60, tier: 'high' } }
+/*
+ * 기체 쪽 레전드 확정은 없앴다 (2026-09-11).
+ *
+ * 마흔 번마다 레전드가 확정으로 나오면 등급 넷을 만든 뜻이 없다 - 사람이
+ * 세는 것은 남은 횟수뿐이고, 중급·상급은 지나가는 자리가 된다. 파일럿은
+ * 등급이 넷뿐이라 상급 확정을 남긴다.
+ */
+const PITY = { pilot: { at: 60, tier: 'high' } }
 
 /*
  * 뽑기는 하나다.
@@ -3509,7 +3528,7 @@ const UPG_MAX = 7
 function partsEarned(score) { return Math.max(1, Math.round(score / 65)) }
 /** 다음 단계 비용. 등급이 높을수록 비싸다 */
 function upgCost(p, lv) {
-  const t = { common: 1, rare: 1.6, legend: 2.4 }[p.tier]
+  const t = { common: 1, rare: 1.6, high: 2.0, legend: 2.4 }[p.tier]
   return Math.round((40 + lv * 55) * t)
 }
 function upgOf(id) { return prog.upg[id] || 0 }
@@ -4112,7 +4131,11 @@ for (const k in ART3_B64) {
 }
 /** 다 받아졌을 때만 그린다. 반쯤 받아진 그림을 그리면 깜빡인다 */
 function ga(k) {
-  const im = GA[k]
+  let im = GA[k]
+  /* 상급 그림이 오기 전까지는 같은 무기의 중급 것을 빌린다 (2026-09-11) */
+  if ((!im || !im.naturalWidth) && typeof k === 'string' && k.endsWith('-high')) {
+    im = GA[k.replace('-high', '-rare')]
+  }
   return im && im.complete && im.naturalWidth ? im : null
 }
 /** 가운데를 기준으로 한 변 sz 로 그린다 */
@@ -4542,7 +4565,7 @@ function showUnlockPop() {
   document.getElementById('unlockClose').onclick = () => { el.hidden = true; modalOff() }
 }
 /** 등급 이름. 팝업에서만 쓴다 */
-function GRADES_T(t) { return t === 'legend' ? '전설' : t === 'rare' ? '희귀' : '일반' }
+function GRADES_T(t) { return TIERS[t] || '일반' }
 function hangarPlaneImage(p) {
   return p ? (HANGAR_ART.planes[p.id] || (shipArt(p.id) || {}).src || '') : ''
 }
@@ -4754,7 +4777,7 @@ document.getElementById('setClose').onclick = () => { elSet.hidden = true; modal
  */
 const OWN_FILTERS  = [['all', '전체'], ['own', '보유'], ['lock', '미보유']]
 const TIER_FILTERS = [['all', '전체'], ['common', '일반'],
-                      ['rare', '희귀'], ['legend', '전설']]
+                      ['rare', '중급'], ['high', '상급'], ['legend', '레전드']]
 
 function renderPlanes() {
   /*
@@ -5107,11 +5130,14 @@ function paintRates() {
         (need ? ` · 하나 열기까지 평균 ${need.toLocaleString('ko-KR')}번` : '') +
         `</span></div>`
     }).join('')
+    /* 기체 쪽은 2026-09-11 에 확정을 없앴다. 없는 갈래는 줄을 안 그린다 */
     const pity = PITY[kind]
     return `<div class="lab">${kind === 'plane' ? '기체' : '파일럿'} 등급별 확률</div>${rows}` +
       `<div class="rate"><span>완성품 (조각 대신 통째로)</span><span class="v">${g.jackpot}%</span></div>` +
-      `<div class="rate"><span>${pity.at}번마다</span><span class="v">` +
-      `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상 확정</span></div>`
+      (pity
+        ? `<div class="rate"><span>${pity.at}번마다</span><span class="v">` +
+          `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상 확정</span></div>`
+        : '')
   }
   body.innerHTML =
     `<div class="lab">무엇이 나오는가</div>` +
@@ -6509,7 +6535,7 @@ function shoot(u, i, dt) {
    * 어디에 설지를 고르게 된다. 대신 적은 더 많이 나오되 무르게 했다.
    */
   u.cd = rate * PLAYER_CD
-  sfx('shot', p.tier === 'legend' ? 2 : p.tier === 'rare' ? 1 : 0)
+  sfx('shot', tierStep(p.tier))
 
   /* 분신은 제 자리를 들고 온다. 편대 자리 계산을 안 탄다 */
   const pos = u.at || slotPos(i)
@@ -6520,7 +6546,7 @@ function shoot(u, i, dt) {
    * 있는데, 지금까지는 탄이 조금 굵어지는 것 말고는 표시가 없었다.
    */
   state.muzzles.push({ x: pos.x, y: pos.y - 12, age: 0,
-                       k: p.tier === 'legend' ? 'mz3' : p.tier === 'rare' ? 'mz2' : 'mz1' })
+                       k: ['mz1', 'mz2', 'mz3'][tierStep(p.tier)] })
   /*
    * 연사를 절반으로 줄인 만큼 한 발을 두 배로 무겁게 한다.
    *
@@ -6529,7 +6555,7 @@ function shoot(u, i, dt) {
    * 실제로 그렇게 해 봤더니 3챕터 보스를 80초에 42%밖에 못 깎았다.
    */
   const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD
-  const tier = p.tier === 'legend' ? 2 : p.tier === 'rare' ? 1 : 0
+  const tier = tierStep(p.tier)
   const B = state.bullets
   /* 빛은 지속도 연쇄도 없다. 그 자리에서 더 아프면 끝이라 여기서 곱한다 */
   const elAdd = p.el === 'lite' ? (1 + ELS.lite.add) : 1
@@ -10726,12 +10752,25 @@ for (const k in SHIP_B64) {
   SHIP_IMG[k] = im
 }
 
+/*
+ * 등급을 0·1·2 로 접는다 (2026-09-11).
+ *
+ * 탄 수·총구 불꽃·발사음이 등급을 세 자리로만 쓴다. 상급을 넷째 자리로
+ * 늘리면 탄이 한 발 더 늘어 레전드와 겹친다 - 상급은 배수로 세고,
+ * 여기서는 중급과 같은 자리에 둔다.
+ */
+function tierStep(t) { return t === 'legend' ? 2 : (t === 'rare' || t === 'high') ? 1 : 0 }
 function shipArt(id) {
-  const im = SHIP_IMG[id]
+  let im = SHIP_IMG[id]
+  /*
+   * 상급(2026-09-11 신설)은 아직 제 그림이 없다. 같은 무기의 중급 그림을
+   * 빌린다 - 빈 화면보다 낫고, 그림이 오면 이 줄만 지우면 된다.
+   */
+  if ((!im || !im.naturalWidth) && id.endsWith('-high')) im = SHIP_IMG[id.replace('-high', '-rare')]
   return im && im.complete && im.naturalWidth ? im : null
 }
 
-const TIER_COLOR = { common: '#dbe7f5', rare: '#8fd8ff', legend: '#ffd27a' }
+const TIER_COLOR = { common: '#dbe7f5', rare: '#8fd8ff', high: '#c0a6ff', legend: '#ffd27a' }
 
 /**
  * 색을 밝히거나(양수) 어둡게(음수) 한다.
