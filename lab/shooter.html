@@ -350,6 +350,12 @@
   }
   #pauseUI[hidden] { display: none !important; }
   .rlv.slotnew { color: var(--gold); font-weight: 700; }
+  /* 스탯 안내 줄. 왼쪽에 숫자가 들어가 34px 로는 넘친다 */
+  .rlv.stat { grid-template-columns: 58px 1fr; }
+  .rlv.stat .nu {
+    text-align: center; font-weight: 800; font-size: 14px;
+    color: var(--gold, #ffd98a);
+  }
   .rlv.slotnew .t2 { color: var(--muted); font-weight: 500; }
   #pauseUI .pbox {
     pointer-events: auto; text-align: center; padding: 18px 22px 14px;
@@ -4565,6 +4571,63 @@ function showUnlockPop() {
   }
   document.getElementById('unlockClose').onclick = () => { el.hidden = true; modalOff() }
 }
+/*
+ * 파일럿 스탯 안내 (Lv.5, 2026-09-11).
+ *
+ * 스탯은 처음부터 올릴 수 있었는데, 격납고 -> 파일럿 -> 그 사람 카드
+ * 안까지 세 번 들어가야 나온다. 그래서 「경험치가 쌓이는데 쓸 데가
+ * 없다」로 끝나는 사람이 있었다.
+ *
+ * Lv.5 에 한 번만 띄운다 - 그때 쓸 수 있는 경험치가 3,800 쯤이라
+ * 첫 칸(900)을 넉넉히 살 수 있고, 우 윙맨 자리도 같이 열려서 화면을
+ * 들여다보는 때다.
+ *
+ * 이미 한 칸이라도 찍은 사람에게는 안 띄운다 - 아는 사람에게 설명하는
+ * 창은 방해다. 새 기체·자리 창이 떠 있으면 이번엔 건너뛰고 다음 번
+ * 격납고에서 띄운다. 두 창이 겹치면 뒤엣것이 안 보인다.
+ */
+const STAT_GUIDE_LV = 5
+function showStatGuide() {
+  if (prog.seenStatGuide) return
+  if ((prog.pilot.lv || 1) < STAT_GUIDE_LV) return
+  const el = document.getElementById('unlockPop')
+  if (!el || !el.hidden) return
+  if (pilotSpent() > 0) { prog.seenStatGuide = true; save(); return }
+  prog.seenStatGuide = true
+  save()
+  const st = pilotSt()
+  document.getElementById('unlockTitle').textContent = '파일럿 스탯을 올려 보세요'
+  document.getElementById('unlockSub').textContent =
+    '쌓인 경험치로 파일럿을 키웁니다. 첫 칸 ' +
+    statCost(0).toLocaleString('ko-KR') + ' · 지금 쓸 수 있는 경험치 ' +
+    pilotXp().toLocaleString('ko-KR')
+  document.getElementById('unlockList').innerHTML = ST_KEYS.map((k) => {
+    const S = STATS[k]
+    return '<div class="rlv stat">' +
+      '<span class="nu" aria-hidden="true">+' + S.per + S.unit + '</span>' +
+      '<span><span class="t1">' + S.name + ' ' + (st[k] || 0) + '/' + ST_MAX + '</span><br>' +
+      '<span class="t2">' + S.desc + '</span></span></div>'
+  }).join('') +
+    '<div class="rlv stat"><span class="nu" aria-hidden="true">※</span>' +
+    '<span><span class="t2">스탯은 파일럿마다 따로 쌓입니다. ' +
+    '언제든 되돌려 경험치를 돌려받을 수 있습니다.</span></span></div>'
+  document.getElementById('unlockOk').textContent = '스탯 올리러 가기'
+  el.hidden = false
+  modalOn(el, () => document.getElementById('unlockClose').click())
+  document.getElementById('unlockOk').onclick = () => {
+    el.hidden = true; modalOff(); hangarChoose('pilot', null, 'hgPilot')
+    /*
+     * 파일럿 목록까지만 가면 「상세 보기」를 한 번 더 눌러야 스탯이
+     * 나온다 - 안내를 읽고 눌렀는데 또 찾아야 하면 안내가 아니다.
+     * 지금 태운 파일럿의 상세를 바로 연다.
+     */
+    setTimeout(() => {
+      const card = document.getElementById('pilotNowCard')
+      if (card) card.click()
+    }, 0)
+  }
+  document.getElementById('unlockClose').onclick = () => { el.hidden = true; modalOff() }
+}
 /** 등급 이름. 팝업에서만 쓴다 */
 function GRADES_T(t) { return TIERS[t] || '일반' }
 function hangarPlaneImage(p) {
@@ -4608,7 +4671,8 @@ function renderSquad() {
   $('hgPilot').setAttribute('aria-label', pl.name + ', 파일럿 선택 및 성장')
   $('hgPilot').onclick = () => hangarChoose('pilot', null, 'hgPilot')
   /* 새로 열린 기체가 있으면 알린다. 화면을 그린 뒤에 띄운다 */
-  setTimeout(showUnlockPop, 0)
+  /* 해금 창이 안 떴을 때만 스탯 안내가 이어서 뜬다 (showStatGuide 안에서 확인) */
+  setTimeout(() => { showUnlockPop(); showStatGuide() }, 0)
   elSlots.replaceChildren()
   for (const i of [0, 2, 3]) {
     const open = slotOpen(i), m = SLOT_META[i]
