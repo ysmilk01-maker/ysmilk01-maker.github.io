@@ -8204,7 +8204,7 @@ function mkEnemy(kind, x, y, drift) {
      * 대신 안 비키면 제일 아프다 - 피할 수 있는 것일수록 세게 때린다는
      * 원칙을 여기서도 지킨다.
      */
-    lancer: { hp: 43, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
+    lancer: { hp: 86, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
 
     /*
      * 방패.
@@ -8224,7 +8224,7 @@ function mkEnemy(kind, x, y, drift) {
      * 지금까지 열한 종이 다 「쏘면 죽는다」 하나였다. 이건 서는 자리를
      * 바꾸게 만든다 - 정면에서 화력을 쏟는 대신 옆으로 돌아야 한다.
      */
-    shield: { hp: 27, r: 21, sp: 34, score: 460, fire: 2.4, art: 48, shield: 55, shieldT: 6.5 },
+    shield: { hp: 54, r: 21, sp: 34, score: 460, fire: 2.4, art: 48, shield: 55, shieldT: 6.5 },
 
     /*
      * 분열.
@@ -8233,7 +8233,7 @@ function mkEnemy(kind, x, y, drift) {
      * 갈라진 둘까지 같이 쓸어 담고, 한 발씩 쏘는 무기는 두 번 일한다.
      * 무기를 고를 이유가 생긴다.
      */
-    split:  { hp: 20, r: 19, sp: 46, score: 300, fire: 2.2, art: 44, splits: 2 },
+    split:  { hp: 40, r: 19, sp: 46, score: 300, fire: 2.2, art: 44, splits: 2 },
 
     /*
      * 자폭.
@@ -8242,7 +8242,8 @@ function mkEnemy(kind, x, y, drift) {
      * 반경 안에 있으면 맞는다. 그래서 쏴서 미리 떨구는 것이 답인데,
      * 터질 때도 반경이 남으므로 가까이서 잡으면 같이 맞는다.
      */
-    bomber: { hp: 13, r: 17, sp: 66, score: 340, fire: 99, art: 38, boomR: 96 },
+    /* 중간 무리 x2 (2026-09-12) */
+    bomber: { hp: 26, r: 17, sp: 66, score: 340, fire: 99, art: 38, boomR: 96 },
 
     /*
      * 지원기.
@@ -8251,7 +8252,7 @@ function mkEnemy(kind, x, y, drift) {
      * 이걸 먼저 잡을지, 눈앞의 것을 먼저 잡을지 고르게 하는 적이다 -
      * 화면에 순서가 생긴다.
      */
-    guard:  { hp: 23, r: 18, sp: 38, score: 400, fire: 99, art: 42, auraR: 118 },
+    guard:  { hp: 46, r: 18, sp: 38, score: 400, fire: 99, art: 42, auraR: 118 },
 
     /*
      * 미확인기.
@@ -9164,7 +9165,22 @@ function boom(x, y, n, color) {
    * 전에는 6 이상이면 전부 'boom' 이었다. 잡졸(12)과 중형(22)이 같은
    * 소리라, 잡졸이 열 마리씩 터질 때 큰 소리가 겹쳐 다 뭉개졌다.
    */
-  if (n >= 18) sfx('boom', n / 40)
+  /*
+   * 네 층으로 나눈다 (2026-09-12).
+   *
+   * 전에는 잡졸('pop')과 그 밖의 전부('boom') 둘뿐이었다. 중형도 보스도
+   * 같은 소리라, 한 판을 끝맺는 보스가 잡몹 스무 마리째와 똑같이 들렸다.
+   * 무엇을 잡았는지는 화면보다 소리가 먼저 알려 준다.
+   *
+   *   n<6      무음   총알이 박히는 불똥
+   *   6~17     pop    잡졸 (12·14)
+   *   18~35    boom   중형·지상·보스 부위 (22·24·26·30)
+   *   36~59    bmid   UFO·중간보스 (40·46)
+   *   60~      bboss  보스 (70)
+   */
+  if (n >= 60) sfx('bboss')
+  else if (n >= 36) sfx('bmid')
+  else if (n >= 18) sfx('boom', n / 40)
   else if (n >= 6) sfx('pop', n / 18)
   /*
    * 알갱이만으로는 '터졌다'가 안 읽힌다. 여섯 장짜리 불꽃을 같이 얹는다.
@@ -14496,6 +14512,45 @@ function sfx(kind, arg) {
       // 저음 두 겹 - 뚝 떨어지는 몫과 배를 미는 몫
       auTone('sine', 190 - sz * 40, 48, 0.16 + sz * 0.10, 0.20 + sz * 0.14, t0 + 0.004)
       auTone('sine', 110 - sz * 30, 30, 0.36 + sz * 0.30, 0.20 + sz * 0.30, t0 + 0.012)
+      break
+    }
+    /*
+     * 중간보스가 터지는 소리.
+     *
+     * 'boom' 보다 반 옥타브 낮고 두 배 길다. 치는 몫을 **두 번** 준다 -
+     * 한 번은 깨지는 순간, 한 번은 몸이 주저앉는 순간. 끝에 금속이
+     * 울리는 꼬리를 얹어 「덩어리가 무너졌다」를 만든다.
+     */
+    case 'bmid': {
+      if (!auGate('bmid', 0.12)) return
+      const c = AU.ctx, t0 = c.currentTime
+      auHiss(9000, 2600, 0.06, 0.30, 'highpass')
+      auHiss(1400, 160, 0.52, 0.30, 'bandpass')
+      auHiss(520, 90, 0.80, 0.18, 'lowpass')
+      auTone('sine', 150, 36, 0.30, 0.30, t0 + 0.004)
+      auTone('sine', 92, 24, 0.62, 0.32, t0 + 0.14)
+      /* 금속 꼬리 */
+      auTone('triangle', 430, 170, 0.34, 0.07, t0 + 0.10)
+      break
+    }
+    /*
+     * 보스가 터지는 소리.
+     *
+     * 한 판을 끝맺는 자리다. 제일 길고 제일 낮게, 치는 몫을 **세 번**
+     * 준다 - 깨짐 / 주저앉음 / 멀리서 한 번 더. 마지막 저음은 1초를
+     * 끌어서 화면이 조용해질 때까지 남는다.
+     */
+    case 'bboss': {
+      if (!auGate('bboss', 0.3)) return
+      const c = AU.ctx, t0 = c.currentTime
+      auHiss(9000, 2000, 0.08, 0.34, 'highpass')
+      auHiss(1100, 120, 0.78, 0.34, 'bandpass')
+      auHiss(420, 60, 1.50, 0.22, 'lowpass')
+      auTone('sine', 132, 30, 0.42, 0.34, t0 + 0.004)
+      auTone('sine', 80, 20, 0.90, 0.36, t0 + 0.18)
+      auTone('sine', 58, 18, 1.10, 0.26, t0 + 0.44)
+      /* 찢어지는 몸통. 사인만으로는 「크다」가 아니라 「둔하다」가 된다 */
+      auTone('sawtooth', 190, 40, 0.55, 0.10, t0 + 0.02)
       break
     }
     /*
