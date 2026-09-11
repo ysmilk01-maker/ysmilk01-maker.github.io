@@ -1131,6 +1131,15 @@
   }
   .gatab button.on { color: var(--accent); border-color: var(--accent); }
   /* 아래 단추는 화면에 고정한다. 결과를 훑다 보면 뽑기 단추가 위로 밀린다 */
+  /* 뽑기 상자. 글만 있으면 아무것도 안 뜬 화면처럼 보인다 */
+  .gcrate { text-align: center; margin: 18px 0 4px; }
+  .gcrate img {
+    width: 168px; height: 168px; object-fit: contain;
+    filter: drop-shadow(0 10px 22px rgba(0,0,0,.55));
+    animation: crateBob 2.6s ease-in-out infinite;
+  }
+  @keyframes crateBob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }
+  @media (prefers-reduced-motion: reduce) { .gcrate img { animation: none } }
   #scGacha .gmain {
     position: sticky; bottom: 0; margin-top: 10px;
     padding-top: 10px; background: linear-gradient(transparent, var(--bg) 40%);
@@ -1315,12 +1324,17 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad .hg-wing.need span[aria-hidden]{color:#edc879}
 @keyframes wingNeed{0%,100%{box-shadow:0 0 0 0 rgba(237,200,121,.45)}50%{box-shadow:0 0 0 5px rgba(237,200,121,0)}}
 #squadSub.need{color:#edc879;font-weight:700}
+/* 파일럿 스탯을 올릴 수 있으면 그 칸이 빛난다 (2026-09-11) */
+#scSquad .hg-pilot.grow,#scSquad .hg-main.grow{border-color:#edc879!important;animation:wingNeed 1.6s ease-in-out infinite}
+#scSquad .hg-pilot.grow .hg-change,#scSquad .hg-main.grow .hg-change{color:#edc879;font-weight:800}
 @media(prefers-reduced-motion:reduce){#scSquad .hg-wing.need{animation:none}}
 #tabs{max-width:480px;margin-inline:auto;height:calc(var(--hg-nav) + env(safe-area-inset-bottom,0px));grid-template-columns:repeat(3,1fr);align-items:center;gap:10px;padding:4px 20px calc(4px + env(safe-area-inset-bottom,0px));background:#09131af5;border-top:1px solid #3a515d88}
 #tabs button{position:relative;justify-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:78px;height:65px;padding:3px 6px;font-size:11px;color:#afc5d0;border-radius:13px}#tabs button>svg{width:28px;height:28px}#tabs button>img{width:65px;height:58px;object-fit:contain}#tabs button>img.nav-art{width:44px;height:44px}
 #scSquad #hgPlaneImage{width:100%;height:100%;object-fit:contain;padding:7%;box-sizing:border-box}
 #tabs .hg-home{width:86px;height:73px;top:-8px;background:linear-gradient(#223b43,#15252d);border:1px solid #58747f;border-radius:19px;box-shadow:0 4px 0 #071116}#tabs .hg-home.on{border-color:#a2c6bd;background:linear-gradient(#39575f,#172c34)}#tabs .hg-home.on:before{content:'';position:absolute;bottom:5px;left:34px;width:17px;height:2px;border-radius:2px;background:#c9efe4}
-#tabs button.dot:after{top:9px;right:13px;margin:0;width:6px;height:6px;background:#edc879}#tabs .hg-home.dot:after{top:10px;right:10px}.hg-back{margin-bottom:10px;align-self:flex-start;background:#1a2a3380;color:#bcd0d9;border:1px solid #49626e88;padding:8px 12px;min-height:40px;font-size:12px;box-shadow:none}
+#tabs button.dot:after{top:7px;right:10px;margin:0;width:10px;height:10px;background:#ffcf4a;border:2px solid #0b1118;box-shadow:0 0 0 0 rgba(255,207,74,.6);animation:tabPing 1.5s ease-out infinite}
+@keyframes tabPing{0%{box-shadow:0 0 0 0 rgba(255,207,74,.55)}70%{box-shadow:0 0 0 9px rgba(255,207,74,0)}100%{box-shadow:0 0 0 0 rgba(255,207,74,0)}}
+@media (prefers-reduced-motion: reduce){#tabs button.dot:after{animation:none}}#tabs .hg-home.dot:after{top:10px;right:10px}.hg-back{margin-bottom:10px;align-self:flex-start;background:#1a2a3380;color:#bcd0d9;border:1px solid #49626e88;padding:8px 12px;min-height:40px;font-size:12px;box-shadow:none}
 @media(min-width:600px){#scSquad{border-inline:1px solid #263d48}.hg-hero{height:clamp(370px,49vh,470px)}}
 @media(max-width:360px){.hg-res{padding:11px 14px;font-size:10px;gap:5px}.hg-res>div{gap:4px}.hg-top{padding:9px 14px 0;min-height:50px}.hg-hero{height:365px}.hg-plane-name{left:16px;top:6px}.hg-plane-name strong{font-size:22px}#scSquad .hg-main{top:41px;left:22%;width:73%;height:56%}#scSquad .hg-pilot{left:3%;width:39%;height:47%}.hg-wings{right:4%;bottom:2px;width:46%}.hg-wing-row{gap:4px}#scSquad .hg-wing{height:66px}.hg-wing img{height:32px}.hg-wings p{font-size:9px}.hg-wing-title{font-size:9px}.hg-pilot-label strong{font-size:15px}.hg-pilot-label small{font-size:9px}.hg-details{margin-inline:14px}.hg-footer{padding-inline:14px}.hg-destination strong{font-size:15px}}
 @media(max-height:650px){.hg-top{min-height:45px;padding-top:5px}.hg-res{padding-block:8px}.hg-footer{padding-top:5px;padding-bottom:5px}.hg-destination{margin-bottom:6px}#scSquad #launch{min-height:46px;font-size:19px}.hg-hint{margin-top:6px}.hg-scroll{scrollbar-width:thin}}
@@ -4697,7 +4711,16 @@ function renderSquad() {
   $('hgPilotImage').src = HANGAR_ART.pilots[pl.id] || (GC[pilotFace(pl)] || {}).src || ''
   $('hgPilotName').textContent = pl.name
   $('hgPilotMeta').textContent = GRADES[pl.grade].name + ' 파일럿 · Lv.' + pt.lv
+  /*
+   * 「성장 가능」이라는 글자만으로는 안 보인다 (2026-09-11).
+   *
+   * 아래 탭에는 점이 켜지는데 그 점이 **어디를 가리키는지**가 화면에
+   * 없었다 - 기체는 올릴 게 없는데 불이 들어온 것처럼 보였다. 실제로는
+   * 파일럿 스탯이 올라갈 수 있는 상태였다. 칸 자체를 빛낸다.
+   */
   $('hgPilotChange').textContent = anyPilotUp() ? '성장 가능 ›' : '변경 ›'
+  $('hgPilot').classList.toggle('grow', anyPilotUp())
+  $('hgMain').classList.toggle('grow', anyUpg())
   $('hgPilot').setAttribute('aria-label', pl.name + ', 파일럿 선택 및 성장')
   $('hgPilot').onclick = () => hangarChoose('pilot', null, 'hgPilot')
   /* 새로 열린 기체가 있으면 알린다. 화면을 그린 뒤에 띄운다 */
@@ -5096,15 +5119,20 @@ function renderGacha(res) {
     ? '기체가 나올지 파일럿이 나올지는 <b>열어 봐야</b> 압니다.'
     : '파일럿은 다 모으셨습니다. 이제 기체만 나옵니다.'
 
-  const lp = PITY.plane.at - (prog.pull.plane % PITY.plane.at)
-  const li = PITY.pilot.at - (prog.pull.pilot % PITY.pilot.at)
+  /*
+   * 기체 쪽 천장을 없앤 날(2026-09-11) 여기를 안 고쳤다. PITY.plane 이
+   * undefined 라 이 줄에서 예외가 나고, **뽑기 화면이 통째로 죽었다** -
+   * 가챠권 수도 상자도 안 나오고 확률·가챠권 탭도 안 눌렸다. 한 줄이
+   * 화면 하나를 먹은 셈이라, 남은 천장만 읽도록 고친다.
+   */
+  const li = PITY.pilot ? PITY.pilot.at - (prog.pull.pilot % PITY.pilot.at) : 0
+  const hard = HARD_PITY - (prog.pull.plane % HARD_PITY)
   document.getElementById('gaPity').innerHTML =
-    `<div><span class="k">가챠권</span><span class="v">${prog.ticket}</span></div>` +
-    `<div><span class="k">전설 확정까지</span><span class="v">${lp}</span></div>` +
-    (need
-      ? `<div><span class="k">상급 확정까지</span><span class="v">${li}</span></div>`
-      : `<div><span class="k">기체 확정까지</span>` +
-        `<span class="v">${HARD_PITY - (prog.pull.plane % HARD_PITY)}</span></div>`)
+    `<div><span class="k">가챠권</span><span class="v">${prog.ticket}장</span></div>` +
+    `<div><span class="k">기체 확정까지</span><span class="v">${hard}</span></div>` +
+    (need && PITY.pilot
+      ? `<div><span class="k">상급 파일럿까지</span><span class="v">${li}</span></div>`
+      : '')
 
   document.querySelectorAll('#gaTabs button').forEach((b) => {
     b.className = b.dataset.t === gaTab ? 'on' : ''
@@ -5147,13 +5175,16 @@ function paintGacha(res) {
      * 어디까지 왔는지는 둘 다 보여 준다 - 안 보여 주면 천장이 있는 줄도
      * 모른 채 돌리게 된다.
      */
-    const lp = PITY.plane.at - (prog.pull.plane % PITY.plane.at)
-    const li = PITY.pilot.at - (prog.pull.pilot % PITY.pilot.at)
     /*
      * 천장 숫자와 「무엇이 나오는지」는 화면 위쪽이 맡는다. 여기서는
      * 조각이 무엇인지만 말한다 - 같은 말을 세 번 적으면 아무도 안 읽는다.
+     *
+     * 상자 그림을 같이 깐다. 전에는 글만 있어서 아무것도 안 뜬 화면처럼
+     * 보였다 - 여기가 「누르면 열린다」를 알리는 자리다.
      */
+    const crate = gc('crateC')
     body.innerHTML = head +
+      (crate ? `<div class="gcrate"><img src="${crate.src}" alt=""></div>` : '') +
       `<div class="empty">조각을 모으면 열립니다. 남는 조각은 강화에 씁니다.<br>` +
       `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.</div>`
     return
@@ -6410,6 +6441,12 @@ canvas.addEventListener('pointerdown', (e) => {
       e.preventDefault()
       return
     }
+    /* 강화 아이템 안내 중. 아무 데나 누르면 이어진다 */
+    if (state.itemGuide) {
+      itemGuideClose()
+      e.preventDefault()
+      return
+    }
     if (state.paused) {
       if (state.resumeT <= 0) { state.resumeT = RESUME_WAIT; sfx('pick'); pauseUI(false) }
       e.preventDefault()
@@ -7032,7 +7069,8 @@ const CHAPTERS = [
      * 2챕터 이후는 안 건드린다 - 2-20 은 이미 29초다.
      */
     /* 체력 0.52 -> 0.73 (2026-09-11, +40%). 잡졸이 스치기만 해도 터져서 손맛이 없었다 */
-    bossHp: 576, hpMul: 0.73, spMul: 1.14, fireMul: 3.1,
+    /* 초반 스무 판 보스만 한 번 더 +50% (2026-09-11). 576 -> 864 */
+    bossHp: 864, hpMul: 0.73, spMul: 1.14, fireMul: 3.1,
     pool: [
       [5, (r) => line(2 + ((r() * 4) | 0), 'small')],
       [3, (r) => diagonal('small', r() < .5 ? 1 : -1)],
@@ -8618,6 +8656,39 @@ function dropItem(x, y, richer) {
   const key = wantMod ? rollMod(s.mods) : null
   if (key) s.modDrops++
   s.items.push({ x, y, t: 0, r: 11, mod: key })   // mod 가 null 이면 화력 아이템
+  /* 처음 보는 강화 아이템이면 멈추고 가리킨다 */
+  if (key) itemTip(s.items[s.items.length - 1])
+}
+
+/*
+ * 첫 강화 아이템 안내 (2026-09-11).
+ *
+ * 아이템은 이 게임의 화력 곡선 그 자체다 - 하나가 강화 두 칸이고,
+ * 셋까지 쌓인다. 그런데 화면에서 27픽셀짜리 동그라미라 「주우면 뭐가
+ * 되는지」를 아무도 안 알려 줬다. 시뮬에서도 안 줍는 봇은 편대 단계가
+ * 1~3 에 머물렀다 - 사람도 다르지 않다.
+ *
+ * 필살기 안내와 같은 방식이다. 딱 한 번, 멈추고, 가리키고, 아무 데나
+ * 누르면 바로 이어진다.
+ */
+function itemTip(it) {
+  if (prog.tipItem) return
+  if (!state || !state.running || state.paused) return
+  if (state.ultGuide != null) return        /* 필살기 안내와 겹치지 않게 */
+  prog.tipItem = true
+  save()
+  state.paused = true
+  state.resumeT = 0
+  state.itemGuide = { t: 0, it: it }
+  drag = null
+}
+/** 안내를 닫고 곧바로 이어 간다 */
+function itemGuideClose() {
+  if (!state) return
+  state.itemGuide = null
+  state.paused = false
+  state.resumeT = 0
+  sfx('pick')
 }
 
 /*
@@ -13693,6 +13764,52 @@ function draw() {
     g.font = 'bold 14px system-ui'
     g.fillText('여기를 누르세요', ULT_BTN.x - 74 + bob * 12, ULT_BTN.y - 44)
     g.restore()
+  } else if (s.paused && s.itemGuide) {
+    /*
+     * 강화 아이템 안내. 아이템 자리만 도려내고 고리와 손가락으로 가리킨다.
+     * 글은 짧게 - 읽는 화면이 아니라 「저것을 먹어라」를 알리는 화면이다.
+     */
+    const gd = s.itemGuide, it = gd.it
+    gd.t += 1 / 60
+    const bob = Math.abs(Math.sin(gd.t * 3))
+    const ix = it.x, iy = it.y
+    const M = it.mod && MODS[it.mod]
+    const tone = (M && M.color) || '#ffd166'
+    g.save()
+    g.fillStyle = 'rgba(6,9,14,.72)'
+    g.fillRect(0, 0, W, H)
+    g.globalCompositeOperation = 'destination-out'
+    g.beginPath(); g.arc(ix, iy, it.r + 22, 0, Math.PI * 2); g.fill()
+    g.globalCompositeOperation = 'source-over'
+    /* 퍼지는 고리 */
+    const ph = (gd.t % 1.2) / 1.2
+    g.strokeStyle = 'rgba(255,209,102,' + (0.8 * (1 - ph)).toFixed(3) + ')'
+    g.lineWidth = 3
+    g.beginPath(); g.arc(ix, iy, it.r + 14 + ph * 26, 0, Math.PI * 2); g.stroke()
+    g.strokeStyle = tone; g.lineWidth = 2.5
+    g.beginPath(); g.arc(ix, iy, it.r + 16, 0, Math.PI * 2); g.stroke()
+    /* 손가락. 아이템 왼쪽에서 다가갔다 물러난다 */
+    g.font = '40px system-ui'
+    g.textAlign = 'center'; g.textBaseline = 'middle'
+    g.fillText('👉', ix - 66 + bob * 12, iy + 2)
+    /* 글. 아이템이 화면 위쪽이면 아래에, 아래쪽이면 위에 적는다 */
+    const ty = iy < H * 0.5 ? H * 0.72 : H * 0.26
+    g.textAlign = 'center'
+    g.fillStyle = tone
+    g.font = 'bold 22px system-ui'
+    g.fillText('강화 아이템입니다', W / 2, ty)
+    g.fillStyle = 'rgba(232,238,247,.94)'
+    g.font = 'bold 15px system-ui'
+    g.fillText('획득하면 강화 효과를 얻을 수 있어요', W / 2, ty + 28)
+    if (M) {
+      g.fillStyle = 'rgba(180,198,218,.85)'
+      g.font = '13px system-ui'
+      g.fillText(M.name + ' · ' + M.desc, W / 2, ty + 52)
+    }
+    g.fillStyle = 'rgba(160,178,200,.7)'
+    g.font = '12px system-ui'
+    g.fillText('아무 곳이나 누르면 이어집니다', W / 2, ty + 78)
+    g.restore()
   } else if (s.paused) {
     g.fillStyle = 'rgba(6,9,14,.72)'
     g.fillRect(0, 0, W, H)
@@ -14085,6 +14202,25 @@ function sfx(kind, arg) {
       auTone('triangle', 880, 1320, 0.18, 0.11)
       auTone('triangle', 1320, 1760, 0.22, 0.07, AU.ctx.currentTime + 0.09)
       break
+    /*
+     * 프로펠러 시동 (2026-09-11).
+     *
+     * 출격을 누르면 나는 소리다. 날이 도는 것은 **저음의 맥동**이라
+     * 그것부터 만든다 - 사각파 두 개를 아주 낮은 주파수에서 살짝 어긋나게
+     * 겹치면 「두두두두」가 생긴다. 여기에 바람 소리를 얹고, 회전이 붙는
+     * 느낌을 주려고 둘 다 위로 밀어 올린다.
+     */
+    case 'prop': {
+      const t0 = AU.ctx.currentTime
+      /* 날 소리. 살짝 어긋난 두 겹이 맥동을 만든다 */
+      auTone('square', 34, 96, 1.15, 0.085, t0)
+      auTone('square', 37, 103, 1.15, 0.075, t0 + 0.02)
+      /* 엔진 몸통 */
+      auTone('sawtooth', 68, 188, 1.1, 0.05, t0 + 0.04)
+      /* 바람. 회전이 붙으면서 밝아진다 */
+      auHiss(320, 2100, 1.2, 0.07, 'bandpass')
+      break
+    }
     case 'ult':
       // 올라가는 소리 뒤에 한 방. 화면이 번쩍하는 순간과 맞춘다
       auTone('sawtooth', 190, 1500, 0.34, 0.1)
@@ -14273,9 +14409,35 @@ function end(win) {
   const rankAfter = pilotRank()
   save()
 
+  /*
+   * 이번 판에 새로 열린 것 (2026-09-11).
+   *
+   * 판 중에 열리는 것은 레벨로 열리는 것뿐이다 - 뽑기는 판 밖에서 돈다.
+   * 기체나 자리가 열렸는데 「다음 단계 출격」을 주 단추로 두면, 열린 줄도
+   * 모르고 같은 몸으로 계속 나간다. 실제로 그래서 좌 윙맨이 열린 것을
+   * 여러 판 뒤에 알았다.
+   *
+   * 그럴 때는 「다음 단계」를 접고 격납고로 보낸다. 넣고 나서 나가면 된다.
+   */
+  const freshPlanes = PLANES.filter((q) => q.unlock.kind === 'lv' &&
+    q.unlock.v > lvBefore && q.unlock.v <= prog.pilot.lv)
+  const freshSlots = SLOT_META.filter((m) => m.lv &&
+    m.lv > lvBefore && m.lv <= prog.pilot.lv)
+  const mustFit = freshPlanes.length + freshSlots.length > 0
+
   /* 주 단추를 상황에 맞게. 구역(끝없는 출격)은 「다음 단계」가 없다 */
-  document.getElementById('nextGo').hidden = !hasNext
-  document.getElementById('retry').hidden = !(!win && !zone)
+  document.getElementById('nextGo').hidden = !hasNext || mustFit
+  document.getElementById('retry').hidden = !(!win && !zone) || mustFit
+  const goHangar = document.getElementById('again')
+  if (mustFit) {
+    goHangar.textContent = freshPlanes.length && freshSlots.length
+      ? '새 기체와 자리 적용하기'
+      : freshSlots.length ? '새 자리에 기체 넣기' : '새 기체 적용하기'
+    goHangar.classList.remove('ghost')
+  } else {
+    goHangar.textContent = '격납고로'
+    goHangar.classList.add('ghost')
+  }
 
   const hardTag = state.hard ? '하드코어 · ' : state.crazy ? '크레이지 · ' : ''
   document.getElementById('overTitle').textContent =
@@ -14449,7 +14611,11 @@ function doLaunch(zoneMode) {
   showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
   return true
 }
-document.getElementById('launch').onclick = () => doLaunch(false)
+document.getElementById('launch').onclick = () => {
+  /* 프로펠러가 돌면서 나간다. 누른 순간에 울려야 누른 값이 난다 */
+  sfx('prop')
+  doLaunch(false)
+}
 document.getElementById('launch2').onclick = () => doLaunch(false)
 /* 결과 창을 닫을 때 기다리고 있던 새 챕터 알림이 있으면 그것부터 */
 let pendingChapter = null
