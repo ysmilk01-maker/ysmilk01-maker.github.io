@@ -1271,6 +1271,11 @@
   .pnow .cells .c .v { margin-left: auto; color: var(--dim); font-weight: 700; }
   .pnow .cells .c.on .v { color: var(--gold); }
   .pnow .go { margin-top: 9px; font-size: 11px; font-weight: 800; color: var(--accent); }
+  /* 올릴 것이 있을 때. 눈이 여기 먼저 가야 한다 */
+  .pnow .go.hot {
+    color: #1b1405; background: var(--gold, #ffd98a); display: inline-block;
+    padding: 5px 11px; border-radius: 7px; font-size: 12px;
+  }
 
   /* 상세의 큰 초상. 카드의 것과 같은 그림을 크게 쓴다 */
   .dsheet .pbig {
@@ -4747,7 +4752,21 @@ function renderSquad() {
   $('hgPilot').classList.toggle('grow', anyPilotUp())
   $('hgMain').classList.toggle('grow', anyUpg())
   $('hgPilot').setAttribute('aria-label', pl.name + ', 파일럿 선택 및 성장')
-  $('hgPilot').onclick = () => hangarChoose('pilot', null, 'hgPilot')
+  /*
+   * 스탯이 너무 깊이 있었다 (2026-09-11).
+   *
+   * 격납고 -> 파일럿 목록 -> 그 사람 카드 -> 상세, 세 번을 들어가야
+   * 나왔다. 올릴 것이 있을 때는 **한 번에** 그 자리로 보낸다. 닫으면
+   * 파일럿 목록이라 돌아갈 곳도 그대로다.
+   */
+  $('hgPilot').onclick = () => {
+    hangarChoose('pilot', null, 'hgPilot')
+    if (!anyPilotUp()) return
+    setTimeout(() => {
+      const card = document.getElementById('pilotNowCard')
+      if (card) card.click()
+    }, 0)
+  }
   /* 새로 열린 기체가 있으면 알린다. 화면을 그린 뒤에 띄운다 */
   /* 해금 창이 안 떴을 때만 스탯 안내가 이어서 뜬다 (showStatGuide 안에서 확인) */
   setTimeout(() => { showUnlockPop(); showStatGuide() }, 0)
@@ -5760,18 +5779,28 @@ function openPilot(pl, list) {
     '<div class="sub2">' + G.name +
       (pl.grade === 'legend' ? ' · 후방 자리'
                              : ' · 기본 ' + Math.round(G.base * 100) + '%') + '</div>' +
+    /*
+     * 스탯을 초상 위로 올린다 (2026-09-11).
+     *
+     * 초상이 210px 라 그 아래 설명·수치 줄까지 지나야 스탯이 나왔다.
+     * 이 시트에 들어오는 이유의 대부분이 스탯을 찍으러 오는 것인데,
+     * 찾으려면 한 번 굴려야 했다. 쓸 수 있는 경험치를 바로 위에 붙여
+     * 「얼마가 있고 어디에 쓰나」를 한 눈에 둔다.
+     */
+    '<div class="rows">' +
+      row2('보유 경험치', pilotXp().toLocaleString('ko-KR')) +
+    '</div>' +
+    '<div class="lab">스탯</div><div class="sum">' + statHtml + '</div>' +
     (face ? '<div class="pbig" style="--face:var(--gc-' + face + ')"></div>'
           : '<div class="pbig none"><div class="rk ' + pl.grade + '"></div></div>') +
     '<div class="cap">' + pl.desc + '</div>' +
     '<div class="rows">' +
       row2('등급 배수', '화력·체력 ×' + G.base.toFixed(2)) +
-      row2('경험치', back.toLocaleString('ko-KR')) +
-      row2('보유 경험치', pilotXp().toLocaleString('ko-KR')) +
+      row2('부은 경험치', back.toLocaleString('ko-KR')) +
     '</div>' +
     (have ? '' : '<div class="note2">아직 잠겨 있습니다. ' + G.name + ' 조각 ' +
       shardG(pl.grade) + '/' + GRADE_NEED[pl.grade] + '개. 열면 ' + G.name +
       ' 둘 다 쓸 수 있습니다.</div>') +
-    '<div class="lab">스탯</div><div class="sum">' + statHtml + '</div>' +
     '<div class="note2">스탯은 파일럿마다 따로 쌓입니다. ' +
       '경험치 주머니는 하나라, 누구에게 붓는지가 선택입니다.</div>' +
     (back
@@ -5921,7 +5950,10 @@ function renderPilot() {
         GRADES[nowP.grade].name + '</span></div>' +
       '<div class="de">' + nowP.desc + '</div>' +
       '<div class="cells">' + nowStat + '</div>' +
-      '<div class="go">상세 보기 ▸</div>' +
+      /* 올릴 것이 있으면 그것을 이름으로 부른다. 「상세 보기」로는 안 찾는다 */
+      (anyPilotUp()
+        ? '<div class="go hot">스탯 올리기 ▸</div>'
+        : '<div class="go">상세 보기 ▸</div>') +
     '</div></div>'
 
   document.getElementById('pilotBody').innerHTML =
