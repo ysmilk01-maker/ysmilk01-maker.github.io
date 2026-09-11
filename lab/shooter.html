@@ -8657,7 +8657,7 @@ function dropItem(x, y, richer) {
   if (key) s.modDrops++
   s.items.push({ x, y, t: 0, r: 11, mod: key })   // mod 가 null 이면 화력 아이템
   /* 처음 보는 강화 아이템이면 표시만 해 둔다. 멈추는 것은 내려온 뒤다 */
-  if (key && !prog.tipItem && !s.tipWait) s.tipWait = s.items[s.items.length - 1]
+  if (key && !prog.tipItem2 && !s.tipWait) s.tipWait = s.items[s.items.length - 1]
 }
 
 /*
@@ -8672,10 +8672,18 @@ function dropItem(x, y, richer) {
  * 누르면 바로 이어진다.
  */
 function itemTip(it) {
-  if (prog.tipItem) return
+  /*
+   * 열쇠를 tipItem -> tipItem2 로 바꿨다 (2026-09-11).
+   *
+   * 처음 낸 판은 **떨어지는 순간**에 멈췄고 가리킨 자리가 까맣게 뚫려
+   * 있었다. 그 판을 본 사람은 안내를 받은 것이 아니라 못 쓸 것을 한 번
+   * 본 것이라, 열쇠만 소진되고 고친 뒤로는 영영 안 뜬다. 이름을 바꿔
+   * 한 번 더 준다.
+   */
+  if (prog.tipItem2) return
   if (!state || !state.running || state.paused) return
   if (state.ultGuide != null) return        /* 필살기 안내와 겹치지 않게 */
-  prog.tipItem = true
+  prog.tipItem2 = true
   save()
   state.paused = true
   state.resumeT = 0
