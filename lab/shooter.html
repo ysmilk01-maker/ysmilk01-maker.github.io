@@ -8656,8 +8656,8 @@ function dropItem(x, y, richer) {
   const key = wantMod ? rollMod(s.mods) : null
   if (key) s.modDrops++
   s.items.push({ x, y, t: 0, r: 11, mod: key })   // mod 가 null 이면 화력 아이템
-  /* 처음 보는 강화 아이템이면 멈추고 가리킨다 */
-  if (key) itemTip(s.items[s.items.length - 1])
+  /* 처음 보는 강화 아이템이면 표시만 해 둔다. 멈추는 것은 내려온 뒤다 */
+  if (key && !prog.tipItem && !s.tipWait) s.tipWait = s.items[s.items.length - 1]
 }
 
 /*
@@ -10259,6 +10259,22 @@ function update(dt) {
    */
   for (const it of s.items) { it.y += 165 * dt; it.t += dt }
   s.items = s.items.filter((it) => it.y < H + 30)
+  /*
+   * 첫 강화 아이템 안내는 **내려온 뒤에** 건다 (2026-09-11).
+   *
+   * 떨어지는 순간에 멈췄더니 적이 죽은 자리가 화면 맨 위여서, 가리키는
+   * 것이 화면 가장자리에 걸리거나 아예 위로 잘렸다. 무엇을 가리키는지
+   * 모르면 손가락을 그린 값이 없다.
+   *
+   * 화면 위에서 30~62% 구간, 즉 눈에 확실히 들어오고 아직 주울 시간이
+   * 남은 자리에서 건다. 그 아이템이 먼저 사라지면(주웠거나 지나갔거나)
+   * 표시를 지우고 다음 아이템을 기다린다.
+   */
+  if (s.tipWait) {
+    const w = s.tipWait
+    if (s.items.indexOf(w) < 0) s.tipWait = null
+    else if (w.y > H * 0.30 && w.y < H * 0.62) { s.tipWait = null; itemTip(w) }
+  }
 
   for (const p of s.parts) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .94; p.vy *= .94 }
   s.parts = s.parts.filter((p) => p.age < p.life)
@@ -13776,39 +13792,60 @@ function draw() {
     const M = it.mod && MODS[it.mod]
     const tone = (M && M.color) || '#ffd166'
     g.save()
+    /*
+     * 덮개에 구멍을 낸다.
+     *
+     * 필살기 안내처럼 destination-out 으로 파면 **아이템까지 지워진다** -
+     * 단추는 이 뒤에 다시 그려지지만 아이템은 이미 그려진 뒤라서, 가리키는
+     * 자리만 까맣게 뚫렸다. 덮개를 한 번에 그리되 원을 반대로 감아
+     * (evenodd) 그 자리만 안 칠한다.
+     */
     g.fillStyle = 'rgba(6,9,14,.72)'
-    g.fillRect(0, 0, W, H)
-    g.globalCompositeOperation = 'destination-out'
-    g.beginPath(); g.arc(ix, iy, it.r + 22, 0, Math.PI * 2); g.fill()
-    g.globalCompositeOperation = 'source-over'
+    g.beginPath()
+    g.rect(0, 0, W, H)
+    g.arc(ix, iy, it.r + 22, 0, Math.PI * 2)
+    g.fill('evenodd')
     /* 퍼지는 고리 */
     const ph = (gd.t % 1.2) / 1.2
     g.strokeStyle = 'rgba(255,209,102,' + (0.8 * (1 - ph)).toFixed(3) + ')'
     g.lineWidth = 3
     g.beginPath(); g.arc(ix, iy, it.r + 14 + ph * 26, 0, Math.PI * 2); g.stroke()
-    g.strokeStyle = tone; g.lineWidth = 2.5
+    g.strokeStyle = tone; g.lineWidth = 3
     g.beginPath(); g.arc(ix, iy, it.r + 16, 0, Math.PI * 2); g.stroke()
-    /* 손가락. 아이템 왼쪽에서 다가갔다 물러난다 */
-    g.font = '40px system-ui'
+    /*
+     * 손가락 둘. 왼쪽에서 가리키고, 위에서 화살표가 콕콕 찍는다.
+     * 하나만으로는 「저것」이 덜 읽힌다.
+     */
     g.textAlign = 'center'; g.textBaseline = 'middle'
-    g.fillText('👉', ix - 66 + bob * 12, iy + 2)
-    /* 글. 아이템이 화면 위쪽이면 아래에, 아래쪽이면 위에 적는다 */
-    const ty = iy < H * 0.5 ? H * 0.72 : H * 0.26
-    g.textAlign = 'center'
+    g.font = '44px system-ui'
+    g.fillText('👉', ix - 70 + bob * 14, iy + 2)
+    g.font = 'bold 30px system-ui'
     g.fillStyle = tone
-    g.font = 'bold 22px system-ui'
+    g.fillText('▼', ix, iy - 46 - bob * 7)
+    /* 글. 아이템이 화면 위쪽이면 아래에, 아래쪽이면 위에 적는다 */
+    const ty = iy < H * 0.5 ? H * 0.74 : H * 0.24
+    g.textAlign = 'center'
+    /* 제일 중요하다는 것을 먼저 못 박는다 */
+    g.fillStyle = tone
+    g.font = 'bold 13px system-ui'
+    g.fillText('꼭 주우세요', W / 2, ty - 30)
+    g.fillStyle = '#ffffff'
+    g.font = 'bold 24px system-ui'
     g.fillText('강화 아이템입니다', W / 2, ty)
-    g.fillStyle = 'rgba(232,238,247,.94)'
+    g.fillStyle = 'rgba(232,238,247,.95)'
     g.font = 'bold 15px system-ui'
     g.fillText('획득하면 강화 효과를 얻을 수 있어요', W / 2, ty + 28)
     if (M) {
-      g.fillStyle = 'rgba(180,198,218,.85)'
-      g.font = '13px system-ui'
+      g.fillStyle = tone
+      g.font = 'bold 14px system-ui'
       g.fillText(M.name + ' · ' + M.desc, W / 2, ty + 52)
     }
-    g.fillStyle = 'rgba(160,178,200,.7)'
+    g.fillStyle = 'rgba(190,206,224,.8)'
+    g.font = '12.5px system-ui'
+    g.fillText('한 판에 셋까지 쌓이고, 쌓일수록 세집니다', W / 2, ty + 76)
+    g.fillStyle = 'rgba(150,168,190,.7)'
     g.font = '12px system-ui'
-    g.fillText('아무 곳이나 누르면 이어집니다', W / 2, ty + 78)
+    g.fillText('아무 곳이나 누르면 이어집니다', W / 2, ty + 100)
     g.restore()
   } else if (s.paused) {
     g.fillStyle = 'rgba(6,9,14,.72)'
