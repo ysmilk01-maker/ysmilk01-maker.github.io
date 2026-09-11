@@ -3707,14 +3707,17 @@ const ST_KEYS = Object.keys(STATS)
  */
 function xpNeed(lv) {
   /*
-   * Lv.6 부터 1.5배 (2026-09-11).
+   * Lv.6 부터 1.95배 (2026-09-11, 1.5 에서 30% 더).
    *
    * Lv.5 까지는 속도가 맞는데 그 뒤가 너무 빨랐다. 기체 해금이 두
    * 레벨마다라 레벨이 빠르면 기체도 쏟아진다. 앞은 그대로 두고 뒤만
    * 늦춘다.
+   *
+   * 1.5 로도 모자랐다 - 17단계에서 Lv.15 였다. 단계와 레벨이 나란히
+   * 가야 「이번 판을 이기려면 강화를 해야 한다」가 성립한다.
    */
   const base = lv === 1 ? 300 : 770 + 198 * (lv - 1)
-  return lv >= 6 ? Math.round(base * 1.5) : base
+  return lv >= 6 ? Math.round(base * 1.95) : base
 }
 function xpFromScore(score) { return Math.round(score * 0.03) }
 
