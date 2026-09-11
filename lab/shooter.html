@@ -265,6 +265,20 @@
   .card .nm { font-size: 13.5px; font-weight: 700; }
   .card .wp { font-size: 11px; color: var(--accent); margin-top: 3px; }
   .card .de { font-size: 10.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  /*
+   * 지금 태운 것과 견준 화력. 고르는 이유가 이 한 줄이라 제일 먼저 읽히게
+   * 이름 위에 둔다.
+   */
+  .card .cmp {
+    font-size: 12px; font-weight: 800; margin: 5px 0 1px;
+    letter-spacing: -.01em;
+  }
+  .card .cmp.up { color: #7dffd4; }
+  .card .cmp.dn { color: #7d8ea3; }
+  .card .cmp.same { color: var(--gold, #ffd98a); }
+  /* 미보유 토글은 등급 줄 끝에 붙는다 */
+  .filters .lockfil { margin-left: auto; opacity: .8; }
+  .filters .lockfil.on { opacity: 1; }
   .card .tag {
     position: absolute; top: 9px; right: 10px; font-size: 9.5px; font-weight: 800;
     padding: 2px 6px; border-radius: 5px;
@@ -3610,6 +3624,17 @@ function anyPilotUp() {
                                 shardG(k) >= GRADE_NEED[k])
 }
 /** 강화 단계가 화력과 연사에 얹히는 몫 */
+/*
+ * 그 기체의 초당 피해(상대값).
+ *
+ * 등급 배수와 강화를 함께 본다 - 화면에서 「어느 쪽이 센가」를 물으면
+ * 답은 등급도 강화도 아니고 이 둘을 곱한 값이다. 일반기 강화 0 이 1 이라
+ * 그대로 비율로 쓸 수 있다. 기체 목록의 정렬과 비교가 이것을 본다.
+ */
+function planeDps(p) {
+  if (!p) return 0
+  return (p.power * upgPower(p.id)) / (p.rate * upgRate(p.id))
+}
 function upgPower(id) { return 1 + upgOf(id) * 0.12 }
 function upgRate(id) { return 1 - upgOf(id) * 0.04 }
 function save() {
@@ -4952,14 +4977,51 @@ function renderPlanes() {
     }
     ef.appendChild(row)
   }
-  frow('보유', OWN_FILTERS, planeOwn, (k) => { planeOwn = k })
+  /*
+   * 고르는 줄을 둘에서 하나로 (2026-09-11).
+   *
+   * 「보유 3개 + 등급 5개」 여덟 단추가 화면 위 31% 를 먹어서, 기체가
+   * 나오기 전에 스크롤이 필요했다. 실제로 자주 쓰는 것은 등급뿐이고
+   * 보유 여부는 「가진 것만 볼까 / 다 볼까」 둘로 족하다.
+   */
   frow('등급', TIER_FILTERS, planeTier, (k) => { planeTier = k })
+  const lockRow = ef.querySelector('.frow:last-child')
+  if (lockRow) {
+    const b = document.createElement('button')
+    b.className = 'lockfil' + (planeOwn === 'all' ? ' on' : '')
+    b.textContent = planeOwn === 'all' ? '미보유 숨기기' : '미보유도'
+    b.onclick = () => { planeOwn = planeOwn === 'all' ? 'own' : 'all'; renderPlanes() }
+    lockRow.appendChild(b)
+  }
 
   elPlanes.innerHTML = ''
   /* 두 축을 같이 건다. 하나가 '전체' 면 그 축은 안 거른다 */
   const list = PLANES.filter((p) =>
     (planeOwn === 'all' || (planeOwn === 'own' ? unlocked(p) : !unlocked(p))) &&
     (planeTier === 'all' || p.tier === planeTier))
+
+  /*
+   * 순서를 준다 (2026-09-11).
+   *
+   * 전에는 PLANES 에 적힌 차례 그대로였다. 지금 태운 기체와 제일 센 기체와
+   * 아직 못 연 기체가 뒤섞여 나와서, 고르려면 열몇 장을 다 읽어야 했다.
+   * 이 화면의 일은 「무엇을 넣을까」 하나뿐이므로 그 순서로 세운다.
+   *
+   *   1. 이 자리에 지금 들어 있는 것
+   *   2. 가진 것 중 센 순서
+   *   3. 아직 못 연 것 (조각이 많이 모인 순 - 곧 열릴 것이 위로)
+   */
+  const here = prog.squad[activeSlot]
+  list.sort((a, b) => {
+    if (a.id === here) return -1
+    if (b.id === here) return 1
+    const oa = unlocked(a), ob = unlocked(b)
+    if (oa !== ob) return oa ? -1 : 1
+    if (oa) return planeDps(b) - planeDps(a)
+    return (shardOf(b.id) / shardNeed(b)) - (shardOf(a.id) / shardNeed(a))
+  })
+  /* 지금 이 자리 기체와 견준다. 「지금보다 센가」가 고르는 이유의 전부다 */
+  const nowDps = planeDps(planeById(here))
 
   if (!list.length) {
     elPlanes.innerHTML = '<div class="empty">여기 해당하는 기체가 없습니다.</div>'
@@ -4995,9 +5057,25 @@ function renderPlanes() {
        * 보여 줄 길이 없었던 셈이다. 카드 아래 전폭 단추로 내린다.
        */
       `<canvas class="pv" width="220" height="150"></canvas>` +
+      /*
+       * 지금 것과 견준 화력 (2026-09-11).
+       *
+       * 등급도 강화도 화면에 있었지만 둘을 곱해 보는 것은 사람 몫이었다.
+       * 고르는 이유는 「지금보다 센가」 하나뿐이니 그 답을 바로 적는다.
+       */
+      (ok && nowDps
+        ? (p.id === here
+            ? `<div class="cmp same">지금 이것</div>`
+            : (() => {
+                const d = Math.round((planeDps(p) / nowDps - 1) * 100)
+                return d > 0 ? `<div class="cmp up">화력 +${d}%</div>`
+                     : d < 0 ? `<div class="cmp dn">화력 ${d}%</div>`
+                             : `<div class="cmp same">화력 같음</div>`
+              })())
+        : '') +
       `<div class="nm">${p.name}</div>` +
       `<div class="wp"><i class="wi w-${p.weapon}"></i>${WEAPONS[p.weapon].name}</div>` +
-      `<div class="de">${WEAPONS[p.weapon].desc}</div>` +
+      /* 무기 설명은 상세로 뺐다. 같은 무기끼리 같은 줄이 반복돼 자리만 먹었다 */
       /* 전설만 붙는 줄. 여기가 등급 값을 눈으로 가르는 자리다 */
       (p.el
         ? `<div class="elrow"><span class="el el-${p.el}">${ELS[p.el].name}</span>` +
@@ -5008,19 +5086,22 @@ function renderPlanes() {
         ? (shardOf(p.id) ? `<div class="shard">조각 ${shardOf(p.id)}개</div>` : '')
         : `<div class="shard">조각 ${shardOf(p.id)} / ${shardNeed(p)}</div>`) +
       (ok
+        /*
+         * 강화는 **올릴 수 있을 때만** 단추가 된다 (2026-09-11).
+         *
+         * 전에는 열 장 모두에 회색 「강화하기」가 붙어 있었다. 이 화면의
+         * 일은 고르는 것인데 제일 큰 단추가 다른 일을 가리켰고, 카드가
+         * 그만큼 길어져 두 줄이 채 안 보였다. 못 올리면 글줄로 적는다.
+         */
         ? `<div class="up"><span class="lvl">강화 ${lv}/${UPG_MAX}` +
           (lv ? ` · 화력 +${Math.round((upgPower(p.id) - 1) * 100)}%` : '') + `</span>` +
-          /*
-           * 단추에 재화를 다 적으면(「부품 888 · 조각 240」) 좁은 카드에서
-           * 넘친다. 단추는 「강화하기」만, 필요한 것은 윗줄에 - 모자란 쪽을
-           * 붉게 적어 무엇이 없어서 못 누르는지 보이게 한다.
-           */
           (lv >= UPG_MAX
-            ? `<button disabled>최대</button>`
-            : `<div class="need">` +
-              `<span class="${prog.parts < cost ? 'no' : ''}">부품 ${cost.toLocaleString('ko-KR')}</span> · ` +
-              `<span class="${shardOf(p.id) < shardUpg(p, lv) ? 'no' : ''}">조각 ${shardUpg(p, lv)}</span></div>` +
-              `<button ${prog.parts < cost || shardOf(p.id) < shardUpg(p, lv) ? 'disabled' : ''}>강화하기</button>`) +
+            ? ''
+            : canUpg(p)
+              ? `<button>강화하기</button>`
+              : `<div class="need">` +
+                `<span class="${prog.parts < cost ? 'no' : ''}">부품 ${cost.toLocaleString('ko-KR')}</span> · ` +
+                `<span class="${shardOf(p.id) < shardUpg(p, lv) ? 'no' : ''}">조각 ${shardUpg(p, lv)}</span></div>`) +
           `</div>`
         : '')
 
