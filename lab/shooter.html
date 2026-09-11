@@ -3552,8 +3552,18 @@ const UPG_MAX = 7
  *
  * 1.5%(score/65) 로 줄인다. 기체 하나를 한 단계 올리는 데 드는 돈이
  * 판 두어 번어치가 되게 맞춘 것이다.
+ *
+ * **다시 절반으로 (2026-09-11, score/130).**
+ *
+ * 캠페인 시뮬에서 벽에 부딪힌 시점에 남은 부품이 10,000~14,000 인데
+ * 메인 강화는 4/7 이었다 - 강화를 막는 것은 조각이지 부품이 아니라,
+ * 중반부터 부품은 쓸 데 없는 숫자였다. 남아도는 재화는 재화가 아니다.
+ *
+ * 절반으로 줄여도 완주에는 지장이 없다. 실패 예산 100 으로 다섯 판을
+ * 재 보니 넷이 4-20 을 끝냈고, 그때도 부품은 5,700~10,200 이 남았다.
+ * 조이는 것은 초반뿐이다.
  */
-function partsEarned(score) { return Math.max(1, Math.round(score / 65)) }
+function partsEarned(score) { return Math.max(1, Math.round(score / 130)) }
 /** 다음 단계 비용. 등급이 높을수록 비싸다 */
 function upgCost(p, lv) {
   const t = { common: 1, rare: 1.6, high: 2.0, legend: 2.4 }[p.tier]
