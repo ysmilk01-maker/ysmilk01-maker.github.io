@@ -1272,6 +1272,12 @@
 
 /* Codex hangar UI v02: presentation only; battle assets and rules are unchanged. */
 .hg-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap;border:0!important}
+/*
+ * 다음 출격권까지 남은 시간. 전에는 hg-sr(낭독기 전용)이라 화면에
+ * 아무 데도 없었다 - 「0/10」만 보이고 언제 차는지 알 길이 없었다.
+ * 10분에 하나로 바꾸면서 드러낸다. 가득 차면 글자를 비운다.
+ */
+.hg-wt{margin-left:5px;font-size:10px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
 :root{--hg-nav:82px}
 .screen{padding-bottom:calc(var(--hg-nav) + 12px + env(safe-area-inset-bottom,0px))}
 .screen>.body{min-height:0}
@@ -2130,11 +2136,11 @@ const PLANES = []
 /* ================================================================
  * 출격권
  *
- * 다섯 판을 들고 시작하고 30분에 하나씩 찬다. 다 쓰면 광고를 보고 한 판.
+ * 열 판을 들고 시작하고 10분에 하나씩 찬다. 다 쓰면 광고를 보고 한 판.
  *
  * 조심할 것이 하나 있다. 이 게임의 목적은 오래 하게 만드는 것인데 출격권은
  * 그 반대로 작동한다 - 처음 온 사람이 15분 만에 벽을 만나면 다시 안 온다.
- * 그래서 상한을 다섯으로 넉넉히 두고, 비어 있을 때 광고 한 번이면 바로
+ * 그래서 상한을 열로 넉넉히 두고, 비어 있을 때 광고 한 번이면 바로
  * 이어서 할 수 있게 했다. 기다리라고만 하면 그냥 나간다.
  * ================================================================ */
 /* ================================================================
@@ -2299,12 +2305,24 @@ const STAR_FAIL = 1
 const STAR_CLEAR = 3
 const STAR_TICKET = 3
 
-const EN_MAX = 5
-const EN_MAX_HI = 8              // 파일럿 Lv.10 부터
-const EN_LV = 10
+/*
+ * 열 판을 들고 시작하고 10분에 하나씩 찬다 (2026-09-11).
+ *
+ * 한 판이 40~90초다. 다섯 장에 30분이면 실제로 앉아 있는 시간은 5분인데
+ * 다음 한 판까지 30분을 기다리라는 뜻이었다 - 짧은 게임에 긴 자물쇠를
+ * 채운 꼴이라 한 번 비면 그날은 끝이었다.
+ *
+ * 열 장이면 한자리에서 10분 남짓 논다. 빈 통을 다시 채우는 데 100분이라
+ * 하루에 서너 번 들어오는 결이 된다.
+ *
+ * 파일럿 Lv.10 에 상한이 8 로 오르던 것은 없앴다 - 상한이 이미 열이라
+ * 그 위로 더 주면 「열 판」이라는 설계가 흐려진다. 되살리려면 여기에
+ * 등급별 값을 다시 두면 된다.
+ */
+const EN_MAX = 10
 /** 저절로 차는 상한. 보상으로 받은 것은 이 위로도 쌓인다 */
-function enMax() { return prog.pilot.lv >= EN_LV ? EN_MAX_HI : EN_MAX }
-const EN_REGEN = 30 * 60 * 1000        // 30분에 하나
+function enMax() { return EN_MAX }
+const EN_REGEN = 10 * 60 * 1000        // 10분에 하나
 const AD_ENERGY_DAY = 10               // 하루에 광고로 채울 수 있는 횟수
 
 /* ================================================================
@@ -4692,7 +4710,7 @@ function renderSquad() {
   $('squadSub').textContent = needSlot ? '빈 자리가 있습니다. 자리를 눌러 기체를 고르세요'
     : slotOpen(0) && slotOpen(2) ? '자리를 눌러 기체를 변경합니다' : '파일럿이 성장하면 자리가 열립니다'
   $('squadSub').classList.toggle('need', needSlot)
-  $('resBar').innerHTML = '<div><i class="ic fuel" aria-hidden="true"></i><span>출격권</span><b id="hgEnergy"></b><small id="enWait" class="hg-sr"></small></div>' +
+  $('resBar').innerHTML = '<div><i class="ic fuel" aria-hidden="true"></i><span>출격권</span><b id="hgEnergy"></b><small id="enWait" class="hg-wt"></small></div>' +
     '<div><i class="ic part" aria-hidden="true"></i><span>부품</span><b id="vParts"></b></div>' +
     '<div><i class="ic tk" aria-hidden="true"></i><span>뽑기권</span><b id="vTicket"></b></div>'
   fxNum($('vParts'), prog.parts, 'parts')
@@ -4725,8 +4743,8 @@ function paintEnergy() {
   paintHangarStatus()
   const w = document.getElementById('enWait')
   if (w) {
-    const n = energy()
-    w.textContent = n < enMax() ? mmss(energyWait()) : '가득'
+    /* 가득이면 비운다. 「가득」이라고 적으면 「10/10 가득」이 되어 겹친다 */
+    w.textContent = energy() < enMax() ? mmss(energyWait()) : ''
   }
   const el = document.getElementById('enRow')
   if (!el) return
