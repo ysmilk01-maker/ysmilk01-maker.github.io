@@ -4804,7 +4804,19 @@ const TOUR = [
 ]
 let tourAt = 0
 function tourStart(force) {
-  if (!force && prog.tourDone) return
+  if (!force && prog.tourDone2) return
+  /*
+   * 타이틀이 떠 있는 동안은 안 된다 (2026-09-12).
+   *
+   * 격납고는 타이틀 **뒤에서** 미리 그려진다. 그래서 renderSquad 의
+   * 갈고리가 「시작하기」를 누르기도 전에 걸렸고, 투어가 타이틀 위에
+   * 떠서 엉뚱한 자리를 가리켰다. 접속 보상 창도 같은 이유로 막는다 -
+   * 두 창이 겹치면 둘 다 안 읽힌다.
+   */
+  const tt = document.getElementById('title')
+  if (tt && !tt.hidden) return
+  const dd = document.getElementById('daily')
+  if (dd && !dd.hidden) return
   if (curScreen !== 'squad') go('squad')
   tourAt = 0
   const el = document.getElementById('tour')
@@ -4859,7 +4871,7 @@ function tourPaint() {
     tourAt === TOUR.length - 1 ? '시작하기' : '다음'
 }
 function tourEnd() {
-  prog.tourDone = true
+  prog.tourDone2 = true
   save()
   const el = document.getElementById('tour')
   if (el) el.hidden = true
@@ -4937,7 +4949,7 @@ function renderSquad() {
      * 처음 온 사람에게는 투어가 먼저다. 해금 창이나 스탯 안내와 겹치면
      * 둘 다 안 읽히므로, 투어가 안 뜨는 경우에만 그것들을 띄운다.
      */
-    if (!prog.tourDone) { tourStart(false); return }
+    if (!prog.tourDone2) { tourStart(false); return }
     showUnlockPop(); showStatGuide()
   }, 0)
   elSlots.replaceChildren()
@@ -15158,6 +15170,11 @@ function titleStart() {
   music('hangar')
   const daily = claimDaily()
   if (daily) showDaily(daily)
+  /*
+   * 보상창이 뜨면 그쪽을 닫을 때 render() 가 돌아 갈고리가 다시 걸린다.
+   * 안 뜨면 여기서 직접 띄운다 - 안 그러면 다음 격납고까지 안 뜬다.
+   */
+  else setTimeout(() => { if (!prog.tourDone2) tourStart(false) }, 0)
 }
 titleShow()
 document.getElementById('tGo').onclick = titleStart
