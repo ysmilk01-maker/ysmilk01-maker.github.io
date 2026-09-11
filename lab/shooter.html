@@ -169,6 +169,18 @@
   }
   .slotTabs button.on { background: rgba(90,170,255,.14); border-color: var(--accent); color: var(--ink); }
   .slotTabs button.lock { opacity: .45; }
+  /*
+   * 「메인 적용중」 표시 (2026-09-11).
+   *
+   * 목록만 보고는 지금 무엇을 쓰고 있는지 몰라 같은 기체를 또 골랐다.
+   * 등급 태그 맞은편에 붙여 카드 한 장 안에서 답이 나오게 한다.
+   */
+  .card .inuse {
+    position: absolute; top: 8px; right: 8px; z-index: 2;
+    padding: 2px 7px; border-radius: 999px;
+    background: rgba(95,212,138,.16); border: 1px solid rgba(95,212,138,.55);
+    color: #8ef0b4; font-size: 9.5px; font-weight: 700; white-space: nowrap;
+  }
   .slotTabs button i { display: block; font-style: normal; font-size: 10px; font-weight: 500; margin-top: 2px; }
 
   /* 지금 고른 기체 - 크게 한 대 */
@@ -1355,7 +1367,6 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   -->
   <div class="slotTabs" id="slotTabs"></div>
   <!-- 지금 그 자리에 있는 기체. 목록 위에 크게 세운다 -->
-  <div class="pick" id="pickNow"></div>
   <div class="filters" id="planeFilters"></div>
   <div class="body"><div class="grid" id="planes"></div></div>
 </div>
@@ -3590,7 +3601,14 @@ function unlocked(p) {
 }
 function unlockLabel(p) {
   if (p.unlock.kind === 'free') return ''
-  if (prog.owned.includes(p.id)) return ''
+  /*
+   * 이미 열렸으면 조건을 적지 않는다 (2026-09-11).
+   *
+   * 전에는 prog.owned 만 봤다. 레벨로 열리는 기체는 owned 에 안 들어가서
+   * 「파일럿 Lv.3」이 열린 뒤에도 카드에 붙어 있었다 - 쓰고 있는 기체에
+   * 잠금 문구가 달려 있으면 열린 것인지 아닌지 알 수가 없다.
+   */
+  if (unlocked(p)) return ''
   if (p.unlock.kind === 'gacha') return `뽑기로 조각 ${shardNeed(p)}개`
   if (p.unlock.kind === 'lv') return `파일럿 Lv.${p.unlock.v}`
   if (p.unlock.kind === 'score') return `누적 ${p.unlock.v.toLocaleString('ko-KR')}점`
@@ -4766,40 +4784,16 @@ function renderPlanes() {
     }
   })
 
-  /* 지금 그 자리에 있는 기체를 크게 한 대 */
-  const now = slotOpen(activeSlot) ? planeById(prog.squad[activeSlot]) : null
-  const pk = document.getElementById('pickNow')
-  if (!now) {
-    pk.className = 'pick none'
-    pk.innerHTML = slotOpen(activeSlot)
-      ? '이 자리가 비어 있습니다. 아래에서 고르세요.'
-      : '이 자리는 아직 잠겨 있습니다.'
-  } else {
-    const lv = upgOf(now.id)
-    pk.className = 'pick'
-    pk.innerHTML =
-      `<canvas width="264" height="216"></canvas>` +
-      `<div><div class="nm">${now.name}</div>` +
-      `<div class="wp">${WEAPONS[now.weapon].name} · ${TIERS[now.tier]}</div>` +
-      `<div class="st">` +
-        `<div>강화 <b>${lv}/${UPG_MAX}</b></div>` +
-        `<div>화력 <b>${Math.round(upgPower(now.id) * slotMul(activeSlot) * 100)}%</b>` +
-          ` <span style="color:var(--dim)">(자리 ${Math.round(slotMul(activeSlot) * 100)}%)</span></div>` +
-        `<div>사격 간격 <b>${(upgRate(now.id) * 100).toFixed(0)}%</b></div>` +
-      `</div></div>`
-    paintPlane(pk.querySelector('canvas'), now, 1.35)
-    /* 위쪽 큰 그림도 누르면 상세가 열린다. 여기가 제일 먼저 눈에 든다 */
-    pk.onclick = () => openDetail(now, list)
-    pk.style.cursor = 'pointer'
-  }
-
+  /*
+   * 위쪽 큰 그림과 뽑기 단추를 뺐다 (2026-09-11).
+   *
+   * 큰 그림은 「지금 고르는 자리에 있는 기체」였는데, 정작 목록의 카드에는
+   * 어느 자리에 쓰고 있는지가 안 적혀 있었다. 그래서 이미 쓰고 있는 기체를
+   * 또 고르게 됐다. 큰 그림을 지우고 그 표시를 카드로 내린다.
+   * 뽑기는 하단 메뉴에 따로 있으니 여기서 또 받을 이유가 없다.
+   */
   const ef = document.getElementById('planeFilters')
   ef.innerHTML = ''
-  const gb = document.createElement('button')
-  gb.textContent = `뽑기 · 가챠권 ${prog.ticket}장`
-  gb.style.cssText = 'background:#24406b;color:#cfe6ff;flex:1 1 100%'
-  gb.onclick = () => openGacha()
-  ef.appendChild(gb)
   /* 줄마다 무엇을 고르는 줄인지 앞에 적는다. 안 적으면 여섯 개가 한 덩어리로 읽힌다 */
   const frow = (label, defs, now, set) => {
     const row = document.createElement('div')
@@ -4831,6 +4825,13 @@ function renderPlanes() {
     return
   }
 
+  /* 어느 자리에 쓰고 있는지. 카드마다 붙인다 */
+  const usedIn = {}
+  SLOT_META.forEach((m, i) => {
+    const id = prog.squad[i]
+    if (id && slotOpen(i)) (usedIn[id] = usedIn[id] || []).push(m.role)
+  })
+
   for (const p of list) {
     const ok = unlocked(p)
     const picked = prog.squad[activeSlot] === p.id
@@ -4843,6 +4844,7 @@ function renderPlanes() {
     const cost = upgCost(p, lv)
     c.innerHTML =
       `<span class="tag t-${p.tier}">${TIERS[p.tier]}</span>` +
+      (usedIn[p.id] ? `<span class="inuse">${usedIn[p.id].join(' · ')} 적용중</span>` : '') +
       /*
        * 상세로 들어가는 문.
        *
