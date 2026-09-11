@@ -1909,6 +1909,17 @@ const ULT_POWER = 0.8
  * 초반 판에 그만큼 안 나온다. 이제 잡졸 여섯이면 한 발이 여섯씩 찬다.
  */
 const ULT_GAIN = 2.0
+/*
+ * 두 번째부터는 40%만 찬다 (2026-09-12).
+ *
+ * 한 판에 두 번, 세 번씩 터지니 궁극기가 「아껴 뒀다 쓰는 것」이 아니라
+ * 「차면 쓰는 것」이 됐다. 처음 한 번은 그대로 둔다 - 그 한 번이 첫
+ * 보스를 넘기는 수단이고, 거기까지는 빨리 와야 재미가 붙는다.
+ *
+ * 줄이는 것은 **버는 속도**지 총량이 아니다. 오래 붙어 있으면 두 번째도
+ * 결국 찬다 - 그냥 늦게 온다.
+ */
+function ultGainMul() { return (state && state.ultUsed > 0) ? 0.4 : 1 }
 
 /* 기체 그림에 쓰는 무기 색. 그 무기가 쏘는 탄 색을 그대로 가져왔다 */
 const WEAPON_COLOR = {
@@ -9035,7 +9046,7 @@ function missileBurst(b) {
     /* 격파로는 아이템이 안 나온다. 아이템은 보급으로만 온다(dropSupply) */
     const before = s.ult
     s.ult = Math.min(ultCap(), s.ult +
-      (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
+      (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * ultGainMul() * perk('ult'))
     if (before < ULT_MAX && s.ult >= ULT_MAX) { sfx('ready'); ultTip() }
   }
 
@@ -9157,7 +9168,7 @@ function chainFrom(from, b) {
       s.score += best.score
       s.kills++
       boom(best.x, best.y, 12, '#bff0ff')
-      s.ult = Math.min(ultCap(), s.ult + 8 * ULT_GAIN * perk('ult'))
+      s.ult = Math.min(ultCap(), s.ult + 8 * ULT_GAIN * ultGainMul() * perk('ult'))
     }
     bit.push(best)
     cur = best
@@ -10099,7 +10110,7 @@ function update(dt) {
           boom(e.x, e.y, e.kind === 'mid' ? 22 : 12,
                e.burn ? ELS.fire.color : ELS.psn.color)
           s.ult = Math.min(ultCap(), s.ult +
-            (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
+            (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * ultGainMul() * perk('ult'))
           continue
         }
       }
@@ -10811,7 +10822,7 @@ function collide() {
           const before = s.ult
           // 예전엔 잡졸 열일곱만 잡으면 궁이 찼다. 판이 궁으로만 굴러갔다
           s.ult = Math.min(ultCap(), s.ult +
-            (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * perk('ult'))
+            (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * ultGainMul() * perk('ult'))
           if (before < ULT_MAX && s.ult >= ULT_MAX) { sfx('ready'); ultTip() }
         }
       }
