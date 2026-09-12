@@ -15187,13 +15187,24 @@ function auInit() {
   AU.sfxBus.connect(AU.master)
   return c
 }
-/* 첫 손짓에 소리 장치를 열고, 켜져 있으면 그 자리에서 음악을 시작한다 */
+/*
+ * 첫 손짓에 소리 장치를 열고, 켜져 있으면 그 자리에서 음악을 시작한다.
+ *
+ * 한 번만 듣고 끝내면(once) 그 손짓에 브라우저가 아직 안 열어 준 경우
+ * 영영 안 켜진다 - 열릴 때까지 다시 건다. 실제로 첫 탭이 먹히지 않는
+ * 기기가 있었다.
+ */
 function auWake() {
   auInit()
   if (AU.on.music && AU.want && !AU.now) auPlay(AU.want)
+  if (!AU.ctx || AU.ctx.state === 'suspended') auArm()
 }
-addEventListener('pointerdown', auWake, { once: true })
-addEventListener('keydown', auWake, { once: true })
+function auArm() {
+  addEventListener('pointerdown', auWake, { once: true })
+  addEventListener('touchstart', auWake, { once: true })
+  addEventListener('keydown', auWake, { once: true })
+}
+auArm()
 
 /**
  * AAC 는 앞뒤에 인코더가 만든 무음을 붙인다. 그대로 반복시키면 한 바퀴마다
@@ -16064,6 +16075,19 @@ function titleShow() {
    * 어디인지 알 길이 없다. 뒤를 inert 로 잠그고 시작 단추에 초점을 준다.
    */
   titleInert(true)
+  /*
+   * 타이틀에서 바로 메인 테마를 건다 (2026-09-12).
+   *
+   * 전에는 「시작하기」를 눌러야 음악이 시작됐다 - 그 안에서 music('hangar')
+   * 을 처음 불렀기 때문이다. 여기서 미리 걸어 두면 화면을 **아무 데나**
+   * 한 번 만지는 순간 나온다. 단추를 찾을 필요가 없다.
+   *
+   * 손짓 없이 바로 트는 것은 브라우저가 막는다(자동재생 정책). 대신
+   * 이미 소리 장치가 열린 상태(같은 탭에서 다시 온 경우)면 그 자리에서
+   * 바로 난다.
+   */
+  music('hangar')
+  auWake()
   let wait = 0
   const boot = document.getElementById('boot')
   if (boot && boot.getAnimations) {
