@@ -228,7 +228,7 @@
     'vec3 rz(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z);}',
     'vec3 turn(vec3 p){return rz(ry(rx(p,.62+uTilt.y),uAngle+uTilt.x),-.24);}',
     'void main(){vec3 p=turn(aPosition*uScale)+uOffset;vPosition=p;vNormal=turn(aNormal);',
-    'float z=7.0-p.z;gl_Position=vec4(p.x*2.75/uAspect,p.y*2.75,1.002*z-.2002,z);}'
+    'float z=7.0-p.z;float f=2.75*min(1.0,uAspect);gl_Position=vec4(p.x*f/uAspect,p.y*f,1.002*z-.2002,z);}'
   ].join('\n');
   var fragment = [
     'precision highp float; varying vec3 vNormal; varying vec3 vPosition;',
