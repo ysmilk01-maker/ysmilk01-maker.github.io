@@ -6128,7 +6128,13 @@ function paintStage(cv, sg) {
    * 가는지가 안 읽혔다. 그림이 있으면 그걸 쓰고, 아래쪽에 어두운 띠를
    * 한 겹 깔아 그 위의 챕터 이름이 확실히 읽히게 한다.
    */
-  const bim = ic('ch_' + sg.theme)
+  /*
+   * 이름이 안 맞아 4전선이 그라디언트로 떨어지고 있었다 (2026-09-12).
+   *
+   * 그림은 ch_fire 로 들어와 있는데 테마 이름은 ash 다. 미리보기가
+   * 있는데도 안 쓰이고 있었다. 표를 하나 두고 이름이 다른 것만 적는다.
+   */
+  const bim = ic('ch_' + (CH_ART[sg.theme] || sg.theme))
   if (bim) {
     c.drawImage(bim, 0, 0, w, h)
     const sh = c.createLinearGradient(0, h * 0.45, 0, h)
@@ -8203,6 +8209,8 @@ const MID_FORMS = ['mid', 'midRing', 'midTwin', 'midWall', 'midCarrier']
  * 새 전선을 또 만들면 그림이 올 때까지 여기에 한 줄 적었다가 지운다.
  */
 const THEME_ART = {}
+/** 전선 미리보기 그림의 이름이 테마 이름과 다른 것 */
+const CH_ART = { ash: 'fire' }
 /* 늪과 구름 위에는 배·비행선이 선다. 전차와 요새는 안 어울린다 */
 const WATER_THEME = { sea: true, swamp: true, sky: true }
 /*
