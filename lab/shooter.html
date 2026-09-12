@@ -12900,7 +12900,8 @@ function groundArt(kind) {
    * 색이라 눈밭에도 용암 위에도 같은 포대가 서 있었다. 사막(2챕터)은
    * 원래 것이 이미 사막색이라 그대로 둔다.
    */
-  const th = (state && state.stage && state.stage.theme) || 'sea'
+  const th0 = (state && state.stage && state.stage.theme) || 'sea'
+  const th = (th0 === 'snow' || th0 === 'ash') ? th0 : SKIN_OF[th0]
   if (th === 'snow' || th === 'ash') {
     const sk = GROUND_IMG[kind + '_' + th]
     if (sk && sk.complete && sk.naturalWidth) return sk
@@ -12992,6 +12993,17 @@ const ENEMY_ART_ALIAS = {}
  * 안 타는 정예 부대라는 결이고, 그래서 모래색도 눈색도 아닌 무쇠 회색이다.
  * 바다(1챕터)는 기본 그림 그대로 둔다 - 거기가 기준이다.
  */
+/*
+ * 전선마다 적기가 입는 옷 (2026-09-12에 열한 전선분 정리).
+ *
+ * 사막·설원·화산 셋만 제 옷이 있었고 나머지 열둘은 전부 기본(바다)
+ * 얼굴이었다. 그런데 새로 만든 열한 전선 중 다섯은 **이미 있는 옷이
+ * 그대로 맞는다** - 빙벽과 대염호는 흰 눈밭이고, 협곡은 붉은 사암이라
+ * 사막이고, 재의 평원은 화산재다. 그림을 새로 받을 이유가 없다.
+ *
+ * 아래 SKIN_OF 로 묶어 두고, 진짜로 새 옷이 필요한 여섯(늪·폐허 /
+ * 공업·유전 / 본거지·최후)만 따로 받는다.
+ */
 const ENEMY_SKIN = {
   sand: {
     small: 'eJetSand', dive: 'eKami', gunner: 'eGun', split: 'eDrone',
@@ -13009,10 +13021,24 @@ const ENEMY_SKIN = {
     mid: 'eMidH', tank: 'eTankH', guard: 'eGuardH',
   },
 }
+/*
+ * 그림이 없는 전선을 이미 있는 옷에 붙인다.
+ *
+ *   재의 평원   화산재라 화산과 같다
+ *   협곡        붉은 사암이라 사막과 같다
+ *   빙벽 · 대염호 · 공중 요새   희고 창백해 설원과 같다
+ *
+ * 나머지(늪 · 공업 · 본거지 · 폐허 · 유전 · 최후)는 어느 것과도 안 맞아
+ * 새 그림을 기다린다. 그때까지는 기본 얼굴로 나간다.
+ */
+const SKIN_OF = {
+  ash2: 'ash', canyon: 'sand', glacier: 'snow', salt: 'snow', sky: 'snow',
+}
 
 function enemyArt(kind) {
   /* 이 전선에 제 얼굴이 있으면 그것을. 없으면 원래 것으로 떨어진다 */
-  const th = (state && state.stage && state.stage.theme) || 'sea'
+  const th0 = (state && state.stage && state.stage.theme) || 'sea'
+  const th = ENEMY_SKIN[th0] ? th0 : (SKIN_OF[th0] || th0)
   const sk = ENEMY_SKIN[th]
   if (sk && sk[kind] && ENEMY_IMG[sk[kind]]) {
     const s = ENEMY_IMG[sk[kind]]
