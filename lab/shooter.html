@@ -7585,6 +7585,9 @@ const CHAPTERS = [
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [2, (r) => wing('mid', 3)],
     ],
   },
@@ -7608,6 +7611,9 @@ const CHAPTERS = [
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [2, (r) => wing('mid', 3)],
     ],
   },
@@ -7631,6 +7637,9 @@ const CHAPTERS = [
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [2, (r) => wing('mid', 3)],
     ],
   },
@@ -7654,6 +7663,9 @@ const CHAPTERS = [
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [2, (r) => wing('mid', 3)],
     ],
   },
@@ -7677,6 +7689,9 @@ const CHAPTERS = [
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [2, (r) => wing('mid', 3)],
     ],
   },
@@ -7700,6 +7715,9 @@ const CHAPTERS = [
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
       [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [2, (r) => wing('mid', 3)],
     ],
   },
@@ -8223,6 +8241,37 @@ function bombRaid(n) {
  *
  * @param n 발수. 둘까지만 쏜다 - 셋이면 안전한 자리가 없어질 수 있다
  */
+/*
+ * 서는 탄을 한 줄 뿌린다 (2026-09-12).
+ *
+ * 화면 위에서 가로로 늘어서 내려오다 중간에 멈춘다. 한 줄에 구멍이
+ * 둘 있어서 거기로만 지나갈 수 있다 - 「어디로 갈까」를 미리 정하게
+ * 만드는 것이 이 패턴의 일이다.
+ *
+ * @param n 몇 발. 화면 폭을 n 등분해 세운다
+ */
+function holdWall(n) {
+  const s = state
+  const cnt = Math.max(4, Math.min(9, n | 0))
+  /* 구멍 둘. 붙어 있으면 한 군데나 마찬가지라 떨어뜨린다 */
+  const gap1 = 1 + Math.floor(Math.random() * (cnt - 2))
+  let gap2 = 1 + Math.floor(Math.random() * (cnt - 2))
+  if (Math.abs(gap2 - gap1) < 2) gap2 = (gap1 + 3) % cnt
+  /* 멈추는 높이. 너무 위면 지나가기 쉽고 너무 아래면 피할 틈이 없다 */
+  const stopY = H * (0.34 + Math.random() * 0.16)
+  const vy = 210
+  for (let i = 0; i < cnt; i++) {
+    if (i === gap1 || i === gap2) continue
+    const x = (W / cnt) * (i + 0.5)
+    s.ebullets.push({
+      x, y: -30, vx: 0, vy, r: 7, age: 0,
+      kind: 'hold', dmg: DMG.bullet,
+      flyT: (stopY + 30) / vy,      /* 그 높이까지 날아간 뒤 멈춘다 */
+      stayT: 3.4,
+    })
+  }
+}
+
 function rocketVolley(n) {
   const s = state
   const k = Math.max(1, Math.min(2, n | 0))
@@ -8425,6 +8474,18 @@ function mkEnemy(kind, x, y, drift) {
      * 원칙을 여기서도 지킨다.
      */
     lancer: { hp: 86, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
+
+    /*
+     * 가로 빔 (2026-09-12).
+     *
+     * 창(lancer)이 세로로 긋는다면 이쪽은 **가로로** 긋는다. 지금까지
+     * 위협이 전부 위에서 아래였다 - 좌우로만 비키면 다 피해진다.
+     * 가로 빔은 그 반대를 요구한다: 위아래로 움직여야 한다.
+     *
+     * 예고 1.3초. 그 동안 빔이 지나갈 줄이 보이므로 위나 아래로 비키면
+     * 된다. 화면을 가로지르므로 좌우로는 못 피한다 - 그게 이 적의 값이다.
+     */
+    beamer: { hp: 34, r: 19, sp: 36, score: 380, fire: 4.2, art: 46, hbeam: true },
 
     /*
      * 방패.
@@ -10439,6 +10500,22 @@ function update(dt) {
      * 다른 적과 달리 조준탄을 안 쓴다. 대신 빔이 지나갈 길을 먼저 보여주고
      * 1.1초 뒤에 쏜다. 그 안에 옆으로 비키면 된다.
      */
+    /* 가로 빔. 세로 빔과 같은 짜임인데 축만 눕혔다 */
+    if (e.hbeam) {
+      if (e.beamPh > 0) {
+        e.beamPh -= dt
+        if (e.beamPh <= .35 && Math.abs(pl.y - e.y) < 15 + PLAYER_R) {
+          hitPlayer(DMG.beam)
+        }
+      } else {
+        e.cd -= dt
+        if (e.cd <= 0 && e.y > 60 && e.y < H * .62) {
+          e.cd = e.fire * fireScale()
+          e.beamPh = 1.65
+        }
+      }
+      continue
+    }
     if (e.lance) {
       if (e.beamPh > 0) {
         e.beamPh -= dt
@@ -10777,6 +10854,24 @@ function update(dt) {
       /* 예고 중. 자리만 알리고 아직 안 떨어진다 */
       b.warnT -= dt
       continue
+    } else if (b.kind === 'hold') {
+      /*
+       * 서는 탄 (2026-09-12).
+       *
+       * 날아가다 멈춰서 그 자리에 남는다. 맞히는 것이 목적이 아니라
+       * **설 자리를 뺏는 것**이 목적이다 - 지금까지 모든 탄이 「피하면
+       * 지나가는 것」이라, 화면이 아무리 촘촘해도 한 번 비키면 끝이었다.
+       * 이건 비킨 자리에 계속 남아서 다음 수를 좁힌다.
+       *
+       *   flyT 동안 날아간다 -> 멈춘다 -> stayT 를 버틴다 -> 사라진다
+       */
+      if (b.flyT > 0) {
+        b.flyT -= dt
+        if (b.flyT <= 0) { b.vx = 0; b.vy = 0 }
+      } else {
+        b.stayT -= dt
+        if (b.stayT <= 0) { b.dead = true; continue }
+      }
     } else if (b.kind === 'flakshell' && b.y <= b.burstY) {
       /* 정해진 높이에서 파편으로 터진다 */
       b.dead = true
@@ -12005,6 +12100,21 @@ function drawShipOn(g, x, y, opt) {
   }
 
   g.restore()
+}
+
+/** 가로 빔. 화면 폭을 가로지른다 - 좌우로는 못 피한다 */
+function drawEnemyHBeam(e) {
+  const firing = e.beamPh <= .35
+  const half = firing ? 15 : 15 + ((e.beamPh - .35) / 1.3) * 16
+  if (firing) {
+    g.fillStyle = 'rgba(255,120,150,.8)'
+    g.fillRect(0, e.y - half, W, half * 2)
+    g.fillStyle = 'rgba(255,255,255,.9)'
+    g.fillRect(0, e.y - half * .4, W, half * .8)
+  } else {
+    g.fillStyle = 'rgba(255,110,140,' + (.10 + Math.sin(e.t * 24) * .05) + ')'
+    g.fillRect(0, e.y - half, W, half * 2)
+  }
 }
 
 /** 레이저기의 예고와 빔. 적기보다 먼저 깔아야 기체가 위에 온다 */
@@ -13250,6 +13360,7 @@ function draw() {
     g.restore()
   }
   for (const e of s.enemies) if (e.lance && e.beamPh > 0) drawEnemyBeam(e)
+  for (const e of s.enemies) if (e.hbeam && e.beamPh > 0) drawEnemyHBeam(e)
   for (const e of s.enemies) drawEnemy(e)
   if (s.boss) drawBoss(s.boss)
 
@@ -13360,6 +13471,33 @@ function draw() {
       g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1.6
       for (let i = 0; i < b.hp; i++) {
         g.beginPath(); g.arc(0, 0, b.r + 3 + i * 3.5, 0, Math.PI * 2); g.stroke()
+      }
+      g.restore()
+    } else if (b.kind === 'hold') {
+      /*
+       * 서는 탄. 다른 탄과 **한눈에 달라야** 한다 - 피하면 지나가는
+       * 것이 아니라 자리를 뺏는 것이라, 같은 동그라미로 그리면
+       * 「곧 지나가겠지」 하고 기다리다 갇힌다.
+       *
+       * 날아가는 동안은 옅고, 멈추면 고리가 조여들며 진해진다.
+       * 사라지기 0.7초 전부터 옅어져 「이제 지나가도 된다」를 알린다.
+       */
+      const flying = b.flyT > 0
+      const fade = (!flying && b.stayT < 0.7) ? b.stayT / 0.7 : 1
+      g.save()
+      g.globalAlpha = (flying ? 0.55 : 1) * fade
+      g.fillStyle = 'rgba(190,120,255,.30)'
+      g.beginPath(); g.arc(b.x, b.y, b.r * 2.2, 0, Math.PI * 2); g.fill()
+      g.fillStyle = '#c98aff'
+      g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill()
+      g.fillStyle = '#ffffff'
+      g.beginPath(); g.arc(b.x, b.y, b.r * .4, 0, Math.PI * 2); g.fill()
+      /* 멈춘 뒤에는 고리가 천천히 조여든다 - 서 있다는 표시 */
+      if (!flying) {
+        const ph = (s.t * 0.9) % 1
+        g.strokeStyle = 'rgba(201,138,255,' + (0.7 * (1 - ph)).toFixed(3) + ')'
+        g.lineWidth = 2
+        g.beginPath(); g.arc(b.x, b.y, b.r + 2 + (1 - ph) * 12, 0, Math.PI * 2); g.stroke()
       }
       g.restore()
     } else if (b.kind === 'missile') {
