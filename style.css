@@ -1105,25 +1105,34 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
   .kinetic-description { max-width: 295px; }
   .kinetic-kicker { margin-bottom: 28px; }
 }
+/* 모바일은 브라우저 바가 펼쳐진 작은 뷰포트(svh)를 기준으로 제목과 3D를 한 화면에 넣는다.
+ * 글자 확대·아주 낮은 화면에서는 내용 높이가 우선이라 필요한 만큼 스크롤을 허용한다. */
 @media (max-width: 760px) {
-  .hero--kinetic { padding-inline: 24px; }
-  .kinetic-layout { display: flex; flex-direction: column; min-height: 0; align-items: stretch; }
-  .kinetic-copy { padding: 45px 0 0; width: 100%; }
-  .kinetic-kicker { font-size: 10px; gap: 7px; letter-spacing: 0; margin-bottom: 24px; }
-  .kinetic-kicker > span { font-size: 18px; }
-  .hero--kinetic h1 { font-size: clamp(48px, 11.9vw, 70px); line-height: 1.13; letter-spacing: -.058em; }
-  .kinetic-description { font-size: 13px; line-height: 1.8; margin-top: 23px; max-width: 310px; }
+  .hero--kinetic { padding-inline: 24px; padding-bottom: 8px; overflow: clip; }
+  .kinetic-layout { display: grid; grid-template-rows: auto minmax(140px, 1fr); height: calc(100svh - 142px); min-height: min-content; align-items: stretch; }
+  .kinetic-copy { padding: 18px 0 0; width: 100%; }
+  .kinetic-kicker { font-size: 10px; gap: 7px; letter-spacing: 0; margin-bottom: 14px; }
+  .kinetic-kicker > span { font-size: 16px; }
+  .hero--kinetic h1 { font-size: clamp(36px, 9.8vw, 44px); line-height: 1.1; letter-spacing: -.058em; }
+  .kinetic-description { font-size: 12px; line-height: 1.6; margin-top: 12px; max-width: 310px; }
   .mobile-break { display: inline; }
-  .kinetic-actions { margin-top: 24px; gap: 8px 20px; }
-  .kinetic-cta { min-height: 48px; padding: 7px 8px 7px 18px; gap: 17px; font-size: 13px; }
-  .kinetic-cta > span { width: 32px; height: 32px; font-size: 20px; }
+  .kinetic-actions { margin-top: 16px; gap: 6px 16px; }
+  .kinetic-cta { min-height: 44px; padding: 6px 8px 6px 18px; gap: 17px; font-size: 12px; }
+  .kinetic-cta > span { width: 30px; height: 30px; font-size: 20px; }
   .kinetic-secondary { font-size: 11px; gap: 8px; }
-  .kinetic-platform { margin-top: 12px; font-size: 10px; }
-  .kinetic-art { position: relative; top: auto; right: auto; transform: none; width: calc(100% + 68px); margin: -9px -34px -22px; opacity: 1; }
-  .kinetic-foot { min-height: 64px; }
+  .kinetic-platform { margin-top: 8px; font-size: 10px; }
+  .kinetic-art { position: relative; top: auto; right: auto; transform: none; width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; margin: 0; opacity: 1; container-type: size; }
+  .kinetic-art .art-surface { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); inset: 0; margin: auto; }
+  .kinetic-art .art-orbit { width: min(85cqw, 85cqh); height: min(85cqw, 85cqh); inset: 0; margin: auto; }
+  .kinetic-poster { width: auto; height: 80%; max-width: 90%; object-fit: contain; left: 50%; top: 10%; transform: translateX(-50%); }
+  .kinetic-foot { min-height: 48px; }
   .kinetic-down, .motion-toggle { font-size: 10px; }
   .kinetic-down { gap: 9px; }
   .halo-a { width: 170%; right: -40%; top: 18%; }
+}
+@media (max-width: 359px) {
+  .kinetic-actions { column-gap: 8px; }
+  .kinetic-cta { gap: 13px; padding-left: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero--kinetic *, .hero--kinetic *::before, .hero--kinetic *::after { animation: none !important; transition: none !important; }
