@@ -1218,7 +1218,14 @@
   }
   .g10.r-rare, .g10.r-mid, .g10.r-high { border-color: #2e6f9e; background: #12222f; }
   .g10.r-legend { border-color: var(--gold); background: #2a2107; }
-  .g10 .t { font-size: 10px; font-weight: 800; letter-spacing: .02em; }
+  /* 모서리에 갈래. 기체인지 파일럿인지가 칸 안에서 갈려야 한다 */
+  .g10 .kd {
+    position: absolute; top: 0; left: 0; z-index: 2;
+    padding: 1px 4px 2px; border-radius: 0 0 6px 0;
+    font-size: 8px; font-weight: 800; letter-spacing: -.02em;
+    background: rgba(0,0,0,.55); color: var(--muted);
+  }
+  .g10 .t { font-size: 10px; font-weight: 800; letter-spacing: .02em; margin-top: 2px; }
   .g10.r-common .t, .g10.r-normal .t { color: var(--dim); }
   .g10.r-rare .t, .g10.r-mid .t, .g10.r-high .t { color: #7dd3fc; }
   .g10.r-legend .t { color: var(--gold); }
@@ -3825,15 +3832,25 @@ function paintGacha10(list) {
     const pic = im && im.complete && im.naturalWidth
       ? `<img src="${im.src}" alt="">`
       : pa ? `<img src="data:image/webp;base64,${GACHA_B64[pa.face[0]]}" alt="">` : ''
+    /*
+     * 무엇을 받았는지 칸에 적는다 (2026-09-12).
+     *
+     * 「중급 8」이 전부였다. 기체인지 파일럿인지, 8 이 무엇의 8 인지가
+     * 화면에 없어서 열 칸이 같은 것의 반복으로 읽혔다 - 「열 개가 안
+     * 나온 것 같다」는 말이 여기서 나온다. 갈래를 모서리에 붙이고
+     * 숫자에 단위를 준다.
+     */
     return `<div class="g10 r-${r.tier}${r.got ? ' hit' : ''}" style="animation-delay:${i * 45}ms">` +
+      `<span class="kd">${r.kind === 'pilot' ? '파일럿' : '기체'}</span>` +
       pic +
       `<div class="t">${nm}</div>` +
-      `<div class="c">${r.jack || r.hard ? '완성품' : r.n}</div>` +
+      `<div class="c">${r.jack || r.hard ? '완성품' : '조각 ' + r.n}</div>` +
       `<div class="n">${r.got ? '열림' : ''}</div>` +
       `</div>`
   }).join('')
   body.innerHTML = head +
-    `<div class="g10sum">가장 좋은 것은 <b style="color:${gTone(top.tier).main}">` +
+    `<div class="g10sum"><b>${list.length}장</b> 중 가장 좋은 것은 ` +
+    `<b style="color:${gTone(top.tier).main}">` +
     `${GRADES[top.tier] ? GRADES[top.tier].name : TIERS[top.tier]}</b> · ` +
     `${gotN ? `<b>${gotN}개</b>가 열렸습니다` : '열린 것은 없습니다'}</div>` +
     `<div class="grid10">${cells}</div>`
