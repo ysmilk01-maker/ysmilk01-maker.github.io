@@ -747,11 +747,24 @@
 
 
   /* 챕터 지도 */
-  .chtabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-  .chtabs button { padding: 8px 12px; font-size: 12px; border-radius: 9px;
-                   background: #141c2c; color: var(--muted); font-weight: 700; }
-  .chtabs button.on { background: var(--accent); color: #04121a; }
-  .chtabs button.lock { opacity: .45; }
+  .chbar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .chbar .chnav {
+    flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px;
+    background: #141c2c; color: var(--muted); font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chbar .chnav:disabled { opacity: .22; }
+  .chbar .chcur {
+    flex: 1 1 auto; min-width: 0; text-align: center; background: #141c2c;
+    border-radius: 10px; padding: 6px 8px 7px;
+  }
+  .chbar .chcur .cn {
+    font-size: 13.5px; font-weight: 800; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chbar .chcur .cs { font-size: 11px; color: var(--dim); margin-top: 2px; }
+  .chbar .chcur .cs i { margin-left: 3px; }
+  .chpage { touch-action: pan-y; }
   .nodes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-top: 10px; }
   .node {
     background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
@@ -5712,7 +5725,7 @@ function paintShop() {
 /** 카드에 그 판의 색을 그대로 보여 준다. 이름만으로는 어떤 곳인지 모른다 */
 function paintStage(cv, sg) {
   if (!cv) return
-  const TH = THEMES[sg.theme]
+  const TH = THEMES[sg.theme] || THEMES.sea
   const dpr = Math.min(2, window.devicePixelRatio || 1)
   const w = cv.clientWidth || 260, h = cv.clientHeight || 92
   cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr)
@@ -5845,9 +5858,18 @@ function renderStage() {
   const ch = CHAPTERS[mapCh]
   const el = document.getElementById('stageBody')
 
-  const tabs = CHAPTERS.map((c, i) =>
-    `<button data-ch="${i}" class="${i === mapCh ? 'on' : ''}${chapterOpen(i) ? '' : ' lock'}">` +
-    `${c.id}. ${c.name} ${chapterStars(i)}/${SUBS * 3}<i class="sti"></i></button>`).join('')
+  const canPrev = mapCh > 0
+  const canNext = mapCh < CHAPTERS.length - 1 && chapterOpen(mapCh + 1)
+  const bar =
+    `<div class="chbar">` +
+    `<button class="chnav" data-chn="-1"${canPrev ? '' : ' disabled'}>‹</button>` +
+    `<div class="chcur">` +
+    `<div class="cn">${ch.id}. ${ch.name}</div>` +
+    `<div class="cs">${ch.id} / ${CHAPTERS.length} · ` +
+    `${chapterStars(mapCh)}/${SUBS * 3}<i class="sti"></i></div>` +
+    `</div>` +
+    `<button class="chnav" data-chn="1"${canNext ? '' : ' disabled'}>›</button>` +
+    `</div>`
 
   const nodes = Array.from({ length: SUBS }, (_, k) => {
     const sub = k + 1
@@ -5867,12 +5889,13 @@ function renderStage() {
   }).join('')
 
   el.innerHTML =
-    `<div class="chtabs">${tabs}</div>` +
+    bar +
+    `<div class="chpage">` +
     `<div class="card stg"><canvas class="pv" width="520" height="184"></canvas>` +
     `<div class="nm">${ch.id}. ${ch.name}</div><div class="de">${ch.sub}</div>` +
     `<div class="up"><span class="lvl">적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}` +
     ` · 별 ${chapterStars(mapCh)}/${SUBS * 3}</span></div></div>` +
-    `<div class="nodes">${nodes}</div>` +
+    `<div class="nodes">${nodes}</div></div>` +
     /*
      * 보스 도전 (2026-09-12). 파일럿 Lv.10 에 열린다.
      * 앞의 것을 깨야 다음이 열리므로 목록이 한 줄로 이어진다.
@@ -5884,7 +5907,7 @@ function renderStage() {
           return `<button class="rushrow${open ? '' : ' lock'}${done ? ' done' : ''}"` +
             ` data-rush="${i}"${open ? '' : ' disabled'}>` +
             `<span class="rn">${d.name}</span>` +
-            `<span class="rs">${open ? d.sub : (i ? BOSS_RUSH[i-1].name + ' 을 먼저 깨야 합니다' : '')}</span>` +
+            `<span class="rs">${open ? d.sub : (i ? eul(BOSS_RUSH[i - 1].name) + ' 먼저 깨야 합니다' : '')}</span>` +
             `<span class="rr">${done ? '격파함' : '경험치 ' + d.xp.toLocaleString('ko-KR') + ' · 가챠권 ' + (done ? RUSH_TICKET_AGAIN : RUSH_TICKET_FIRST)}</span>` +
             `</button>`
         }).join('') + `</div>`
@@ -5905,14 +5928,22 @@ function renderStage() {
     b.onclick = (e) => { e.stopPropagation(); startBossRush(+b.dataset.rush) }
   })
 
-  el.querySelectorAll('[data-ch]').forEach((b) => {
-    const i = +b.dataset.ch
-    b.onclick = () => {
-      if (!chapterOpen(i)) { alert(`${CHAPTERS[i - 1].name} ${SUBS}단계를 먼저 깨야 합니다.`); return }
-      mapCh = i
-      renderStage()
-    }
+  el.querySelectorAll('[data-chn]').forEach((b) => {
+    b.onclick = () => chapterStep(+b.dataset.chn)
   })
+  const page = el.querySelector('.chpage')
+  if (page) {
+    let sx = 0, sy = 0, down = false
+    page.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; down = true })
+    page.addEventListener('pointercancel', () => { down = false })
+    page.addEventListener('pointerup', (e) => {
+      if (!down) return
+      down = false
+      const dx = e.clientX - sx, dy = e.clientY - sy
+      if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+      chapterStep(dx < 0 ? 1 : -1)
+    })
+  }
   el.querySelectorAll('[data-sub]').forEach((d) => {
     const sub = +d.dataset.sub
     d.onclick = () => {
@@ -7333,6 +7364,80 @@ const THEMES = {
     halo: 'rgba(255,140,70,.09)', body: 'rgba(58,40,38,.58)',
     cap: 'rgba(255,112,48,.5)', dark: 'rgba(26,12,14,.62)',
   },
+  /*
+   * 다섯째부터 열다섯째까지.
+   *
+   * 여기 표에 없는 전선은 전선 화면의 미리보기가 TH.sky 를 읽다가
+   * 그 자리에서 죽는다 - 그림만 넣고 색표를 안 채워 두었더니
+   * 5전선부터 화면이 통째로 멎었다. 하늘 그림이 깔리는 전투 중에는
+   * 거의 안 보이지만, 미리보기와 탄·결 색은 이 표에서 나온다.
+   */
+  ash2: {
+    sky: ['#141210', '#2e2a22', '#4c463a'],
+    line: '220,205,170', glint: '245,238,215',
+    halo: 'rgba(225,210,175,.08)', body: 'rgba(120,112,96,.55)',
+    cap: 'rgba(200,188,158,.5)', dark: 'rgba(38,34,28,.58)',
+  },
+  swamp: {
+    sky: ['#060f0b', '#0e2119', '#183528'],
+    line: '140,210,165', glint: '210,245,220',
+    halo: 'rgba(150,215,175,.09)', body: 'rgba(70,92,70,.55)',
+    cap: 'rgba(96,140,96,.5)', dark: 'rgba(16,34,26,.58)',
+  },
+  sky: {
+    sky: ['#03060f', '#0a1030', '#141d4e'],
+    line: '170,190,255', glint: '225,232,255',
+    halo: 'rgba(180,195,255,.10)', body: 'rgba(150,160,190,.5)',
+    cap: 'rgba(225,232,255,.5)', dark: 'rgba(24,32,72,.55)',
+  },
+  canyon: {
+    sky: ['#2a0f08', '#54200f', '#8a3d18'],
+    line: '255,170,110', glint: '255,225,180',
+    halo: 'rgba(255,185,130,.09)', body: 'rgba(140,80,48,.55)',
+    cap: 'rgba(180,96,52,.5)', dark: 'rgba(62,26,14,.58)',
+  },
+  steel: {
+    sky: ['#0d0b0a', '#241c18', '#3e2e24'],
+    line: '235,180,120', glint: '255,225,190',
+    halo: 'rgba(235,190,140,.08)', body: 'rgba(96,88,80,.55)',
+    cap: 'rgba(150,120,88,.5)', dark: 'rgba(30,24,20,.6)',
+  },
+  core: {
+    sky: ['#03040a', '#0a0e1c', '#151c32'],
+    line: '190,215,255', glint: '235,245,255',
+    halo: 'rgba(200,220,255,.10)', body: 'rgba(70,78,92,.55)',
+    cap: 'rgba(120,140,175,.5)', dark: 'rgba(14,18,30,.62)',
+  },
+  glacier: {
+    sky: ['#04101a', '#0a2434', '#144056'],
+    line: '150,220,255', glint: '220,245,255',
+    halo: 'rgba(170,230,255,.10)', body: 'rgba(150,190,210,.5)',
+    cap: 'rgba(215,240,255,.55)', dark: 'rgba(20,54,74,.55)',
+  },
+  ruin: {
+    sky: ['#0b0a0c', '#221c1e', '#3c2c26'],
+    line: '230,180,150', glint: '255,225,200',
+    halo: 'rgba(230,190,160,.08)', body: 'rgba(100,92,88,.55)',
+    cap: 'rgba(150,128,112,.5)', dark: 'rgba(28,22,22,.6)',
+  },
+  salt: {
+    sky: ['#1a1d20', '#3a4046', '#6b747c'],
+    line: '235,245,250', glint: '255,255,255',
+    halo: 'rgba(240,248,255,.10)', body: 'rgba(185,192,196,.5)',
+    cap: 'rgba(245,250,255,.55)', dark: 'rgba(60,68,74,.5)',
+  },
+  oil: {
+    sky: ['#0a0705', '#241206', '#4a2408'],
+    line: '255,165,70', glint: '255,225,160',
+    halo: 'rgba(255,175,90,.09)', body: 'rgba(60,48,40,.6)',
+    cap: 'rgba(255,130,40,.5)', dark: 'rgba(20,12,8,.62)',
+  },
+  final: {
+    sky: ['#08040a', '#26060f', '#54101c'],
+    line: '255,120,120', glint: '255,205,205',
+    halo: 'rgba(255,120,120,.10)', body: 'rgba(52,36,40,.6)',
+    cap: 'rgba(200,52,52,.5)', dark: 'rgba(18,8,12,.65)',
+  },
 }
 
 const WAVES = [
@@ -8337,6 +8442,21 @@ function subOpen(ci, sub) {
   return starOf(ci, sub - 1) > 0
 }
 function chapterOpen(ci) { return ci === 0 || starOf(ci - 1, SUBS) > 0 }
+/* 받침에 따라 을/를 을 고른다. 「항모 을」 같은 말이 화면에 남지 않게. */
+function eul(w) {
+  const c = w.charCodeAt(w.length - 1) - 0xac00
+  const has = c >= 0 && c <= 11171 && c % 28 !== 0
+  return w + (has ? '을' : '를')
+}
+
+function chapterStep(d) {
+  const t = mapCh + d
+  if (t < 0 || t >= CHAPTERS.length) return
+  if (!chapterOpen(t)) return
+  mapCh = t
+  renderStage()
+}
+
 function chapterStars(ci) {
   let n = 0
   for (let k = 1; k <= SUBS; k++) n += starOf(ci, k)
