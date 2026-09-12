@@ -981,6 +981,20 @@
   }
   /* 새로 생긴 것은 금색으로 살짝 밝힌다 - 늘 받는 것과 갈려야 한다 */
   .rcell.hot { background: rgba(255,200,90,.10); border-color: rgba(255,200,90,.42); }
+  /*
+   * 진 판의 한 줄.
+   *
+   * 처음엔 보상 칸(.rcell)에 긴 글을 넣었는데, 그 칸은 30px 아이콘 +
+   * 짧은 값에 맞춰 짜인 3열 격자라 글이 한 글자씩 접혀 세로로 늘어졌다.
+   * 칸을 나누지 말고 두 칸을 다 써서 한 줄로 적는다.
+   */
+  .rnone {
+    grid-column: 1 / -1; text-align: center;
+    padding: 15px 12px; border-radius: 9px;
+    background: rgba(255,255,255,.045); border: 1px solid var(--line);
+    color: var(--muted); font-size: 12.5px; line-height: 1.6;
+  }
+  .rnone b { display: block; color: var(--ink); font-size: 13.5px; margin-bottom: 3px; }
   .rcell .ic { width: 26px; height: 26px; background: center/contain no-repeat; }
   .rcell .ic.part { background-image: var(--ui-resPart); }
   .rcell .ic.star { background-image: var(--ui-resStar); }
@@ -1442,6 +1456,48 @@
   .card.can, .gcard.can { animation: upglow 1.8s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) {
     .card.can, .gcard.can { animation: none; border-color: var(--gold); }
+  }
+
+  /*
+   * 편대에 올라가 있는 기체 (2026-09-12).
+   *
+   * 「메인 적용중」 알약이 오른쪽 위에 붙어 있었지만 9.5px 짜리라
+   * 목록을 훑을 때는 안 읽힌다. 서른 장이 한 줄로 이어지는 화면이라
+   * 어느 것을 지금 태우고 있는지 다시 하나씩 봐야 했다.
+   *
+   * 테두리를 형광 초록으로 바꾼다. 알약과 같은 색이라 둘이 한 신호로
+   * 읽히고, 글자를 안 읽어도 카드 모양만으로 갈린다.
+   *
+   * 이 규칙이 .picked(파랑)와 .can(금색) 뒤에 와야 한다 - 셋 다
+   * 테두리 색을 쥐고 있어서 나중에 적힌 것이 이긴다. 태우고 있는 것을
+   * 제일 먼저 알아보게 하는 것이 이 화면의 일이다.
+   */
+  /*
+   * border-color 로는 안 된다.
+   *
+   * 카드 테두리가 CSS 선이 아니라 **9분할 놋쇠 그림**(border-image,
+   * 10.4px)이다. 그림이 덮고 있어서 border-color 를 초록으로 줘도
+   * 화면에는 안 나온다 - 처음에 그렇게 넣었다가 카드 뒤로 옅은 빛만
+   * 새어 나왔다.
+   *
+   * 그래서 카드 바깥에 고리를 하나 덧그린다. 놋쇠 그림을 안 건드리고
+   * 그 둘레를 두르므로 액자는 액자대로 남고 신호만 얹힌다.
+   */
+  .card.used::before {
+    content: ''; position: absolute; inset: -2px; border-radius: 16px;
+    border: 2px solid #5fd48a; pointer-events: none; z-index: 3;
+    box-shadow: 0 0 12px rgba(95,212,138,.55), inset 0 0 8px rgba(95,212,138,.25);
+  }
+  /* 태우고 있는데 강화까지 되면 고리가 숨 쉰다 */
+  @keyframes useglow {
+    0%, 100% { border-color: #5fd48a; box-shadow: 0 0 8px rgba(95,212,138,.40), inset 0 0 6px rgba(95,212,138,.20); }
+    50%      { border-color: #b6ffd4; box-shadow: 0 0 20px rgba(95,212,138,.85), inset 0 0 12px rgba(95,212,138,.40); }
+  }
+  .card.used.can::before { animation: useglow 1.8s ease-in-out infinite; }
+  /* 고리가 도니 금색 숨쉬기는 끈다 - 한 카드가 두 박자로 뛰면 정신없다 */
+  .card.used.can { animation: none; border-color: transparent; }
+  @media (prefers-reduced-motion: reduce) {
+    .card.used.can::before { animation: none; }
   }
   .gcard.no { opacity: .5; }
   /*
@@ -2784,7 +2840,13 @@ const HARD_REVIVE = 1
  */
 const CRAZY_DMG = 1.3
 const CRAZY_TICKET = 1
-const STAR_FAIL = 1
+/*
+ * 1 -> 0 (2026-09-12). 진 판은 별도 안 준다.
+ *
+ * 자세한 이유는 end() 의 보상 주석에 적었다. 값을 여기 남겨 두는 것은
+ * 되돌릴 때 한 군데만 고치면 되게 하려는 것이다.
+ */
+const STAR_FAIL = 0
 const STAR_CLEAR = 3
 const STAR_TICKET = 3
 
@@ -4426,7 +4488,17 @@ function xpNeed(lv) {
    * 가야 「이번 판을 이기려면 강화를 해야 한다」가 성립한다.
    */
   const base = lv === 1 ? 300 : 770 + 198 * (lv - 1)
-  /* 1.95 에서 50% 더 (2026-09-12). Lv.6 부터 2.93 배 */
+  /*
+   * 계단이 둘이다.
+   *
+   * Lv.6 부터 2.93배 (1.95 에서 50% 더, 2026-09-12).
+   * Lv.10 부터 다시 두 배 (2026-09-12).
+   *
+   * 열 레벨이 분기점인 이유가 있다 - 보스 도전이 Lv.10 에 열리고,
+   * 파일럿 셋째 자리(우설·결승·수훈·뇌성)도 Lv.10 에 붙는다. 거기까지는
+   * 배우는 구간이고 그 뒤가 기르는 구간이라, 속도를 한 번 더 꺾는다.
+   */
+  if (lv >= 10) return Math.round(base * 2.93 * 2)
   return lv >= 6 ? Math.round(base * 2.93) : base
 }
 function xpFromScore(score) { return Math.round(score * 0.03) }
@@ -5932,8 +6004,9 @@ function renderPlanes() {
     const ok = unlocked(p)
     const picked = prog.squad[activeSlot] === p.id
     const c = document.createElement('div')
+    /* usedIn 에 있으면 어느 자리든 지금 태우고 있는 기체다 */
     c.className = 'card' + (ok ? '' : ' locked') + (picked ? ' picked' : '') +
-      (canUpg(p) ? ' can' : '')
+      (canUpg(p) ? ' can' : '') + (usedIn[p.id] ? ' used' : '')
     kbClickable(c)
     const lab = unlockLabel(p)
     const lv = upgOf(p.id)
@@ -6252,8 +6325,8 @@ function paintRates() {
     `<div class="rate"><span>기체 ${HARD_PITY}장째</span>` +
     `<span class="v">기체 하나 확정 (등급 랜덤)</span></div>` +
     `<div class="empty">아래 확률은 그 갈래가 걸렸을 때의 값입니다.<br>` +
-    `가챠권은 별 ${STAR_TICKET}개마다 한 장입니다. 별은 한 판에 ${STAR_FAIL}개, ` +
-    `깨면 ${STAR_CLEAR}개가 찹니다. 돈으로는 살 수 없습니다.</div>`
+    `가챠권은 별 ${STAR_TICKET}개마다 한 장입니다. 별은 판을 깨면 ` +
+    `${STAR_CLEAR}개가 차고, 실패하면 차지 않습니다.</div>`
 }
 
 document.getElementById('gPull').onclick = () => {
@@ -17210,7 +17283,19 @@ function end(win) {
    */
   const sc = perk('score')
   if (sc !== 1) state.score = Math.round(state.score * sc)
-  const earned = partsEarned(state.score)
+  /*
+   * 진 판은 아무것도 안 준다 (2026-09-12).
+   *
+   * 전에는 져도 부품(점수/130)과 별 하나와 경험치(점수x0.03)가 나왔다.
+   * 깨는 것과 죽는 것의 차이가 「조금 덜 받는다」뿐이라, 어려운 판에서는
+   * **깨려고 버티는 것보다 점수만 벌고 죽는 쪽이 편했다.** 경험치가
+   * 특히 그랬다 - 점수에만 묶여 있어서 보스를 못 잡아도 웨이브를 오래
+   * 끌면 레벨이 올랐다.
+   *
+   * 이기면 받고 지면 못 받는다. 조각과 하드코어 몫은 이미 그랬다.
+   * 점수 기록(누적·최고·단계 최고)은 보상이 아니라 기록이라 그대로 둔다.
+   */
+  const earned = win ? partsEarned(state.score) : 0
   prog.total += state.score
   prog.parts += earned
 
@@ -17378,11 +17463,11 @@ function end(win) {
   prog.scores.sort((a, b) => b.s - a.s)
   prog.scores = prog.scores.slice(0, 50)          // 쉰 개면 충분하다
 
-  const gained = xpFromScore(state.score)
+  const gained = win ? xpFromScore(state.score) : 0
   /* 오르기 전 계급을 잡아 둔다. 이름이 바뀌었는지는 이 값과만 견줄 수 있다 */
   const rankBefore = pilotRank()
   const lvBefore = prog.pilot.lv
-  const up = addXp(state.score)
+  const up = win ? addXp(state.score) : false
   const rankAfter = pilotRank()
   save()
 
@@ -17443,21 +17528,31 @@ function end(win) {
       (hv ? '<span class="hv">' + hv + '</span>' : '<span></span>') +
     '</div>'
 
-  const cells =
-    cell('part', '부품', '+' + earned.toLocaleString('ko-KR'),
-         prog.parts.toLocaleString('ko-KR')) +
-    cell('star', '별', '+' + stars, prog.star + '/' + STAR_TICKET) +
-    cell('xp', '파일럿 경험치', '+' + gained.toLocaleString('ko-KR'), 'Lv.' + prog.pilot.lv) +
+  /*
+   * 진 판에 「+0」을 세 줄 늘어놓지 않는다.
+   *
+   * 숫자로는 맞는 말인데, 받은 것이 없는 화면에 받는 칸을 그대로 두면
+   * 무엇이 달라졌는지가 안 읽힌다. 한 줄로 왜 없는지만 적는다.
+   */
+  const cells = (!win
+    ? '<div class="rnone"><b>보상 없음</b>' +
+      '판을 깨야 부품 · 별 · 경험치를 받습니다</div>'
+    : cell('part', '부품', '+' + earned.toLocaleString('ko-KR'),
+           prog.parts.toLocaleString('ko-KR')) +
+      cell('star', '별', '+' + stars, prog.star + '/' + STAR_TICKET) +
+      cell('xp', '파일럿 경험치', '+' + gained.toLocaleString('ko-KR'), 'Lv.' + prog.pilot.lv)) +
     /* 조각은 태운 기체 것이다. 어느 기체인지 적어야 「내 것이 늘었다」가 된다 */
     (shardGot
       ? cell('shard', shardName + ' 조각', '+' + shardGot,
              shardOf(state.squad[MAIN_SLOT].plane.id) + '개', true)
       : '') +
-    (hardGot
-      ? cell('tk', '가챠권', '+' + (tickets + hardGot), '보유 ' + prog.ticket, true)
-      : tickets
-        ? cell('tk', '가챠권', '+' + tickets, '보유 ' + prog.ticket, true)
-        : cell('tk', '가챠권', STAR_TICKET - prog.star + '별 남음', '')) +
+    (!win
+      ? ''
+      : hardGot
+        ? cell('tk', '가챠권', '+' + (tickets + hardGot), '보유 ' + prog.ticket, true)
+        : tickets
+          ? cell('tk', '가챠권', '+' + tickets, '보유 ' + prog.ticket, true)
+          : cell('tk', '가챠권', STAR_TICKET - prog.star + '별 남음', '')) +
     /* 난이도 몫은 따로 한 칸을 준다. 별에 섞이면 뭘로 받았는지 모른다 */
     (hardGot
       ? cell('hard', modeName + ' 첫 클리어', '가챠권 +' + hardGot, '', true)
