@@ -7056,6 +7056,8 @@ function newState() {
     /* 이 판에서 지금까지 떨어뜨린 개조의 수와, 이 판의 상한 */
     modDrops: 0,
     modCap: rollModCap(),
+    /* 이 판에 지금까지 떨어뜨린 보급의 수. 가챠권은 안 센다 */
+    itemDrops: 0,
     /* 이 판에 가챠권이 나오는가. 나온다면 판의 어디쯤에서 */
     tkPlan: Math.random() < TICKET_STAGE_P,
     tkAt: 0.15 + Math.random() * 0.70,
@@ -10286,7 +10288,18 @@ const TICKET_STAGE_P = 0.30
  * 세는 것은 주운 수가 아니라 떨어뜨린 수다. 안 주우면 다음 것이 나오는
  * 식이면 상한이 상한 구실을 못 한다.
  */
-/* 2 -> 4 (2026-09-12). 판이 50초 위로 올라와서 둘로는 심심하다 */
+/*
+ * 한 판에 떨어지는 보급의 총수 (2026-09-12).
+ *
+ * MOD_CAP 은 「강화 효과가 붙은 것」만 셌다. 붙지 않은 것(mod:null)은
+ * 세지 않아서 보급이 뜰 때마다 그냥 떨어졌고, 판마다 열 개 넘게
+ * 내려왔다. 상한이 상한 구실을 못 한 셈이다.
+ *
+ * 세는 자리를 옮긴다 - 떨어지는 것을 전부 세고 넷에서 끊는다.
+ * 가챠권은 이 수에 안 넣는다. 성격이 다른 물건이고 판에 한 장이다.
+ */
+const ITEM_CAP = 4
+/* 그 넷 중 강화 효과가 붙는 것의 상한 */
 const MOD_CAP = 4
 /**
  * 이 판에 나올 개조의 수. 판마다 다르다.
@@ -10304,6 +10317,21 @@ function rollModCap() {
    */
   const r = Math.random()
   return r < 0.15 ? 1 : r < 0.50 ? 2 : r < 0.82 ? 3 : MOD_CAP
+}
+
+/*
+ * 보급 간격.
+ *
+ * 3.5~5.5초 붙박이였다. 넷에서 끊고 나면 네 개가 판 앞 20초에 다
+ * 떨어지고 남은 시간은 아무것도 안 내려오는 판이 된다. 판 길이에서
+ * 나눠 고르게 편다 - 50초 판은 8초, 65초 판은 10초 간격이 된다.
+ */
+function supplyGap() {
+  const s = state
+  const wv = s.stage && s.stage.waves
+  const total = (wv && wv.length) ? wv[wv.length - 1].at : 50
+  const g = total * 0.80 / ITEM_CAP
+  return g * (0.85 + Math.random() * 0.30)
 }
 
 /*
@@ -10348,6 +10376,9 @@ function dropSupply() {
       return
     }
   }
+  /* 넷을 다 내렸으면 더 안 내린다 */
+  if (s.itemDrops >= ITEM_CAP) return
+  s.itemDrops++
   dropItem(x, -24, true)
 }
 
@@ -12142,7 +12173,7 @@ function update(dt) {
   if (s.supplyT <= 0 && (!s.boss || s.rush >= 0)) {
     dropSupply()
     /* 「소나기」는 이 간격이 짧아진다 */
-    s.supplyT = (SUPPLY_GAP[0] + Math.random() * (SUPPLY_GAP[1] - SUPPLY_GAP[0])) * perk('sup')
+    s.supplyT = supplyGap() * perk('sup')
   }
 
   /*
