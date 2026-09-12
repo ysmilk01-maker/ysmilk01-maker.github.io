@@ -2088,7 +2088,7 @@ const SHIELD_TIME = 6.5
 /*
  * 궁극기 세기. 지속 시간과 피해가 다 이 값을 곱해 쓴다.
  *
- * 「홍련」의 위력 +10% 가 여기에 붙는다 - 한 곳에 곱하면 열한 개
+ * 「열화」의 위력 +10% 가 여기에 붙는다 - 한 곳에 곱하면 열한 개
  * 궁극기에 똑같이 먹는다. 따로 손보면 하나는 반드시 빠뜨린다.
  */
 const ULT_POWER = 0.8
@@ -3178,7 +3178,14 @@ const PERK0 = { pow: 1, rate: 1, rng: 1, hp: 0, ult: 1, heal: 0, inv: 0,
 const PILOTS = [
   { id: 'n1', grade: 'normal', face: 0, name: '초연',
     perk: {}, desc: '치우침이 없습니다' },
-  { id: 'n2', grade: 'normal', face: 1, name: '거암',
+  /*
+   * 「거암」이 여성 초상에 붙어 있었다 (2026-09-12).
+   *
+   * 巨岩 은 큰 바위다. 이름은 단단함을 말하려고 골랐는데 초상은 짧은
+   * 머리의 젊은 여성이라 둘이 따로 놀았다. 얼굴에 맞추되 특성(체력)은
+   * 그대로 읽히게 - 서리는 단단하게 언 것이다.
+   */
+  { id: 'n2', grade: 'normal', face: 1, name: '서리',
     perk: { hp: 14 }, desc: '최대 체력 +14' },
 
   { id: 'm1', grade: 'mid', face: 0, name: '적호',
@@ -3191,7 +3198,8 @@ const PILOTS = [
   { id: 'h2', grade: 'high', face: 1, name: '철갑',
     perk: { heal: 5, inv: 0.12 }, desc: '보급 회복 두 배 · 피격 무적 +0.12초' },
 
-  { id: 'l1', grade: 'legend', face: 0, name: '홍련',
+  /* 「홍련」은 반대로 노년 남성 장교 초상에 붙어 있었다. 특성과 맞춰 고친다 */
+  { id: 'l1', grade: 'legend', face: 0, name: '열화',
     perk: { ultPow: 1.10 }, desc: '필살기 위력 +10%' },
   { id: 'l2', grade: 'legend', face: 1, name: '은월',
     perk: { hp: 20, inv: 0.2 }, desc: '최대 체력 +20 · 피격 무적 +0.2초' },
@@ -8014,7 +8022,7 @@ const WAVES = [
   { at: 26.0, f: () => line(2, 'gunner') },
   { at: 27.0, f: () => { ground('radar', W - 84); ground('turret', W / 2) } },
   { at: 29.0, f: () => dive(3) },
-  { at: 30.0, f: () => rise('small', 2) },
+  { at: 30.0, f: () => flank('small', 2, Math.random() < .5 ? 1 : -1) },
   { at: 32.0, f: () => spawnBoss() },
 ]
 
@@ -8044,7 +8052,7 @@ const WAVES_SAND = [
   { at: 32.0, f: () => line(4, 'gunner') },
   { at: 34.0, f: () => { ground('laser', W - 80); ground('radar', 84) } },
   { at: 35.5, f: () => line(1, 'lancer') },
-  { at: 37.0, f: () => rise('gunner', 2) },
+  { at: 37.0, f: () => flank('gunner', 2, Math.random() < .5 ? 1 : -1) },
   { at: 38.5, f: () => wing('small', 5) },
   { at: 41.0, f: () => spawnBoss() },
 ]
@@ -8079,7 +8087,7 @@ const WAVES_SNOW = [
   { at: 39.0, f: () => { ground('laser', 80); ground('laser', W - 80) } },
   { at: 41.0, f: () => side('gunner', 3, 1) },
   { at: 42.4, f: () => side('gunner', 3, -1) },
-  { at: 44.0, f: () => rise('mid', 3) },
+  { at: 44.0, f: () => flank('mid', 3, Math.random() < .5 ? 1 : -1) },
   { at: 45.6, f: () => line(2, 'lancer') },
   { at: 47.0, f: () => line(3, 'tank') },
   { at: 49.0, f: () => spawnBoss() },
@@ -8225,7 +8233,7 @@ const CHAPTERS = [
       [1, (r) => line(1 + ((r() * 2) | 0), 'gunner')],
       [1, (r) => dive(2 + ((r() * 2) | 0))],
       [1, (r) => side('small', 3, r() < .5 ? 1 : -1)],
-      [1, (r) => rise('small', 2)],
+      [1, (r) => flank('small', 2, r() < .5 ? 1 : -1)],
       /* 분열만 1챕터에 둔다. 방패·자폭·지원기는 판을 읽는 눈이 필요하다 */
       [1, (r) => line(1 + ((r() * 2) | 0), 'split')],
     ],
@@ -8281,7 +8289,7 @@ const CHAPTERS = [
       [1, () => spawnUfo()],
       /* 직선 미사일도 같이. 한 발이면 피할 자리가 화면의 대부분이다 */
       [1, (r) => rocketVolley(1)],
-      [1, (r) => rise('gunner', 2)],
+      [1, (r) => flank('gunner', 2, r() < .5 ? 1 : -1)],
       [1, (r) => line(1, 'tank')],
     ],
   },
@@ -8312,7 +8320,7 @@ const CHAPTERS = [
       [2, (r) => bombRaid(4 + ((r() * 2) | 0))],
       [1, () => spawnUfo()],
       [2, (r) => rocketVolley(1 + ((r() * 2) | 0))],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [1, (r) => wing('small', 5)],
     ],
   },
@@ -8354,7 +8362,7 @@ const CHAPTERS = [
       [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [2, (r) => wing('mid', 3)],
     ],
   },
@@ -8378,7 +8386,7 @@ const CHAPTERS = [
       [5, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [2, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8407,7 +8415,7 @@ const CHAPTERS = [
       [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8434,7 +8442,7 @@ const CHAPTERS = [
       [1, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
-      [3, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [3, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [4, (r) => holdWall(5 + ((r() * 3) | 0))],
       [4, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8464,7 +8472,7 @@ const CHAPTERS = [
       [2, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [4, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [5, (r) => holdWall(5 + ((r() * 3) | 0))],
       [4, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8493,7 +8501,7 @@ const CHAPTERS = [
       [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [4, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8522,7 +8530,7 @@ const CHAPTERS = [
       [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [2, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
-      [5, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [5, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8551,7 +8559,7 @@ const CHAPTERS = [
       [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8580,7 +8588,7 @@ const CHAPTERS = [
       [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [3, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8609,7 +8617,7 @@ const CHAPTERS = [
       [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [4, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [6, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [2, (r) => holdWall(5 + ((r() * 3) | 0))],
       [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8638,7 +8646,7 @@ const CHAPTERS = [
       [6, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [1, () => spawnUfo()],
       [6, (r) => rocketVolley(2)],
-      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [2, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [3, (r) => holdWall(5 + ((r() * 3) | 0))],
       [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -8667,7 +8675,7 @@ const CHAPTERS = [
       [4, (r) => bombRaid(4 + ((r() * 3) | 0))],
       [3, () => spawnUfo()],
       [4, (r) => rocketVolley(2)],
-      [4, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      [4, (r) => flank('mid', 2 + ((r() * 2) | 0), r() < .5 ? 1 : -1)],
       [4, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
       [4, (r) => holdWall(5 + ((r() * 3) | 0))],
       [4, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
@@ -9523,7 +9531,13 @@ function side(kind, n, dir) {
  * 이제 둘을 나눈다 (2026-09-11): waitT 동안은 화면 아래에 그대로 서서
  * 표식만 깜빡이고, 그 뒤에 riseT 동안 올라온다. 「알리고 나서 나온다」.
  */
-const RISE_WARN = 1.0
+/*
+ * 측하단 편대 예고 (2026-09-12).
+ *
+ * 옆에서 들어오는 것(SIDE_WARN 1.6)보다 조금 짧게 잡는다. 대각선이라
+ * 들어오는 길이 눈에 더 잘 띄고, 길게 끌면 판이 멈춘 것처럼 보인다.
+ */
+const FLANK_WARN = 1.5
 /*
  * 군집 (2026-09-12).
  *
@@ -9544,18 +9558,41 @@ function swarmPack(n) {
   }
 }
 
-function rise(kind, n) {
-  for (let i = 0; i < n; i++) {
-    const e = mkEnemy(kind, 60 + Math.random() * (W - 120), H + 24, 0)
-    e.mode = 'rise'
-    e.waitT = RISE_WARN + i * .35
-    e.riseT = 1.5
-    e.riseSp = 215
-    state.enemies.push(e)
-    /* 표식은 기다리는 동안과 올라오는 앞부분까지 */
-    edgeWarn('b', e.x, e.waitT + 0.5, 82)
-  }
+/*
+ * 측하단 편대.
+ *
+ * 아래에서 곧장 솟던 것(rise)을 뺐다. 화면 아래는 내 기체가 서 있는
+ * 자리라, 거기서 솟는 것은 피할 자리를 주는 위협이 아니라 서 있는 자리를
+ * 빼앗는 위협이었다 - 예고를 1초 줘도 뜨는 순간 이미 몸 밑이다.
+ *
+ * 대신 **아래 모서리에서 비스듬히** 올라온다.
+ *
+ *   · 들어오는 길이 대각선이라 옆으로 한 번 비키면 통째로 흘릴 수 있다
+ *   · 한 줄로 연달아 들어오므로 한 마리가 아니라 편대로 읽힌다
+ *   · 모서리 두 변에 표식을 띄운다 - 옆만 보면 아래를 놓치고 아래만
+ *     보면 옆을 놓친다
+ *
+ * @param dir  1 이면 왼쪽 아래에서, -1 이면 오른쪽 아래에서
+ */
+function flank(kind, n, dir) {
+  const cnt = Math.max(2, Math.min(6, n | 0))
+  const d = dir > 0 ? 1 : -1
+  const x0 = d > 0 ? -44 : W + 44
+  const y0 = H - 46
+  edgeWarn(d > 0 ? 'l' : 'r', y0 - 46, FLANK_WARN, 200)
+  edgeWarn('b', d > 0 ? 84 : W - 84, FLANK_WARN, 160)
   sfx('alarm')
+  banner('측면 편대')
+  afterWarn(FLANK_WARN, () => {
+    for (let i = 0; i < cnt; i++) {
+      const e = mkEnemy(kind, x0 - d * i * 56, y0 + i * 9, 0)
+      e.mode = 'flank'
+      /* 가로로 밀고 들어오면서 위로 빠진다. 판 길이에 맞춰 세로만 보정 */
+      e.vx = d * 172
+      e.vy = -124 * SPD_K
+      state.enemies.push(e)
+    }
+  })
 }
 
 /*
@@ -11876,17 +11913,19 @@ function update(dt) {
     } else if (e.mode === 'side') {
       e.x += e.vx * dt
       e.y += e.sp * .35 * dt
-    } else if (e.mode === 'rise') {
-      if (e.waitT > 0) e.waitT -= dt          /* 예고만 뜨고 아직 안 올라온다 */
-      else if (e.riseT > 0) { e.riseT -= dt; e.y -= e.riseSp * dt }
-      else e.y += e.sp * .8 * dt
+    } else if (e.mode === 'flank') {
+      /* 모서리에서 비스듬히. 가로로 들어오면서 위로 빠진다 */
+      e.x += e.vx * dt
+      e.y += e.vy * dt
     } else {
       e.y += e.sp * dt
       const wobble = e.sway ? Math.sin(e.t * 1.1) * e.sway : Math.sin(e.t * 1.6) * 34
       e.x += (e.drift ? e.drift * 46 : wobble) * dt
     }
     // 옆에서 들어오는 것만 화면 밖을 허용한다. 나머지는 가둔다
-    if (e.mode !== 'side') e.x = Math.max(18, Math.min(W - 18, e.x))
+    if (e.mode !== 'side' && e.mode !== 'flank') {
+      e.x = Math.max(18, Math.min(W - 18, e.x))
+    }
 
     /*
      * 레이저기. 자리를 잡으면 예고하고 쏜다.
@@ -11995,7 +12034,8 @@ function update(dt) {
     }
   }
   s.enemies = s.enemies.filter((e) =>
-    (e.mode === 'rise' && (e.riseT > 0 || e.waitT > 0)) ||
+    /* 측면 편대는 줄이 길어 화면 밖에서 시작한다. 위로 빠질 때까지 둔다 */
+    (e.mode === 'flank' && e.y > -80) ||
     (e.y < H + 60 && e.x > -90 && e.x < W + 90))
 
   const bs = s.boss
