@@ -273,15 +273,23 @@
     font-size: 12px; font-weight: 800; margin: 5px 0 1px;
     letter-spacing: -.01em;
   }
+  .card .cmp b { font-variant-numeric: tabular-nums; }
   .card .cmp.up { color: #7dffd4; }
   .card .cmp.dn { color: #7d8ea3; }
   .card .cmp.same { color: var(--gold, #ffd98a); }
   /* 미보유 토글은 등급 줄 끝에 붙는다 */
   .filters .lockfil { margin-left: auto; opacity: .8; }
   .filters .lockfil.on { opacity: 1; }
+  /*
+   * 등급은 왼쪽, 쓰는 자리는 오른쪽 (2026-09-12).
+   *
+   * 둘 다 오른쪽 위였다. 「메인 적용중」이 붙는 순간 등급 배지가 그
+   * 아래로 숨어서, 지금 태운 기체만 등급을 알 수 없었다 - 하필 제일
+   * 알고 싶은 한 장이다.
+   */
   .card .tag {
-    position: absolute; top: 9px; right: 10px; font-size: 9.5px; font-weight: 800;
-    padding: 2px 6px; border-radius: 5px;
+    position: absolute; top: 9px; left: 10px; font-size: 9.5px; font-weight: 800;
+    padding: 2px 6px; border-radius: 5px; z-index: 2;
   }
   .t-common { background: #232733; color: #9aa1ae; }
   .t-rare { background: #16324e; color: #7dd3fc; }
@@ -3836,6 +3844,23 @@ function planeDps(p) {
   if (!p) return 0
   return (p.power * upgPower(p.id)) / (p.rate * upgRate(p.id))
 }
+/*
+ * 전투력 - 등급과 강화를 한 숫자로 합친다.
+ *
+ * 카드에는 등급 배지와 강화 단계가 따로 있었다. 「일반 3강」과
+ * 「중급 0강」 중 어느 쪽이 센지는 사람이 곱해 봐야 알았고, 그래서
+ * 강화를 부어 놓고 새 등급이 나오면 갈아타도 되는지부터 의심하게 된다.
+ *
+ * 눈금은 **제일 약한 기체의 0강을 100** 으로 둔다. 지금 태운 것과 견주는
+ * 상대값(화력 ±%)은 이미 있으니, 이 숫자는 저장과 무관하게 늘 같은 자리를
+ * 가리켜야 어제 본 값과 오늘 본 값을 견줄 수 있다.
+ */
+let DPS_100 = 0
+function planeScore(p) {
+  if (!p) return 0
+  if (!DPS_100) DPS_100 = Math.min(...PLANES.map((q) => q.power / q.rate))
+  return Math.round(planeDps(p) / DPS_100 * 100)
+}
 function upgPower(id) { return 1 + upgOf(id) * 0.12 }
 function upgRate(id) { return 1 - upgOf(id) * 0.04 }
 function save() {
@@ -5446,16 +5471,16 @@ function renderPlanes() {
        * 등급도 강화도 화면에 있었지만 둘을 곱해 보는 것은 사람 몫이었다.
        * 고르는 이유는 「지금보다 센가」 하나뿐이니 그 답을 바로 적는다.
        */
-      (ok && nowDps
-        ? (p.id === here
-            ? `<div class="cmp same">지금 이것</div>`
-            : (() => {
-                const d = Math.round((planeDps(p) / nowDps - 1) * 100)
-                return d > 0 ? `<div class="cmp up">화력 +${d}%</div>`
-                     : d < 0 ? `<div class="cmp dn">화력 ${d}%</div>`
-                             : `<div class="cmp same">화력 같음</div>`
-              })())
-        : '') +
+      /* 전투력이 먼저다. 등급과 강화를 다 먹은 숫자라 이것 하나로 줄이 선다 */
+      (() => {
+        const sc = `<b>전투력 ${planeScore(p).toLocaleString('ko-KR')}</b>`
+        if (!ok || !nowDps) return `<div class="cmp dn">${sc}</div>`
+        if (p.id === here) return `<div class="cmp same">${sc} · 지금 이것</div>`
+        const d = Math.round((planeDps(p) / nowDps - 1) * 100)
+        return d > 0 ? `<div class="cmp up">${sc} · +${d}%</div>`
+             : d < 0 ? `<div class="cmp dn">${sc} · ${d}%</div>`
+                     : `<div class="cmp same">${sc} · 같음</div>`
+      })() +
       `<div class="nm">${p.name}</div>` +
       `<div class="wp"><i class="wi w-${p.weapon}"></i>${WEAPONS[p.weapon].name}</div>` +
       /* 무기 설명은 상세로 뺐다. 같은 무기끼리 같은 줄이 반복돼 자리만 먹었다 */
@@ -6707,6 +6732,8 @@ function openDetail(p, list) {
       (p.trait ? row('고유 성질', traitText(p) + ' ' +
                      dim(MOD_KEYS.filter((k) => p.trait[k])
                          .map((k) => MODS[k].desc).join(' · '))) : '') +
+      row('전투력', `${planeScore(p).toLocaleString('ko-KR')} ` +
+          dim('등급과 강화를 합친 값')) +
       row('등급 화력', `×${p.power.toFixed(2)}`) +
       row('등급 연사', `×${p.rate.toFixed(2)} ` + dim('작을수록 빠름')) +
       row('강화', `${lv}/${UPG_MAX}` +
