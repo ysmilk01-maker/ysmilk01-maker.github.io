@@ -1929,16 +1929,13 @@ const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는
  * 시각이 정해져 있으니 「첫 번째는 접근 구간, 두 번째는 보스」처럼
  * 계획을 세울 수 있다.
  *
- * 「홍련」의 충전 +25% 는 시각을 당기는 것으로 옮긴다(12초·32초).
- * 「뇌성」의 한 발 더는 70초에 한 발을 더 붙인다.
+ * 「뇌성」은 제 시각표를 쓴다 - 10초·30초·50초로 셋이다. 한 발이
+ * 더 있는 대신 첫 발이 일찍 오고 간격이 촘촘하다.
  */
 const ULT_AT = [15, 40]
+const ULT_AT_N = [10, 30, 50]
 function ultTimes() {
-  const k = perk('ult') || 1
-  const out = ULT_AT.map((t) => t / k)
-  const extra = Math.round(perk('ultN') || 0)
-  for (let i = 0; i < extra; i++) out.push((70 + i * 30) / k)
-  return out
+  return (perk('ultN') || 0) >= 1 ? ULT_AT_N.slice() : ULT_AT.slice()
 }
 function ultCap() { return ULT_MAX * ultTimes().length }
 /*
@@ -1975,7 +1972,14 @@ const SHARD_R = 104
 const SHIELD_MAX = 55
 const SHIELD_TIME = 6.5
 
+/*
+ * 궁극기 세기. 지속 시간과 피해가 다 이 값을 곱해 쓴다.
+ *
+ * 「홍련」의 위력 +10% 가 여기에 붙는다 - 한 곳에 곱하면 열한 개
+ * 궁극기에 똑같이 먹는다. 따로 손보면 하나는 반드시 빠뜨린다.
+ */
 const ULT_POWER = 0.8
+function ultPow() { return ULT_POWER * (perk('ultPow') || 1) }
 /*
  * 1.2 -> 2.0 (2026-09-11). 1챕터 초반 한 판에 한 번도 못 채우는 판이
  * 있었다. 잡졸 하나가 3.6 이라 100 을 채우려면 스물여덟 마리인데,
@@ -3056,7 +3060,7 @@ const PILOT_ART = {
  * 1, 더하는 축은 0 이다 - 기본값을 틀리면 특성 없는 파일럿이 손해를 본다.
  */
 const PERK0 = { pow: 1, rate: 1, rng: 1, hp: 0, ult: 1, heal: 0, inv: 0,
-                sup: 1, shard: 1, score: 1, ultN: 0 }
+                sup: 1, shard: 1, score: 1, ultN: 0, ultPow: 1 }
 const PILOTS = [
   { id: 'n1', grade: 'normal', face: 0, name: '초연',
     perk: {}, desc: '치우침이 없습니다' },
@@ -3074,7 +3078,7 @@ const PILOTS = [
     perk: { heal: 5, inv: 0.12 }, desc: '보급 회복 두 배 · 피격 무적 +0.12초' },
 
   { id: 'l1', grade: 'legend', face: 0, name: '홍련',
-    perk: { ult: 1.25 }, desc: '필살기 충전 +25%' },
+    perk: { ultPow: 1.10 }, desc: '필살기 위력 +10%' },
   { id: 'l2', grade: 'legend', face: 1, name: '은월',
     perk: { hp: 20, inv: 0.2 }, desc: '최대 체력 +20 · 피격 무적 +0.2초' },
 
@@ -3085,7 +3089,7 @@ const PILOTS = [
    * heal/inv/ult). 겹치면 「이름만 다른 같은 사람」이 되므로 **아직 아무도
    * 안 쓰는 축**으로 넷을 세운다.
    *
-   *   ultN  필살기가 한 발 더 쌓인다     - 쌓아 두고 몰아 쓰는 사람
+   *   ultN  필살기 충전 시각표가 셋이 된다 - 자주 쓰는 사람
    *   sup   보급품이 더 자주 떨어진다    - 개조로 굴리는 사람
    *   shard 조각을 더 얻는다            - 오래 모으는 사람
    *   score 점수가 더 붙는다            - 경험치와 부품이 같이 는다
@@ -3100,7 +3104,7 @@ const PILOTS = [
   { id: 'h3', grade: 'high', face: 2, name: '상월',
     perk: { score: 1.12 }, desc: '점수가 12% 더 붙습니다' },
   { id: 'l3', grade: 'legend', face: 2, name: '뇌성',
-    perk: { ultN: 1 }, desc: '필살기를 한 발 더 쌓아 둡니다' },
+    perk: { ultN: 1 }, desc: '필살기가 10·30·50초에 세 번 찹니다' },
 ]
 const PILOT_BY = Object.fromEntries(PILOTS.map((p) => [p.id, p]))
 
@@ -8641,7 +8645,20 @@ function buildWaves(ch, sub) {
   /* 챕터 배수도 열 개로. 뒤로 갈수록 짧아진다 - 세진 만큼 짧게 */
   const LEN_CH = [1, 1, 0.95, 0.9, 0.88, 0.86, 0.84, 0.82, 0.8, 0.78,
                   0.77, 0.76, 0.75, 0.74, 0.73]
-  const len = 42 * 1.375 * (bossStage ? 0.68 : 0.76) * (LEN_CH[ch.id - 1] || 0.78)
+  /*
+   * 제일 짧은 판이 50초가 되게 통째로 올린다 (2026-09-12).
+   *
+   * 전에는 1전선 44초에서 15전선 29초까지 내려갔다. 뒤로 갈수록 빽빽해지니
+   * 짧게 잡은 것인데, 30초는 한 판으로 안 읽힌다 - 붙고 나면 곧 끝난다.
+   *
+   * 배수로 올리면 앞 전선이 77초가 되어 늘어진다. **더하기로 올려**
+   * 제일 짧은 판을 50초에 맞추고 전선 사이의 차이는 그대로 둔다.
+   * 1전선 65초 - 15전선 50초가 된다.
+   */
+  const LEN_MIN = 50
+  const lenRaw = 42 * 1.375 * (bossStage ? 0.68 : 0.76) * (LEN_CH[ch.id - 1] || 0.78)
+  const lenFloor = 42 * 1.375 * 0.68 * LEN_CH[LEN_CH.length - 1]
+  const len = LEN_MIN + (lenRaw - lenFloor)
   /*
    * 기본 간격. 좁을수록 촘촘하다.
    *
@@ -10777,9 +10794,9 @@ function fireUlt() {
 
   const pl = s.player
   switch (k) {
-    case 'rapid':  s.ultT = 3.5 * ULT_POWER; break
-    case 'laser':  s.ultT = 3 * ULT_POWER; break
-    case 'spread': s.ultT = 2.5 * ULT_POWER; break
+    case 'rapid':  s.ultT = 3.5 * ultPow(); break
+    case 'laser':  s.ultT = 3 * ultPow(); break
+    case 'spread': s.ultT = 2.5 * ultPow(); break
     case 'orb':
       s.ultT = ORB_ULT.hold
       /* 모은 값. 끝날 때 이만큼이 펄스로 나간다 */
@@ -10800,7 +10817,7 @@ function fireUlt() {
       break
     }
     case 'pierce':
-      s.ultT = 1.2 * ULT_POWER
+      s.ultT = 1.2 * ultPow()
       pl.inv = Math.max(pl.inv, 1.4)
       break
     case 'wave': {
@@ -10842,7 +10859,7 @@ function fireUlt() {
       const save = CHAIN.range
       CHAIN.range = 9999
       chainFrom({ x: pl.x, y: pl.y - 20, dead: true },
-                { dmg: 115 * ULT_POWER, jumps: 16, falloff: 0.95 })
+                { dmg: 115 * ultPow(), jumps: 16, falloff: 0.95 })
       CHAIN.range = save
       break
     }
@@ -10867,13 +10884,13 @@ function fireUlt() {
       for (const e of s.enemies) {
         const a = Math.atan2(e.y - pl.y, e.x - pl.x)
         s.bullets.push({ x: pl.x, y: pl.y, vx: Math.cos(a) * 240, vy: Math.sin(a) * 240,
-                         r: 5, dmg: 76 * ULT_POWER, kind: 'homing', turn: PLAYER_HOMING_TURN * 2,
+                         r: 5, dmg: 76 * ultPow(), kind: 'homing', turn: PLAYER_HOMING_TURN * 2,
                          life: 3, age: 0, owner: MAIN_SLOT, pierce: 0, bounce: 0 })
       }
       if (s.boss) {
         for (let i = 0; i < 6; i++) {
           s.bullets.push({ x: pl.x, y: pl.y, vx: (i - 2.5) * 40, vy: -240,
-                           r: 5, dmg: 76 * ULT_POWER, kind: 'homing', turn: PLAYER_HOMING_TURN * 2,
+                           r: 5, dmg: 76 * ultPow(), kind: 'homing', turn: PLAYER_HOMING_TURN * 2,
                            life: 3, age: 0, owner: MAIN_SLOT, pierce: 0, bounce: 0 })
         }
       }
@@ -11195,14 +11212,14 @@ function updateUlt(dt) {
       for (const e of s.enemies) {
         if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r && !e.shocked) {
           /* 26 이었다. 적탄을 지우는 것이 본업이라 해도 스치기만 하면 안 된다 */
-          e.shocked = true; e.hp -= 78 * ULT_POWER; e.flash = .1
+          e.shocked = true; e.hp -= 78 * ultPow(); e.flash = .1
         }
       }
       if (sh.r > H) sh.done = true
     } else {
       sh.r += (sh.kind === 'shell' ? 420 : 330) * dt
       /* 기뢰(44)와 포격(90). 둘 다 한 방형이라 여기서 곱한다 */
-      const dmg = (sh.kind === 'shell' ? 90 : 44) * ULT_POWER
+      const dmg = (sh.kind === 'shell' ? 90 : 44) * ultPow()
       for (const e of s.enemies) {
         if (!e.hitBy || e.hitBy !== sh) {
           if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r) { e.hp -= dmg; e.flash = .1; e.hitBy = sh }
