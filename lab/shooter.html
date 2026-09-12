@@ -6424,7 +6424,8 @@ function openPilot(pl, list) {
     document.getElementById('dNext').onclick = () => go2(1)
   }
 
-  body.querySelectorAll('.stat .pips button[data-st]').forEach((b) => {
+  /* 시트를 한 줄짜리로 바꾸면서 .stat .pips 가 없어졌다. 열쇠로 직접 잡는다 */
+  body.querySelectorAll('button[data-st]').forEach((b) => {
     b.onclick = () => {
       const k = b.dataset.st
       if (!hasGrade(pl.grade) || !canStat(k, pl.id)) return
