@@ -3685,6 +3685,7 @@ function pull(kind) {
     const fresh = GRADE_NEED[tier] > 0 && !hasGrade(tier)
     if (jack && fresh) {
       prog.pilotOwned[tier] = true
+      prog.newPilot = tier
       save()
       return { kind, tier, n: 1, name: GRADES[tier].name + ' 파일럿', got: true, jack: true }
     }
@@ -3693,7 +3694,11 @@ function pull(kind) {
     if (jack) { n = JACK_SHARD; big = true }
     prog.shardG[tier] = shardG(tier) + n
     const got = fresh && prog.shardG[tier] >= GRADE_NEED[tier]
-    if (got) { prog.pilotOwned[tier] = true; prog.shardG[tier] -= GRADE_NEED[tier] }
+    if (got) {
+      prog.pilotOwned[tier] = true
+      prog.shardG[tier] -= GRADE_NEED[tier]
+      prog.newPilot = tier
+    }
     save()
     return { kind, tier, n, big, name: GRADES[tier].name + ' 파일럿 조각', got }
   }
@@ -4926,7 +4931,28 @@ const TOUR = [
   ['#tabs', '아래 메뉴', '전선·격납고·뽑기로 오갑니다. 할 일이 있으면 노란 점이 켜집니다.'],
 ]
 let tourAt = 0
+/*
+ * 손가락 안내는 처음 일곱 칸짜리 한 벌만 있었다. 한 칸짜리 안내를
+ * 더 붙이려니 배열과 열쇠가 붙박이라 손댈 데가 없었다 - 지금 도는
+ * 목록과 「한 번만」 열쇠를 밖으로 뺀다. 열쇠가 없으면 매번 뜬다.
+ */
+let tourSteps = TOUR
+let tourKey = 'tourDone2'
+function tourRun(steps, key) {
+  if (key && prog[key]) return
+  const tt = document.getElementById('title')
+  if (tt && !tt.hidden) return
+  const el = document.getElementById('tour')
+  if (!el || !steps || !steps.length) return
+  tourSteps = steps
+  tourKey = key || null
+  tourAt = 0
+  el.hidden = false
+  tourPaint()
+}
 function tourStart(force) {
+  tourSteps = TOUR
+  tourKey = 'tourDone2'
   if (!force && prog.tourDone2) return
   /*
    * 타이틀이 떠 있는 동안은 안 된다 (2026-09-12).
@@ -4948,10 +4974,10 @@ function tourStart(force) {
   tourPaint()
 }
 function tourPaint() {
-  const step = TOUR[tourAt]
+  const step = tourSteps[tourAt]
   if (!step) return tourEnd()
   const t = document.querySelector(step[0])
-  if (!t) { tourAt++; return tourPaint() }
+  if (!t) { tourAt++; return tourAt < tourSteps.length ? tourPaint() : tourEnd() }
   t.scrollIntoView({ block: 'center', behavior: 'auto' })
   const r = t.getBoundingClientRect()
   const pad = 6
@@ -4987,17 +5013,19 @@ function tourPaint() {
   const below = r.bottom + 190 < window.innerHeight
   box.style.top = below ? (r.bottom + 18) + 'px' : ''
   box.style.bottom = below ? '' : (window.innerHeight - r.top + 18) + 'px'
-  document.getElementById('tourStep').textContent = (tourAt + 1) + ' / ' + TOUR.length
+  document.getElementById('tourStep').textContent =
+    tourSteps.length > 1 ? (tourAt + 1) + ' / ' + tourSteps.length : ''
   document.getElementById('tourTitle').textContent = step[1]
   document.getElementById('tourText').textContent = step[2]
   document.getElementById('tourNext').textContent =
-    tourAt === TOUR.length - 1 ? '시작하기' : '다음'
+    tourAt === tourSteps.length - 1 ? (tourSteps === TOUR ? '시작하기' : '알겠습니다') : '다음'
 }
 function tourEnd() {
-  prog.tourDone2 = true
-  save()
+  if (tourKey) { prog[tourKey] = true; save() }
   const el = document.getElementById('tour')
   if (el) el.hidden = true
+  tourSteps = TOUR
+  tourKey = 'tourDone2'
 }
 
 /** 등급 이름. 팝업에서만 쓴다 */
@@ -5693,14 +5721,14 @@ document.getElementById('gPull').onclick = () => {
    * 소리는 연출 안에서 등급에 맞춰 낸다. 여기서 먼저 내면 상자가 열리기
    * 전에 결과를 알려 주는 꼴이 된다.
    */
-  gfxPlay([res], () => { renderGacha(res); renderWallet(); renderTabs() })
+  gfxPlay([res], () => { renderGacha(res); renderWallet(); renderTabs(); newPilotPopup() })
 }
 
 document.getElementById('gPull10').onclick = () => {
   const list = pull10(gKind)
   if (!list) return
   gaTab = 'pull'
-  gfxPlay(list, () => { renderGacha(list); renderWallet(); renderTabs() })
+  gfxPlay(list, () => { renderGacha(list); renderWallet(); renderTabs(); newPilotPopup() })
 }
 function paintShop() {
   const body = document.getElementById('gBody')
@@ -6210,6 +6238,88 @@ function openPilot(pl, list) {
   }
 }
 
+/*
+ * 새 파일럿 알림.
+ *
+ * 등급이 열려도 뽑기 결과 줄에 한 줄 뜨고 끝이었다. 파일럿 화면에
+ * 들어가야 새 얼굴이 생긴 것을 아는데, 거기까지 갈 이유를 안 줬다.
+ *
+ * 더 중요한 것은 **부어 둔 경험치를 옮길 수 있다**는 사실이다.
+ * 「스탯 되돌리기」는 파일럿 상세 시트 맨 아래에 있어서, 새 파일럿을
+ * 받은 사람이 「지금까지 부은 게 아깝다」로 끝나 버린다. 그래서 알림
+ * 뒤에 그 단추를 손가락으로 짚는다.
+ */
+function newPilotPopup() {
+  const tier = prog.newPilot
+  if (!tier || !GRADES[tier]) return
+  prog.newPilot = null
+  save()
+
+  const G = GRADES[tier]
+  const mine = PILOTS.filter((p) => p.grade === tier)
+  const cur = pilotNow()
+  const back = stSpent(cur.id)
+  const panel = document.getElementById('detail')
+  const body = document.getElementById('detailBody')
+  cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
+
+  body.innerHTML =
+    '<h3>새 파일럿</h3>' +
+    '<div class="sub2">' + G.name + ' 파일럿이 열렸습니다</div>' +
+    '<div class="lab">들어온 사람</div><div class="sum">' +
+    mine.map((p) => row(p.name, p.desc, true)).join('') +
+    '</div>' +
+    '<div class="note2">' +
+    (back
+      ? '지금 태운 ' + cur.name + '에게 부은 경험치 ' + back.toLocaleString('ko-KR') +
+        ' 을 부어 두셨습니다. 「스탯 되돌리기」로 한 번에 돌려받아 새 파일럿에 다시 부을 수 있습니다. 되돌리기는 몇 번이든 됩니다.'
+      : '스탯은 파일럿마다 따로 쌓입니다. 경험치 주머니는 하나라, 누구에게 붓는지가 선택입니다.') +
+    '</div>' +
+    '<div class="bar">' +
+    '<button id="npGo">파일럿 보러 가기</button>' +
+    '<button class="ghost" id="npLater">나중에</button>' +
+    '</div>'
+
+  const close = () => { panel.hidden = true; panel.onclick = null; modalOff() }
+  panel.hidden = false
+  modalOn(panel, close)
+  panel.onclick = (e) => { if (e.target === panel) close() }
+  document.getElementById('npLater').onclick = close
+  document.getElementById('npGo').onclick = () => {
+    close()
+    go('pilot')
+    renderPilot()
+    /*
+     * 상세 시트를 먼저 열고 그 위에 손가락을 얹는다. #tour 가 판보다
+     * 위에 있어서 겹쳐도 읽힌다. 한 틱 미루지 않으면 아직 안 그려진
+     * 자리를 재게 된다.
+     */
+    if (back) {
+      openPilot(cur, PILOTS.filter((p) => hasGrade(p.grade)))
+      setTimeout(() => tourRun([
+        ['#pReset', '부은 경험치 되돌리기',
+         cur.name + '에게 부은 경험치 ' + back.toLocaleString('ko-KR') +
+         ' 을 그대로 돌려받습니다. 그 경험치로 새 파일럿을 키우면 됩니다.'],
+      ], null), 50)
+    } else {
+      setTimeout(() => tourRun([
+        ['#pilotNowCard', '파일럿 바꾸기',
+         '카드를 누르면 스탯을 찍고 태울 사람을 고릅니다. 부은 경험치는 「스탯 되돌리기」로 언제든 돌려받습니다.'],
+      ], null), 50)
+    }
+  }
+}
+
+/** 아직 안 연 등급 중 제일 가까운 것 한 줄. 초반 화면에만 쓴다 */
+function nextGradeLine() {
+  const left = GRADE_KEYS.filter((k) => GRADE_NEED[k] > 0 && !hasGrade(k))
+  if (!left.length) return '파일럿은 다 모으셨습니다.'
+  left.sort((a, b) => (shardG(b) / GRADE_NEED[b]) - (shardG(a) / GRADE_NEED[a]))
+  const k = left[0]
+  return '다음 파일럿 · ' + GRADES[k].name + ' 조각 ' +
+    shardG(k) + '/' + GRADE_NEED[k] + ' — 뽑기에서 모읍니다.'
+}
+
 function renderPilot() {
   const pt = prog.pilot
   const have = pilotXp()
@@ -6226,7 +6336,15 @@ function renderPilot() {
    * 등급을 열면 그 등급의 둘 다 열린다. 조각을 두 배로 모으게 하면
    * 「고를 수 있다」가 「더 모아라」가 된다.
    */
-  const list = PILOTS.slice()
+  /*
+   * 초반에는 가진 것만 보여 준다.
+   *
+   * 여덟 장 중 여섯이 잠겨 있으면 고를 것이 여덟처럼 보이는데 실제로
+   * 누를 수 있는 것은 둘이다. 등급을 하나라도 더 열면 그때 전부 편다 -
+   * 그때부터는 잠긴 칸이 목표로 읽힌다.
+   */
+  const early = GRADE_KEYS.filter((k) => hasGrade(k)).length <= 1
+  const list = early ? PILOTS.filter((pl) => hasGrade(pl.grade)) : PILOTS.slice()
   const cards = list.map((pl) => {
     const G = GRADES[pl.grade]
     const owned = hasGrade(pl.grade)
@@ -6317,6 +6435,7 @@ function renderPilot() {
 
     '<div class="lab">파일럿</div>' +
     '<div class="pcards">' + cards + '</div>' +
+    (early ? '<div class="empty" style="padding:10px 2px">' + nextGradeLine() + '</div>' : '') +
     '<div class="bar"><button class="ghost small" id="pilotGacha">' +
     '뽑기 · 가챠권 ' + prog.ticket + '장</button></div>' +
 
