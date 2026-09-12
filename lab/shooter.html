@@ -985,6 +985,16 @@
   .rlv .rk { width: 34px; height: 34px; }
   .rlv .t1 { font-size: 15px; font-weight: 900; color: var(--gold, #ffd98a); }
   .rlv .t2 { font-size: 11px; color: var(--dim); }
+  /* 전선 화면의 한 줄. 누르면 목록이 열린다 */
+  .rushopen {
+    display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 14px;
+    padding: 13px 14px; border-radius: 11px; text-align: left;
+    background: linear-gradient(90deg, rgba(255,107,107,.16), rgba(255,107,107,.05));
+    border: 1px solid rgba(255,107,107,.42);
+  }
+  .rushopen .rn { font-size: 14px; font-weight: 800; color: #ff9b9b; }
+  .rushopen .rs { font-size: 11.5px; color: var(--dim); }
+  .rushopen .go { margin-left: auto; color: #ff9b9b; font-weight: 800; }
   /* 보스 도전 목록 */
   .rushlist { display: grid; gap: 8px; margin-top: 8px; }
   .rushrow {
@@ -1412,6 +1422,17 @@
   .pnow .nm { font-size: 16px; font-weight: 900; display: flex; align-items: center; gap: 7px; }
   .pnow .gr { padding: 2px 7px; font-size: 10px; font-weight: 800; border-radius: 6px; }
   .pnow .de { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+  .rank1 {
+    margin-top: 8px; padding: 10px 12px; border-radius: 10px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--line);
+  }
+  .rank1 .t { display: flex; align-items: baseline; font-size: 13px; }
+  .rank1 .t b { font-weight: 800; }
+  .rank1 .t span { margin-left: auto; font-size: 11px; color: var(--dim);
+                   font-variant-numeric: tabular-nums; }
+  .rank1 .xpbar { margin-top: 7px; }
+  .rank1 .x { margin-top: 7px; font-size: 11.5px; color: var(--dim); }
+  .rank1 .x b { color: var(--gold, #ffd98a); font-variant-numeric: tabular-nums; }
   .pnow .cells {
     display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 9px;
   }
@@ -5442,11 +5463,42 @@ function renderSet() {
   const row = (key, nm, de) =>
     `<div class="setrow"><div><div class="nm">${nm}</div><div class="de">${de}</div></div>` +
     `<div class="sw${AU.on[key] ? ' on' : ''}" data-set="${key}"></div></div>`
+  /*
+   * 호출부호 · 마크가 파일럿 화면에서 넘어왔다 (2026-09-12).
+   *
+   * 한 번 정하고 마는 것들이라 매번 지나가는 자리에 있을 이유가 없었다.
+   * 그것들이 밑에 깔려 있어서 정작 파일럿 카드가 화면 밖에서 시작했다.
+   */
   document.getElementById('setBody').innerHTML =
     row('music', '배경음악', '켜면 곡 파일 1.1MB 를 한 번 받습니다') +
     row('sfx', '효과음', '발사·격추·피격 소리') +
     row('vib', '진동', '맞았을 때만 울립니다') +
-    `<div class="empty">기록을 지우려면 파일럿 화면의 개발용 단추를 쓰세요.</div>`
+    '<div class="lab">호출부호</div>' +
+    '<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="' +
+      (prog.pilot.name || '').replace(/"/g, '&quot;') + '">' +
+    '<div class="lab">마크</div>' +
+    '<div class="marks" id="marks">' +
+    MARK_COLOR.map((_, i) =>
+      '<div class="mark' + (i === prog.pilot.mark ? ' on' : '') + '" data-mark="' + i + '">' +
+      '<canvas width="80" height="80" style="width:100%;height:38px"></canvas></div>').join('') +
+    '</div>' +
+    '<div class="lab">그 밖에</div>' +
+    '<div class="bar"><button class="ghost small" id="devUnlock">개발용 전체 해금</button></div>'
+
+  document.querySelectorAll('#marks .mark').forEach((el) => {
+    const i = +el.dataset.mark
+    drawMark(el.querySelector('canvas'), i)
+    el.onclick = () => { prog.pilot.mark = i; save(); renderSet() }
+  })
+  const nm = document.getElementById('pilotNm')
+  if (nm) nm.oninput = () => { prog.pilot.name = nm.value.trim().slice(0, 12); save() }
+  const du = document.getElementById('devUnlock')
+  if (du) du.onclick = () => {
+    prog.owned = PLANES.map((p) => p.id).concat(LEGEND_PILOT.id)
+    prog.pilot.lv = PILOT_MAX
+    prog.pilot.xp = 0
+    save(); renderSet(); render()
+  }
   document.querySelectorAll('[data-set]').forEach((el) => {
     el.onclick = () => {
       const k = el.dataset.set
@@ -6148,7 +6200,7 @@ function renderStage() {
   el.innerHTML =
     bar +
     `<div class="chpage">` +
-    `<div class="card stg"><canvas class="pv" width="520" height="184"></canvas>` +
+    `<div class="card stg"><canvas class="pv" width="520" height="140"></canvas>` +
     `<div class="nm">${ch.id}. ${ch.name}</div><div class="de">${ch.sub}</div>` +
     `<div class="up"><span class="lvl">적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}` +
     ` · 별 ${chapterStars(mapCh)}/${SUBS * 3}</span></div></div>` +
@@ -6157,17 +6209,18 @@ function renderStage() {
      * 보스 도전 (2026-09-12). 파일럿 Lv.10 에 열린다.
      * 앞의 것을 깨야 다음이 열리므로 목록이 한 줄로 이어진다.
      */
+    /*
+     * 보스 도전을 한 줄로 접는다 (2026-09-12).
+     *
+     * 다섯 줄이 382px 라 난이도 고르는 칸까지 밀려 화면 밖으로 나갔다.
+     * 전선 화면에서 제일 자주 하는 일은 판을 고르는 것이지 보스 도전에
+     * 들어가는 것이 아니다 - 한 줄로 두고 누르면 편다.
+     */
     (rushModeOpen()
-      ? `<div class="lab" style="margin-top:18px">보스 도전</div>` +
-        `<div class="rushlist">` + BOSS_RUSH.map((d, i) => {
-          const open = bossRushOpen(i), done = bossRushDone(i)
-          return `<button class="rushrow${open ? '' : ' lock'}${done ? ' done' : ''}"` +
-            ` data-rush="${i}"${open ? '' : ' disabled'}>` +
-            `<span class="rn">${d.name}</span>` +
-            `<span class="rs">${open ? d.sub : (i ? eul(BOSS_RUSH[i - 1].name) + ' 먼저 깨야 합니다' : '')}</span>` +
-            `<span class="rr">${done ? '격파함' : '경험치 ' + d.xp.toLocaleString('ko-KR') + ' · 가챠권 ' + (done ? RUSH_TICKET_AGAIN : RUSH_TICKET_FIRST)}</span>` +
-            `</button>`
-        }).join('') + `</div>`
+      ? `<button class="rushopen" id="rushOpen">` +
+        `<span class="rn">보스 도전</span>` +
+        `<span class="rs">${BOSS_RUSH.filter((d, i) => bossRushDone(i)).length}` +
+        ` / ${BOSS_RUSH.length} 격파</span><span class="go">▸</span></button>`
       : `<div class="lab" style="margin-top:18px">보스 도전</div>` +
         `<div class="empty">파일럿 Lv.${RUSH_LV} 에 열립니다.</div>`) +
     hardBox()
@@ -6181,9 +6234,8 @@ function renderStage() {
   bindModes(el, renderStage)
   const zg = document.getElementById('zoneGo')
   if (zg) zg.onclick = (e) => { e.stopPropagation(); doLaunch(true) }
-  el.querySelectorAll('[data-rush]').forEach((b) => {
-    b.onclick = (e) => { e.stopPropagation(); startBossRush(+b.dataset.rush) }
-  })
+  const ro = document.getElementById('rushOpen')
+  if (ro) ro.onclick = (e) => { e.stopPropagation(); openRushSheet() }
 
   el.querySelectorAll('[data-chn]').forEach((b) => {
     b.onclick = () => chapterStep(+b.dataset.chn)
@@ -6761,18 +6813,20 @@ function renderPilot() {
   const pTop = pBody.scrollTop
   pBody.innerHTML =
     '<div class="lab">지금 태운 파일럿</div>' + nowBox +
-    '<div class="lab">계급</div>' +
-    '<div class="sum">' +
-      row('현재', pilotRank() + ' · Lv.' + pt.lv + (maxed ? ' (만렙)' : ''), maxed) +
-      (maxed ? '' :
-        '<div class="row" style="display:block">' +
-        '<div style="display:flex;font-size:12px"><span class="k">다음 레벨까지</span>' +
-        '<span class="v">' + got.toLocaleString('ko-KR') + ' / ' +
-          need.toLocaleString('ko-KR') + '</span></div>' +
-        '<div class="xpbar" style="margin-top:8px"><i style="width:' +
-          Math.min(100, (got / need) * 100).toFixed(1) + '%"></i></div>' +
-        '</div>') +
-      row('보유 경험치', have.toLocaleString('ko-KR'), have > 0) +
+    /*
+     * 계급을 세 줄에서 한 칸으로 (2026-09-12).
+     *
+     * 현재·다음 레벨까지·보유 경험치가 각각 한 줄이라 146px 을 먹었다.
+     * 셋 다 숫자 하나씩이라 한 줄에 들어간다.
+     */
+    '<div class="rank1">' +
+      '<div class="t"><b>' + pilotRank() + ' · Lv.' + pt.lv + '</b>' +
+      (maxed ? '<span>만렙</span>'
+             : '<span>다음까지 ' + got.toLocaleString('ko-KR') + ' / ' +
+               need.toLocaleString('ko-KR') + '</span>') + '</div>' +
+      (maxed ? '' : '<div class="xpbar"><i style="width:' +
+        Math.min(100, (got / need) * 100).toFixed(1) + '%"></i></div>') +
+      '<div class="x">쓸 수 있는 경험치 <b>' + have.toLocaleString('ko-KR') + '</b></div>' +
     '</div>' +
 
     '<div class="lab">파일럿</div>' +
@@ -6781,37 +6835,16 @@ function renderPilot() {
     '<div class="bar"><button class="ghost small" id="pilotGacha">' +
     '뽑기 · 가챠권 ' + prog.ticket + '장</button></div>' +
 
-    '<div class="lab">호출부호</div>' +
-    '<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="' +
-      pt.name.replace(/"/g, '&quot;') + '">' +
-    '<div class="lab">마크</div>' +
-    '<div class="marks" id="marks">' +
-    MARK_COLOR.map((_, i) =>
-      '<div class="mark' + (i === pt.mark ? ' on' : '') + '" data-mark="' + i + '">' +
-      '<canvas width="80" height="80" style="width:100%;height:38px"></canvas></div>').join('') +
-    '</div>' +
-
-    '<div class="lab">편대</div><div class="sum">' + legendBox + '</div>' +
-
-    '<div class="lab">소리</div>' +
-    '<div class="bar">' +
-    '<button class="ghost small" id="btnMusic">음악</button>' +
-    '<button class="ghost small" id="btnSfx">효과음</button>' +
-    '</div>' +
-
-    '<div class="lab">그 밖에</div>' +
-    '<div class="bar">' +
-    '<button class="ghost small" id="devUnlock">개발용 전체 해금</button>' +
-    '</div>'
+    /*
+     * 호출부호 · 마크 · 소리 · 개발용은 설정으로 옮겼다 (2026-09-12).
+     *
+     * 이 화면에서 하는 일은 파일럿을 고르고 키우는 것인데, 그 아래로
+     * 네 덩어리가 더 붙어 있어서 정작 파일럿 카드가 화면 밖에서
+     * 시작했다. 한 번 정하고 마는 것들은 설정에 둔다.
+     */
+    '<div class="lab">편대</div><div class="sum">' + legendBox + '</div>'
 
   if (pTop) pBody.scrollTop = pTop
-  document.querySelectorAll('#marks .mark').forEach((el) => {
-    const i = +el.dataset.mark
-    drawMark(el.querySelector('canvas'), i)
-    el.onclick = () => { prog.pilot.mark = i; save(); renderPilot() }
-  })
-  const nm = document.getElementById('pilotNm')
-  nm.oninput = () => { prog.pilot.name = nm.value.trim().slice(0, 12); save() }
 
   /* 카드를 누르면 상세가 열린다. 쓸지 말지는 거기서 정한다 - 기체와 같다 */
   document.querySelectorAll('.pcard[data-who]').forEach((el) => {
@@ -6829,15 +6862,6 @@ function renderPilot() {
           String.fromCharCode(10, 10) +
           '결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.')
   }
-  document.getElementById('devUnlock').onclick = () => {
-    prog.owned = PLANES.map((p) => p.id).concat(LEGEND_PILOT.id)
-    prog.pilot.lv = PILOT_MAX
-    prog.pilot.xp = 0
-    save(); renderPilot()
-  }
-  document.getElementById('btnMusic').onclick = () => setMusic(!AU.on.music)
-  document.getElementById('btnSfx').onclick = () => setSfx(!AU.on.sfx)
-  auPaint()
 }
 
 /**
@@ -9132,6 +9156,40 @@ const RUSH_TICKET_AGAIN = 1
 /** 보스 도전 자체가 열렸나. 파일럿 Lv.10 */
 const RUSH_LV = 10
 function rushModeOpen() { return prog.pilot.lv >= RUSH_LV }
+
+/* 보스 도전 목록. 전선 화면을 밀어내지 않게 따로 연다 */
+function openRushSheet() {
+  const panel = document.getElementById('detail')
+  const body = document.getElementById('detailBody')
+  if (!panel || !body) return
+  cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
+  body.className = 'dsheet'
+  body.innerHTML =
+    '<h3>보스 도전</h3>' +
+    '<div class="sub2">' + BOSS_RUSH.filter((d, i) => bossRushDone(i)).length +
+      ' / ' + BOSS_RUSH.length + ' 격파 · 앞의 것을 깨야 다음이 열립니다</div>' +
+    '<div class="rushlist">' + BOSS_RUSH.map((d, i) => {
+      const open = bossRushOpen(i), done = bossRushDone(i)
+      return '<button class="rushrow' + (open ? '' : ' lock') + (done ? ' done' : '') + '"' +
+        ' data-rush="' + i + '"' + (open ? '' : ' disabled') + '>' +
+        '<span class="rn">' + d.name + '</span>' +
+        '<span class="rs">' + (open ? d.sub
+          : (i ? eul(BOSS_RUSH[i - 1].name) + ' 먼저 깨야 합니다' : '')) + '</span>' +
+        '<span class="rr">' + (done ? '격파함'
+          : '경험치 ' + d.xp.toLocaleString('ko-KR') + ' · 가챠권 ' +
+            (done ? RUSH_TICKET_AGAIN : RUSH_TICKET_FIRST) + '장') + '</span>' +
+        '</button>'
+    }).join('') + '</div>' +
+    '<div class="bar"><button class="ghost" id="dClose">닫기</button></div>'
+  const close = () => { panel.hidden = true; panel.onclick = null; modalOff() }
+  panel.hidden = false
+  modalOn(panel, close)
+  panel.onclick = (e) => { if (e.target === panel) close() }
+  document.getElementById('dClose').onclick = close
+  body.querySelectorAll('[data-rush]').forEach((b) => {
+    b.onclick = (e) => { e.stopPropagation(); close(); startBossRush(+b.dataset.rush) }
+  })
+}
 /*
  * 그 도전이 열렸나.
  *
