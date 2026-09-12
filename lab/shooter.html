@@ -1,3 +1,4 @@
+<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>오늘도 출격</title>
@@ -371,7 +372,14 @@
     align-items: center; justify-content: center; pointer-events: none;
   }
   #pauseUI[hidden] { display: none !important; }
-  .rlv.slotnew { color: var(--gold); font-weight: 700; }
+  /*
+   * 아이콘이 없는 줄은 칸을 나누지 않는다 (2026-09-12).
+   *
+   * .rlv 가 `34px 1fr` 그리드인데 이 줄은 제목이 맨 텍스트라 34px 짜리
+   * 아이콘 칸으로 들어갔다. 「＋ 좌 윙맨 자리가 열렸습니다」가 네 줄로
+   * 깨졌다 - 하필 첫 클리어와 첫 레벨업이 겹치는 화면이다.
+   */
+  .rlv.slotnew { color: var(--gold); font-weight: 700; grid-template-columns: 1fr; }
   /* 스탯 안내 줄. 왼쪽에 숫자가 들어가 34px 로는 넘친다 */
   .rlv.stat { grid-template-columns: 58px 1fr; }
   .rlv.stat .nu {
@@ -2040,8 +2048,24 @@ function applyEl(e, b) {
     if (!e[f] || e[f].dps < dps) e[f] = { t: E.t, dps: dps }
     else e[f].t = E.t
   } else if (k === 'ice') {
-    if (!(e.slowT > 0)) { e.sp0 = e.sp; e.sp = e.sp * E.mul }
-    e.slowT = E.t
+    /*
+     * 보스에는 sp 가 없다 (2026-09-12).
+     *
+     * 적기는 sp 를 바꿔치기해 둔화를 걸지만 보스는 이동 방식이 달라
+     * 그 칸이 아예 없다. 그대로 걸면 `undefined * 0.45` 로 **보스 속도가
+     * NaN** 이 되고, slowT 를 깎는 코드도 적기 루프에만 있어서 결빙
+     * 표시가 판 끝까지 안 지워졌다. 전설 두 대(산탄·파동)를 쥐면 모든
+     * 보스전에서 재현된다.
+     *
+     * 보스에는 속도 대신 **사격을 늦춘다**. 없는 값을 건드리지 않고
+     * 냉기가 보스에도 뜻을 갖는다.
+     */
+    if (typeof e.sp === 'number') {
+      if (!(e.slowT > 0)) { e.sp0 = e.sp; e.sp = e.sp * E.mul }
+      e.slowT = E.t
+    } else {
+      e.chill = E.t
+    }
   } else if (k === 'elec') {
     if (Math.random() < E.jump) chainFrom(e, { x: e.x, y: e.y, dmg: b.dmg * 0.5, jumps: 1 })
   }
@@ -2139,30 +2163,36 @@ const PLANES = []
    * 이름이 없다 - 지어낸 말이 아니라 실제로 있던 것이라 무게가 다르다.
    */
   /*
-   * 기체 이름 (2026-09-12 다시 지음).
+   * 기체 이름 (2026-09-12 두 번째로 다시 지음).
    *
-   * 전에는 「산개·비산·쇄도」처럼 **하는 짓**을 그대로 적었다. 그건 기술
-   * 이름이지 기체 이름이 아니다 - 실제 전투기는 飛燕·疾風·紫電처럼
-   * 짧은 명사 하나를 단다.
+   * 처음에는 「산개·비산·쇄도」처럼 하는 짓을 그대로 적었다. 그건 기술
+   * 이름이지 기체 이름이 아니다. 그래서 짧은 명사 하나로 바꿨는데,
+   * 그때 실존 전투기 이름을 가져다 쓰면서 **일본 제국군 기체명을 한자
+   * 독음으로 열일곱 개나 넣었다.** 그중 하나는 자폭기 이름이었다.
+   * 한국에 내놓는 게임에 실을 이름이 아니다. 전부 걷어낸다.
    *
-   * 굵은 것은 실존기다. 비연(Ki-61) · 질풍(Ki-84) · 자전(N1K) ·
-   * 열풍(A7M) · 진전(J7W) · 극광(P1Y2) · 천뢰(J5N) · 추수(J8M) ·
-   * 혜성(D4Y) · 유성(B7A) · 채운(C6N) · 은하(P1Y) · 심산(G5N) ·
-   * 연산(G8N) · 월광(J1N) · 앵화(MXY-7).
+   * 다시 고를 때의 기준:
+   *
+   *   매      새매 - 참매 - 보라매 - 송골매. 우리 매사냥 등급 그대로라
+   *           세기 순서가 저절로 선다
+   *   조선 화기  편전 · 작살 · 주화 · 총통 · 천자포. 원래 있던 신기전 ·
+   *           파성포와 한 줄에 선다
+   *   순우리말  불똥 · 불덩이 · 별똥 · 미리내 · 용오름. 한자 독음이
+   *           아니라서 남의 나라 기체명과 겹칠 여지가 아예 없다
    *
    * 무기 성질로 한 줄씩 세우되, 등급이 오를수록 무거운 글자를 쓴다.
    */
   const NAMES = {
-    rapid:  ['비연', '질풍', '자전', '열풍'],
-    spread: ['진풍', '창공', '광풍', '폭풍'],
-    laser:  ['전광', '섬전', '극광', '진전'],
-    homing: ['창응', '해동청', '천뢰', '사신'],
-    pierce: ['예봉', '추수', '파공', '파천'],
-    wave:   ['파문', '해일', '동해', '심연'],
-    orb:    ['유성', '혜성', '채운', '은하'],
-    mine:   ['화전', '앵화', '신기전', '벽력'],
-    beam:   ['철퇴', '심산', '연산', '파성포'],
-    boomer: ['반월', '곡도', '월광', '환월'],
+    rapid:  ['새매', '참매', '보라매', '송골매'],
+    spread: ['삭풍', '창공', '광풍', '폭풍'],
+    laser:  ['전광', '섬전', '낙뢰', '천둥'],
+    homing: ['창응', '해동청', '편전', '사신'],
+    pierce: ['예봉', '작살', '파공', '파천'],
+    wave:   ['파문', '해일', '용오름', '심연'],
+    orb:    ['불똥', '불덩이', '별똥', '미리내'],
+    mine:   ['화전', '주화', '신기전', '벽력'],
+    beam:   ['철퇴', '총통', '천자포', '파성포'],
+    boomer: ['반월', '곡도', '언월도', '환월'],
   }
   /*
    * 전설의 속성과 성질.
@@ -2192,9 +2222,9 @@ const PLANES = []
    * 제일 나쁘다 - 산 사람이 속았다고 느낀다.
    */
   const LEGEND_TRAIT = {
-    rapid:  { extra: 1, speed: 1 },   // 태풍   더 많이, 더 빠르게
-    spread: { extra: 1, bounce: 1 },  // 노도   넓게 퍼지고 벽에 튄다
-    laser:  { pierce: 2 },            // 극광   꿰뚫는다
+    rapid:  { extra: 1, speed: 1 },   // 송골매 더 많이, 더 빠르게
+    spread: { extra: 1, bounce: 1 },  // 폭풍   넓게 퍼지고 벽에 튄다
+    laser:  { pierce: 2 },            // 천둥   꿰뚫는다
     homing: { split: 1, big: 1 },     // 사신   굵고, 맞으면 갈라진다
     pierce: { big: 2, pierce: 1 },    // 파천   굵고 깊다
     wave:   { big: 2, pierce: 2 },    // 심연   두꺼운 물결이 뚫고 간다
@@ -2209,9 +2239,9 @@ const PLANES = []
     /*
      * 일반기는 **셋만** 거저 열린다 (2026-09-11).
      *
-     *   질풍   처음부터
-     *   산개   파일럿 Lv.3
-     *   섬광   파일럿 Lv.5
+     *   새매   처음부터
+     *   삭풍   파일럿 Lv.3
+     *   전광   파일럿 Lv.5
      *   나머지 일곱  뽑기로만. 조각을 모아야 열린다
      *
      * 누적 점수로 열던 때는 한 판이 5,000~5,800점이라 몇 판 만에 여덟
@@ -2221,10 +2251,10 @@ const PLANES = []
     /*
      * 거저 주는 것은 **넷뿐**이고, 셋은 자리가 열리는 때에 맞춘다 (2026-09-12).
      *
-     *   질풍   처음부터
-     *   산개   Lv.2  — 좌 윙맨이 열리는 때
-     *   섬광   Lv.5  — 우 윙맨이 열리는 때
-     *   폭우   Lv.10 — 중급 연발. 거저 주는 마지막이다 (아래 rare)
+     *   새매   처음부터
+     *   삭풍   Lv.2  — 좌 윙맨이 열리는 때
+     *   전광   Lv.5  — 우 윙맨이 열리는 때
+     *   참매   Lv.10 — 중급 연발. 거저 주는 마지막이다 (아래 rare)
      *
      * 자리가 열리는데 넣을 기체가 없으면 빈 칸만 생긴다. 자리와 기체를
      * 같은 레벨에 묶어 두면 「열렸다 → 넣는다」가 한 번에 끝난다.
@@ -2409,7 +2439,17 @@ function missions() {
   save()
   return prog.miss
 }
-function missDef(id) { return MISSIONS.find((m) => m.id === id) }
+/*
+ * 표에 없는 id 가 와도 죽지 않는다 (2026-09-12).
+ *
+ * 저장에는 그날 뽑힌 임무 id 가 남는다. 임무 표를 고쳐서 배포하면
+ * 그 id 가 사라지고, `missDef(id).give` 가 undefined 를 읽다 부팅 중에
+ * 스크립트가 통째로 죽는다. **설정의 초기화 단추에도 못 가서 복구가
+ * 안 된다** - 그날 접속자 전원이 자정까지 앱을 못 연다.
+ * 못 찾으면 첫 임무로 떨어뜨린다. 틀린 임무가 하나 보이는 편이
+ * 앱이 안 열리는 것보다 낫다.
+ */
+function missDef(id) { return MISSIONS.find((m) => m.id === id) || MISSIONS[0] }
 function missDone(q) { return q.p >= q.n }
 
 /** 판이 끝나면 진행도를 올린다 */
@@ -4850,7 +4890,7 @@ const HANGAR_ART = {"planes":{"rapid-high":"data:image/webp;base64,UklGRraGAABXR
 /*
  * 격납고 큰 그림 전용 기체 3종 (코덱스 디자인 이미지 v01, 2026-09-10).
  *
- * 일반 3기(질풍·산개·섬광)만 있다. 전투용 SHIP_IMG·shipArt 와 별개이고,
+ * 일반 3기(새매·삭풍·전광)만 있다. 전투용 SHIP_IMG·shipArt 와 별개이고,
  * 없는 기체는 hangarPlaneImage 로 돌아간다. 희귀·전설에 이 그림을
  * 씌우지 않는다.
  */
@@ -8546,9 +8586,18 @@ function buildWaves(ch, sub) {
    * 상한(16)에 닿아 그 뒤가 전부 같은 판이 된다.
    */
   /* 15전선으로 늘리며 뒤를 더 눕혔다. 상한(16)에 닿으면 그 뒤가 다 같은 판이다 */
-  const DENS_OFF = [0, 5, 8, 10.5, 12, 13, 13.8, 14.4, 14.9, 15.3,
+  /*
+   * 첫 칸이 0 이었다 (2026-09-12).
+   *
+   * 아래에서 `|| 15.3` 으로 받는데 0 은 falsy 라 **1전선이 10전선 값으로
+   * 돌았다.** 1-1 밀도 16.2, 2-1 밀도 5.58 - 처음 켠 사람이 게임에서
+   * 제일 빽빽한 판을 만나고, 1전선을 넘기면 적이 4분의 1로 줄었다.
+   * `??` 로 받고 첫 칸에 실제 값을 넣는다.
+   */
+  const DENS_OFF = [2.5, 5, 8, 10.5, 12, 13, 13.8, 14.4, 14.9, 15.3,
                     15.5, 15.65, 15.75, 15.85, 15.9]
-  const dens = sub * (ch.id > 1 ? 0.583 : 0.917) + (DENS_OFF[ch.id - 1] || 15.3)
+  /* 1전선만 가파르게 올리던 것도 없앤다 - 시작값이 생겼으니 필요 없다 */
+  const dens = sub * 0.583 + (DENS_OFF[ch.id - 1] ?? 15.3)
   /*
    * 천장을 0.9 에서 0.72 로 낮췄다.
    *
@@ -9978,7 +10027,14 @@ function bossHit(bs, x, y, dmg) {
 /** 범위 공격. 자리를 못 고르는 대신 살아 있는 부위를 한꺼번에 친다 */
 /* 보스에 걸린 지속 피해를 한 프레임 굴린다 */
 function bossDot(bs, dt) {
-  if (!bs || bs.entering || (!bs.burn && !bs.psn)) return
+  if (!bs) return
+  /* 냉기. 보스는 속도 대신 사격이 늦어진다 */
+  if (bs.chill > 0) {
+    bs.chill -= dt
+    bs.cd += dt * (1 - ELS.ice.mul)
+    if (bs.lanceCd != null) bs.lanceCd += dt * (1 - ELS.ice.mul)
+  }
+  if (bs.entering || (!bs.burn && !bs.psn)) return
   const d = tickDot(bs, dt)
   if (d > 0) bossArea(bs, d)
 }
@@ -10463,6 +10519,7 @@ function reviveByAd() {
     pl.x = W / 2
     pl.y = H - 120
     state.ebullets.length = 0        // 부활하자마자 맞으면 억울하다
+    state.ended = false              // 판이 다시 도니 정산 빗장을 연다
     state.running = true
     scOver.hidden = true
     last = performance.now()
@@ -13041,7 +13098,7 @@ function drawStatus(o, r) {
   const on = []
   if (o.burn) on.push('fire')
   if (o.psn) on.push('psn')
-  if (o.slowT > 0) on.push('ice')
+  if (o.slowT > 0 || o.chill > 0) on.push('ice')
   if (!on.length) return
   const AURA = { fire: 'elFire', ice: 'elIce', psn: 'elPsn', elec: 'elElec', lite: 'elLite' }
   g.save()
@@ -15994,6 +16051,15 @@ function start() {
   music('battle')
 }
 function end(win) {
+  /*
+   * 두 번 들어오면 보상이 두 번 나간다 (2026-09-12).
+   *
+   * 죽어서 한 번 정산하고, 광고로 부활해 클리어하면 또 정산했다.
+   * 점수가 누적이라 두 번째가 더 크다 - 「일부러 죽기」가 최적 플레이가
+   * 된다. 부활할 때 이 빗장을 도로 연다.
+   */
+  if (state.ended) return
+  state.ended = true
   state.running = false
   /*
    * 「서리」는 점수가 더 붙는다.
