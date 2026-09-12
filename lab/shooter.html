@@ -3176,8 +3176,15 @@ const PILOT_ART = {
 const PERK0 = { pow: 1, rate: 1, rng: 1, hp: 0, ult: 1, heal: 0, inv: 0,
                 sup: 1, shard: 1, score: 1, ultN: 0, ultPow: 1 }
 const PILOTS = [
+  /*
+   * 「초연」에 연사를 준다 (2026-09-12).
+   *
+   * 열둘 중 유일하게 특성이 비어 있었다. 처음 태우는 사람인데 고를
+   * 이유가 「아직 다른 게 없어서」뿐이라, 서리(체력)나 우설(보급)이
+   * 열리는 순간 쓸 이유가 사라졌다. 제일 무난한 축인 연사를 준다.
+   */
   { id: 'n1', grade: 'normal', face: 0, name: '초연',
-    perk: {}, desc: '치우침이 없습니다' },
+    perk: { rate: 0.90 }, desc: '사격 간격 -10%' },
   /*
    * 「거암」이 여성 초상에 붙어 있었다 (2026-09-12).
    *
@@ -3190,12 +3197,14 @@ const PILOTS = [
 
   { id: 'm1', grade: 'mid', face: 0, name: '적호',
     perk: { pow: 1.06 }, desc: '화력 +6%' },
-  { id: 'm2', grade: 'mid', face: 1, name: '쾌도',
+  /* 快刀 는 칼 별명이라 남성으로 읽힌다. 초상은 여성이고 특성은 빠르기다 */
+  { id: 'm2', grade: 'mid', face: 1, name: '섬영',
     perk: { rate: 0.94 }, desc: '사격 간격 -6%' },
 
   { id: 'h1', grade: 'high', face: 0, name: '응안',
     perk: { rng: 1.10 }, desc: '탄폭 +10%' },
-  { id: 'h2', grade: 'high', face: 1, name: '철갑',
+  /* 鐵甲 도 마찬가지. 붉은 스카프의 초상이고 특성은 버텨 주는 쪽이다 */
+  { id: 'h2', grade: 'high', face: 1, name: '단심',
     perk: { heal: 5, inv: 0.12 }, desc: '보급 회복 두 배 · 피격 무적 +0.12초' },
 
   /* 「홍련」은 반대로 노년 남성 장교 초상에 붙어 있었다. 특성과 맞춰 고친다 */
@@ -3223,7 +3232,8 @@ const PILOTS = [
     perk: { sup: 0.82 }, desc: '보급품이 20% 자주 떨어집니다' },
   { id: 'm3', grade: 'mid', face: 2, name: '결승',
     perk: { shard: 1.30 }, desc: '조각을 30% 더 얻습니다' },
-  { id: 'h3', grade: 'high', face: 2, name: '상월',
+  /* 霜月 은 반대로 부드럽다. 초상은 남성이고 특성은 전공(점수)이다 */
+  { id: 'h3', grade: 'high', face: 2, name: '수훈',
     perk: { score: 1.12 }, desc: '점수가 12% 더 붙습니다' },
   { id: 'l3', grade: 'legend', face: 2, name: '뇌성',
     perk: { ultN: 1 }, desc: '필살기가 10·30·50초에 세 번 찹니다' },
@@ -9605,7 +9615,8 @@ function flank(kind, n, dir) {
  * 소수점은 확률로 올린다 - 3마리 줄이면 3.6 이 되는데, 늘 3 으로
  * 내림하면 20% 가 아니라 0% 가 된다.
  */
-const SMALL_MUL = 1.2
+/* 1.2 -> 1.38 (2026-09-12). 20% 위에 15% 를 더 얹은 값이다 */
+const SMALL_MUL = 1.38
 function enemyCount(n, kind) {
   if (kind !== 'small') return n
   const raw = n * SMALL_MUL
