@@ -1,3 +1,7 @@
 .DS_Store
 .playwright-cli/
 __pycache__/
+
+# 워드프레스 배포 산출물
+wordpress/build/
+wordpress/dist/

@@ -1,0 +1,262 @@
+/*
+ * 블로그(글·목록·검색·404)를 정적 사이트와 같은 얼굴로 맞춘다.
+ *
+ * style.css 가 먼저 실리고 여기서 GeneratePress 구조만 덮는다.
+ * 테마의 헤더·푸터·사이드바는 숨기고, 플러그인이 정적 사이트의
+ * <nav class="nav"> 와 <footer class="foot"> 를 대신 넣는다.
+ */
+
+/* 테마 껍데기 제거 — 대신 정적 사이트의 것을 쓴다 */
+.site-header,
+.site-info,
+.footer-widgets,
+#right-sidebar,
+#left-sidebar,
+.generate-back-to-top {
+  display: none !important;
+}
+
+body {
+  background: var(--black) !important;
+  color: var(--ink-on-dark) !important;
+  font-family: var(--font) !important;
+}
+
+/* 본문 폭. 읽기 좋은 한 줄 길이에 맞춘다. */
+.site.grid-container,
+#page {
+  max-width: 780px !important;
+  margin: 0 auto !important;
+  padding: 0 20px !important;
+  background: transparent !important;
+}
+
+.site-content {
+  display: block !important;
+  padding: 56px 0 96px !important;
+}
+
+.content-area,
+.site-main {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+/* 글 카드 */
+.separate-containers .inside-article,
+.separate-containers .comments-area,
+.separate-containers .page-header,
+.separate-containers .paging-navigation,
+.one-container .site-content {
+  background: var(--stage) !important;
+  border: 1px solid var(--line-dark);
+  border-radius: 18px;
+  padding: 30px !important;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+  .separate-containers .inside-article,
+  .separate-containers .comments-area,
+  .separate-containers .page-header {
+    padding: 22px !important;
+    border-radius: 14px;
+  }
+  .site-content { padding: 36px 0 64px !important; }
+}
+
+/* 제목 */
+.page-header h1,
+.page-title,
+.entry-title {
+  color: var(--white) !important;
+  font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+  line-height: 1.28;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+
+.entry-title a {
+  color: var(--white) !important;
+  text-decoration: none !important;
+}
+
+.entry-title a:hover,
+.entry-title a:focus {
+  color: var(--link-dark) !important;
+}
+
+/* 날짜·글쓴이·분류 */
+.entry-meta,
+.entry-meta a,
+.posted-on,
+.byline,
+.cat-links,
+.tags-links {
+  color: var(--muted-dim) !important;
+  font-size: var(--text-caption) !important;
+}
+
+.entry-meta a:hover { color: var(--ink-on-dark) !important; }
+
+/* 본문 */
+.entry-content,
+.entry-summary,
+.page-header p {
+  color: var(--body-dark) !important;
+  font-size: var(--text-body);
+  line-height: 1.78;
+  word-break: keep-all;
+}
+
+.entry-content h2,
+.entry-content h3,
+.entry-content h4 {
+  color: var(--white);
+  letter-spacing: -0.015em;
+  margin-top: 1.9em;
+}
+
+.entry-content h2 { font-size: 1.4rem; }
+.entry-content h3 { font-size: 1.15rem; }
+
+.entry-content a { color: var(--link-dark) !important; }
+
+.entry-content strong { color: var(--ink-on-dark); }
+
+.entry-content blockquote {
+  border-left: 2px solid var(--line-hover);
+  margin: 1.6em 0;
+  padding: 2px 0 2px 18px;
+  color: var(--muted-dark);
+}
+
+.entry-content code,
+.entry-content pre {
+  background: #101014;
+  border: 1px solid var(--line-dark);
+  border-radius: 10px;
+  font-size: var(--text-small);
+}
+
+.entry-content code { padding: 2px 6px; }
+.entry-content pre { padding: 16px 18px; overflow-x: auto; }
+.entry-content pre code { background: none; border: 0; padding: 0; }
+
+.entry-content img { border-radius: 12px; }
+
+.entry-content hr {
+  border: 0;
+  border-top: 1px solid var(--line-dark);
+  margin: 2.4em 0;
+}
+
+.entry-content table { border-collapse: collapse; width: 100%; font-size: var(--text-small); }
+.entry-content th,
+.entry-content td { border: 1px solid var(--line-dark); padding: 10px 12px; text-align: left; }
+.entry-content th { color: var(--ink-on-dark); background: #101014; }
+
+/* 「더 보기」·페이지 넘김 */
+.read-more,
+.paging-navigation a,
+.nav-links a {
+  color: var(--link-dark) !important;
+  text-decoration: none;
+  font-size: var(--text-small);
+}
+
+/* 검색창·폼 */
+.search-form input[type="search"],
+.entry-content input,
+.entry-content textarea {
+  background: #101014 !important;
+  color: var(--ink-on-dark) !important;
+  border: 1px solid var(--line-dark) !important;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* 댓글 */
+.comments-area .comment-author,
+.comments-area .comment-metadata a { color: var(--muted-dim) !important; }
+.comments-area .comment-content { color: var(--body-dark) !important; }
+
+/* 관리자 표시줄이 sticky 네비를 가리지 않게 */
+body.admin-bar .nav { top: 32px; }
+@media (max-width: 782px) {
+  body.admin-bar .nav { top: 46px; }
+}
+
+/* 쉬운 목차 — 기본이 흰 박스라 어두운 본문에서 튄다 */
+#ez-toc-container,
+.ez-toc-container {
+  background: #101014 !important;
+  border: 1px solid var(--line-dark) !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+  padding: 16px 18px !important;
+}
+
+#ez-toc-container .ez-toc-title,
+.ez-toc-title {
+  color: var(--ink-on-dark) !important;
+  font-size: var(--text-small) !important;
+  font-weight: 600;
+}
+
+#ez-toc-container a,
+#ez-toc-container a:visited,
+.ez-toc-list a {
+  color: var(--muted-dark) !important;
+  text-decoration: none !important;
+  font-size: var(--text-small) !important;
+}
+
+#ez-toc-container a:hover,
+#ez-toc-container a:focus {
+  color: var(--link-dark) !important;
+}
+
+#ez-toc-container .ez-toc-list-level-1 > li::before,
+#ez-toc-container .eztoc-toggle-counter,
+#ez-toc-container .ez-toc-counter {
+  color: var(--muted-dim) !important;
+}
+
+.ez-toc-toggle,
+.ez-toc-js-icon-con,
+#ez-toc-container .ez-toc-js-icon-con {
+  background: transparent !important;
+  border-color: var(--line-dark) !important;
+}
+
+.ez-toc-icon-toggle-span svg path,
+.ez-toc-icon-toggle-span svg rect {
+  fill: var(--muted-dark) !important;
+}
+
+/* 댓글 입력창 */
+#comment,
+#respond textarea,
+#respond input[type="text"],
+#respond input[type="email"],
+#respond input[type="url"] {
+  background: #101014 !important;
+  color: var(--ink-on-dark) !important;
+  border: 1px solid var(--line-dark) !important;
+  border-radius: 10px;
+}
+
+#respond .comment-reply-title,
+#respond label { color: var(--ink-on-dark) !important; }
+#respond .comment-notes,
+#respond .form-submit + p { color: var(--muted-dim) !important; }
+
+#respond input[type="submit"] {
+  background: var(--white) !important;
+  color: var(--black) !important;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-weight: 600;
+}
