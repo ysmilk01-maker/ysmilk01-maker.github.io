@@ -2,6 +2,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>오늘도 출격</title>
+<!--
+  제목 글꼴.
+
+  시스템 글꼴로 세운 「오늘도 출격」이 밋밋하다는 지적을 받았다. 포스터
+  글씨에 가까운 것이 필요한데, 한글 디스플레이 글꼴 중 이만한 무게를
+  내는 것이 흔치 않다. 굵고 각진 Black Han Sans 하나만 받는다.
+
+  못 받아도 아래 대체 목록으로 떨어지므로 화면이 비지 않는다. 게임 안쪽
+  글자는 건드리지 않는다 - 이 글꼴은 타이틀 제목에만 쓴다.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
 
 <!--
   편대 종스크롤 슈팅 프로토타입
@@ -426,10 +440,17 @@
    * 옅어지면서 노을 배경이 그대로 드러나므로 한 번의 디졸브가 된다.
    * 두 화면의 바탕색을 같은 검정으로 맞춘 것도 그래서다.
    */
+  /*
+   * 제목 덩어리를 위로 올린다 (2026-09-12).
+   *
+   * 아래에 붙여 두니 해와 수평선(배경에서 제일 밝은 띠) 위에 글자가
+   * 얹혀 대비가 죽었다. 위쪽 구름 띠는 어두워서 글자가 산다.
+   * 제목은 위로, 단추는 아래에 그대로 둔다.
+   */
   #title {
     position: fixed; inset: 0; z-index: 39;
     display: flex; flex-direction: column;
-    align-items: center; justify-content: flex-end;
+    align-items: center; justify-content: flex-start;
     background: #05070d;
   }
   #title[hidden] { display: none !important; }
@@ -483,8 +504,17 @@
    * 살고, 글 덩어리는 엄지가 닿는 아래쪽에 모인다 - 누를 것이 아래에
    * 있는 것이 세로 화면에서 맞다.
    */
+  /*
+   * 제목은 위, 단추는 아래. 가운데는 배경이 맡는다.
+   *
+   * 둘을 붙여 놓으면 화면 절반이 빈 바다로 남는다. 남는 공간을 단추
+   * 위에 몰아 단추가 아래로 내려가게 한다(margin-top:auto).
+   */
   #title .tin {
-    position: relative; text-align: center; padding: 0 26px 9vh;
+    position: relative; text-align: center; padding: 0 26px calc(6vh + env(safe-area-inset-bottom, 0px));
+    margin-top: max(170px, 25vh);
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column; align-items: center;
   }
   #title .tin > * { animation: tIn .6s cubic-bezier(.16,1,.3,1) both; }
   /*
@@ -509,16 +539,65 @@
    * 엠블럼과 제목 사이에 끼어 있어서, 하나로 읽혀야 할 둘(엠블럼 + 제목)을
    * 갈라 놓고 있었다. 위쪽 귀퉁이는 어차피 비어 있다.
    */
+  /*
+   * 회사 이름 앞에 마크를 세운다 (2026-09-12).
+   *
+   * 자간만 넓힌 글자 한 줄이라 「무엇을 만든 곳인지」가 안 남았다.
+   * 계급장을 닮은 날개 표식을 붙여 로크업으로 만든다 - 그림 파일을
+   * 더 받지 않게 SVG 로 그린다.
+   */
   #title .tsub {
-    position: absolute; top: max(26px, 5.5vh); left: 0; right: 0;
-    font-size: 11px; font-weight: 800; letter-spacing: .3em;
-    color: #86a2c4; text-indent: .3em; text-align: center;
-    text-shadow: 0 2px 12px rgba(0,0,0,.8);
+    position: absolute; top: max(24px, 5vh); left: 0; right: 0;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 11px; font-weight: 800; letter-spacing: .26em;
+    color: #d9c79a; text-indent: .26em;
+    text-shadow: 0 2px 12px rgba(0,0,0,.85);
     animation: tIn .8s ease var(--tD, 0s) both;
   }
+  #title .tsub .tmk {
+    width: 26px; height: 13px; flex: none; text-indent: 0;
+    background: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 26'>\
+<g fill='none' stroke='%23e7c87a' stroke-width='3' stroke-linecap='round'>\
+<path d='M4 9 L26 20 L48 9'/><path d='M12 4 L26 11 L40 4'/></g>\
+<circle cx='26' cy='22' r='3' fill='%23e7c87a'/></svg>") center/contain no-repeat;
+    filter: drop-shadow(0 1px 4px rgba(0,0,0,.7));
+  }
+  /*
+   * 제목을 그림에서 글자로 되돌린다 (2026-09-12).
+   *
+   * 로고 그림이 놋쇠 명판과 겹쳐 「오늘도」가 명판 위로 삐져나오고
+   * 「출격」은 월계관 안에 갇혀 잘려 보였다. 두 장을 겹쳐 놓은 것이라
+   * 어느 한쪽도 제 크기로 못 섰다.
+   *
+   * 글자로 세우되 한 줄로 늘어놓지 않는다 - 「오늘도」를 작게 얹고
+   * 「출격」을 크게 받치면 포스터 제목이 된다. 금속 그라데이션과
+   * 아래로 떨어지는 그림자로 무게를 준다.
+   */
   #title .tlogo {
-    margin: 6px 0 0; font-size: 46px; font-weight: 900; letter-spacing: -.02em;
-    color: #eef4ff; text-shadow: 0 6px 26px rgba(0,0,0,.7);
+    margin: 8px 0 0; display: flex; flex-direction: column; align-items: center;
+    line-height: 1;
+  }
+  #title .tlogo .t1 {
+    font-size: 19px; font-weight: 800; letter-spacing: .42em; text-indent: .42em;
+    color: #e9d3a4; text-shadow: 0 2px 10px rgba(0,0,0,.85);
+  }
+  #title .tlogo .t2 {
+    margin-top: 6px;
+    font-family: 'Black Han Sans', system-ui, -apple-system, sans-serif;
+    font-size: 74px; font-weight: 400; letter-spacing: .01em;
+    background: linear-gradient(180deg, #fff8e6 0%, #ffdf9c 34%, #e5a842 62%, #b47613 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    filter: drop-shadow(0 2px 0 rgba(70,36,0,.65))
+            drop-shadow(0 12px 28px rgba(0,0,0,.8));
+  }
+  /* 제목 뒤에 어두운 기운을 한 겹. 해와 수평선 위에서도 글자가 선다 */
+  #title .tlogo::before {
+    content: ''; position: absolute; left: 50%; top: 46%;
+    width: 320px; height: 190px; transform: translate(-50%, -50%);
+    background: radial-gradient(60% 55% at 50% 50%, rgba(5,7,12,.72), rgba(5,7,12,0) 72%);
+    pointer-events: none; z-index: -1;
   }
   /*
    * 그림 로고.
@@ -530,13 +609,7 @@
    * 놋쇠 명판 위에 로고를 얹는다. 글자만 하늘에 떠 있으면 받쳐 주는 것이
    * 없다는 지적이 있었다. 명판이 없으면 로고만 그려진다.
    */
-  #title.haslogo .tlogo {
-    height: 124px; margin-top: -2px; text-indent: -200vw; overflow: hidden;
-    background:
-      var(--ui-titlelogo) center 46%/auto 74% no-repeat,
-      var(--ui-titleplate, none) center/contain no-repeat;
-    filter: drop-shadow(0 8px 22px rgba(0,0,0,.75));
-  }
+  /* 그림 로고는 글자에 자리를 내줬다. 규칙만 남겨 둔다 */
   /*
    * 엠블럼과 제목을 겹쳐 하나로 만든다.
    *
@@ -544,12 +617,12 @@
    * 물려 두 개가 한 덩어리(로크업)로 서게 한다.
    */
   #title .tem {
-    width: 104px; height: 104px; margin: 0 auto -6px;
+    width: 86px; height: 86px; margin: 0 auto -4px;
     background: var(--ui-titleem) center/contain no-repeat;
     filter: drop-shadow(0 6px 18px rgba(0,0,0,.6));
   }
   #title .tline {
-    margin-top: 12px; font-size: 12.5px; color: #b3c4da;
+    margin-top: 16px; font-size: 12.5px; color: #b3c4da;
     text-shadow: 0 2px 10px rgba(0,0,0,.7);
   }
   /*
@@ -564,7 +637,7 @@
    * 아직 전투가 아닌가」가 됐다. 이름은 결과를 말해야 한다.
    */
   #title button {
-    margin-top: 34px; padding: 16px 62px; font-size: 17px; font-weight: 900;
+    margin-top: auto; padding: 16px 62px; font-size: 17px; font-weight: 900;
     letter-spacing: .1em; text-indent: .1em; border-radius: 12px;
     color: #2b1d06;
     background: linear-gradient(180deg, #f4cd72 0%, #d9a13c 52%, #b8801f 100%);
@@ -587,7 +660,7 @@
   @media (prefers-reduced-motion: reduce) {
     #title button { animation: none; }
   }
-  #title .tver { margin-top: 20px; font-size: 10.5px; color: #6b7d92; }
+  #title .tver { margin-top: 16px; font-size: 10.5px; color: #6b7d92; }
 
   /*
    * 덮개.
@@ -1612,10 +1685,10 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 -->
 <div id="title" hidden>
   <div class="tbg"></div>
-  <div class="tsub">나인투식스랩</div>
+  <div class="tsub"><i class="tmk" aria-hidden="true"></i>나인투식스랩</div>
   <div class="tin">
     <div class="tem" id="tEm" hidden></div>
-    <h1 class="tlogo">오늘도 출격</h1>
+    <h1 class="tlogo"><span class="t1">오늘도</span><span class="t2">출격</span></h1>
     <div class="tline">편대를 몰고 나가는 비행 슈팅</div>
     <button id="tGo">시작하기</button>
     <div class="tver" id="tVer"></div>
@@ -3125,8 +3198,7 @@ for (const k in GACHA_B64) {
     const el = document.querySelector('#title .tbg')
     if (el) el.classList.add('has')
   }
-  /* 로고 그림이 왔으면 글자 대신 그것을 세운다 */
-  if (ICON_B64.titlelogo) document.getElementById('title').classList.add('haslogo')
+  /* 로고 그림 대신 글자로 세운다 (2026-09-12). haslogo 를 안 붙인다 */
   /*
    * 단계 화면은 그동안 편성 화면 그림을 빌려 쓰고 있었다(--sc-squad).
    * 출격 전에 지도를 고르는 화면인데 격납고가 깔려 있으니 어디로 왔는지가
