@@ -2099,19 +2099,31 @@ const PLANES = []
    * 「신기전」은 조선의 로켓이다. 미사일 계열의 전설 자리에 이만한
    * 이름이 없다 - 지어낸 말이 아니라 실제로 있던 것이라 무게가 다르다.
    */
+  /*
+   * 기체 이름 (2026-09-12 다시 지음).
+   *
+   * 전에는 「산개·비산·쇄도」처럼 **하는 짓**을 그대로 적었다. 그건 기술
+   * 이름이지 기체 이름이 아니다 - 실제 전투기는 飛燕·疾風·紫電처럼
+   * 짧은 명사 하나를 단다.
+   *
+   * 굵은 것은 실존기다. 비연(Ki-61) · 질풍(Ki-84) · 자전(N1K) ·
+   * 열풍(A7M) · 진전(J7W) · 극광(P1Y2) · 천뢰(J5N) · 추수(J8M) ·
+   * 혜성(D4Y) · 유성(B7A) · 채운(C6N) · 은하(P1Y) · 심산(G5N) ·
+   * 연산(G8N) · 월광(J1N) · 앵화(MXY-7).
+   *
+   * 무기 성질로 한 줄씩 세우되, 등급이 오를수록 무거운 글자를 쓴다.
+   */
   const NAMES = {
-    /* 뇌전은 뽑기 전용기 「뇌신」과 겹쳐서 비켰다. 바람으로 한 줄을 세운다 */
-    /* 넷째(상급)는 2026-09-11 에 새로 지었다. 중급과 레전드 사이의 무게 */
-    rapid:  ['질풍', '폭우', '삭풍', '태풍'],
-    spread: ['산개', '비산', '쇄도', '노도'],
-    laser:  ['섬광', '백열', '섬전', '극광'],
-    homing: ['추격', '혈랑', '집념', '사신'],
-    pierce: ['예봉', '철창', '관철', '파천'],
-    wave:   ['파문', '해일', '격랑', '심연'],
-    orb:    ['유성', '위성', '삼성', '쌍성'],
-    mine:   ['화전', '흑룡', '비격', '신기전'],
-    beam:   ['철퇴', '거포', '공성포', '파성포'],
-    boomer: ['반월', '곡도', '월륜', '환영'],
+    rapid:  ['비연', '질풍', '자전', '열풍'],
+    spread: ['진풍', '창공', '광풍', '폭풍'],
+    laser:  ['전광', '섬전', '극광', '진전'],
+    homing: ['창응', '해동청', '천뢰', '사신'],
+    pierce: ['예봉', '추수', '파공', '파천'],
+    wave:   ['파문', '해일', '동해', '심연'],
+    orb:    ['유성', '혜성', '채운', '은하'],
+    mine:   ['화전', '앵화', '신기전', '벽력'],
+    beam:   ['철퇴', '심산', '연산', '파성포'],
+    boomer: ['반월', '곡도', '월광', '환월'],
   }
   /*
    * 전설의 속성과 성질.
@@ -2904,24 +2916,24 @@ const PILOT_ART = {
 const PERK0 = { pow: 1, rate: 1, rng: 1, hp: 0, ult: 1, heal: 0, inv: 0,
                 sup: 1, shard: 1, score: 1, ultN: 0 }
 const PILOTS = [
-  { id: 'n1', grade: 'normal', face: 0, name: '무명',
+  { id: 'n1', grade: 'normal', face: 0, name: '초연',
     perk: {}, desc: '치우침이 없습니다' },
-  { id: 'n2', grade: 'normal', face: 1, name: '반석',
+  { id: 'n2', grade: 'normal', face: 1, name: '거암',
     perk: { hp: 14 }, desc: '최대 체력 +14' },
 
-  { id: 'm1', grade: 'mid', face: 0, name: '예리',
+  { id: 'm1', grade: 'mid', face: 0, name: '적호',
     perk: { pow: 1.06 }, desc: '화력 +6%' },
-  { id: 'm2', grade: 'mid', face: 1, name: '쾌속',
+  { id: 'm2', grade: 'mid', face: 1, name: '쾌도',
     perk: { rate: 0.94 }, desc: '사격 간격 -6%' },
 
-  { id: 'h1', grade: 'high', face: 0, name: '형안',
+  { id: 'h1', grade: 'high', face: 0, name: '응안',
     perk: { rng: 1.10 }, desc: '탄폭 +10%' },
-  { id: 'h2', grade: 'high', face: 1, name: '철벽',
+  { id: 'h2', grade: 'high', face: 1, name: '철갑',
     perk: { heal: 5, inv: 0.12 }, desc: '보급 회복 두 배 · 피격 무적 +0.12초' },
 
-  { id: 'l1', grade: 'legend', face: 0, name: '홍염',
+  { id: 'l1', grade: 'legend', face: 0, name: '홍련',
     perk: { ult: 1.25 }, desc: '필살기 충전 +25%' },
-  { id: 'l2', grade: 'legend', face: 1, name: '백야',
+  { id: 'l2', grade: 'legend', face: 1, name: '은월',
     perk: { hp: 20, inv: 0.2 }, desc: '최대 체력 +20 · 피격 무적 +0.2초' },
 
   /*
@@ -2939,13 +2951,13 @@ const PILOTS = [
    * 판에서 세지는 것이 아니라 **판 밖이 빨라지는** 축이 둘(shard·score)
    * 있다. 세기로만 갈리면 결국 제일 센 하나만 쓰게 된다.
    */
-  { id: 'n3', grade: 'normal', face: 2, name: '소나기',
+  { id: 'n3', grade: 'normal', face: 2, name: '우설',
     perk: { sup: 0.82 }, desc: '보급품이 20% 자주 떨어집니다' },
-  { id: 'm3', grade: 'mid', face: 2, name: '매듭',
+  { id: 'm3', grade: 'mid', face: 2, name: '결승',
     perk: { shard: 1.30 }, desc: '조각을 30% 더 얻습니다' },
-  { id: 'h3', grade: 'high', face: 2, name: '서리',
+  { id: 'h3', grade: 'high', face: 2, name: '상월',
     perk: { score: 1.12 }, desc: '점수가 12% 더 붙습니다' },
-  { id: 'l3', grade: 'legend', face: 2, name: '천둥',
+  { id: 'l3', grade: 'legend', face: 2, name: '뇌성',
     perk: { ultN: 1 }, desc: '필살기를 한 발 더 쌓아 둡니다' },
 ]
 const PILOT_BY = Object.fromEntries(PILOTS.map((p) => [p.id, p]))
