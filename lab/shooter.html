@@ -807,12 +807,6 @@
     background: #24406b; color: #cfe6ff; font-weight: 800;
   }
   .stat .pips button[disabled] { background: #1a2536; color: #5b6a80; }
-  .marks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; margin-top: 8px; }
-  .mark {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-    padding: 5px; cursor: pointer; display: grid; place-items: center;
-  }
-  .mark.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   input.nm {
     width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
     color: var(--ink); font-family: inherit; font-size: 14px; padding: 11px 12px;
@@ -3551,6 +3545,17 @@ function gfxPlay(list, done) {
   const top = bestOf(list)
   const tone = gTone(top.tier)
   const T1 = 0.42, T2 = 0.92, T3 = 1.55   // 흔들림 / 열림 / 등장
+  /*
+   * 열 장을 뽑으면 상자에서 차례로 튀어나온다 (2026-09-12).
+   *
+   * 전에는 제일 좋은 한 장만 세우고 끝났다. 열 장을 뽑았는데 연출은
+   * 한 장짜리라, 「열 개가 안 나온 것 같다」가 여기서도 나왔다.
+   * 제일 좋은 것을 먼저 세우고, 그 뒤에 나머지가 다다다 하고 튀어나와
+   * 다섯씩 두 줄로 앉는다.
+   */
+  const many = list.length > 1
+  const POP = 0.085                       // 한 장씩 터지는 간격
+  const T4 = many ? T3 + POP * list.length + 0.62 : T3
   const W = 440, H = 560
   const dpr = Math.min(2, window.devicePixelRatio || 1)
   cv.width = W * dpr; cv.height = H * dpr
@@ -3582,7 +3587,7 @@ function gfxPlay(list, done) {
    * setTimeout 은 창이 가려져도(느려지긴 해도) 돈다. 연출 길이보다
    * 넉넉하게 잡아 두고, 정상적으로 끝나면 이 타이머는 취소된다.
    */
-  GFX.fuse = setTimeout(end, (T3 + 1.2) * 1000)
+  GFX.fuse = setTimeout(end, (T4 + 1.2) * 1000)
 
   /* 흩어질 알갱이. 미리 만들어 둔다 - 매 프레임 난수를 쓰면 떨린다 */
   const bits = []
@@ -3594,10 +3599,11 @@ function gfxPlay(list, done) {
 
   const t0 = performance.now()
   let rang = 0
+  let popped = 0
 
   const step = (now) => {
     const t = (now - t0) / 1000
-    if (GFX.skip || t > T3) { end(); return }
+    if (GFX.skip || t > T4) { end(); return }
     c.clearRect(0, 0, W, H)
 
     const cx = W / 2, cy = H * 0.58
@@ -3758,11 +3764,51 @@ function gfxPlay(list, done) {
     if (t > T2) {
       const k = Math.min(1, (t - T2) / 0.45)
       const e = 1 - Math.pow(1 - k, 3)
-      c.save()
-      c.translate(cx, cy - 130 - e * 40)
-      c.globalAlpha = e
-      gfxCard(c, tone, top, e)
-      c.restore()
+      /* 열 장이 튀어나오기 시작하면 큰 카드는 물러난다 */
+      const out = many ? Math.min(1, Math.max(0, (t - T3) / 0.3)) : 0
+      if (out < 1) {
+        c.save()
+        c.translate(cx, cy - 130 - e * 40 - out * 40)
+        c.globalAlpha = e * (1 - out)
+        c.scale(1 - out * 0.25, 1 - out * 0.25)
+        gfxCard(c, tone, top, e)
+        c.restore()
+      }
+    }
+
+    /* ── 열 장이 차례로 튀어나온다 ── */
+    if (many && t > T3) {
+      const tt = t - T3
+      const cols = 5
+      const gx = 80, gy = 104
+      const ox = cx - (cols - 1) * gx / 2
+      const oy = cy - 108
+      for (let i = 0; i < list.length; i++) {
+        const st = i * POP
+        if (tt < st) continue
+        const k = Math.min(1, (tt - st) / 0.3)
+        const e = 1 - Math.pow(1 - k, 3)
+        const tx = ox + (i % cols) * gx
+        const ty = oy + Math.floor(i / cols) * gy
+        /* 상자 자리에서 제 칸으로. 가는 길에 한 번 솟았다 내려앉는다 */
+        const x = cx + (tx - cx) * e
+        const y = (cy - 20) + (ty - (cy - 20)) * e - Math.sin(e * Math.PI) * 46
+        const sc = 0.30 + e * 0.21
+        const r = list[i]
+        c.save()
+        c.translate(x, y)
+        c.scale(sc, sc)
+        c.globalAlpha = Math.min(1, e * 2)
+        gfxCard(c, gTone(r.tier), r, 1)
+        c.restore()
+      }
+      /* 튀어나올 때마다 짧게 한 번. 「다다다다」는 소리가 절반이다 */
+      const n = Math.min(list.length, Math.floor(tt / POP) + 1)
+      if (n > popped) {
+        popped = n
+        const r = list[n - 1]
+        sfx(gTone(r.tier).rank >= 2 ? 'ready' : 'pick', 0.5)
+      }
     }
 
     /* 등급에 따라 다른 등장음. 전설은 한 겹 더 얹는다 */
@@ -5628,20 +5674,16 @@ function renderSet() {
     '<div class="lab">호출부호</div>' +
     '<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="' +
       (prog.pilot.name || '').replace(/"/g, '&quot;') + '">' +
-    '<div class="lab">마크</div>' +
-    '<div class="marks" id="marks">' +
-    MARK_COLOR.map((_, i) =>
-      '<div class="mark' + (i === prog.pilot.mark ? ' on' : '') + '" data-mark="' + i + '">' +
-      '<canvas width="80" height="80" style="width:100%;height:38px"></canvas></div>').join('') +
-    '</div>' +
+    /*
+     * 마크를 걷었다 (2026-09-12).
+     *
+     * 여섯 색 중 하나를 고를 수 있었는데, 고른 것이 화면 어디에도 안
+     * 나왔다 - 기체에도 안 그려지고 랭킹에도 안 붙었다. 고르는 자리만
+     * 있고 쓰이는 자리가 없는 설정이라 없앤다.
+     */
     '<div class="lab">그 밖에</div>' +
     '<div class="bar"><button class="ghost small" id="devUnlock">개발용 전체 해금</button></div>'
 
-  document.querySelectorAll('#marks .mark').forEach((el) => {
-    const i = +el.dataset.mark
-    drawMark(el.querySelector('canvas'), i)
-    el.onclick = () => { prog.pilot.mark = i; save(); renderSet() }
-  })
   const nm = document.getElementById('pilotNm')
   if (nm) nm.oninput = () => { prog.pilot.name = nm.value.trim().slice(0, 12); save() }
   const du = document.getElementById('devUnlock')
@@ -6460,55 +6502,7 @@ function renderRank() {
 }
 
 /* ── 파일럿 ─────────────────────────────────────────────────────── */
-/*
- * 마크는 그림 파일 없이 캔버스로 그린다. 파일을 여섯 개 더 넣으면 본문이
- * 그만큼 무거워지는데, 이 정도 도형은 코드가 더 싸다.
- */
-const MARK_COLOR = ['#4fd1ff', '#ffc44d', '#ff5470', '#4ade80', '#c9a8ff', '#7dffd4']
-function drawMark(cv, idx) {
-  if (!cv) return
-  const dpr = Math.min(2, window.devicePixelRatio || 1)
-  const w = cv.clientWidth || 40, h = cv.clientHeight || 40
-  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr)
-  const c = cv.getContext('2d')
-  c.setTransform(dpr, 0, 0, dpr, 0, 0)
-  c.clearRect(0, 0, w, h)
-  c.translate(w / 2, h / 2)
-  const R = Math.min(w, h) * 0.36
-  c.fillStyle = c.strokeStyle = MARK_COLOR[idx % 6]
-  c.lineWidth = 2.2; c.lineJoin = 'round'
-  c.beginPath()
-  switch (idx % 6) {
-    case 0:                                  // 별
-      for (let k = 0; k < 10; k++) {
-        const a = -Math.PI / 2 + (k * Math.PI) / 5
-        const r = k % 2 ? R * 0.45 : R
-        k ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r)
-      }
-      c.closePath(); c.fill(); break
-    case 1:                                  // 번개
-      c.moveTo(R * .25, -R); c.lineTo(-R * .45, R * .12); c.lineTo(-R * .02, R * .12)
-      c.lineTo(-R * .25, R); c.lineTo(R * .5, -R * .18); c.lineTo(R * .06, -R * .18)
-      c.closePath(); c.fill(); break
-    case 2:                                  // 방패
-      c.moveTo(0, -R); c.lineTo(R * .8, -R * .55); c.lineTo(R * .8, R * .2)
-      c.quadraticCurveTo(R * .8, R * .85, 0, R)
-      c.quadraticCurveTo(-R * .8, R * .85, -R * .8, R * .2)
-      c.lineTo(-R * .8, -R * .55); c.closePath(); c.fill(); break
-    case 3:                                  // 화살
-      c.moveTo(0, -R); c.lineTo(R * .7, R * .35); c.lineTo(0, R * .05)
-      c.lineTo(-R * .7, R * .35); c.closePath(); c.fill(); break
-    case 4:                                  // 겹원
-      c.arc(0, 0, R, 0, 6.284); c.stroke()
-      c.beginPath(); c.arc(0, 0, R * .5, 0, 6.284); c.fill(); break
-    case 5:                                  // 십자
-      c.moveTo(-R * .26, -R); c.lineTo(R * .26, -R); c.lineTo(R * .26, -R * .26)
-      c.lineTo(R, -R * .26); c.lineTo(R, R * .26); c.lineTo(R * .26, R * .26)
-      c.lineTo(R * .26, R); c.lineTo(-R * .26, R); c.lineTo(-R * .26, R * .26)
-      c.lineTo(-R, R * .26); c.lineTo(-R, -R * .26); c.lineTo(-R * .26, -R * .26)
-      c.closePath(); c.fill(); break
-  }
-}
+/* 마크(여섯 색 표식)는 쓰이는 자리가 없어 걷었다 (2026-09-12) */
 
 /* ================================================================
  * 파일럿
