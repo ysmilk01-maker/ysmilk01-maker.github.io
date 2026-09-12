@@ -6892,7 +6892,7 @@ function openDetail(p, list) {
   const lvNum = state ? state.player.lv : 1
   const L = LV[Math.min(5, Math.max(1, lvNum))] || LV[1]
   const realRate = baseRate(p.weapon) * p.rate * upgRate(p.id) * pilotRate() /
-                   (0.85 + L.mult * 0.15) * PLAYER_CD
+                   (0.85 + L.mult * 0.15) * PLAYER_CD / SQUAD_RATE
   const shots = realRate > 0 ? (1 / realRate) : 0
 
   body.innerHTML =
@@ -7498,6 +7498,17 @@ const LV = [null,
 
 /** 아군 사격 간격 배수. 1보다 크면 느리게 쏜다 */
 const PLAYER_CD = 2.0
+/*
+ * 편대 전체에 걸리는 배수 (2026-09-12).
+ *
+ * 화력과 연사를 각각 15% 올린다. 기체·강화·파일럿을 다 곱한 뒤
+ * 마지막에 한 번 곱하는 자리라, 등급이나 무기에 치우치지 않고
+ * 스물아홉 기에 똑같이 먹는다.
+ *
+ * 연사는 간격을 나눈다 - 간격이 짧아지는 것이 곧 연사가 빨라지는 것이다.
+ */
+const SQUAD_DMG = 1.15
+const SQUAD_RATE = 1.15
 
 function baseRate(w) {
   return { rapid: .10, spread: .30, laser: .05, homing: .38, pierce: .26,
@@ -7566,7 +7577,7 @@ function shoot(u, i, dt) {
    * 문지르면 다 죽었다. 간격을 두 배로 벌리면 한 발이 아까워지고,
    * 어디에 설지를 고르게 된다. 대신 적은 더 많이 나오되 무르게 했다.
    */
-  u.cd = rate * PLAYER_CD
+  u.cd = rate * PLAYER_CD / SQUAD_RATE
   sfx('shot', tierStep(p.tier))
 
   /* 분신은 제 자리를 들고 온다. 편대 자리 계산을 안 탄다 */
@@ -7586,7 +7597,7 @@ function shoot(u, i, dt) {
    * 「연사 절반 × 보스 체력 3배」가 곱해져서 보스전이 여섯 배가 된다 -
    * 실제로 그렇게 해 봤더니 3챕터 보스를 80초에 42%밖에 못 깎았다.
    */
-  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD
+  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD * SQUAD_DMG
   const tier = tierStep(p.tier)
   const B = state.bullets
   /* 빛은 지속도 연쇄도 없다. 그 자리에서 더 아프면 끝이라 여기서 곱한다 */
@@ -9389,7 +9400,26 @@ function rise(kind, n) {
   sfx('alarm')
 }
 
-function line(n, kind) {
+/*
+ * 잡졸만 20% 더 나온다 (2026-09-12).
+ *
+ * 편대 화력을 15% 올린 만큼 수로 되받는다. 맷집·중형·랜서까지 같이
+ * 늘리면 화면이 단단한 것들로 덮여서 「치우는 맛」이 아니라 「안
+ * 치워진다」가 된다. 잡졸은 수로 미는 놈이라 늘려도 성격이 안 변한다.
+ *
+ * 소수점은 확률로 올린다 - 3마리 줄이면 3.6 이 되는데, 늘 3 으로
+ * 내림하면 20% 가 아니라 0% 가 된다.
+ */
+const SMALL_MUL = 1.2
+function enemyCount(n, kind) {
+  if (kind !== 'small') return n
+  const raw = n * SMALL_MUL
+  const base = Math.floor(raw)
+  return base + (Math.random() < raw - base ? 1 : 0)
+}
+
+function line(n0, kind) {
+  const n = enemyCount(n0, kind)
   const gap = W / (n + 1)
   for (let i = 0; i < n; i++) state.enemies.push(mkEnemy(kind, gap * (i + 1), -40 - i * 12, 0))
 }
