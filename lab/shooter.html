@@ -4305,7 +4305,17 @@ function pilotRank() {
  */
 const LEGEND_PILOT = { id: 'pilot-legend', price: 3000 }
 function boughtLegend() { return prog.owned.includes(LEGEND_PILOT.id) || hasGrade('legend') }
-function isLegend() { return prog.pilot.lv >= PILOT_MAX || boughtLegend() }
+/*
+ * 후방 자리는 전설 기체로만 연다 (2026-09-12).
+ *
+ * 전에는 파일럿 Lv.30(만렙) 이나 전설 파일럿을 사면 열렸다. 그러면
+ * 오래 돌기만 해도 네 자리가 채워져서, 전설 기체를 뽑을 이유가
+ * 「화력이 조금 더」로 줄었다. 자리 하나는 그보다 큰 값이다.
+ *
+ * 이제 전설 기체를 **하나라도** 가지면 열린다. 뽑기로만 나오므로
+ * 자리 자체가 전설을 뽑은 값이 된다.
+ */
+function isLegend() { return PLANES.some((p) => p.tier === 'legend' && unlocked(p)) }
 
 /*
  * 등급 배수는 화력과 체력에만 얹는다.
@@ -4479,17 +4489,17 @@ const SLOT_META = [
    * 지상 위협은 놓쳐도 그냥 화면 밖으로 지나가고, 돌진기는 아래로 빠지면
    * 위협이 끝난다. 뒤를 지키는 그림보다 화력 한 자리가 실제로 쓸모 있다.
    */
+  /* 여는 열쇠는 전설 기체다(isLegend). 화력 몫은 REAR_MUL 을 쓴다 */
   { role: '후방', mul: 0.2, legend: true },
 ]
 
 /*
- * 후방 자리의 화력은 어떻게 열었느냐로 갈린다.
+ * 후방 자리의 화력.
  *
- * 산 사람은 20%, 만렙으로 연 사람은 10%. 만렙까지 쉰 판을 도는 값이
- * 절반이라도 남아 있어야 "돈 없으면 못 한다"가 안 된다.
+ * 전에는 어떻게 열었느냐로 20% 와 10% 로 갈렸다. 이제 여는 길이
+ * 전설 기체 하나뿐이라 갈릴 것이 없다. 높은 쪽으로 통일한다.
  */
-const REAR_BOUGHT = 0.2
-const REAR_EARNED = 0.1
+const REAR_MUL = 0.2
 /** 그 자리를 쓸 수 있나 */
 /** 열려 있는데 비어 있는 자리가 있나. 있으면 편대 탭에 점을 찍는다 */
 function anySlotEmpty() {
@@ -4503,14 +4513,13 @@ function slotOpen(i) {
 }
 function slotWhy(i) {
   const m = SLOT_META[i]
-  if (m.legend) return '레전드 파일럿'
+  if (m.legend) return '전설 기체'
   if (m.lv) return '파일럿 Lv.' + m.lv
   return ''
 }
 function slotMul(i) {
   const m = SLOT_META[i]
-  if (!m.legend) return m.mul
-  return boughtLegend() ? REAR_BOUGHT : REAR_EARNED
+  return m.legend ? REAR_MUL : m.mul
 }
 let activeSlot = 1
 const NO_MODS = { pierce: 0, split: 0, extra: 0, seek: 0, rate: 0, big: 0, bounce: 0, speed: 0 }
@@ -6822,13 +6831,20 @@ function renderPilot() {
       '</div>'
   }).join('')
 
+  /*
+   * 전설 파일럿 상품은 이제 자리를 열어 주지 않는다 (2026-09-12).
+   *
+   * 후방 자리가 전설 기체로만 열리게 바뀌었으므로, 이 상품이 파는 것은
+   * **레전드 등급 파일럿 셋**이다 - 열화 · 은월 · 뇌성. 팔던 것과 다른
+   * 것을 파는 셈이니 문구를 바꾼다.
+   */
   const legendBox = boughtLegend()
-    ? row('전설 파일럿', '후방 편대 ' + Math.round(REAR_BOUGHT * 100) + '%', true)
+    ? row('레전드 파일럿', '열화 · 은월 · 뇌성', true)
     : '<div class="stat">' +
-      '<div class="hd"><span class="nm">전설 파일럿</span>' +
-      '<span class="ef">후방 편대 ' + Math.round(REAR_BOUGHT * 100) + '%</span></div>' +
-      '<div class="de">네 번째 자리가 열립니다.' +
-      (isLegend() ? ' 지금은 ' + Math.round(REAR_EARNED * 100) + '% 로 쓰고 있습니다.' : '') +
+      '<div class="hd"><span class="nm">레전드 파일럿</span>' +
+      '<span class="ef">셋이 한 번에</span></div>' +
+      '<div class="de">열화(필살기 위력 +10%) · 은월(체력 +20) · ' +
+      '뇌성(필살기 세 번)이 열립니다. 조각을 모아도 열 수 있습니다.' +
       '</div><div class="pips">' +
       '<button id="buyLegend">' + LEGEND_PILOT.price.toLocaleString('ko-KR') +
       '원</button></div></div>'
@@ -16963,7 +16979,8 @@ function end(win) {
             (rankUp ? rankAfter + ' 승급' : '레벨 ' + prog.pilot.lv + ' 달성') +
           '</span><br><span class="t2">' +
             (rankUp ? 'Lv.' + lvBefore + ' → Lv.' + prog.pilot.lv : rankAfter) +
-            (prog.pilot.lv >= PILOT_MAX ? ' · 후방 자리가 열렸습니다' : '') +
+            /* 만렙이 후방 자리를 열어 주던 것은 없앴다 (2026-09-12) */
+            (prog.pilot.lv >= PILOT_MAX ? ' · 만렙' : '') +
           '</span>' +
         '</span>' +
       '</div>'
