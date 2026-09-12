@@ -3025,6 +3025,30 @@ const PILOTS = [
     perk: { ultN: 1 }, desc: '필살기를 한 발 더 쌓아 둡니다' },
 ]
 const PILOT_BY = Object.fromEntries(PILOTS.map((p) => [p.id, p]))
+
+/*
+ * 등급 안에서 몇째인지에 따라 합류 레벨이 다르다.
+ *
+ * 일반 셋은 처음부터 다 가진 상태였다. 시작하자마자 고를 것이 셋이면
+ * 셋 다 세기가 같아서 고르는 것이 아니라 미루게 된다. 한 명으로 시작해
+ * Lv.5 · Lv.10 에 하나씩 붙이면, 그때마다 알릴 거리가 생기고 「스탯을
+ * 옮길 수 있다」를 가르칠 자리도 같이 생긴다.
+ */
+const PILOT_OPEN_LV = [1, 5, 10]
+function pilotNeedLv(pl) {
+  const n = PILOTS.filter((p) => p.grade === pl.grade).indexOf(pl)
+  return PILOT_OPEN_LV[n] || 1
+}
+/** 지금 쓸 수 있는 사람인가. 등급을 열었고 합류 레벨을 넘겼는가 */
+function pilotOpen(pl) {
+  return hasGrade(pl.grade) && prog.pilot.lv >= pilotNeedLv(pl)
+}
+/** 새로 합류한 사람을 알림 줄에 적어 둔다 */
+function markNewPilots(ids) {
+  if (!ids || !ids.length) return
+  const cur = Array.isArray(prog.newPilot) ? prog.newPilot : []
+  prog.newPilot = cur.concat(ids.filter((i) => !cur.includes(i)))
+}
 /** 지금 쓰는 파일럿. 저장에 없으면 그 등급의 첫 사람 */
 function pilotNow() {
   return PILOT_BY[prog.pilot.who] ||
@@ -3685,7 +3709,7 @@ function pull(kind) {
     const fresh = GRADE_NEED[tier] > 0 && !hasGrade(tier)
     if (jack && fresh) {
       prog.pilotOwned[tier] = true
-      prog.newPilot = tier
+      markNewPilots(PILOTS.filter((p) => p.grade === tier && pilotOpen(p)).map((p) => p.id))
       save()
       return { kind, tier, n: 1, name: GRADES[tier].name + ' 파일럿', got: true, jack: true }
     }
@@ -3697,7 +3721,7 @@ function pull(kind) {
     if (got) {
       prog.pilotOwned[tier] = true
       prog.shardG[tier] -= GRADE_NEED[tier]
-      prog.newPilot = tier
+      markNewPilots(PILOTS.filter((p) => p.grade === tier && pilotOpen(p)).map((p) => p.id))
     }
     save()
     return { kind, tier, n, big, name: GRADES[tier].name + ' 파일럿 조각', got }
@@ -4076,6 +4100,11 @@ function addXpRaw(n) {
     need += xpNeed(pt.lv)
     if (pt.xpTotal < need) break
     pt.lv++; up++
+  }
+  /* 오른 만큼 거슬러 보고, 이번에 문턱을 넘은 사람만 적는다 */
+  if (up) {
+    const was = pt.lv - up
+    markNewPilots(PILOTS.filter((p) => pilotOpen(p) && pilotNeedLv(p) > was).map((p) => p.id))
   }
   return up
 }
@@ -5101,7 +5130,9 @@ function renderSquad() {
      * 둘 다 안 읽히므로, 투어가 안 뜨는 경우에만 그것들을 띄운다.
      */
     if (!prog.tourDone2) { tourStart(false); return }
+    if (newPilotPopup()) return
     showUnlockPop(); showStatGuide()
+    upgReadyGuide()
   }, 0)
   elSlots.replaceChildren()
   for (const i of [0, 2, 3]) {
@@ -6249,14 +6280,63 @@ function openPilot(pl, list) {
  * 받은 사람이 「지금까지 부은 게 아깝다」로 끝나 버린다. 그래서 알림
  * 뒤에 그 단추를 손가락으로 짚는다.
  */
+/*
+ * 지금 화면 위에 떠 있는 창이 있는가.
+ *
+ * 안내가 셋(해금 창 · 스탯 안내 · 손가락)인데 서로를 몰랐다. 겹치면
+ * 둘 다 안 읽히고, 뒤엣것이 앞엣것을 가리킨 자리를 덮는다.
+ */
+function anyOverlay() {
+  return ['detail', 'title', 'daily', 'unlockPop', 'gfx', 'upgfx']
+    .some((id) => { const e = document.getElementById(id); return e && !e.hidden })
+}
+
+/*
+ * 올릴 수 있게 된 순간을 짚어 준다.
+ *
+ * 칸이 금색으로 빛나고 아래 탭에 점이 켜지지만, 둘 다 「켜져 있는 상태」라
+ * 화면을 보고 있지 않으면 켜진 순간을 놓친다. 판을 끝내고 돌아왔을 때가
+ * 그 순간이라, 격납고로 들어오는 길에 한 번만 손가락으로 짚는다.
+ *
+ * 계속 뜨면 잔소리가 되므로 **꺼져 있다가 켜진 것**만 짚는다.
+ * prog.upgWas 에 지난번 상태를 비트로 남긴다 (1 기체 · 2 파일럿).
+ */
+function upgReadyGuide() {
+  const el = document.getElementById('tour')
+  if (!el || !el.hidden) return false
+  if (anyOverlay()) return false
+
+  const now = (anyUpg() ? 1 : 0) + (anyPilotUp() ? 2 : 0)
+  const was = prog.upgWas || 0
+  if (now === was) return false
+  prog.upgWas = now
+  save()
+  const fresh = now & ~was
+  if (!fresh) return false
+
+  const steps = []
+  if (fresh & 1) {
+    steps.push(['#hgMain', '기체를 강화할 수 있습니다',
+      '부품이 모였습니다. 여기를 눌러 메인 기체를 강화합니다. 강화는 그 기체에만 쌓입니다.'])
+  }
+  if (fresh & 2) {
+    steps.push(['#hgPilot', '파일럿을 키울 수 있습니다',
+      '경험치가 모였습니다. 여기를 누르면 스탯 화면으로 바로 갑니다. 잘못 찍어도 되돌려 받습니다.'])
+  }
+  if (!steps.length) return false
+  tourRun(steps, null)
+  return true
+}
+
 function newPilotPopup() {
-  const tier = prog.newPilot
-  if (!tier || !GRADES[tier]) return
+  const ids = Array.isArray(prog.newPilot) ? prog.newPilot : []
+  const mine = ids.map((i) => PILOT_BY[i]).filter((p) => p && pilotOpen(p))
+  if (!mine.length) { prog.newPilot = null; return false }
+  if (anyOverlay()) return false
   prog.newPilot = null
   save()
 
-  const G = GRADES[tier]
-  const mine = PILOTS.filter((p) => p.grade === tier)
+  const gnames = [...new Set(mine.map((p) => GRADES[p.grade].name))].join(' · ')
   const cur = pilotNow()
   const back = stSpent(cur.id)
   const panel = document.getElementById('detail')
@@ -6265,7 +6345,7 @@ function newPilotPopup() {
 
   body.innerHTML =
     '<h3>새 파일럿</h3>' +
-    '<div class="sub2">' + G.name + ' 파일럿이 열렸습니다</div>' +
+    '<div class="sub2">' + gnames + ' 파일럿이 합류했습니다</div>' +
     '<div class="lab">들어온 사람</div><div class="sum">' +
     mine.map((p) => row(p.name, p.desc, true)).join('') +
     '</div>' +
@@ -6295,7 +6375,7 @@ function newPilotPopup() {
      * 자리를 재게 된다.
      */
     if (back) {
-      openPilot(cur, PILOTS.filter((p) => hasGrade(p.grade)))
+      openPilot(cur, PILOTS.filter(pilotOpen))
       setTimeout(() => tourRun([
         ['#pReset', '부은 경험치 되돌리기',
          cur.name + '에게 부은 경험치 ' + back.toLocaleString('ko-KR') +
@@ -6308,16 +6388,24 @@ function newPilotPopup() {
       ], null), 50)
     }
   }
+  return true
 }
 
 /** 아직 안 연 등급 중 제일 가까운 것 한 줄. 초반 화면에만 쓴다 */
 function nextGradeLine() {
+  const out = []
+  /* 가진 등급 안에서 아직 안 온 사람 - 레벨만 올리면 온다 */
+  const soon = PILOTS.filter((p) => hasGrade(p.grade) && !pilotOpen(p))
+    .sort((a, b) => pilotNeedLv(a) - pilotNeedLv(b))[0]
+  if (soon) out.push('파일럿 Lv.' + pilotNeedLv(soon) + ' 에 한 명 더 합류합니다.')
   const left = GRADE_KEYS.filter((k) => GRADE_NEED[k] > 0 && !hasGrade(k))
-  if (!left.length) return '파일럿은 다 모으셨습니다.'
-  left.sort((a, b) => (shardG(b) / GRADE_NEED[b]) - (shardG(a) / GRADE_NEED[a]))
-  const k = left[0]
-  return '다음 파일럿 · ' + GRADES[k].name + ' 조각 ' +
-    shardG(k) + '/' + GRADE_NEED[k] + ' — 뽑기에서 모읍니다.'
+  if (left.length) {
+    left.sort((a, b) => (shardG(b) / GRADE_NEED[b]) - (shardG(a) / GRADE_NEED[a]))
+    const k = left[0]
+    out.push('다음 등급 · ' + GRADES[k].name + ' 조각 ' +
+      shardG(k) + '/' + GRADE_NEED[k] + ' — 뽑기에서 모읍니다.')
+  }
+  return out.join('<br>') || '파일럿은 다 모으셨습니다.'
 }
 
 function renderPilot() {
@@ -6344,7 +6432,7 @@ function renderPilot() {
    * 그때부터는 잠긴 칸이 목표로 읽힌다.
    */
   const early = GRADE_KEYS.filter((k) => hasGrade(k)).length <= 1
-  const list = early ? PILOTS.filter((pl) => hasGrade(pl.grade)) : PILOTS.slice()
+  const list = PILOTS.filter((pl) => pilotOpen(pl) || (!early && !hasGrade(pl.grade)))
   const cards = list.map((pl) => {
     const G = GRADES[pl.grade]
     const owned = hasGrade(pl.grade)
