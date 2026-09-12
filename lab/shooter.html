@@ -2884,6 +2884,18 @@ const AD_ENERGY_DAY = 10               // 하루에 광고로 채울 수 있는 
  * ================================================================ */
 /* 화면 아래에 적어 두는 판 번호. 무엇을 보고 있는지 물을 때 쓴다 */
 const BUILD_TAG = '0.9.1'
+/*
+ * 올린 시각 (2026-09-12). 배포 스크립트가 이 줄을 갈아 끼운다.
+ *
+ * 파일이 13MB 고 깃허브 페이지가 10분(max-age=600) 캐시한다. 고쳐서
+ * 올려도 폰은 한참 옛 화면을 그대로 보여 준다 - 실제로 고친 것을 두고
+ * 「아직 그대로인데」 하고 다시 묻게 됐다. 시작 화면에 올린 시각을
+ * 적어 두면 지금 내 폰이 어느 판을 쥐고 있는지 한 눈에 갈린다.
+ *
+ * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
+ * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
+ */
+const BUILD_AT = '09-12 23:19'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -17866,7 +17878,7 @@ function titleShow() {
   const em = document.getElementById('tEm')
   if (em && ICON_B64.titleem) em.hidden = false
   const v = document.getElementById('tVer')
-  if (v) v.textContent = 'v' + BUILD_TAG
+  if (v) v.textContent = 'v' + BUILD_TAG + ' · ' + BUILD_AT
 }
 function titleStart() {
   if (titleDone) return
