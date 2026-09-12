@@ -1025,6 +1025,112 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 }
 
 
+/* ---------- 살아 있는 조형물 · 첫 화면 ---------- */
+:root {
+  --kinetic-blue: #485cff;
+  --kinetic-violet: #783cf0;
+  --kinetic-pearl: #dce0ff;
+  --kinetic-lilac: #c0b3ff;
+  --kinetic-copy: #bfc0d2;
+  --kinetic-muted: #999bab;
+  --kinetic-wash: rgba(72, 92, 255, .18);
+  --kinetic-purple-wash: rgba(120, 60, 240, .12);
+  --kinetic-hairline: rgba(190, 197, 255, .16);
+  --kinetic-grid: rgba(190, 197, 255, .04);
+  --kinetic-button-glow: rgba(107, 118, 255, .25);
+  --kinetic-shadow: rgba(0, 0, 0, .5);
+  --kinetic-out: cubic-bezier(.23, 1, .32, 1);
+  --kinetic-in-out: cubic-bezier(.77, 0, .175, 1);
+}
+.hero--kinetic { position: relative; isolation: isolate; display: block; min-height: min(880px, calc(100svh - 48px)); padding: 0 clamp(24px, 5.6vw, 96px); text-align: left; background: var(--black); overflow: hidden; }
+.hero-atmosphere { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.halo { position: absolute; border-radius: 50%; }
+.halo-a { width: 78%; aspect-ratio: 1; right: -12%; top: -18%; background: radial-gradient(ellipse, var(--kinetic-wash), transparent 68%); }
+.halo-b { width: 62%; aspect-ratio: 1; right: 3%; bottom: -45%; background: radial-gradient(ellipse, var(--kinetic-purple-wash), transparent 65%); }
+.hero-grid { position: absolute; inset: 0; background-image: linear-gradient(90deg, var(--kinetic-grid) 1px, transparent 1px); background-size: 25% 100%; opacity: .65; mask-image: linear-gradient(transparent, var(--black) 28%, transparent); }
+.kinetic-layout { position: relative; min-height: min(790px, calc(100svh - 130px)); max-width: 1440px; margin: auto; display: flex; align-items: center; }
+.kinetic-copy { position: relative; z-index: 2; width: 64%; padding: 76px 0 84px; pointer-events: none; }
+.kinetic-kicker { display: flex; gap: 10px; align-items: center; margin: 0 0 36px; color: var(--kinetic-copy); font-size: 12px; font-weight: 500; letter-spacing: .035em; animation: kinetic-enter .8s var(--kinetic-out) both; }
+.kinetic-kicker > span { font-size: 22px; line-height: 1; color: var(--kinetic-lilac); }
+.hero--kinetic h1 { font-size: clamp(66px, 7.9vw, 122px); line-height: 1.12; letter-spacing: -.064em; font-weight: 850; white-space: nowrap; text-wrap: initial; }
+.title-line { display: block; overflow: hidden; padding: 0 .05em .06em 0; margin-bottom: -.06em; }
+.title-line > span { display: block; animation: kinetic-title 1.15s var(--kinetic-out) .08s both; }
+.title-line:nth-child(2) > span { animation-delay: .18s; }
+.title-line em { font-style: normal; color: var(--kinetic-pearl); background: linear-gradient(115deg, var(--white) 0%, var(--kinetic-pearl) 36%, var(--kinetic-lilac) 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.kinetic-description { color: var(--kinetic-copy); max-width: 390px; font-size: 16px; line-height: 1.85; letter-spacing: -.025em; margin: 29px 0 0; animation: kinetic-enter 1s var(--kinetic-out) .28s both; }
+.mobile-break { display: none; }
+.kinetic-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 26px; margin-top: 32px; animation: kinetic-enter 1s var(--kinetic-out) .38s both; pointer-events: auto; width: fit-content; }
+.kinetic-cta { display: inline-flex; align-items: center; justify-content: space-between; gap: 26px; min-height: 54px; padding: 9px 10px 9px 24px; border-radius: 999px; background: var(--paper); color: var(--ink-on-light); font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 8px 36px var(--kinetic-button-glow); transition: transform 150ms var(--kinetic-out), box-shadow 150ms; }
+.kinetic-cta > span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--white); background: var(--ink-on-light); font-size: 22px; font-weight: 400; }
+.kinetic-secondary { display: inline-flex; gap: 15px; align-items: center; min-height: 44px; color: var(--kinetic-copy); text-decoration: none; font-size: 13px; }
+.kinetic-secondary:hover { color: var(--white); }
+.kinetic-platform { margin: 20px 0 0; font-size: 12px; color: var(--kinetic-muted); animation: kinetic-enter 1s var(--kinetic-out) .48s both; }
+.kinetic-art { position: absolute; width: 69%; aspect-ratio: 1; right: -12%; top: 50%; transform: translateY(-52%); pointer-events: none; }
+.art-surface { position: absolute; inset: 0; animation: kinetic-art-in 1.6s var(--kinetic-out) .1s both; }
+.kinetic-canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .6s; }
+.kinetic-art[data-renderer="webgl"] .kinetic-canvas { opacity: 1; }
+.kinetic-poster { position: absolute; width: 68%; left: 16%; top: 15%; transition: opacity .6s; }
+.kinetic-art[data-renderer="webgl"] .kinetic-poster { opacity: 0; }
+.art-orbit { position: absolute; width: 85%; height: 85%; left: 7.5%; top: 7.5%; border: 1px solid var(--kinetic-hairline); border-radius: 50%; }
+.orbit-one { transform: rotate(-28deg) scaleY(.56); }
+.orbit-two { transform: rotate(49deg) scaleY(.74); opacity: .35; }
+.art-spark { position: absolute; color: var(--kinetic-pearl); font-size: 26px; animation: kinetic-spark 5s var(--kinetic-in-out) infinite alternate; }
+.spark-one { top: 19%; right: 20%; }
+.spark-two { left: 18%; bottom: 18%; font-size: 14px; animation-delay: -2s; }
+.kinetic-foot { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; max-width: 1440px; margin: auto; min-height: 76px; border-top: 1px solid var(--kinetic-hairline); }
+.kinetic-down { min-height: 44px; display: flex; gap: 16px; align-items: center; color: var(--kinetic-muted); font-size: 11px; text-decoration: none; }
+.kinetic-down > span { color: var(--kinetic-pearl); font-size: 22px; }
+.motion-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--kinetic-muted); background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
+.motion-toggle[hidden] { display: none; }
+.motion-icon { width: 15px; font-size: 13px; }
+.hero--kinetic a:focus-visible, .motion-toggle:focus-visible { outline: 2px solid var(--kinetic-pearl); outline-offset: 5px; }
+.hero--kinetic.is-paused *, .hero--kinetic.is-offscreen * { animation-play-state: paused !important; }
+/* 등장 중 멈추거나 키보드로 진입해도 문구와 버튼이 숨은 채 남지 않는다. */
+.hero--kinetic:is(.is-paused, :focus-within) :is(.kinetic-kicker, .title-line > span, .kinetic-description, .kinetic-actions, .kinetic-platform, .art-surface) { animation: none; opacity: 1; transform: none; }
+@keyframes kinetic-enter { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes kinetic-title { from { transform: translateY(108%); } to { transform: translateY(0); } }
+@keyframes kinetic-art-in { from { opacity: 0; transform: translateY(22px) scale(.95) rotate(-9deg); } to { opacity: 1; transform: none; } }
+@keyframes kinetic-spark { from { opacity: .4; transform: translateY(0) rotate(0); } to { opacity: .9; transform: translateY(-9px) rotate(25deg); } }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .kinetic-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 46px var(--kinetic-button-glow); }
+  .kinetic-cta:active { transform: scale(.96); }
+}
+@media (min-width: 1600px) { .kinetic-art { right: -6%; width: 64%; } }
+@media (max-width: 900px) {
+  .hero--kinetic { padding-inline: 28px; min-height: auto; }
+  .kinetic-layout { min-height: 670px; }
+  .kinetic-copy { width: 80%; padding-block: 66px 100px; }
+  .hero--kinetic h1 { font-size: clamp(64px, 9vw, 86px); }
+  .kinetic-art { width: 82%; right: -27%; top: 49%; opacity: .85; }
+  .kinetic-description { max-width: 295px; }
+  .kinetic-kicker { margin-bottom: 28px; }
+}
+@media (max-width: 760px) {
+  .hero--kinetic { padding-inline: 24px; }
+  .kinetic-layout { display: flex; flex-direction: column; min-height: 0; align-items: stretch; }
+  .kinetic-copy { padding: 45px 0 0; width: 100%; }
+  .kinetic-kicker { font-size: 10px; gap: 7px; letter-spacing: 0; margin-bottom: 24px; }
+  .kinetic-kicker > span { font-size: 18px; }
+  .hero--kinetic h1 { font-size: clamp(48px, 11.9vw, 70px); line-height: 1.13; letter-spacing: -.058em; }
+  .kinetic-description { font-size: 13px; line-height: 1.8; margin-top: 23px; max-width: 310px; }
+  .mobile-break { display: inline; }
+  .kinetic-actions { margin-top: 24px; gap: 8px 20px; }
+  .kinetic-cta { min-height: 48px; padding: 7px 8px 7px 18px; gap: 17px; font-size: 13px; }
+  .kinetic-cta > span { width: 32px; height: 32px; font-size: 20px; }
+  .kinetic-secondary { font-size: 11px; gap: 8px; }
+  .kinetic-platform { margin-top: 12px; font-size: 10px; }
+  .kinetic-art { position: relative; top: auto; right: auto; transform: none; width: calc(100% + 68px); margin: -9px -34px -22px; opacity: 1; }
+  .kinetic-foot { min-height: 64px; }
+  .kinetic-down, .motion-toggle { font-size: 10px; }
+  .kinetic-down { gap: 9px; }
+  .halo-a { width: 170%; right: -40%; top: 18%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero--kinetic *, .hero--kinetic *::before, .hero--kinetic *::after { animation: none !important; transition: none !important; }
+  .title-line > span, .art-surface { transform: none; opacity: 1; }
+}
+
+
 /* ---------- 상세 페이지 · 본문 ---------- */
 
 /*

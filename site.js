@@ -1,10 +1,9 @@
 /*
  * 등장 연출.
  *
- * 두 갈래다. GSAP 이 실려 있으면 그쪽으로 — 첫 화면 제목이 낱말 단위로
- * 올라오고, 스크롤에 맞춰 첫 화면이 뒤로 물러나고, 카드 속 폰이 스크롤과
- * 다른 속도로 움직인다. GSAP 이 안 실렸거나(CDN 이 막힌 곳) 움직임을 줄여
- * 달라고 했으면 예전 그대로 IntersectionObserver 로 한 번씩만 올린다.
+ * 본문은 GSAP 또는 IntersectionObserver 로 한 번씩 드러낸다.
+ * 동작 줄이기에서는 처음부터 모두 보인다. 메인 제목은 CSS, 입체 조형물은
+ * 파일 아래의 WebGL 렌더러가 맡아 CDN 로딩 여부와 관계없이 표시한다.
  *
  * 한 번 올라온 것은 다시 감추지 않는다 — 위아래로 스크롤할 때마다 글이
  * 깜빡이면 읽는 사람이 피곤하다.
@@ -168,130 +167,172 @@
       });
     });
 
-    /* 첫 화면이 없는 페이지(상세)는 여기까지 — 위쪽 요소들도 batch 가 올린다 */
-    var hero = document.querySelector('.hero');
-    if (!hero) {
-      return function () {};
-    }
-
-    /*
-     * 스크롤하면 첫 화면이 뒤로 물러난다.
-     *
-     * 글이 아래 무대보다 느리게 올라가며 옅어진다. 배경 빛은 그보다 더
-     * 느리게. 그래서 겹이 생긴다 — 앞의 것이 먼저 가고 뒤의 것이 남는다.
-     */
-    var sculpt = hero.querySelector('.sculpt');
-    var layers = sculpt ? gsap.utils.toArray(sculpt.querySelectorAll('img')) : [];
-    var depth = function (el) { return parseFloat(el.getAttribute('data-depth')) || 1; };
-
-    gsap.timeline({
-      scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }
-    })
-      .to(hero.querySelector('.hero-text'), { y: 140, opacity: 0, ease: 'none' }, 0)
-      .to(hero.querySelector('.light'), { y: 90, ease: 'none' }, 0)
-      .to(layers, {
-        // 앞에 있는 조각일수록 빨리 흩어진다
-        y: function (i, el) { return -80 * depth(el); },
-        opacity: 0,
-        ease: 'none'
-      }, 0);
-
-    /*
-     * 조형물.
-     *
-     * 세 겹의 움직임이 서로 다른 속성을 쓴다. 떠다니기는 y·rotation, 마우스
-     * 따라가기는 xPercent·yPercent, 스크롤 흩어짐은 위의 y 스크럽. 같은 속성을
-     * 둘이 건드리면 하나가 다른 하나를 지운다.
-     */
-    if (layers.length) gsap.set(layers, { opacity: 0, scale: 0.72, transformOrigin: '50% 50%' });
-
-    function floatLayers() {
-      layers.forEach(function (el, i) {
-        var d = depth(el);
-        gsap.to(el, {
-          y: '+=' + (9 + 7 * d),
-          rotation: (i % 2 ? 1 : -1) * 1.6 * d,
-          duration: 4.2 + i * 0.7,
-          ease: 'sine.inOut',
-          yoyo: true,
-          repeat: -1
-        });
-      });
-    }
-
-    /* 마우스가 있는 기기에서만 — 손가락 화면에서는 따라갈 포인터가 없다 */
-    if (layers.length && window.matchMedia('(hover: hover)').matches) {
-      var qx = layers.map(function (el) { return gsap.quickTo(el, 'xPercent', { duration: 0.9, ease: 'power3' }); });
-      var qy = layers.map(function (el) { return gsap.quickTo(el, 'yPercent', { duration: 0.9, ease: 'power3' }); });
-      hero.addEventListener('pointermove', function (e) {
-        var nx = e.clientX / window.innerWidth - 0.5;
-        var ny = e.clientY / window.innerHeight - 0.5;
-        layers.forEach(function (el, i) {
-          var d = depth(el);
-          qx[i](nx * 16 * d);
-          qy[i](ny * 12 * d);
-        });
-      });
-    }
-
-    /* 스크롤 안내선 — 위에서 아래로 한 번씩 흘러내린다 */
-    var cue = hero.querySelector('.scroll-cue');
-    var cueLine = cue && cue.querySelector('span');
-    if (cueLine) {
-      gsap.fromTo(cueLine,
-        { scaleY: 0, transformOrigin: 'top' },
-        { scaleY: 1, duration: 1.3, ease: 'power2.inOut', repeat: -1, repeatDelay: 0.5 });
-    }
-
-    /*
-     * 안내선은 스크롤을 조금만 해도 사라진다.
-     *
-     * 등장 트윈(0→1)과 같은 요소를 건드리므로 등장이 끝난 뒤에 건다. 먼저
-     * 걸면 스크롤 위치 0 에서 "사라진 상태"를 그려 버려 등장이 지워진다.
-     */
-    function fadeCueOnScroll() {
-      if (!cue) return;
-      gsap.to(cue, {
-        opacity: 0,
-        ease: 'none',
-        scrollTrigger: { trigger: hero, start: 'top top', end: '25% top', scrub: true }
-      });
-    }
-
-    /*
-     * 제목은 낱말로 쪼개서 아래에서 올라온다.
-     *
-     * 낱말마다 덮개(mask)가 있어 잘린 채로 올라오다 드러난다. 그냥 올리는 것과
-     * 달리 글자가 "나타나는" 순서가 생긴다. SplitText 가 없으면 한 덩이로.
-     */
-    var title = hero.querySelector('h1');
-    var words = null;
-    if (SplitText && title) {
-      try {
-        var split = SplitText.create(title, { type: 'words', mask: 'words', wordsClass: 'w' });
-        words = split.words;
-        gsap.set(words, { yPercent: 110 });
-      } catch (e) {
-        words = null;
-      }
-    }
-
-    return function () {
-      var tl = gsap.timeline({ defaults: { ease: ease }, onComplete: fadeCueOnScroll });
-      tl.to(hero.querySelector('.eyebrow'), { opacity: 1, y: 0, duration: 0.7 }, 0);
-      if (words) {
-        tl.set(title, { opacity: 1, y: 0 }, 0.1)
-          .to(words, { yPercent: 0, duration: 0.95, stagger: 0.07, ease: 'power4.out' }, 0.1);
-      } else {
-        tl.to(title, { opacity: 1, y: 0, duration: 0.9 }, 0.1);
-      }
-      tl.to(hero.querySelector('.sub'), { opacity: 1, y: 0, duration: 0.8 }, 0.45)
-        .to(hero.querySelector('.hero-actions'), { opacity: 1, y: 0, duration: 0.8 }, 0.6)
-        .to(hero.querySelector('.scroll-cue'), { opacity: 1, y: 0, duration: 0.8 }, 0.9);
-      if (layers.length) {
-        // 뒤에서 앞으로 한 겹씩 서고, 다 서면 떠다니기 시작
-        tl.to(layers, { opacity: 1, scale: 1, duration: 1.3, stagger: 0.09, ease: 'power3.out', onComplete: floatLayers }, 0.25);
-      }
-    };
+    // 메인의 실시간 3D 연출은 아래 전용 렌더러가 맡는다.
+    return function () {};
   }
+})();
+
+/* 실제 입체 메시를 WebGL로 그린다. 외부 엔진·텍스처 다운로드 없이 약 1만 삼각형.
+ * 화면 밖·숨긴 탭·동작 줄이기·일시정지에서는 렌더 루프를 멈춘다.
+ * WebGL 미지원/컨텍스트 손실 때는 기존 유리 이미지를 즉시 보여준다. */
+(function () {
+  'use strict';
+  var hero = document.querySelector('.hero--kinetic');
+  if (!hero) return;
+  var art = hero.querySelector('.kinetic-art');
+  var canvas = hero.querySelector('canvas');
+  var toggle = hero.querySelector('.motion-toggle');
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  var fine = matchMedia('(hover: hover) and (pointer: fine)');
+  var paused = false, inView = true, lost = false, frame = 0, last = 0, clock = 0;
+  var targetX = 0, targetY = 0, pointerX = 0, pointerY = 0;
+  var velocityX = 0, velocityY = 0;
+  var gl, program, uniforms = {}, meshes = [];
+  toggle.hidden = reduce.matches;
+
+  function syncMotion() {
+    var stopped = paused || reduce.matches;
+    hero.classList.toggle('is-paused', stopped);
+    hero.classList.toggle('is-offscreen', !inView || document.hidden);
+    toggle.hidden = reduce.matches;
+    toggle.setAttribute('aria-pressed', String(paused));
+    toggle.querySelector('.motion-label').textContent = paused ? '움직임 재생하기' : '움직임 멈추기';
+    toggle.querySelector('.motion-icon').textContent = paused ? '▷' : 'Ⅱ';
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0; last = 0;
+    if (gl && !lost) {
+      draw();
+      if (!stopped && inView && !document.hidden) frame = requestAnimationFrame(tick);
+    }
+  }
+  toggle.addEventListener('click', function () { paused = !paused; syncMotion(); });
+  reduce.addEventListener('change', syncMotion);
+  document.addEventListener('visibilitychange', syncMotion);
+  if ('IntersectionObserver' in window) new IntersectionObserver(function (entries) {
+    inView = entries[0].isIntersecting; syncMotion();
+  }, { threshold: 0 }).observe(hero);
+  hero.addEventListener('pointermove', function (event) {
+    if (!fine.matches || reduce.matches || paused || event.pointerType === 'touch') return;
+    var rect = hero.getBoundingClientRect();
+    targetX = (event.clientX - rect.left) / rect.width - .5;
+    targetY = (event.clientY - rect.top) / rect.height - .5;
+  }, { passive: true });
+  hero.addEventListener('pointerleave', function () { targetX = targetY = 0; });
+
+  var vertex = [
+    'attribute vec3 aPosition; attribute vec3 aNormal;',
+    'uniform vec2 uTilt; uniform float uAngle; uniform float uAspect; uniform float uScale; uniform vec3 uOffset;',
+    'varying vec3 vNormal; varying vec3 vPosition;',
+    'vec3 rx(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(p.x,c*p.y-s*p.z,s*p.y+c*p.z);}',
+    'vec3 ry(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(c*p.x+s*p.z,p.y,-s*p.x+c*p.z);}',
+    'vec3 rz(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z);}',
+    'vec3 turn(vec3 p){return rz(ry(rx(p,.62+uTilt.y),uAngle+uTilt.x),-.24);}',
+    'void main(){vec3 p=turn(aPosition*uScale)+uOffset;vPosition=p;vNormal=turn(aNormal);',
+    'float z=7.0-p.z;gl_Position=vec4(p.x*2.75/uAspect,p.y*2.75,1.002*z-.2002,z);}'
+  ].join('\n');
+  var fragment = [
+    'precision highp float; varying vec3 vNormal; varying vec3 vPosition;',
+    'vec3 environment(vec3 r){',
+    'float panel=exp(-pow((r.x+r.y*.23-.23)/.13,2.0))*smoothstep(-.45,.1,r.y);',
+    'float rim=exp(-pow((r.y-r.x*.54+.14)/.045,2.0));',
+    'float wide=pow(max(0.0,dot(r,normalize(vec3(-.6,.8,.5)))),12.0);',
+    'return vec3(.006,.009,.027)+vec3(.8,.87,1.0)*panel*3.8+vec3(.24,.18,1.0)*rim*.8+vec3(.45,.55,1.0)*wide*.9;',
+    '}',
+    'void main(){vec3 n=normalize(vNormal);vec3 v=normalize(vec3(0.,0.,7.)-vPosition);',
+    'float facing=max(dot(n,v),0.0);float fresnel=pow(1.0-facing,3.0);',
+    'vec3 reflected=reflect(-v,n);vec3 refracted=refract(-v,n,1.0/1.46);',
+    'float tint=clamp(.48+vPosition.y*.18+vPosition.x*.12,0.0,1.0);',
+    'vec3 blue=vec3(.009,.025,.36);vec3 violet=vec3(.075,.008,.30);',
+    'vec3 color=mix(violet,blue,tint);',
+    'float diffuse=max(dot(n,normalize(vec3(-.7,.9,1.6))),0.0);',
+    'color*=.24+diffuse*.72;',
+    'color+=environment(reflected)*(.44+.72*fresnel);',
+    'color+=environment(refracted)*vec3(.11,.10,.25)*.42;',
+    'color+=vec3(.028,.05,.25)*pow(1.0-facing,1.7);',
+    'color=color/(color+vec3(1.0));color=pow(color,vec3(.4545));',
+    'gl_FragColor=vec4(color,1.0);}'
+  ].join('\n');
+
+  function shader(type, source) {
+    var s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { gl.deleteShader(s); throw new Error('shader unavailable'); }
+    return s;
+  }
+  function normal(a) { var l = Math.hypot(a[0],a[1],a[2]) || 1; return a.map(function (v) { return v/l; }); }
+  function cross(a,b) { return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]; }
+  function point(t) { var r = 1.29 + .42*Math.cos(3*t); return [r*Math.cos(2*t),r*Math.sin(2*t),.59*Math.sin(3*t)]; }
+  function makeMesh(sphere) {
+    var positions=[], normals=[], indices=[];
+    var steps=sphere?32:192, sides=sphere?20:28;
+    for (var i=0;i<=steps;i++) {
+      var t=i/steps*Math.PI*2;
+      var p=point(t), p1=point(t+.001), p0=point(t-.001);
+      var tangent=normal(p1.map(function(v,k){return v-p0[k];}));
+      var radial=normal(cross(tangent,[0,0,1])); var binormal=normal(cross(radial,tangent));
+      for (var j=0;j<=sides;j++) {
+        var a=j/sides*Math.PI*2, n, pos;
+        if (sphere) { var b=j/sides*Math.PI; n=[Math.cos(t)*Math.sin(b),Math.cos(b),Math.sin(t)*Math.sin(b)]; pos=n; }
+        else { n=radial.map(function(v,k){return v*Math.cos(a)+binormal[k]*Math.sin(a);}); var radius=.325*(1+.08*Math.cos(3*t)); pos=p.map(function(v,k){return v+n[k]*radius;}); }
+        positions.push.apply(positions,pos); normals.push.apply(normals,n);
+        if (i<steps && j<sides) { var k=i*(sides+1)+j; indices.push(k,k+sides+1,k+1,k+1,k+sides+1,k+sides+2); }
+      }
+    }
+    function buffer(type, data) { var b=gl.createBuffer();gl.bindBuffer(type,b);gl.bufferData(type,data,gl.STATIC_DRAW);return b; }
+    return {position:buffer(gl.ARRAY_BUFFER,new Float32Array(positions)),normal:buffer(gl.ARRAY_BUFFER,new Float32Array(normals)),index:buffer(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices)),count:indices.length};
+  }
+  function resize() {
+    if (!gl || lost) return;
+    var r=canvas.getBoundingClientRect(); var dpr=Math.min(devicePixelRatio || 1,innerWidth<700?1.35:1.7);
+    var size=Math.min(1300,Math.max(1,Math.round(r.width*dpr)));
+    var h=Math.max(1,Math.round(size*r.height/(r.width||1)));
+    if(canvas.width!==size || canvas.height!==h){canvas.width=size;canvas.height=h;}
+    gl.viewport(0,0,canvas.width,canvas.height); draw();
+  }
+  function renderMesh(mesh,scale,x,y,z,angle) {
+    var p=gl.getAttribLocation(program,'aPosition'),n=gl.getAttribLocation(program,'aNormal');
+    gl.bindBuffer(gl.ARRAY_BUFFER,mesh.position);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,0,0);
+    gl.bindBuffer(gl.ARRAY_BUFFER,mesh.normal);gl.enableVertexAttribArray(n);gl.vertexAttribPointer(n,3,gl.FLOAT,false,0,0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.index);
+    gl.uniform1f(uniforms.uScale,scale);gl.uniform3f(uniforms.uOffset,x,y,z);gl.uniform1f(uniforms.uAngle,angle);
+    gl.drawElements(gl.TRIANGLES,mesh.count,gl.UNSIGNED_SHORT,0);
+  }
+  function draw() {
+    if(!gl || lost || !program || !meshes.length) return;
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);
+    gl.uniform1f(uniforms.uAspect,canvas.width/canvas.height);
+    gl.uniform2f(uniforms.uTilt,pointerX*.4,pointerY*.32);
+    var angle=-.36+clock*.105;
+    renderMesh(meshes[0],1,0,Math.sin(clock*.4)*.055,0,angle);
+    renderMesh(meshes[1],.14,-1.64,-1.45+Math.sin(clock*.7)*.1,.3,angle);
+    renderMesh(meshes[1],.085,1.30,1.69+Math.cos(clock*.5)*.06,-.2,angle);
+  }
+  function tick(now) {
+    frame=0;
+    var dt=last?Math.min((now-last)/1000,.033):.016;last=now;clock+=dt;
+    // 질량 1, 강성 100, 감쇠 10. 방향을 바꿀 때에도 현재 속도를 이어간다.
+    velocityX+=(100*(targetX-pointerX)-10*velocityX)*dt; pointerX+=velocityX*dt;
+    velocityY+=(100*(targetY-pointerY)-10*velocityY)*dt; pointerY+=velocityY*dt;
+    draw();
+    if(!paused && !reduce.matches && inView && !document.hidden && !lost) frame=requestAnimationFrame(tick);
+  }
+  function fallback() { lost=true;art.dataset.renderer='poster';if(frame)cancelAnimationFrame(frame);frame=0; }
+  function init() {
+    try {
+      gl=canvas.getContext('webgl',{alpha:true,antialias:true,powerPreference:'low-power',premultipliedAlpha:false});
+      if(!gl) return;
+      lost=false;
+      var vs=shader(gl.VERTEX_SHADER,vertex),fs=shader(gl.FRAGMENT_SHADER,fragment);
+      program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
+      gl.deleteShader(vs);gl.deleteShader(fs);
+      if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error('program unavailable');
+      ['uTilt','uAngle','uAspect','uScale','uOffset'].forEach(function(n){uniforms[n]=gl.getUniformLocation(program,n);});
+      meshes=[makeMesh(false),makeMesh(true)];gl.enable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);
+      resize();art.dataset.renderer='webgl';syncMotion();
+    } catch(e) { fallback(); }
+  }
+  canvas.addEventListener('webglcontextlost',function(e){e.preventDefault();fallback();});
+  canvas.addEventListener('webglcontextrestored',init);
+  if('ResizeObserver' in window)new ResizeObserver(resize).observe(canvas);
+  else window.addEventListener('resize',resize,{passive:true});
+  init();syncMotion();
 })();
