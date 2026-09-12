@@ -5857,7 +5857,7 @@ function renderStage() {
   el.querySelectorAll('[data-ch]').forEach((b) => {
     const i = +b.dataset.ch
     b.onclick = () => {
-      if (!chapterOpen(i)) { alert(`${CHAPTERS[i - 1].name} 20단계를 먼저 깨야 합니다.`); return }
+      if (!chapterOpen(i)) { alert(`${CHAPTERS[i - 1].name} ${SUBS}단계를 먼저 깨야 합니다.`); return }
       mapCh = i
       renderStage()
     }
@@ -7429,8 +7429,15 @@ const MID_FORMS = ['mid', 'midRing', 'midTwin', 'midWall']
  * 여기서 그 줄을 지우면 제 옷을 입는다 - 판 구조와 그림을 따로
  * 굴리려고 둔 다리다.
  */
-/* 2026-09-12: 여섯 전선 모두 제 그림이 들어와 빌리는 줄을 비웠다 */
-const THEME_ART = {}
+/*
+ * 그림이 아직 없는 전선은 있는 것을 빌려 쓴다.
+ * 5~10전선은 제 그림이 들어와 비웠고, 11~15전선이 다시 이 다리를 쓴다.
+ * 23차 그림이 오면 그 줄을 지운다.
+ */
+const THEME_ART = {
+  glacier: 'snow', ruin: 'steel', salt: 'canyon',
+  oil: 'ash2', final: 'core',
+}
 /* 늪과 구름 위에는 배·비행선이 선다. 전차와 요새는 안 어울린다 */
 const WATER_THEME = { sea: true, swamp: true, sky: true }
 /*
@@ -7806,6 +7813,151 @@ const CHAPTERS = [
       [2, (r) => wing('mid', 3)],
     ],
   },
+  {
+    id: 11, name: '빙벽', sub: '수백 미터 얼음 절벽 사이', theme: 'glacier',
+    bossHp: 25500, hpMul: 3.0, spMul: 1.63, fireMul: 1.07,
+    pool: [
+      [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
+      [3, (r) => dive(3 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'shield')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'small')],
+      [3, (r) => line(1 + ((r() * 3) | 0), 'lancer')],
+      [2, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
+      [2, (r) => side('gunner', 3, r() < .5 ? 1 : -1)],
+      [2, (r) => line(2, 'guard')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'split')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'bomber')],
+      [2, (r) => ground('sam', 70 + r() * (W - 140))],
+      [2, (r) => ground(['laser', 'radar', 'flak'][(r() * 3) | 0], 60 + r() * (W - 120))],
+      [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
+      [1, () => spawnUfo()],
+      [3, (r) => rocketVolley(2)],
+      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
+      [2, (r) => line(1 + ((r() * 2) | 0), 'miner')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'swarm')],
+      [2, (r) => wing('mid', 3)],
+    ],
+  },
+  {
+    id: 12, name: '폐허 도시', sub: '불타고 남은 옛 수도', theme: 'ruin',
+    bossHp: 30500, hpMul: 3.32, spMul: 1.66, fireMul: 1.02,
+    pool: [
+      [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
+      [3, (r) => dive(3 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'shield')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'small')],
+      [3, (r) => line(1 + ((r() * 3) | 0), 'lancer')],
+      [2, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
+      [2, (r) => side('gunner', 3, r() < .5 ? 1 : -1)],
+      [2, (r) => line(2, 'guard')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'split')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'bomber')],
+      [2, (r) => ground('sam', 70 + r() * (W - 140))],
+      [2, (r) => ground(['laser', 'radar', 'flak'][(r() * 3) | 0], 60 + r() * (W - 120))],
+      [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
+      [1, () => spawnUfo()],
+      [3, (r) => rocketVolley(2)],
+      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
+      [2, (r) => line(1 + ((r() * 2) | 0), 'miner')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'swarm')],
+      [2, (r) => wing('mid', 3)],
+    ],
+  },
+  {
+    id: 13, name: '대염호', sub: '소금이 하얗게 굳은 호수', theme: 'salt',
+    bossHp: 36000, hpMul: 3.66, spMul: 1.69, fireMul: 0.97,
+    pool: [
+      [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
+      [3, (r) => dive(3 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'shield')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'small')],
+      [3, (r) => line(1 + ((r() * 3) | 0), 'lancer')],
+      [2, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
+      [2, (r) => side('gunner', 3, r() < .5 ? 1 : -1)],
+      [2, (r) => line(2, 'guard')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'split')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'bomber')],
+      [2, (r) => ground('sam', 70 + r() * (W - 140))],
+      [2, (r) => ground(['laser', 'radar', 'flak'][(r() * 3) | 0], 60 + r() * (W - 120))],
+      [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
+      [1, () => spawnUfo()],
+      [3, (r) => rocketVolley(2)],
+      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
+      [2, (r) => line(1 + ((r() * 2) | 0), 'miner')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'swarm')],
+      [2, (r) => wing('mid', 3)],
+    ],
+  },
+  {
+    id: 14, name: '화염 유전', sub: '불기둥이 솟는 유전지대', theme: 'oil',
+    bossHp: 42000, hpMul: 4.02, spMul: 1.72, fireMul: 0.93,
+    pool: [
+      [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
+      [3, (r) => dive(3 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'shield')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'small')],
+      [3, (r) => line(1 + ((r() * 3) | 0), 'lancer')],
+      [2, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
+      [2, (r) => side('gunner', 3, r() < .5 ? 1 : -1)],
+      [2, (r) => line(2, 'guard')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'split')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'bomber')],
+      [2, (r) => ground('sam', 70 + r() * (W - 140))],
+      [2, (r) => ground(['laser', 'radar', 'flak'][(r() * 3) | 0], 60 + r() * (W - 120))],
+      [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
+      [1, () => spawnUfo()],
+      [3, (r) => rocketVolley(2)],
+      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
+      [2, (r) => line(1 + ((r() * 2) | 0), 'miner')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'swarm')],
+      [2, (r) => wing('mid', 3)],
+    ],
+  },
+  {
+    id: 15, name: '최후 결전장', sub: '더 갈 곳이 없다', theme: 'final',
+    bossHp: 49000, hpMul: 4.4, spMul: 1.75, fireMul: 0.89,
+    pool: [
+      [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
+      [3, (r) => dive(3 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'shield')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'small')],
+      [3, (r) => line(1 + ((r() * 3) | 0), 'lancer')],
+      [2, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
+      [2, (r) => side('gunner', 3, r() < .5 ? 1 : -1)],
+      [2, (r) => line(2, 'guard')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'split')],
+      [2, (r) => line(2 + ((r() * 2) | 0), 'bomber')],
+      [2, (r) => ground('sam', 70 + r() * (W - 140))],
+      [2, (r) => ground(['laser', 'radar', 'flak'][(r() * 3) | 0], 60 + r() * (W - 120))],
+      [3, (r) => bombRaid(4 + ((r() * 3) | 0))],
+      [1, () => spawnUfo()],
+      [3, (r) => rocketVolley(2)],
+      [2, (r) => rise('mid', 2 + ((r() * 2) | 0))],
+      /* 가로 빔과 서는 탄. 5챕터부터 나온다 (2026-09-12) */
+      [3, (r) => line(1 + ((r() * 2) | 0), 'beamer')],
+      [3, (r) => holdWall(5 + ((r() * 3) | 0))],
+      [3, (r) => line(2 + ((r() * 2) | 0), 'weaver')],
+      [2, (r) => line(1 + ((r() * 2) | 0), 'miner')],
+      [3, (r) => line(4 + ((r() * 4) | 0), 'swarm')],
+      [2, (r) => wing('mid', 3)],
+    ],
+  },
 ]
 
 function pickFrom(pool, r) {
@@ -7914,7 +8066,8 @@ function buildWaves(ch, sub) {
    * 되돌리려면 1.375 를 1.1 로, 아주 되돌리려면 지우면 된다.
    */
   /* 챕터 배수도 열 개로. 뒤로 갈수록 짧아진다 - 세진 만큼 짧게 */
-  const LEN_CH = [1, 1, 0.95, 0.9, 0.88, 0.86, 0.84, 0.82, 0.8, 0.78]
+  const LEN_CH = [1, 1, 0.95, 0.9, 0.88, 0.86, 0.84, 0.82, 0.8, 0.78,
+                  0.77, 0.76, 0.75, 0.74, 0.73]
   const len = 42 * 1.375 * (bossStage ? 0.68 : 0.76) * (LEN_CH[ch.id - 1] || 0.78)
   /*
    * 기본 간격. 좁을수록 촘촘하다.
@@ -7992,7 +8145,9 @@ function buildWaves(ch, sub) {
    * 열로 늘리되, 전처럼 뒤로 갈수록 눕힌다 - 선형으로 두면 8챕터부터
    * 상한(16)에 닿아 그 뒤가 전부 같은 판이 된다.
    */
-  const DENS_OFF = [0, 5, 8, 10.5, 12, 13, 13.8, 14.4, 14.9, 15.3]
+  /* 15전선으로 늘리며 뒤를 더 눕혔다. 상한(16)에 닿으면 그 뒤가 다 같은 판이다 */
+  const DENS_OFF = [0, 5, 8, 10.5, 12, 13, 13.8, 14.4, 14.9, 15.3,
+                    15.5, 15.65, 15.75, 15.85, 15.9]
   const dens = sub * (ch.id > 1 ? 0.583 : 0.917) + (DENS_OFF[ch.id - 1] || 15.3)
   /*
    * 천장을 0.9 에서 0.72 로 낮췄다.
