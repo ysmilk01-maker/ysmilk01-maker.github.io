@@ -387,3 +387,11 @@
   .app-stage { padding-block: 56px 72px; }
   .app-stage .inner { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 64px; }
 }
+
+/* 출시 전 게임을 실행 가능한 버튼으로 보이게 하지 않는다. */
+.release-notice { display: inline-block; margin: 30px 0 0; padding-block: 12px; border-block: 1px solid var(--line-hover); color: var(--body-dark); font-size: var(--text-ui); }
+.launch-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.open-secondary { background: var(--paper); color: var(--ink-on-light); }
+.light-stage .open-secondary { background: var(--ink-on-light); color: var(--paper); }
+.launch-actions .open { margin-top: 28px; }
+@media (max-width: 899px) { .launch-actions { justify-content: center; } }
