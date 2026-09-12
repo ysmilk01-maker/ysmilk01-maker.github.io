@@ -1111,6 +1111,8 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
   .hero--kinetic { padding-inline: 24px; padding-bottom: 8px; overflow: clip; }
   .kinetic-layout { display: grid; grid-template-rows: auto minmax(140px, 1fr); height: calc(100svh - 142px); min-height: min-content; align-items: stretch; }
   .kinetic-copy { padding: 18px 0 0; width: 100%; }
+  /* 작은 화면의 문구는 즉시 보여 주고 시선은 회전하는 3D에 둔다. */
+  .hero--kinetic :is(.kinetic-kicker, .title-line > span, .kinetic-description, .kinetic-actions, .kinetic-platform) { animation: none; opacity: 1; transform: none; }
   .kinetic-kicker { font-size: 10px; gap: 7px; letter-spacing: 0; margin-bottom: 14px; }
   .kinetic-kicker > span { font-size: 16px; }
   .hero--kinetic h1 { font-size: clamp(36px, 9.8vw, 44px); line-height: 1.1; letter-spacing: -.058em; }
