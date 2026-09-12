@@ -53,7 +53,14 @@
   :root {
     --bg: #08090d; --panel: #13151c; --panel-2: #191c25;
     --line: #23262f; --line-2: #2e323e;
-    --ink: #ececef; --muted: #8b8b93; --dim: #5f6068;
+    /*
+     * 본문 두 색을 올렸다 (2026-09-12).
+     *
+     * --dim 이 배경 대비 2.6~3.2:1 이라 본문 서른한 곳이 흐렸다. 특히
+     * 난이도 고르는 「크레이지·하드코어」가 3.18:1 이어서 고를 수 있는
+     * 선택지가 꺼져 있는 것처럼 읽혔다. 둘 다 올리되 순서는 지킨다.
+     */
+    --ink: #ececef; --muted: #a5adba; --dim: #89919f;
     --accent: #4fd1ff; --accent-ink: #04121a;
     --gold: #f0b90b; --warn: #f76c82; --ok: #4f9e77;
     --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
@@ -4236,7 +4243,25 @@ prog.squad = prog.squad.map((id) => { const p = id && planeById(id); return p &&
 /* ================================================================
  * 화면 크기
  * ================================================================ */
-const W = 420, H = 720
+/*
+ * 세로 길이를 화면에 맞춘다 (2026-09-12).
+ *
+ * 420×720 은 비율이 0.583 인데 요즘 폰은 0.46 근처다. 폭에 맞춰 눕히면
+ * 위아래가 남아서, 375×812 에서 캔버스가 359×615 로 서고 화면의 24%가
+ * 검은 띠가 됐다. 430×932 에서는 222px 이다. 게임 시간의 대부분을
+ * 보내는 화면이라 여기가 제일 아깝다.
+ *
+ * 그래서 H 를 화면 비율로 뽑되 720~880 으로 가둔다. 가두지 않으면
+ * 가로 화면이나 이상한 창 크기에서 판이 통째로 달라진다.
+ *
+ * 속도를 같이 보정한다. 화면이 길어지면 적이 가로지르는 데 더 걸리고,
+ * 판 길이는 초로 재므로 화면에 남는 적이 늘어난다 - 화면만 키웠는데
+ * 난이도가 바뀐다. 세로로 움직이는 것에 H/720 을 곱하면 가로지르는
+ * 시간이 그대로다.
+ */
+const W = 420
+const H = Math.round(Math.max(720, Math.min(880, W * (innerHeight / Math.max(1, innerWidth)))))
+const SPD_K = H / 720
 const PLAYER_R = 8
 const canvas = document.getElementById('c')
 const g = canvas.getContext('2d')
@@ -8881,16 +8906,28 @@ let startingRush = false
  * 제일 쉬운 것만 반복하는 것이 최선의 수가 된다.
  */
 const BOSS_RUSH = [
+  /*
+   * mul 을 50 에서 10~6 으로 내렸다 (2026-09-12).
+   *
+   * 50 이면 한 마리에 16분에서 7시간이 걸렸다. 게다가 체력을 ch 가
+   * 아니라 플레이어가 골라 둔 판에서 뽑고 있어서, 1-1 을 골라 두면
+   * 3분이고 3전선을 골라 두면 54분인 같은 도전이 됐다. 이제 아래 ch 를
+   * 실제로 쓴다.
+   *
+   * 뒤로 갈수록 배수를 눕힌다. 그대로 두면 전선 보스 체력이 이미 커진
+   * 만큼 뒤엣것만 한없이 길어진다 - 어려워지는 것과 오래 걸리는 것은
+   * 다른 일이다.
+   */
   { key: 'tank',    name: '강습 전차',   sub: '화력을 앞세운 지상 요새',
-    ch: 2,  mul: 50, xp: 4000,  form: 'tank',    art: 'tank' },
+    ch: 2,  mul: 10, xp: 4000,  form: 'tank',    art: 'tank' },
   { key: 'carrier', name: '기동 항모',   sub: '함재기를 끝없이 내보낸다',
-    ch: 4,  mul: 50, xp: 8000,  form: 'carrier', art: 'carrier' },
+    ch: 4,  mul: 9,  xp: 8000,  form: 'carrier', art: 'carrier' },
   { key: 'fort',    name: '적 본부',     sub: '사방이 포문이다',
-    ch: 6,  mul: 50, xp: 14000, form: 'fort',    art: 'fort' },
+    ch: 6,  mul: 8,  xp: 14000, form: 'fort',    art: 'fort' },
   { key: 'flak',    name: '대공포 진지', sub: '하늘을 통째로 덮는다',
-    ch: 8,  mul: 50, xp: 22000, form: 'flak',    art: 'fort' },
+    ch: 8,  mul: 7,  xp: 22000, form: 'flak',    art: 'fort' },
   { key: 'void',    name: '성층권 전함', sub: '가장 크고 가장 단단하다',
-    ch: 10, mul: 50, xp: 32000, form: 'void',    art: 'ship' },
+    ch: 10, mul: 6,  xp: 32000, form: 'void',    art: 'ship' },
 ]
 const RUSH_TICKET_FIRST = 3
 const RUSH_TICKET_AGAIN = 1
@@ -8985,7 +9022,7 @@ function bombRaid(n) {
   for (let i = 0; i < n; i++) {
     s.ebullets.push({
       x: Math.max(30, Math.min(W - 30, off + gap * i + (Math.random() - .5) * 22)),
-      y: -70, vx: 0, vy: 205, r: 15, age: 0,
+      y: -70, vx: 0, vy: 205 * SPD_K, r: 15, age: 0,
       sh: 'bomb', dmg: DMG.dive, hp: 40, hpMax: 40,
       /* 이 시간 동안은 안 움직이고 안 맞는다. 경고만 뜬다 */
       warnT: 1.7 + Math.random() * 0.3,
@@ -9028,7 +9065,7 @@ function holdWall(n) {
   if (Math.abs(gap2 - gap1) < 2) gap2 = (gap1 + 3) % cnt
   /* 멈추는 높이. 너무 위면 지나가기 쉽고 너무 아래면 피할 틈이 없다 */
   const stopY = H * (0.34 + Math.random() * 0.16)
-  const vy = 210
+  const vy = 210 * SPD_K
   for (let i = 0; i < cnt; i++) {
     if (i === gap1 || i === gap2) continue
     const x = (W / cnt) * (i + 0.5)
@@ -9370,7 +9407,10 @@ function mkEnemy(kind, x, y, drift) {
   const SG = state.stage || { hpMul: 1, spMul: 1 }
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
-           ...b, hp: Math.round(b.hp * SG.hpMul), sp: Math.round(b.sp * SG.spMul) }
+           ...b, hp: Math.round(b.hp * SG.hpMul),
+           /* 화면이 길어진 만큼 빨라진다. 가로지르는 시간은 그대로다 */
+           sp: Math.round(b.sp * SG.spMul * SPD_K),
+           dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
 }
 
 /* ================================================================
@@ -9477,7 +9517,7 @@ const DMG = {
  *   원경  31 px/s
  *   근경  45 px/s
  */
-const TERRAIN_SPEED = 45
+const TERRAIN_SPEED = 45 * SPD_K   /* 지면도 같이. 안 그러면 지상 유닛만 오래 머문다 */
 /*
  * 구름층.
  *
@@ -9677,7 +9717,8 @@ function spawnBoss(mid) {
    */
   const rush = state.rush >= 0 ? BOSS_RUSH[state.rush] : null
   const base = rush
-    ? Math.round(state.stage.bossHp * 0.55 * rush.mul)
+    /* 골라 둔 판이 아니라 그 도전에 적힌 전선에서 뽑는다 */
+    ? Math.round((CHAPTERS[rush.ch - 1] || CHAPTERS[0]).bossHp * 0.55 * rush.mul)
     : Math.round(state.stage.bossHp * (mid ? mm : 0.55))
 
   /*
@@ -10329,6 +10370,26 @@ function fireScale() {
  * 1 미만이 된다 - 「화면의 적을 차례로 물고 간다」고 적어 놓고 실제로는
  * 앞의 넷만 긁었다. 실측 총피해가 34 였다(융단폭격 1197).
  */
+/*
+ * 번개가 튈 수 있는 것들.
+ *
+ * 적기만 돌고 있었다 (2026-09-12). 이 게임은 180판이 전부 보스로 끝나는데
+ * 번개는 보스에 한 번도 안 튀었다. 그래서 전기 전설이 보스전에서 제일 약한
+ * 기체가 됐다 - 대보스 화력이 미사일 전설의 32분의 1 이었다.
+ * 보스 부위와 열린 코어도 목표로 넣는다.
+ */
+function chainTargets() {
+  const s = state
+  const out = []
+  for (const e of s.enemies) if (!e.dead) out.push({ x: e.x, y: e.y, e })
+  const bs = s.boss
+  if (bs && !bs.entering) {
+    for (const p of bs.parts) if (p.alive) out.push({ x: bs.x + p.dx, y: bs.y + p.dy, bs, o: p })
+    if (bs.core.open) out.push({ x: bs.x, y: bs.y, bs, o: bs.core })
+  }
+  return out
+}
+
 function chainFrom(from, b) {
   const s = state
   const fo = b.falloff != null ? b.falloff : CHAIN.falloff
@@ -10336,26 +10397,34 @@ function chainFrom(from, b) {
   let dmg = b.dmg * fo
   const bit = [from]
   const jumps = b.jumps || 3
+  const pool = chainTargets()
   for (let j = 0; j < jumps; j++) {
     let best = null, bd = CHAIN.range * CHAIN.range
-    for (const e of s.enemies) {
-      if (e.dead || bit.includes(e)) continue
-      const d = (e.x - cur.x) ** 2 + (e.y - cur.y) ** 2
-      if (d < bd) { bd = d; best = e }
+    for (const t of pool) {
+      const key = t.e || t.o
+      if ((t.e && t.e.dead) || bit.includes(key)) continue
+      const d = (t.x - cur.x) ** 2 + (t.y - cur.y) ** 2
+      if (d < bd) { bd = d; best = t }
     }
     if (!best) break
-    best.hp -= dmg
-    best.flash = .12
     s.arcs.push({ x1: cur.x, y1: cur.y, x2: best.x, y2: best.y, age: 0, life: .22,
                   seed: Math.random() * 100 })
-    if (best.hp <= 0 && !best.dead) {
-      best.dead = true
-      s.score += best.score
-      s.kills++
-      boom(best.x, best.y, 12, '#bff0ff')
-      s.ult = Math.min(ultCap(), s.ult + 8 * ULT_GAIN * ultGainMul() * perk('ult'))
+    if (best.e) {
+      const en = best.e
+      en.hp -= dmg
+      en.flash = .12
+      if (en.hp <= 0 && !en.dead) {
+        en.dead = true
+        s.score += en.score
+        s.kills++
+        boom(en.x, en.y, 12, '#bff0ff')
+        s.ult = Math.min(ultCap(), s.ult + 8 * ULT_GAIN * ultGainMul() * perk('ult'))
+      }
+    } else {
+      /* 부위와 코어는 bossHit 이 어디를 맞았는지 가려 준다 */
+      bossHit(best.bs, best.x, best.y, dmg)
     }
-    bit.push(best)
+    bit.push(best.e || best.o)
     cur = best
     dmg *= fo
   }
@@ -11846,7 +11915,14 @@ function update(dt) {
    * 된다 - 앞 구간이 그냥 지나가는 길이 아니게 된다.
    */
   s.supplyT -= dt
-  if (s.supplyT <= 0 && !s.boss) {
+  /*
+   * 보스 도전은 판 전체가 보스다 (2026-09-12).
+   *
+   * 「보스가 서면 끊는다」를 그대로 적용하니 보급이 한 번도 안 떨어져서,
+   * 편대 단계가 1 에 묶인 채로 제일 단단한 놈을 때리게 됐다.
+   * 여기서는 계속 내려 준다.
+   */
+  if (s.supplyT <= 0 && (!s.boss || s.rush >= 0)) {
     dropSupply()
     /* 「소나기」는 이 간격이 짧아진다 */
     s.supplyT = (SUPPLY_GAP[0] + Math.random() * (SUPPLY_GAP[1] - SUPPLY_GAP[0])) * perk('sup')
@@ -13460,11 +13536,14 @@ function drawBoss(bs) {
   /* 2단계가 시작되는 자리. 여기부터는 코어다 */
   g.fillStyle = 'rgba(255,255,255,.85)'
   g.fillRect(30 + w * coreK - 1, 12, 2, 14)
+  /* 점수가 왼쪽 위에 있다. 같은 자리에 쓰면 글자가 겹친다 - 오른쪽 끝에 붙인다 */
   g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '10px system-ui'
+  g.textAlign = 'right'
   g.fillText(bs.core.open
     ? (bs.mid ? '중간보스' : '보스') + ' · 코어 노출'
     : (bs.mid ? '중간보스' : '보스') + ' · 부위 ' +
-      bs.parts.filter((p) => p.alive).length + '개 남음', 30, 34)
+      bs.parts.filter((p) => p.alive).length + '개 남음', W - 30, 34)
+  g.textAlign = 'left'
 }
 
 /*
@@ -15083,7 +15162,8 @@ function draw() {
     g.save()
     g.translate(ULT_BTN.x, ULT_BTN.y)
     // 바탕
-    g.fillStyle = ready ? 'rgba(90,200,255,.22)' : 'rgba(255,255,255,.07)'
+    /* 안 찼을 때 흰 7% 는 밝은 지형에서 사라진다 - 일시정지 단추와 같은 어두운 바탕으로 */
+    g.fillStyle = ready ? 'rgba(90,200,255,.22)' : 'rgba(10,16,26,.62)'
     g.beginPath(); g.arc(0, 0, ULT_BTN.r, 0, Math.PI * 2); g.fill()
     // 채워지는 테두리
     g.strokeStyle = 'rgba(255,255,255,.16)'; g.lineWidth = 4
