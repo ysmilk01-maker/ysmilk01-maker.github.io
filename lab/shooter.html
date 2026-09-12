@@ -9565,8 +9565,15 @@ const ENEMY_HOMING_TURN = PLAYER_HOMING_TURN * 0.2
  * 코어가 열리면 2 페이즈다. 보스는 더 이상 자리를 지키지 않고 돌진하고,
  * 즉사 광선을 쏜다. 부위를 다 부순 대가로 사나워지는 셈이다.
  */
-/** 보스가 나올 때 채워 주는 체력 비율 */
-const BOSS_HEAL = 0.40
+/*
+ * 보스가 나올 때 채워 주는 체력 비율.
+ *
+ * 0.40 에서 0.20 으로 줄였다 (2026-09-12). 판마다 보스 아니면 중간보스가
+ * 나오니 판마다 찼고, 그래서 「내 기체 피가 저절로 찬다」가 버그로 신고됐다.
+ * 절반으로 낮추면 너덜너덜하게 온 판을 받쳐 주는 일은 그대로 하면서,
+ * 깨끗하게 온 판에는 거의 티가 안 난다 - 원래 이 값의 뜻이 그것이었다.
+ */
+const BOSS_HEAL = 0.20
 
 function spawnBoss(mid) {
   /*
@@ -9897,7 +9904,14 @@ function spawnBoss(mid) {
     const pl = state.player
     const before = pl.hp
     pl.hp = Math.min(pl.maxHp, pl.hp + pl.maxHp * BOSS_HEAL)
-    if (pl.hp > before + 1) banner('보급')
+    /*
+     * 얼마나 찼는지 적는다 (2026-09-12).
+     *
+     * 「보급」 두 글자만 떴다. 보스가 나오는 것과 같은 순간이라 체력이
+     * 저절로 차는 것이 규칙인지 고장인지 구분이 안 됐다 - 실제로
+     * 버그 신고가 들어왔다. 규칙이면 규칙처럼 보여야 한다.
+     */
+    if (pl.hp > before + 1) banner('보급 · 체력 +' + Math.round(BOSS_HEAL * 100) + '%')
   }
   banner(mid ? '중간보스' : '보스')
   sfx('alarm')
@@ -10944,8 +10958,14 @@ function levelUp() {
   const pl = state.player
   if (pl.lv < 5) {
     pl.lv++
-    /* 하드코어에서는 그릇도 안 커진다. 끝까지 한 대다 */
-    if (!state.hard) pl.maxHp += 20
+    /*
+     * 하드코어에서는 그릇도 안 커진다. 끝까지 한 대다.
+     *
+     * 늘어난 만큼 지금 체력도 같이 올린다 (2026-09-12). 그릇만 키우면
+     * 막대가 hp/maxHp 라 **단계가 오르는 순간 막대가 줄어든다** - 올렸는데
+     * 나빠 보이는 표시였다. 회복이 아니라 눈금이 늘어난 것이다.
+     */
+    if (!state.hard) { pl.maxHp += 20; pl.hp += 20 }
     banner('편대 ' + pl.lv + '단계')
   } else {
     state.score += 500                          // 만렙이면 점수로
