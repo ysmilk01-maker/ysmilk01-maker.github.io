@@ -13347,23 +13347,42 @@ function drawBoss(bs) {
   g.beginPath(); g.ellipse(0, -bs.r * .1, 7 + bs.phase, 5, 0, 0, Math.PI * 2); g.fill()
   g.restore()
 
-  /* 체력 막대. 구간 경계에 눈금을 넣는다 */
+  /*
+   * 체력 막대. 부위와 코어를 **한 자에** 놓는다 (2026-09-12).
+   *
+   * 전에는 막대가 두 가지를 번갈아 가리켰다 - 부위가 살아 있는 동안은
+   * 부위 합계, 코어가 열리면 코어. 그래서 부위를 다 부순 순간 막대가
+   * 비었다가 **다시 가득 찼다.** 잘 싸워서 다 깎아 놓고 나면 피가 도로
+   * 차는 것처럼 보이니, 이겼는지 졌는지를 막대로 못 읽는다.
+   *
+   * 이제 부위 합계 + 코어를 분모로 잡는다. 막대는 한 방향으로만 준다.
+   * 코어 몫은 왼쪽 끝에 붉게 깔아 두어, 부위를 깎는 동안에도 「여기까지
+   * 가면 2단계」가 미리 보인다.
+   */
   const w = W - 60
   const partHp = bs.parts.reduce((a, p) => a + Math.max(0, p.hp), 0)
   const partMax = bs.parts.reduce((a, p) => a + p.maxHp, 0)
-  const ratio = bs.core.open ? bs.core.hp / bs.core.maxHp : partHp / partMax
+  const total = partMax + bs.core.maxHp
+  const coreK = bs.core.maxHp / total
+  const ratio = Math.max(0, (partHp + Math.max(0, bs.core.hp)) / total)
   g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(30, 16, w, 6)
-  g.fillStyle = bs.core.open ? '#ff5470' : '#ffb45c'
-  g.fillRect(30, 16, w * Math.max(0, ratio), 6)
-  /* 부위 경계. 남은 부위 수가 눈금으로 보인다 */
-  if (!bs.core.open) {
-    g.fillStyle = 'rgba(0,0,0,.45)'
-    let acc = 0
-    for (const p of bs.parts.slice(0, -1)) {
-      acc += p.maxHp / partMax
-      g.fillRect(30 + w * acc, 16, 1.5, 6)
-    }
+  /* 코어 몫이 먼저(왼쪽), 부위 몫이 그 위(오른쪽). 색이 곧 남은 단계다 */
+  g.fillStyle = '#ff5470'
+  g.fillRect(30, 16, w * Math.min(ratio, coreK), 6)
+  if (ratio > coreK) {
+    g.fillStyle = '#ffb45c'
+    g.fillRect(30 + w * coreK, 16, w * (ratio - coreK), 6)
   }
+  /* 부위 경계. 남은 부위 수가 눈금으로 보인다 */
+  g.fillStyle = 'rgba(0,0,0,.45)'
+  let acc = coreK
+  for (const p of bs.parts.slice(0, -1)) {
+    acc += p.maxHp / total
+    g.fillRect(30 + w * acc, 16, 1.5, 6)
+  }
+  /* 2단계가 시작되는 자리. 여기부터는 코어다 */
+  g.fillStyle = 'rgba(255,255,255,.85)'
+  g.fillRect(30 + w * coreK - 1, 12, 2, 14)
   g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '10px system-ui'
   g.fillText(bs.core.open
     ? (bs.mid ? '중간보스' : '보스') + ' · 코어 노출'
