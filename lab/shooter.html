@@ -1917,7 +1917,30 @@ const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는
  * 한 발을 더 쌓게 해 주는데, 상한을 네 군데서 따로 읽고 있어서 한 곳만
  * 고치면 찼는데 안 차는 것처럼 보인다.
  */
-function ultCap() { return ULT_MAX * (ULT_STOCK + perk('ultN')) }
+/*
+ * 필살기는 시각으로 찬다 (2026-09-12).
+ *
+ * 전에는 적을 잡을수록 찼다. 그래서 판마다 몇 번 쓸 수 있는지가
+ * 그때그때 달랐고, 잡졸이 몰려 나오는 구간에서는 연달아 쓰고 보스
+ * 앞에서는 텅 비었다. 언제 쓸지를 고르는 것이 이 물건의 값인데,
+ * 언제 찰지를 모르면 고를 수가 없다.
+ *
+ * 판이 시작하고 15초에 하나, 40초에 하나. 한 판에 둘이 끝이다.
+ * 시각이 정해져 있으니 「첫 번째는 접근 구간, 두 번째는 보스」처럼
+ * 계획을 세울 수 있다.
+ *
+ * 「홍련」의 충전 +25% 는 시각을 당기는 것으로 옮긴다(12초·32초).
+ * 「뇌성」의 한 발 더는 70초에 한 발을 더 붙인다.
+ */
+const ULT_AT = [15, 40]
+function ultTimes() {
+  const k = perk('ult') || 1
+  const out = ULT_AT.map((t) => t / k)
+  const extra = Math.round(perk('ultN') || 0)
+  for (let i = 0; i < extra; i++) out.push((70 + i * 30) / k)
+  return out
+}
+function ultCap() { return ULT_MAX * ultTimes().length }
 /*
  * 쌓아 둘 수 있는 발수.
  *
@@ -10355,10 +10378,7 @@ function missileBurst(b) {
     s.kills++
     boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
     /* 격파로는 아이템이 안 나온다. 아이템은 보급으로만 온다(dropSupply) */
-    const before = s.ult
-    s.ult = Math.min(ultCap(), s.ult +
-      (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * ultGainMul() * perk('ult'))
-    if (before < ULT_MAX && s.ult >= ULT_MAX) { sfx('ready'); ultTip() }
+    /* 필살기는 격파로 안 찬다. 시각표(ULT_AT)가 정한다 */
   }
 
   for (const u of s.grounds) {
@@ -10503,7 +10523,6 @@ function chainFrom(from, b) {
         s.score += en.score
         s.kills++
         boom(en.x, en.y, 12, '#bff0ff')
-        s.ult = Math.min(ultCap(), s.ult + 8 * ULT_GAIN * ultGainMul() * perk('ult'))
       }
     } else {
       /* 부위와 코어는 bossHit 이 어디를 맞았는지 가려 준다 */
@@ -10909,6 +10928,31 @@ function fireUlt() {
 function updateUlt(dt) {
   const s = state
   const pl = s.player
+
+  /*
+   * 게이지를 시각에서 만든다.
+   *
+   * 가진 발수는 (지금까지 준 것 - 쓴 것). 거기에 다음 한 발까지의
+   * 진행도를 얹어 그린다 - 막대가 차는 것이 곧 다음 시각까지 남은
+   * 시간이라, 「조금만 더 버티면 한 발」이 눈에 보인다.
+   */
+  {
+    const times = ultTimes()
+    let given = 0
+    for (const t of times) if (s.t >= t) given++
+    if (given > (s.ultGiven || 0)) {
+      s.ultGiven = given
+      if (given - (s.ultUsed || 0) > 0) { sfx('ready'); ultTip() }
+    }
+    let frac = 0
+    if (given < times.length) {
+      const from = given === 0 ? 0 : times[given - 1]
+      const to = times[given]
+      frac = Math.max(0, Math.min(1, (s.t - from) / Math.max(0.001, to - from)))
+    }
+    const held = Math.max(0, given - (s.ultUsed || 0))
+    s.ult = held * ULT_MAX + frac * ULT_MAX
+  }
 
   if (s.ultT > 0) {
     s.ultT -= dt
@@ -11488,8 +11532,6 @@ function update(dt) {
           e.dead = true; s.score += e.score; s.kills++
           boom(e.x, e.y, e.kind === 'mid' ? 22 : 12,
                e.burn ? ELS.fire.color : ELS.psn.color)
-          s.ult = Math.min(ultCap(), s.ult +
-            (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * ultGainMul() * perk('ult'))
           continue
         }
       }
@@ -12277,13 +12319,7 @@ function collide() {
           e.dead = true; s.score += e.score; s.kills++
           boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
           // 중형이 죽을 때마다 뭔가 떨어지니 화면이 아이템으로 덮였다
-          /* 미사일·번개로 잡아도 같다 */
-          // 큰 적일수록 많이 찬다. 열댓 마리 잡으면 한 번 쓴다
-          const before = s.ult
-          // 예전엔 잡졸 열일곱만 잡으면 궁이 찼다. 판이 궁으로만 굴러갔다
-          s.ult = Math.min(ultCap(), s.ult +
-            (e.kind === 'small' ? 3 : e.kind === 'tank' ? 11 : 6) * ULT_GAIN * ultGainMul() * perk('ult'))
-          if (before < ULT_MAX && s.ult >= ULT_MAX) { sfx('ready'); ultTip() }
+          /* 필살기는 격파로 안 찬다 - 15초·40초에 하나씩만 (ULT_AT) */
         }
       }
     }
