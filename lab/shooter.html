@@ -2895,7 +2895,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-12 23:19'
+const BUILD_AT = '09-12 23:27'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -10058,8 +10058,14 @@ function flank(kind, n, dir) {
  * 소수점은 확률로 올린다 - 3마리 줄이면 3.6 이 되는데, 늘 3 으로
  * 내림하면 20% 가 아니라 0% 가 된다.
  */
-/* 1.2 -> 1.38 (2026-09-12). 20% 위에 15% 를 더 얹은 값이다 */
-const SMALL_MUL = 1.38
+/*
+ * 1.2 -> 1.38 -> 1.79 (2026-09-12).
+ *
+ * 20% 위에 15% 를 얹었고 거기서 다시 30% 를 얹었다. 잡졸은 수로 미는
+ * 놈이라 늘려도 성격이 안 변한다 - 맷집이나 중형을 같이 늘리면 화면이
+ * 단단한 것들로 덮여서 「치우는 맛」이 아니라 「안 치워진다」가 된다.
+ */
+const SMALL_MUL = 1.79
 function enemyCount(n, kind) {
   if (kind !== 'small') return n
   const raw = n * SMALL_MUL
@@ -10095,7 +10101,8 @@ function mkEnemy(kind, x, y, drift) {
      */
     small:  { hp: 4,  r: 13, sp: 78, score: 90,  fire: 2.4, art: 30 },
     /* 30 -> 60 (2026-09-12). 열 종류 중 게임이 「중형」이라 부르는 것은 이것뿐이다 */
-    mid:    { hp: 60, r: 20, sp: 52, score: 220, fire: 1.5, art: 46 },
+    /* 체력 60 -> 66 (2026-09-12, 10%). 중형만 올린다 */
+    mid:    { hp: 66, r: 20, sp: 52, score: 220, fire: 1.5, art: 46 },
     /* 쏘지 않고 몸으로 온다. 조준하는 동안 예고선이 보인다 */
     dive:   { hp: 5,  r: 15, sp: 40, score: 180, fire: 99,  art: 34, aim: .9, dashSp: 430 },
     /* 좌우로 크게 흔들며 부채꼴로 뿌린다. 정면에 서 있으면 안 된다 */
@@ -10481,6 +10488,227 @@ const ENEMY_HOMING_TURN = PLAYER_HOMING_TURN * 0.2
  *
  * 아이템도 원래부터 체력을 안 준다(dropItem 주석 참고).
  */
+
+/** 보스 탄 한 발. 기본값이 길어서 묶는다 */
+function bshot(x, y, vx, vy, r, extra) {
+  state.ebullets.push(Object.assign(
+    { x, y, vx, vy, r, age: 0, dmg: DMG.boss, sh: 'boss' }, extra || {}))
+}
+/** 중간보스는 같은 패턴을 성기게 쏜다. 몸집이 작으니 탄도 작아야 한다 */
+function bcnt(bs, n) { return Math.max(1, Math.round(n * (bs.mid ? 0.6 : 1))) }
+
+/*
+ * 보스마다 쏘는 법이 다르다 (2026-09-12).
+ *
+ * 형태는 다섯인데(함선·전차·요새·편대·모선) 쏘는 법은 하나였다 -
+ * 1페이즈 부채꼴, 2페이즈 나선, 어느 보스를 만나도 같은 자리에서 같은
+ * 모양이 나왔다. **그림만 바뀌고 싸우는 법이 안 바뀌면 다섯 번째
+ * 보스쯤에서 전부 같은 상대가 된다.**
+ *
+ * 형태마다 제 무기를 준다. 가르는 기준은 「어디에 서야 사는가」다 -
+ * 그게 달라야 형태를 나눈 값을 한다.
+ *
+ *   ship     양현 포격    갑판 양끝이 따로 겨눈다. 가운데가 빈다
+ *   tank     곡사 포격    굵고 느리다. 화면 위가 아니라 발밑을 봐야 한다
+ *   fort     회전 탄막    틈이 돌아간다. 서 있으면 안 되고 따라 돌아야 한다
+ *   air      기총소사     빠르고 좁다. 짧게 자주 비킨다
+ *   carrier  편대 발진    탄은 성기고 부하가 쏟아진다. 보스만 보면 안 된다
+ *
+ * cd 는 간격이다. 성기게 쏘는 것은 자주, 촘촘하게 쏘는 것은 뜸하게 -
+ * 안 맞추면 형태에 따라 초당 탄 수가 세 배씩 벌어진다.
+ *
+ * p3 는 코어가 열린 뒤 가끔 한 번 얹는 몫이다. 마지막 페이즈는 다섯이
+ * 같은 고리·연발을 쓰되, 그 위에 제 색을 한 번씩 덧칠한다.
+ */
+const BOSS_PAT = {
+  /* ── 함선. 갑판 양끝 포탑이 따로 겨눈다 ── */
+  ship: {
+    /* 한 번에 여덟 발이라 뜸하게 - 그래도 초당으로는 다섯 중 제일 성겼다 */
+    cd1: 0.85, cd2: 0.68,
+    p1(bs, pl) {
+      /* 두 포탑이 각자 조준한다. 둘 사이(가운데)가 비므로 파고들면 산다 */
+      for (const sx of [-36, 36]) {
+        const x = bs.x + sx, y = bs.y + 14
+        const a = Math.atan2(pl.y - y, pl.x - x)
+        const n = bcnt(bs, 4)
+        for (let k = 0; k < n; k++) {
+          const d = (k - (n - 1) / 2) * .13
+          bshot(x, y, Math.cos(a + d) * 190, Math.sin(a + d) * 190, 4)
+        }
+      }
+    },
+    p2(bs) {
+      /* 일제 사격. 양현에서 가로로 훑는다 - 좌우로는 못 피하고 위아래로 빠져야 한다 */
+      if (Math.random() < 0.55) {
+        for (const dir of [1, -1]) {
+          for (let i = 0; i < bcnt(bs, 5); i++) {
+            bshot(dir > 0 ? -20 : W + 20, 120 + i * 46, dir * 190, 26, 4, { sh: 'mid' })
+          }
+        }
+      }
+      /* 본체는 아래로 굵게 흘린다 */
+      const n = bcnt(bs, 3)
+      for (let k = 0; k < n; k++) {
+        const d = (k - (n - 1) / 2) * .28
+        bshot(bs.x, bs.y + 20, Math.sin(d) * 120, Math.cos(d) * 120, 6, { dmg: DMG.flak, sh: 'heavy' })
+      }
+    },
+    p3(bs) {
+      for (const dir of [1, -1]) {
+        for (let i = 0; i < 5; i++) {
+          bshot(dir > 0 ? -20 : W + 20, 150 + i * 52, dir * 215, 20, 4, { sh: 'mid' })
+        }
+      }
+    },
+  },
+
+  /* ── 전차. 굵고 느린 곡사. 위에서 떨어지는 것을 같이 본다 ── */
+  tank: {
+    /* 탄이 굵고(DMG.flak) 폭격이 따로 붙으므로 수는 적게, 간격은 넓게 */
+    cd1: 1.20, cd2: 0.80,
+    p1(bs, pl) {
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      const n = bcnt(bs, 6)
+      for (let k = 0; k < n; k++) {
+        const d = (k - (n - 1) / 2) * .22
+        bshot(bs.x, bs.y + 22, Math.cos(a + d) * 124, Math.sin(a + d) * 124, 6,
+              { dmg: DMG.flak, sh: 'heavy' })
+      }
+      if (!bs.mid && Math.random() < 0.40) bombRaid(3)
+    },
+    p2(bs, pl) {
+      /* 포격을 부르고 그 사이를 조준탄으로 메운다. 눈을 두 곳에 둬야 한다 */
+      if (!bs.mid && Math.random() < 0.50) bombRaid(4)
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      const n = bcnt(bs, 4)
+      for (let k = 0; k < n; k++) {
+        const d = (k - (n - 1) / 2) * .16
+        bshot(bs.x, bs.y + 22, Math.cos(a + d) * 148, Math.sin(a + d) * 148, 5,
+              { dmg: DMG.flak, sh: 'heavy' })
+      }
+    },
+    p3(bs) { if (!bs.mid) bombRaid(5) },
+  },
+
+  /* ── 요새. 돌아가는 탄막. 틈을 따라 계속 움직여야 한다 ── */
+  fort: {
+    /* 한 번에 고리 하나가 통째로 나가므로 다섯 중 제일 뜸해야 한다 */
+    cd1: 1.15, cd2: 0.56,
+    p1(bs) {
+      /* 고리 하나가 통째로 천천히 퍼진다. 가까이 붙으면 틈이 좁다 */
+      bs.spin = (bs.spin || 0) + 0.31
+      const n = bcnt(bs, 12)
+      for (let i = 0; i < n; i++) {
+        const a = bs.spin + (i / n) * Math.PI * 2
+        bshot(bs.x, bs.y, Math.cos(a) * 142, Math.sin(a) * 142, 4)
+      }
+    },
+    p2(bs) {
+      /* 두 나선이 반대로 돈다. 한쪽 틈을 따라가면 다른 쪽 틈은 반대로 온다 */
+      bs.spin = (bs.spin || 0) + 0.40
+      const n1 = bcnt(bs, 5), n2 = bcnt(bs, 4)
+      for (let k = 0; k < n1; k++) {
+        const a = bs.spin + (k / n1) * Math.PI * 2
+        bshot(bs.x, bs.y + 10, Math.cos(a) * 178, Math.sin(a) * 178, 4)
+      }
+      for (let k = 0; k < n2; k++) {
+        const a = -bs.spin * 1.35 + (k / n2) * Math.PI * 2
+        bshot(bs.x, bs.y + 10, Math.cos(a) * 132, Math.sin(a) * 132, 4)
+      }
+    },
+    p3(bs) {
+      /* 고리 한 겹을 더. 세 겹이 되면 틈이 어긋나 겹친다 */
+      for (let i = 0; i < 22; i++) {
+        const a = (i / 22) * Math.PI * 2 + bs.t * .4
+        bshot(bs.x, bs.y, Math.cos(a) * 88, Math.sin(a) * 88, 4)
+      }
+    },
+  },
+
+  /* ── 편대. 빠르고 좁다. 자주 쏘는 대신 한 번에 적게 ── */
+  air: {
+    cd1: 0.58, cd2: 0.40,
+    p1(bs, pl) {
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      const n = bcnt(bs, 3)
+      for (let k = 0; k < n; k++) {
+        const d = (k - (n - 1) / 2) * .07
+        bshot(bs.x, bs.y + 20, Math.cos(a + d) * 268, Math.sin(a + d) * 268, 3.6)
+      }
+    },
+    p2(bs, pl) {
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      const n = bcnt(bs, 4)
+      for (let k = 0; k < n; k++) {
+        const d = (k - (n - 1) / 2) * .06
+        bshot(bs.x, bs.y + 20, Math.cos(a + d) * 292, Math.sin(a + d) * 292, 3.6)
+      }
+      /* 가끔 옆으로 흩뿌려 「한 줄만 피하면 된다」를 깬다 */
+      if (Math.random() < 0.35) {
+        for (const d of [-.55, -.28, .28, .55]) {
+          bshot(bs.x, bs.y + 20, Math.cos(a + d) * 205, Math.sin(a + d) * 205, 3.6)
+        }
+      }
+    },
+    p3(bs, pl) {
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      for (let k = 0; k < 6; k++) {
+        bshot(bs.x, bs.y + 20, Math.cos(a) * (230 + k * 26), Math.sin(a) * (230 + k * 26), 3.6)
+      }
+    },
+  },
+
+  /* ── 모선. 탄은 성기고 부하가 쏟아진다 ── */
+  carrier: {
+    cd1: 1.10, cd2: 0.72,
+    p1(bs, pl) {
+      /* 발진. 보스만 보고 있으면 옆에서 맞는다 */
+      if (Math.random() < 0.55) {
+        for (const sx of [bs.x - 54, bs.x + 54]) {
+          state.enemies.push(mkEnemy('small', Math.max(30, Math.min(W - 30, sx)), bs.y + 10, 0))
+        }
+      }
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      const n = bcnt(bs, 4)
+      for (let k = 0; k < n; k++) {
+        const d = (k - (n - 1) / 2) * .19
+        bshot(bs.x, bs.y + 20, Math.cos(a + d) * 168, Math.sin(a + d) * 168, 4)
+      }
+    },
+    p2(bs) {
+      /* 유도탄으로 자리를 빼앗고, 성긴 나선으로 길을 좁힌다 */
+      if (Math.random() < 0.45) {
+        for (const dx of [-26, 26]) {
+          state.ebullets.push({ x: bs.x + dx, y: bs.y + 20, vx: 0, vy: 128, r: 5,
+                                kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
+        }
+      }
+      bs.spin = (bs.spin || 0) + 0.46
+      const n = bcnt(bs, 4)
+      for (let k = 0; k < n; k++) {
+        const a = bs.spin + (k / n) * Math.PI * 2
+        bshot(bs.x, bs.y + 10, Math.cos(a) * 162, Math.sin(a) * 162, 4)
+      }
+    },
+    p3(bs) {
+      for (const sx of [bs.x - 70, bs.x, bs.x + 70]) {
+        state.enemies.push(mkEnemy('small', Math.max(30, Math.min(W - 30, sx)), bs.y + 10, 0))
+      }
+    },
+  },
+}
+/*
+ * 중간보스 다섯 벌도 같은 표를 나눠 쓴다.
+ *
+ * 몸집이 작아 탄 수는 bcnt 가 60% 로 줄인다. 새로 짜지 않는 이유는
+ * 중간보스가 매 판 서기 때문이다 - 열 가지를 다 다르게 만들면 배울 것이
+ * 열 개가 되고, 그러면 어느 것도 안 익는다.
+ */
+BOSS_PAT.mid = BOSS_PAT.air
+BOSS_PAT.midRing = BOSS_PAT.fort
+BOSS_PAT.midTwin = BOSS_PAT.ship
+BOSS_PAT.midWall = BOSS_PAT.tank
+BOSS_PAT.midCarrier = BOSS_PAT.carrier
 
 function spawnBoss(mid) {
   /*
@@ -12673,78 +12901,37 @@ function update(dt) {
         const nAlive = bs.parts.filter((p) => p.alive).length
         bs.phase = bs.core.open ? 3 : nAlive < bs.parts.length ? 2 : 1
 
+        /*
+         * 형태마다 쏘는 법이 다르다 (2026-09-12). 표는 BOSS_PAT 에 있다.
+         *
+         * 1·2 페이즈는 통째로 형태가 쥔다. 3 페이즈(코어가 열린 뒤)는
+         * 다섯이 같은 고리·연발을 쓰되 그 위에 형태 몫(p3)을 가끔 얹는다 -
+         * 마지막은 「이 보스의 끝」이 아니라 「보스전의 끝」이라, 다섯이
+         * 같은 박자를 타는 편이 맺음이 분명하다.
+         */
+        const pat = BOSS_PAT[bs.form] || BOSS_PAT.air
         if (bs.phase === 2) {
-          /*
-           * 나선.
-           *
-           * 각도가 조금씩 돌아가며 계속 나온다. 부채꼴은 한 번 피하면
-           * 다음 발까지 쉴 틈이 있는데, 나선은 안전한 자리가 천천히
-           * 옮겨다녀서 계속 따라 움직여야 한다.
-           */
-          bs.cd = 0.42 * slow * haste * chf * 1.111
-          bs.spin = (bs.spin || 0) + 0.42
-          /*
-           * 팔을 배로 (2026-09-12). 셋에서 여섯.
-           *
-           * 나선은 팔이 늘어도 틈이 같이 돈다 - 60도마다 하나면 비켜설
-           * 자리가 계속 생긴다. 부채꼴처럼 한 방향에 몰아 넣는 것과 다르다.
-           */
-          const arms = bs.mid ? 4 : 6
-          for (let k = 0; k < arms; k++) {
-            const a = bs.spin + (k / arms) * Math.PI * 2
-            s.ebullets.push({ x: bs.x, y: bs.y + 10, vx: Math.cos(a) * 175, vy: Math.sin(a) * 175,
-                              r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
-          }
-          /*
-           * 가끔 벽이 온다. 나선만이면 가운데가 늘 안전해진다.
-           *
-           * 한쪽에서 다섯 줄이던 것을 **양쪽에서 다섯 줄씩**으로 바꿨다
-           * (2026-09-12). 줄 간격은 46 그대로라 사이로 빠지는 길은 남아
-           * 있는데, 한쪽으로 도망치는 길은 없어진다 - 위아래로 움직여야 한다.
-           */
-          if (Math.random() < 0.08) {
-            for (const dir of [1, -1]) {
-              for (let i = 0; i < 5; i++) {
-                s.ebullets.push({ x: dir > 0 ? -20 : W + 20, y: 120 + i * 46,
-                                  vx: dir * 190, vy: 26, r: 4, age: 0,
-                                  dmg: DMG.boss, sh: 'mid' })
-              }
-            }
-          }
+          bs.cd = pat.cd2 * slow * haste * chf * 1.111
+          pat.p2(bs, pl)
         } else if (bs.phase === 1) {
-          bs.cd = 1.05 * slow * haste * chf * 1.111
-          /*
-           * 부채꼴을 두 겹으로 (2026-09-12).
-           *
-           * 각도는 그대로 두고 빠른 겹과 느린 겹을 함께 쏜다. 같은 부채를
-           * 촘촘하게 채우면 발수는 배가 되지만 틈이 사라져 피할 자리가
-           * 없어진다 - 겹으로 나가면 발수만 배가 되고 비켜설 자리는 그대로다.
-           * 대신 한 번 비킨 뒤에도 뒤 겹이 오므로 그 자리에 머물 수 없다.
-           */
-          for (const sp of [205, 148]) {
-            for (let i = -3; i <= 3; i++) {
-              const a = Math.PI / 2 + i * .17
-              s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-                                r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
-            }
-          }
-          /* 조준 유도탄. 하나는 늘 나가고 둘째는 가끔 */
-          const nMis = 1 + (Math.random() < .45 ? 1 : 0)
-          for (let k = 0; k < nMis; k++) {
-            s.ebullets.push({ x: bs.x + (k ? 26 : -26), y: bs.y + 20, vx: 0, vy: 130, r: 5,
-                              kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
-          }
+          bs.cd = pat.cd1 * slow * haste * chf * 1.111
+          pat.p1(bs, pl)
         } else {
-          /* 코어가 열리면 원형 탄막 + 조준 3연발을 번갈아 */
+          /* 코어가 열리면 원형 탄막 + 조준 연발을 번갈아 */
           bs.cd = 1.15 * chf * 1.111
+          /* 형태 몫을 한 번씩. 전차면 폭격, 모선이면 발진, 요새면 고리가 한 겹 더 */
+          if (Math.random() < 0.32 && pat.p3) pat.p3(bs, pl)
           /*
-           * 그리고 가끔 폭격을 부른다.
+           * 번갈이를 시계에서 떼어 냈다 (2026-09-12).
            *
-           * 마지막 페이즈에는 보스만 보고 있을 수 없게 만든다 - 화면
-           * 위쪽에 경고가 뜨면 눈을 두 곳에 둬야 한다.
+           * Math.floor(bs.t) % 2 로 갈랐는데, 그건 1초마다 뒤집히는 값이고
+           * 쏘는 간격은 1.28초다. 둘이 엇비슷해서 **한쪽에 붙어 버린다** -
+           * 재 보니 고리(36발)만 계속 나오는 구간과 조준탄(8발)만 계속
+           * 나오는 구간이 생겨서, 같은 페이즈인데 탄 밀도가 네 배씩 뛰었다.
+           * 쏠 때마다 뒤집으면 반드시 번갈아 나온다.
            */
-          if (!bs.mid && Math.random() < 0.16) bombRaid(3 + ((Math.random() * 2) | 0))
-          if (Math.floor(bs.t) % 2 === 0) {
+          bs.ringT = !bs.ringT
+          if (bs.ringT) {
             /*
              * 고리가 두 겹이 됐다 (2026-09-12). 안쪽 겹은 느리고 반 칸
              * 어긋나 있다 - 앞 겹의 틈으로 빠지면 그 자리가 뒤 겹의
@@ -12770,8 +12957,7 @@ function update(dt) {
                                 kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
             }
           }
-        }
-      }
+        }      }
     }
   }
 
