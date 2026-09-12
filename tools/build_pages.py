@@ -148,33 +148,29 @@ APPS = {
   'sudoku': dict(
     slug='sudoku', name='오늘도 무료 스도쿠', tint='sudoku', glow='var(--sudoku-glow)',
     title='오늘도 무료 스도쿠 · 나인투식스랩',
-    meta='답이 하나뿐인 판만 냅니다. 판은 기기 안에서 만들어서 연결이 끊겨도 계속 풀립니다. 웹에서 바로, 스토어 출시 준비 중.',
-    og='답이 하나뿐인 판만. 연결이 끊겨도 계속 풀립니다.',
-    badge='웹에서 바로 · 스토어 준비 중',
-    h1='찍어서 맞히는<br>자리가 없습니다',
-    desc='답이 하나뿐인 판만 내보냅니다. 논리만으로 끝까지 풀립니다. 판은 기기 안에서 만들어서, 연결이 끊겨도 계속 풀 수 있습니다.',
-    hero_img='sudoku.png', hero_alt='오늘도 무료 스도쿠 시작 화면. 3x3 미니 격자와 특징 세 가지.',
-    how=['유일해 보장', '오늘의 퍼즐', '풀던 판 이어하기', '오프라인', '광고로 안 막음'],
-    open_href='../lab/sudoku/', open_label='브라우저에서 풀기',
-    hint='설치도 로그인도 없이 바로 풀립니다. 원스토어·구글플레이 출시를 준비하고 있습니다.',
-    shots=[],
-    feats_h2='답은 하나,<br>내 속도로 풀어보세요',
-    feats_lead='기기 안에서 문제를 만들고 다시 풀어 확인합니다. 답이 하나인 판을 골라 내보냅니다.',
-    feats=[('1개', '답은 하나뿐', '만든 판을 다시 풀어서 답이 하나임을 확인한 것만 내보냅니다. 찍어야 하는 자리가 없습니다.'),
-           ('이어하기', '풀던 판 그대로', '잠깐 멈췄다가 다시 열어도 이어집니다. 같은 브라우저에서 하던 판을 계속 풀어보세요.'),
-           ('오늘', '오늘의 퍼즐', '날짜가 씨앗입니다. 같은 날에는 누구나 같은 판을 받습니다.'),
-           ('기기 안', '퍼즐 생성', '판은 기기 안에서 만듭니다. 지하철에서 연결이 끊겨도 하던 판이 그대로 이어집니다.'),
-           ('꽉', '격자가 화면 전체', '상단 바를 없애고 격자를 화면 끝까지 채웠습니다. 숫자 하나하나가 큽니다.'),
-           ('0', '판을 막는 광고', '퍼즐은 광고 없이 끝까지 풀립니다. 힌트와 이어풀기만 광고 한 편이고, 안 보면 그냥 내 힘으로 풉니다.')],
-    status=[('웹', '지금 바로', '이 페이지의 버튼으로 브라우저에서 풀 수 있습니다. 기록은 그 브라우저에 남습니다.'),
-            ('원스토어', '준비 중', '게임 등록 절차를 밟고 있습니다. 끝나면 안드로이드 앱으로 나옵니다.'),
-            ('토스', '그 다음', '스토어 출시가 확인되면 토스 미니앱으로도 올립니다.')],
-    steps=[('아래 버튼을 누릅니다', '설치 없이 브라우저에서 열립니다.'),
-           ('난이도를 고릅니다', '오늘의 퍼즐이나 새 판. 처음이면 쉬움부터.'),
-           ('풀다 나가도 됩니다', '다시 열면 하던 판이 그대로 있습니다.')],
-    notes=['<strong>웹 버전은 앱과 판이 같습니다.</strong> 토스 광고와 랭킹은 지원하지 않습니다. 진동은 Android Chrome 등 지원하는 브라우저에서만 동작합니다.',
-           '기록은 이 브라우저에만 남습니다. 브라우저 데이터를 지우면 같이 지워집니다.',
-           '앱은 원스토어와 구글플레이에 순서대로 냅니다. 이 페이지가 먼저 알려드립니다.'],
+    meta='답이 하나인 퍼즐, 내 속도로 한 칸씩. 오늘도 무료 스도쿠를 토스와 원스토어에서 만나보세요.',
+    og='귀여운 고양이와 함께 집중하는 시간. 토스·원스토어에서 만나는 무료 스도쿠.',
+    badge='서비스 중 · 토스 · 원스토어', h1='한 칸씩 채우는,<br>나만의 집중 시간.',
+    desc='답이 하나인 퍼즐을 내 속도로 풀어보세요. 오늘의 퍼즐과 난이도 선택, 풀던 판 이어하기를 토스와 원스토어에서 만날 수 있습니다.',
+    hero_img='editorial/sudoku-play.webp', hero_alt='오늘도 무료 스도쿠의 실제 플레이 화면.', hero_width=636, hero_height=1048,
+    how=['오늘의 퍼즐', '난이도 선택', '풀던 판 이어하기', '힌트'],
+    open_href='intoss://daily-free-sudoku', open_label='토스에서 열기',
+    extra_href='https://onesto.re/0001008978', extra_label='원스토어에서 보기',
+    hint='모바일 토스 앱에서 열립니다. 안드로이드에서는 원스토어로도 이용할 수 있습니다.',
+    shots=[('sudoku-hint', '오늘도 무료 스도쿠의 실제 힌트 화면.')],
+    feats_h2='잠깐의 여유를,<br>한 판의 몰입으로',
+    feats_lead='오늘의 퍼즐을 고르거나 새 판을 시작하세요. 막히는 곳에서는 힌트의 도움을 받을 수 있습니다.',
+    feats=[('오늘', '오늘의 퍼즐', '매일 새로운 퍼즐을 만납니다.'),
+           ('선택', '내게 맞는 난이도', '익숙한 난이도로 시작하고, 조금 더 어려운 판에 도전해 보세요.'),
+           ('이어하기', '풀던 판 그대로', '잠깐 멈췄다가 돌아와도 진행하던 판을 이어갑니다.')],
+    status=[('토스', '서비스 중', '토스 앱에서 오늘도 무료 스도쿠를 검색하거나 아래 버튼을 누르세요.'),
+            ('원스토어', '서비스 중', '안드로이드에서 원스토어 상세 페이지를 열어 설치할 수 있습니다.')],
+    steps=[('플랫폼을 고릅니다', '토스 또는 원스토어 버튼을 누르세요.'),
+           ('서비스에서 시작합니다', '토스에서 열거나 원스토어에서 앱을 설치합니다.'),
+           ('퍼즐을 고릅니다', '오늘의 퍼즐이나 원하는 난이도의 새 판을 시작하세요.')],
+    notes=['<strong>공식 서비스 플랫폼에서 이용해 주세요.</strong> 이 홈페이지에서는 브라우저 플레이와 테스트 버전을 제공하지 않습니다.',
+           '진행 기록은 이용한 기기에 저장됩니다. 앱 데이터 삭제 전에 기록 보관 여부를 확인해 주세요.',
+           '광고로 이용하는 기능의 조건은 각 서비스 화면에서 확인할 수 있습니다.'],
     others=['beatwave', 'shooter', 'coin', 'krx', 'ai'],
   ),
   'beatwave': dict(
@@ -183,9 +179,9 @@ APPS = {
     tint='beatwave',
     glow='var(--beatwave-glow)',
     title='비트웨이브 · 나인투식스랩',
-    meta='음악에 맞춰 내려오는 노트를 누르는 리듬게임. 4~8레인과 난이도를 고르고 브라우저에서 바로 플레이합니다. 웹 체험 버전입니다.',
-    og='비트를 따라, 나만의 한 판. 브라우저에서 즐기는 리듬게임 비트웨이브.',
-    badge='웹 체험 · 개발 중',
+    meta='음악에 맞춰 내려오는 노트를 누르는 리듬게임. 4~8레인과 난이도를 고르는 리듬게임을 개발하고 있습니다. 정식 출시를 준비 중입니다.',
+    og='비트를 따라, 나만의 한 판. 정식 출시를 준비하는 리듬게임 비트웨이브.',
+    badge='개발 중 · 정식 출시 준비',
     h1='비트를 따라,<br>나만의 한 판.',
     desc='음악에 맞춰 내려오는 노트를 눌러보세요. 레인 수와 난이도를 고르고, 익숙해질 때까지 연습합니다.',
     hero_img='games/beatwave.webp',
@@ -193,9 +189,9 @@ APPS = {
     hero_width=780,
     hero_height=1688,
     how=['리듬게임', '4~8레인', '터치 · 키보드', '연습 모드'],
-    open_href='https://beatwave-james-k.wjpeain.chatgpt.site/',
-    open_label='비트웨이브 플레이',
-    hint='설치·로그인 없이 외부 웹 플레이 페이지로 이동합니다. 개발 중인 체험 버전입니다.',
+    open_href=None,
+    open_label='정식 출시 준비 중',
+    hint='현재 개발 중인 게임입니다. 출시가 확정되면 공식 서비스 플랫폼을 안내하겠습니다.',
     shots=[('beatwave-select', '비트웨이브 실제 곡 선택 화면. 레인과 난이도, 노트 낙하 속도를 고릅니다.'),
            ('beatwave-play', '비트웨이브 실제 연습 플레이 화면. 음악에 맞춰 내려오는 노트를 누릅니다.')],
     shot_width=780,
@@ -204,14 +200,10 @@ APPS = {
     feats_lead='레인과 난이도를 직접 고르고, 연습한 뒤 같은 곡에 다시 도전합니다.',
     feats=[('4~8', '레인을 고릅니다', '이지·노멀·하드 중 난이도를 고릅니다. 노트 낙하 속도도 따로 조절합니다.'),
            ('연습', '끝까지 들어보세요', '실패 없이 수록 구간을 끝까지 연습합니다. 도전 모드에서는 게이지가 소진되면 종료됩니다.'),
-           ('기록', '다시 도전할 이유', '단계·레인·난이도별 개인 기록을 남깁니다. 웹 기록은 플레이한 브라우저에 저장됩니다.')],
-    steps=[('플레이 버튼을 누릅니다', '웹 페이지에서 ‘게임 시작’을 누릅니다.'),
-           ('레인과 난이도를 고릅니다', '처음이라면 이지와 연습 모드부터 시작해 보세요.'),
-           ('박자에 맞춰 누릅니다', '터치나 화면에 안내된 키보드 키로 노트를 맞힙니다.')],
-    notes=['<strong>개발 중인 웹 체험 버전입니다.</strong> 기능과 화면은 업데이트에 따라 바뀔 수 있습니다. 토스·스토어 정식 출시 버전은 아닙니다.',
-           '웹 기록과 설정은 이용한 브라우저에 저장됩니다. 기기 간 동기화는 없으며 브라우저 데이터를 지우면 기록도 지워집니다.',
-           '현재 웹 버전에는 실제 광고·유료 결제가 연결되어 있지 않습니다.',
-           '기기와 오디오 환경에 따라 입력감이 다를 수 있습니다. 앱 안의 입력 타이밍 보정 설정을 확인해 주세요.'],
+           ('기록', '다시 도전할 이유', '단계·레인·난이도별 개인 기록을 남기며 반복해서 도전하는 경험을 다듬고 있습니다.')],
+    steps=[],
+    notes=['<strong>정식 출시 전입니다.</strong> 소개된 기능과 화면은 개발 과정에서 바뀔 수 있습니다.',
+           '홈페이지에서는 테스트 버전을 제공하지 않습니다. 출시 소식과 이용 경로는 이 페이지에서 안내합니다.'],
     others=['shooter', 'sudoku', 'coin', 'krx', 'ai'],
   ),
   'shooter': dict(
@@ -220,9 +212,9 @@ APPS = {
     tint='shooter',
     glow='var(--shooter-glow)',
     title='오늘도 출격 · 나인투식스랩',
-    meta='기체를 움직여 적의 탄을 피하고 자동 사격으로 전선을 돌파하는 편대 슈팅게임. 브라우저에서 바로 시작하는 웹 체험 버전입니다.',
-    og='피하고, 맞히고. 오늘도 출격. 브라우저에서 바로 시작하는 편대 슈팅게임.',
-    badge='웹 체험 · 개발 중',
+    meta='기체를 움직여 적의 탄을 피하고 자동 사격으로 전선을 돌파하는 편대 슈팅게임. 정식 출시를 준비 중입니다.',
+    og='피하고, 맞히고. 오늘도 출격. 개발 중인 편대 슈팅게임.',
+    badge='개발 중 · 정식 출시 준비',
     h1='피하고, 맞히고.<br>오늘도 출격.',
     desc='기체를 움직여 적의 탄을 피하고, 자동 사격으로 전선을 돌파합니다. 보유한 기체를 골라 나만의 편대를 꾸려보세요.',
     hero_img='games/shooter.webp',
@@ -230,24 +222,21 @@ APPS = {
     hero_width=780,
     hero_height=1688,
     how=['편대 슈팅', '드래그 이동', '자동 사격', '기체 성장'],
-    open_href='../lab/shooter.html',
-    open_label='오늘도 출격 플레이',
-    hint='설치 없이 이 사이트의 게임 화면에서 열립니다. 개발 중인 웹 체험 버전입니다.',
+    open_href=None,
+    open_label='정식 출시 준비 중',
+    hint='현재 개발 중인 게임입니다. 출시가 확정되면 공식 서비스 플랫폼을 안내하겠습니다.',
     shots=[('shooter-play', '오늘도 출격 실제 전투 화면. 바다 위 기체와 적탄, 자동 사격.'),
            ('shooter-squad', '오늘도 출격 실제 편대 준비 화면. 기체 편성과 출격 버튼.')],
     shot_width=780,
     shot_height=1688,
     feats_h2='손끝으로 피하고,<br>편대로 돌파합니다',
-    feats_lead='먼저 출격해 움직임을 익혀보세요. 보유 기체를 바꾸고 강화하며 다시 도전합니다.',
+    feats_lead='드래그 이동과 자동 사격을 중심으로 전투를 만듭니다. 보유 기체를 바꾸고 강화하며 다시 도전합니다.',
     feats=[('이동', '드래그로 조종', '화면을 누른 채 손가락을 움직여 조종합니다. PC에서는 방향키도 지원합니다.'),
            ('자동', '사격은 맡기세요', '기체가 자동으로 사격합니다. 적의 탄과 이동 경로를 보며 피해 보세요.'),
            ('편대', '기체를 고르는 재미', '보유 기체를 편성하고 강화합니다. 진행에 따라 편대 구성을 넓혀갑니다.')],
-    steps=[('플레이 버튼을 누릅니다', '게임 시작 화면에서 ‘출격’을 누릅니다.'),
-           ('준비 화면에서 출격합니다', '보유한 기체를 확인하고 아래 ‘출격’ 버튼을 누릅니다.'),
-           ('기체를 움직입니다', '손가락으로 드래그하거나 방향키로 이동합니다. 사격은 자동입니다.')],
-    notes=['<strong>개발 중인 웹 체험 버전입니다.</strong> 난이도·보상·화면은 업데이트에 따라 바뀔 수 있습니다.',
-           '게임 진행과 설정은 이용한 브라우저에 저장됩니다. 브라우저 데이터를 지우면 함께 지워집니다.',
-           '체험 버전의 광고·보상 표시는 테스트용입니다. 실제 광고 수익이나 유료 결제가 발생하는 정식 서비스가 아닙니다.'],
+    steps=[],
+    notes=['<strong>정식 출시 전입니다.</strong> 소개된 기능과 화면은 개발 과정에서 바뀔 수 있습니다.',
+           '홈페이지에서는 테스트 버전을 제공하지 않습니다. 출시 소식과 이용 경로는 이 페이지에서 안내합니다.'],
     others=['beatwave', 'sudoku', 'coin', 'krx', 'ai'],
   ),
 }
@@ -368,11 +357,11 @@ def page(a):
   elif a.get('status'):
     items = '\n'.join('      <li class="rise"><b>%s</b><h3>%s</h3><p>%s</p></li>' % s for s in a['status'])
     mid = '''
-<!-- 스도쿠는 아직 스토어에 없다. 어디까지 왔는지를 숨기지 않는다 -->
+<!-- 실제 서비스 중인 플랫폼을 안내한다. -->
 <section class="sec" style="--tint:%s">
   <div class="inner">
-    <p class="eyebrow rise">지금 어디까지</p>
-    <h2 class="rise">웹은 열려 있고<br>스토어는 준비 중입니다</h2>
+    <p class="eyebrow rise">서비스 플랫폼</p>
+    <h2 class="rise">토스와 원스토어에서<br>만날 수 있습니다</h2>
     <ul class="feats">
 %s
     </ul>
@@ -386,6 +375,16 @@ def page(a):
   others = '\n'.join(
     '    <li><a href="%s.html" style="--tint:var(--%s)"><b><i></i>%s</b><span>%s</span></a></li>'
     % (o, o, BLURB[o][0], BLURB[o][1]) for o in a['others'])
+
+  # 실행 버튼은 공식 서비스가 있는 앱에만 만든다. 개발 중인 앱에는 링크를 출력하지 않는다.
+  if a.get('open_href'):
+    action = '<a class="open rise" href="%s">%s <span aria-hidden="true">↗</span></a>' % (a['open_href'], a['open_label'])
+    if a.get('extra_href'):
+      action += '<a class="open open-secondary rise" href="%s" target="_blank" rel="noopener noreferrer">%s <span aria-hidden="true">↗</span></a>' % (a['extra_href'], a['extra_label'])
+    launch = '<section class="stage light-stage" style="--tint:%s"><div class="inner"><p class="eyebrow rise" style="color:var(--muted-light)">이용 방법</p><h2 class="rise">공식 플랫폼에서 시작하세요</h2><ol class="steps">%s</ol>%s</div></section>' % (tint, steps, action)
+  else:
+    action = '<p class="release-notice rise">정식 출시 준비 중</p>'
+    launch = ''
 
   appjs = '\n<script src="../app.js"></script>' if a.get('rank_view') else ''
 
@@ -431,7 +430,7 @@ def page(a):
       <p class="badge rise"><i></i> %(badge)s</p>
       <h1 class="rise">%(h1)s</h1>
       <p class="desc rise">%(desc)s</p>
-      <a class="open rise" href="%(open_href)s">%(open_label)s <span aria-hidden="true">↗</span></a>
+      <div class="launch-actions">%(action)s</div>
       <p class="hint rise">%(hint)s</p>
       <ul class="how rise">
 %(how)s
@@ -455,17 +454,7 @@ def page(a):
   </div>
 </section>
 %(mid)s
-<!-- 여는 법 — 밝은 구간 -->
-<section class="stage light-stage" style="--tint:%(tintvar)s">
-  <div class="inner">
-    <p class="eyebrow rise" style="color:var(--muted-light)">여는 법</p>
-    <h2 class="rise">세 번이면 됩니다</h2>
-    <ol class="steps">
-%(steps)s
-    </ol>
-    <a class="open rise" href="%(open_href)s">%(open_label)s</a>
-  </div>
-</section>
+%(launch)s
 
 <!-- 알아둘 것. 작게 쓰지만 빼지 않는다 -->
 <section class="sec" style="--tint:%(tintvar)s">
@@ -506,7 +495,7 @@ def page(a):
 <script src="../site.js"></script>%(appjs)s
 </body>
 </html>
-''' % dict(a, hero_width=a.get("hero_width", 1170), hero_height=a.get("hero_height", 2532), tintvar=tint, how=how, shots=shots, feats=feats, mid=mid, steps=steps, notes=notes, others=others, appjs=appjs)
+''' % dict(a, hero_width=a.get("hero_width", 1170), hero_height=a.get("hero_height", 2532), tintvar=tint, how=how, shots=shots, feats=feats, mid=mid, steps=steps, notes=notes, others=others, appjs=appjs, action=action, launch=launch)
 
 
 def main():
