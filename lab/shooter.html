@@ -8346,7 +8346,7 @@ const CHAPTERS = [
      * 576 -> 864 (+50%, 2026-09-11) -> **1728 (x2, 2026-09-12)**.
      * 오늘 아침 480 에서 3.6 배가 됐다. 중간보스도 이 값에서 갈라져 나온다.
      */
-    bossHp: 1728, hpMul: 0.73, spMul: 1.14, fireMul: 3.1,
+    bossHp: 2250, hpMul: 0.73, spMul: 1.14, fireMul: 3.1,
     pool: [
       [5, (r) => line(2 + ((r() * 4) | 0), 'small')],
       [3, (r) => diagonal('small', r() < .5 ? 1 : -1)],
@@ -8390,7 +8390,7 @@ const CHAPTERS = [
      * 체력 0.85 · 발사 2.3 · 보스 1200 · 챕터 밀도 오프셋 6 · 밀도 기울기
      * 0.35 로 광선 32 · 산탄 35 /60. 2-14 부터는 아직 0~1 이다.
      */
-    bossHp: 2880, hpMul: 0.85, spMul: 1.22, fireMul: 2.3,
+    bossHp: 3740, hpMul: 0.85, spMul: 1.22, fireMul: 2.3,
     pool: [
       [4, (r) => ground(['turret', 'flak', 'radar', 'laser'][(r() * 4) | 0], 60 + r() * (W - 120))],
       [3, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
@@ -8424,7 +8424,7 @@ const CHAPTERS = [
      * 몸은 강화 3~4 · Lv4~5 에서 더 안 큰다 - 계단은 몸이 아니라 판이 맞춰야
      * 한다.
      */
-    bossHp: 3840, hpMul: 1.05, spMul: 1.28, fireMul: 2.0,
+    bossHp: 4990, hpMul: 1.05, spMul: 1.28, fireMul: 2.0,
     pool: [
       [4, (r) => dive(3 + ((r() * 3) | 0))],
       [3, (r) => line(1 + ((r() * 3) | 0), 'tank')],
@@ -8461,7 +8461,7 @@ const CHAPTERS = [
      * 난이도는 사람의 실력으로만 넘는 것이라 계단이 얕아야 한다.
      */
     /* 3챕터와 같은 비율. 시뮬로 재기 전 값 */
-    bossHp: 5760, hpMul: 1.35, spMul: 1.36, fireMul: 1.6,
+    bossHp: 7490, hpMul: 1.35, spMul: 1.36, fireMul: 1.6,
     /*
      * 성격은 「전부 한꺼번에」다.
      *
@@ -8491,7 +8491,7 @@ const CHAPTERS = [
   },
   {
     id: 5, name: '재의 평원', sub: '분화가 끝나고 재만 남은 땅', theme: 'ash2',
-    bossHp: 7200, hpMul: 1.55, spMul: 1.4, fireMul: 1.5,
+    bossHp: 9360, hpMul: 1.55, spMul: 1.4, fireMul: 1.5,
     /* 5전선 — 재만 남은 땅이라 지상 위협과 폭격이 주인공이다 */
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8520,7 +8520,7 @@ const CHAPTERS = [
   },
   {
     id: 6, name: '늪지대', sub: '안개가 걷히지 않는 검은 물', theme: 'swamp',
-    bossHp: 9000, hpMul: 1.75, spMul: 1.44, fireMul: 1.42,
+    bossHp: 11700, hpMul: 1.75, spMul: 1.44, fireMul: 1.42,
     /* 6전선 — 늪이라 전부 느리고 단단하다. 치우지 못하면 쌓인다 */
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8549,7 +8549,7 @@ const CHAPTERS = [
   },
   {
     id: 7, name: '공중 요새', sub: '구름 위에 떠 있는 인공 구조물', theme: 'sky',
-    bossHp: 11200, hpMul: 1.95, spMul: 1.48, fireMul: 1.34,
+    bossHp: 14560, hpMul: 1.95, spMul: 1.48, fireMul: 1.34,
     /* 7전선 — 땅이 없다. 지상 위협이 하나도 안 나오고 공중이 물량으로 민다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8577,7 +8577,7 @@ const CHAPTERS = [
   },
   {
     id: 8, name: '협곡', sub: '벼랑 사이로 난 좁은 길', theme: 'canyon',
-    bossHp: 13800, hpMul: 2.18, spMul: 1.52, fireMul: 1.27,
+    bossHp: 17940, hpMul: 2.18, spMul: 1.52, fireMul: 1.27,
     /* 8전선 — 좁은 협곡이라 옆에서 오고, 서는 탄이 길을 막는다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8606,7 +8606,7 @@ const CHAPTERS = [
   },
   {
     id: 9, name: '공업지대', sub: '매연이 하늘을 덮은 공장 지대', theme: 'steel',
-    bossHp: 17000, hpMul: 2.42, spMul: 1.56, fireMul: 1.2,
+    bossHp: 22100, hpMul: 2.42, spMul: 1.56, fireMul: 1.2,
     /* 9전선 — 공장 지붕마다 포대다. 아래를 계속 봐야 한다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8635,7 +8635,7 @@ const CHAPTERS = [
   },
   {
     id: 10, name: '적 본거지', sub: '모든 것이 시작된 곳', theme: 'core',
-    bossHp: 21000, hpMul: 2.7, spMul: 1.6, fireMul: 1.13,
+    bossHp: 27300, hpMul: 2.7, spMul: 1.6, fireMul: 1.13,
     /* 10전선 — 본거지답게 편대로 나온다. 한 마리씩 오는 것이 없다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8664,7 +8664,7 @@ const CHAPTERS = [
   },
   {
     id: 11, name: '빙벽', sub: '수백 미터 얼음 절벽 사이', theme: 'glacier',
-    bossHp: 25500, hpMul: 3.0, spMul: 1.63, fireMul: 1.07,
+    bossHp: 33150, hpMul: 3.0, spMul: 1.63, fireMul: 1.07,
     /* 11전선 — 얼음 사이를 돌진해 온다. 무리로 흩어지고 다시 모인다 */
     pool: [
       [2, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8693,7 +8693,7 @@ const CHAPTERS = [
   },
   {
     id: 12, name: '폐허 도시', sub: '불타고 남은 옛 수도', theme: 'ruin',
-    bossHp: 30500, hpMul: 3.32, spMul: 1.66, fireMul: 1.02,
+    bossHp: 39650, hpMul: 3.32, spMul: 1.66, fireMul: 1.02,
     /* 12전선 — 폐허에 숨어 방패를 세우고, 부수면 갈라진다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8722,7 +8722,7 @@ const CHAPTERS = [
   },
   {
     id: 13, name: '대염호', sub: '소금이 하얗게 굳은 호수', theme: 'salt',
-    bossHp: 36000, hpMul: 3.66, spMul: 1.69, fireMul: 0.97,
+    bossHp: 46800, hpMul: 3.66, spMul: 1.69, fireMul: 0.97,
     /* 13전선 — 반사가 심한 소금 바닥. 가로 빔과 유도탄이 사방에서 온다 */
     pool: [
       [2, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8751,7 +8751,7 @@ const CHAPTERS = [
   },
   {
     id: 14, name: '화염 유전', sub: '불기둥이 솟는 유전지대', theme: 'oil',
-    bossHp: 42000, hpMul: 4.02, spMul: 1.72, fireMul: 0.93,
+    bossHp: 54600, hpMul: 4.02, spMul: 1.72, fireMul: 0.93,
     /* 14전선 — 불기둥 사이로 폭격과 미사일이 쏟아진다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8780,7 +8780,7 @@ const CHAPTERS = [
   },
   {
     id: 15, name: '최후 결전장', sub: '더 갈 곳이 없다', theme: 'final',
-    bossHp: 49000, hpMul: 4.4, spMul: 1.75, fireMul: 0.89,
+    bossHp: 63700, hpMul: 4.4, spMul: 1.75, fireMul: 0.89,
     /* 15전선 — 마지막이다. 지금까지 나온 것이 전부, 제일 두껍게 나온다 */
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -10081,7 +10081,15 @@ const LIVES = 1
  * **맞는 횟수 자체가 적다.** 한 대는 아프게, 대신 자주 안 맞게 - 체력을
  * 두껍게 해서 뭉개는 것보다 이쪽이 맞다.
  */
-const PLAYER_HP = 110
+/*
+ * 110 -> 77 (2026-09-12). 30% 를 덜어냈다.
+ *
+ * 이 값은 **기체 자체의 몸**이다. 파일럿 스탯(칸당 6)과 특성(서리 +14,
+ * 은월 +20)은 여기에 따로 얹히므로 그대로 남는다 - 등급 계수만 이 값에
+ * 곱해진다(pilotHp 참고). 그래서 아무것도 안 올린 일반 등급이 제일 크게
+ * 깎이고, 오래 키운 쪽은 덜 깎인다.
+ */
+const PLAYER_HP = 77
 /*
  * 피해량.
  *
@@ -12430,8 +12438,11 @@ function update(dt) {
           p.cd = 1.3
           const tx = bs.x + p.dx, ty = bs.y + p.dy
           const a = Math.atan2(pl.y - ty, pl.x - tx)
-          s.ebullets.push({ x: tx, y: ty, vx: Math.cos(a) * 195, vy: Math.sin(a) * 195,
-                            r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
+          /* 한 발에서 두 발로 (2026-09-12). 조금 벌려 쏜다 */
+          for (const d of [-.1, .1]) {
+            s.ebullets.push({ x: tx, y: ty, vx: Math.cos(a + d) * 195, vy: Math.sin(a + d) * 195,
+                              r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
+          }
         }
       }
 
@@ -12486,31 +12497,55 @@ function update(dt) {
            */
           bs.cd = 0.42 * slow * haste * chf * 1.111
           bs.spin = (bs.spin || 0) + 0.42
-          const arms = bs.mid ? 2 : 3
+          /*
+           * 팔을 배로 (2026-09-12). 셋에서 여섯.
+           *
+           * 나선은 팔이 늘어도 틈이 같이 돈다 - 60도마다 하나면 비켜설
+           * 자리가 계속 생긴다. 부채꼴처럼 한 방향에 몰아 넣는 것과 다르다.
+           */
+          const arms = bs.mid ? 4 : 6
           for (let k = 0; k < arms; k++) {
             const a = bs.spin + (k / arms) * Math.PI * 2
             s.ebullets.push({ x: bs.x, y: bs.y + 10, vx: Math.cos(a) * 175, vy: Math.sin(a) * 175,
                               r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
           }
-          /* 가끔 좌우에서 벽이 온다. 나선만이면 가운데가 늘 안전해진다 */
+          /*
+           * 가끔 벽이 온다. 나선만이면 가운데가 늘 안전해진다.
+           *
+           * 한쪽에서 다섯 줄이던 것을 **양쪽에서 다섯 줄씩**으로 바꿨다
+           * (2026-09-12). 줄 간격은 46 그대로라 사이로 빠지는 길은 남아
+           * 있는데, 한쪽으로 도망치는 길은 없어진다 - 위아래로 움직여야 한다.
+           */
           if (Math.random() < 0.08) {
-            const dir = Math.random() < .5 ? 1 : -1
-            for (let i = 0; i < 5; i++) {
-              s.ebullets.push({ x: dir > 0 ? -20 : W + 20, y: 120 + i * 46,
-                                vx: dir * 190, vy: 26, r: 4, age: 0,
-                                dmg: DMG.boss, sh: 'mid' })
+            for (const dir of [1, -1]) {
+              for (let i = 0; i < 5; i++) {
+                s.ebullets.push({ x: dir > 0 ? -20 : W + 20, y: 120 + i * 46,
+                                  vx: dir * 190, vy: 26, r: 4, age: 0,
+                                  dmg: DMG.boss, sh: 'mid' })
+              }
             }
           }
         } else if (bs.phase === 1) {
           bs.cd = 1.05 * slow * haste * chf * 1.111
-          for (let i = -3; i <= 3; i++) {
-            const a = Math.PI / 2 + i * .17
-            s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * 150, vy: Math.sin(a) * 150,
-                              r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
+          /*
+           * 부채꼴을 두 겹으로 (2026-09-12).
+           *
+           * 각도는 그대로 두고 빠른 겹과 느린 겹을 함께 쏜다. 같은 부채를
+           * 촘촘하게 채우면 발수는 배가 되지만 틈이 사라져 피할 자리가
+           * 없어진다 - 겹으로 나가면 발수만 배가 되고 비켜설 자리는 그대로다.
+           * 대신 한 번 비킨 뒤에도 뒤 겹이 오므로 그 자리에 머물 수 없다.
+           */
+          for (const sp of [205, 148]) {
+            for (let i = -3; i <= 3; i++) {
+              const a = Math.PI / 2 + i * .17
+              s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                                r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
+            }
           }
-          /* 조준 유도탄 하나. 가만히 서 있지 못하게 한다 */
-          if (Math.random() < .45) {
-            s.ebullets.push({ x: bs.x, y: bs.y + 20, vx: 0, vy: 130, r: 5,
+          /* 조준 유도탄. 하나는 늘 나가고 둘째는 가끔 */
+          const nMis = 1 + (Math.random() < .45 ? 1 : 0)
+          for (let k = 0; k < nMis; k++) {
+            s.ebullets.push({ x: bs.x + (k ? 26 : -26), y: bs.y + 20, vx: 0, vy: 130, r: 5,
                               kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
           }
         } else {
@@ -12524,19 +12559,30 @@ function update(dt) {
            */
           if (!bs.mid && Math.random() < 0.16) bombRaid(3 + ((Math.random() * 2) | 0))
           if (Math.floor(bs.t) % 2 === 0) {
-            for (let i = 0; i < 18; i++) {
-              const a = (i / 18) * Math.PI * 2 - bs.t * .6
-              s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160,
-                                r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
+            /*
+             * 고리가 두 겹이 됐다 (2026-09-12). 안쪽 겹은 느리고 반 칸
+             * 어긋나 있다 - 앞 겹의 틈으로 빠지면 그 자리가 뒤 겹의
+             * 탄 자리다. 한 번 비키고 끝나지 않는다.
+             */
+            for (const [sp, off] of [[160, 0], [112, Math.PI / 18]]) {
+              for (let i = 0; i < 18; i++) {
+                const a = (i / 18) * Math.PI * 2 - bs.t * .6 + off
+                s.ebullets.push({ x: bs.x, y: bs.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                                  r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
+              }
             }
           } else {
             const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
-            for (const d of [-.14, 0, .14]) {
-              s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * 225, vy: Math.sin(a + d) * 225,
+            /* 조준 연발이 셋에서 여섯으로. 안쪽 셋이 빠르고 바깥 셋이 넓다 */
+            for (const [d, sp] of [[-.14, 225], [0, 225], [.14, 225],
+                                   [-.3, 182], [0, 182], [.3, 182]]) {
+              s.ebullets.push({ x: bs.x, y: bs.y + 24, vx: Math.cos(a + d) * sp, vy: Math.sin(a + d) * sp,
                                 r: 4, age: 0, dmg: DMG.boss, sh: 'boss' })
             }
-            s.ebullets.push({ x: bs.x, y: bs.y + 20, vx: 0, vy: 140, r: 5,
-                              kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
+            for (const dx of [-22, 22]) {
+              s.ebullets.push({ x: bs.x + dx, y: bs.y + 20, vx: 0, vy: 140, r: 5,
+                                kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile })
+            }
           }
         }
       }
