@@ -268,6 +268,65 @@
   .dsheet .bar { display: flex; gap: 8px; margin-top: 14px; }
   .dsheet .bar button { flex: 1; }
 
+  /*
+   * 파일럿 스탯 시트는 스크롤 없이 한 화면에 (2026-09-12).
+   *
+   * 초상 210px + 설명 두 문단 + 단추 세 줄이라 시트가 화면을 넘겼다.
+   * 「닫기」가 제일 아래에 있어서 스탯을 찍고 나면 굴려 내려가야
+   * 나왔다 - 찍으러 들어와서 나가는 길을 찾는 화면이 됐다.
+   *
+   * 초상은 44px 로 이름 옆에 붙이고, 설명은 한 줄로 줄이고, 스탯은
+   * 한 줄에 이름·효과·칸·단추를 다 넣는다. 단추는 맨 아래 한 줄.
+   */
+  .dsheet.pilotsheet { max-height: none; overflow: visible; padding: 14px 14px 12px; }
+  .pilotsheet .phd { display: flex; align-items: center; gap: 10px; }
+  .pilotsheet .phd .pf {
+    width: 44px; height: 44px; flex: none; border-radius: 10px;
+    background: var(--face) top center/cover no-repeat, #0d1119;
+    border: 1px solid var(--line);
+  }
+  .pilotsheet .phd .pf.none { display: flex; align-items: center; justify-content: center; }
+  .pilotsheet .phd h3 { margin: 0; font-size: 18px; font-weight: 800; }
+  .pilotsheet .phd .sub2 { margin-top: 2px; }
+  .pilotsheet .phd .de { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .pilotsheet .bar button.wide { flex: 1.5; }
+  .pilotsheet .bar button.thin { flex: .75; }
+  .pilotsheet .pxp {
+    display: flex; gap: 10px; margin-top: 10px; padding: 8px 10px;
+    background: rgba(255,255,255,.04); border-radius: 8px; font-size: 11.5px; color: var(--dim);
+  }
+  .pilotsheet .pxp b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .pilotsheet .pxp span + span { margin-left: auto; }
+  .pilotsheet .pstats { display: grid; gap: 5px; margin-top: 9px; }
+  .pilotsheet .pst {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 9px; background: rgba(255,255,255,.035);
+    border: 1px solid var(--line); border-radius: 9px;
+  }
+  .pilotsheet .pst .n { font-size: 12.5px; font-weight: 800; width: 30px; flex: none; }
+  .pilotsheet .pst .v {
+    font-size: 11px; color: var(--gold, #ffd98a); width: 50px; flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .pilotsheet .pst .pp { display: flex; gap: 2.5px; flex: 1; min-width: 0; }
+  .pilotsheet .pst .pp i {
+    flex: 1; height: 7px; border-radius: 2px; background: rgba(255,255,255,.13);
+  }
+  .pilotsheet .pst .pp i.on { background: var(--accent); }
+  .pilotsheet .pst button {
+    flex: none; padding: 5px 9px; font-size: 11px; border-radius: 7px; min-width: 52px;
+  }
+  .pilotsheet .pnote { font-size: 11px; color: var(--muted); margin-top: 9px; line-height: 1.5; }
+  .pilotsheet .bar { margin-top: 11px; }
+  .pilotsheet .bar button { padding: 11px 10px; font-size: 13px; }
+  .pilotsheet .pnav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 9px; font-size: 11.5px; color: var(--dim);
+  }
+  .pilotsheet .pnav button {
+    flex: none; padding: 5px 11px; font-size: 11.5px; border-radius: 7px;
+  }
+
   .card.locked { opacity: .5; }
   .card.picked { border-color: var(--accent); }
   .card .nm { font-size: 13.5px; font-weight: 700; }
@@ -6278,6 +6337,7 @@ function stLine(id) {
 function openPilot(pl, list) {
   const panel = document.getElementById('detail')
   const body = document.getElementById('detailBody')
+  body.className = 'dsheet'
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
 
   const G = GRADES[pl.grade]
@@ -6297,66 +6357,58 @@ function openPilot(pl, list) {
    */
   const statHtml = ST_KEYS.map((k) => {
     const S = STATS[k], v = st[k] || 0
-    const eff = k === 'hp' ? '+' + (v * S.per)
-                           : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
+    const eff = !v ? '-'
+      : k === 'hp' ? '+' + (v * S.per)
+      : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
     const pips = Array.from({ length: ST_MAX },
-      (_, i) => '<span class="pip' + (i < v ? ' on' : '') + '"></span>').join('')
+      (_, i) => '<i class="' + (i < v ? 'on' : '') + '"></i>').join('')
     const cost = v < ST_MAX ? statCost(v) : 0
     const can = have && canStat(k, pl.id)
-    return '<div class="stat">' +
-      '<div class="hd"><span class="nm">' + S.name + '</span>' +
-      '<span class="ef">' + (v ? eff : '') + '</span>' +
-      '<span class="k" style="margin-left:auto;font-size:11px;color:var(--dim)">' +
-        v + '/' + ST_MAX + '</span></div>' +
-      '<div class="de">' + S.desc + '</div>' +
-      '<div class="pips">' + pips +
+    return '<div class="pst" title="' + S.desc + '">' +
+      '<span class="n">' + S.name + '</span>' +
+      '<span class="v">' + eff + '</span>' +
+      '<span class="pp">' + pips + '</span>' +
       '<button data-st="' + k + '" ' + (can ? '' : 'disabled') + '>' +
-      (v >= ST_MAX ? '최대' : cost.toLocaleString('ko-KR')) + '</button></div>' +
-      '</div>'
+      (v >= ST_MAX ? '최대' : cost.toLocaleString('ko-KR')) + '</button></div>'
   }).join('')
 
+  /*
+   * 스크롤 없이 한 화면에 (2026-09-12).
+   *
+   * 초상 210px · 설명 두 문단 · 단추 세 줄이라 시트가 화면을 넘겼다.
+   * 「닫기」가 제일 아래에 있어서 스탯을 찍고 나면 굴려 내려가야
+   * 나왔다 - 찍으러 들어와서 나가는 길을 찾는 화면이 됐다.
+   *
+   * 초상은 이름 옆 44px 로, 설명은 머리글 한 줄로, 스탯은 한 줄에
+   * 이름·효과·칸·단추를 다 넣는다. 단추는 맨 아래 한 줄에 모은다.
+   */
+  body.className = 'dsheet pilotsheet'
   body.innerHTML =
-    '<h3>' + pl.name + '</h3>' +
+    '<div class="phd">' +
+    (face ? '<div class="pf" style="--face:var(--gc-' + face + ')"></div>'
+          : '<div class="pf none"><div class="rk ' + pl.grade + '"></div></div>') +
+    '<div><h3>' + pl.name + '</h3>' +
     '<div class="sub2">' + G.name +
       (pl.grade === 'legend' ? ' · 후방 자리'
-                             : ' · 기본 ' + Math.round(G.base * 100) + '%') + '</div>' +
-    /*
-     * 스탯을 초상 위로 올린다 (2026-09-11).
-     *
-     * 초상이 210px 라 그 아래 설명·수치 줄까지 지나야 스탯이 나왔다.
-     * 이 시트에 들어오는 이유의 대부분이 스탯을 찍으러 오는 것인데,
-     * 찾으려면 한 번 굴려야 했다. 쓸 수 있는 경험치를 바로 위에 붙여
-     * 「얼마가 있고 어디에 쓰나」를 한 눈에 둔다.
-     */
-    '<div class="rows">' +
-      row2('보유 경험치', pilotXp().toLocaleString('ko-KR')) +
+                             : ' · 화력·체력 ×' + G.base.toFixed(2)) + '</div>' +
+    '<div class="de">' + pl.desc + '</div></div></div>' +
+    '<div class="pxp">' +
+      '<span>쓸 수 있는 경험치 <b>' + pilotXp().toLocaleString('ko-KR') + '</b></span>' +
+      '<span>부은 것 <b>' + back.toLocaleString('ko-KR') + '</b></span>' +
     '</div>' +
-    '<div class="lab">스탯</div><div class="sum">' + statHtml + '</div>' +
-    (face ? '<div class="pbig" style="--face:var(--gc-' + face + ')"></div>'
-          : '<div class="pbig none"><div class="rk ' + pl.grade + '"></div></div>') +
-    '<div class="cap">' + pl.desc + '</div>' +
-    '<div class="rows">' +
-      row2('등급 배수', '화력·체력 ×' + G.base.toFixed(2)) +
-      row2('부은 경험치', back.toLocaleString('ko-KR')) +
-    '</div>' +
-    (have ? '' : '<div class="note2">아직 잠겨 있습니다. ' + G.name + ' 조각 ' +
-      shardG(pl.grade) + '/' + GRADE_NEED[pl.grade] + '개. 열면 ' + G.name +
-      ' 둘 다 쓸 수 있습니다.</div>') +
-    '<div class="note2">스탯은 파일럿마다 따로 쌓입니다. ' +
-      '경험치 주머니는 하나라, 누구에게 붓는지가 선택입니다.</div>' +
-    (back
-      ? '<div class="bar"><button class="ghost" id="pReset">' +
-        '스탯 되돌리기 · 경험치 ' + back.toLocaleString('ko-KR') + ' 회수</button></div>'
-      : '') +
+    '<div class="pstats">' + statHtml + '</div>' +
+    (have ? '' : '<div class="pnote">아직 잠겨 있습니다. ' + G.name + ' 조각 ' +
+      shardG(pl.grade) + '/' + GRADE_NEED[pl.grade] + '개.</div>') +
     (list && list.length > 1
-      ? '<div class="bar nav"><button class="ghost" id="dPrev">◀ 이전</button>' +
-        '<span class="pos">' + (list.indexOf(pl) + 1) + ' / ' + list.length + '</span>' +
-        '<button class="ghost" id="dNext">다음 ▶</button></div>'
+      ? '<div class="pnav"><button class="ghost" id="dPrev">◀</button>' +
+        '<span>' + (list.indexOf(pl) + 1) + ' / ' + list.length + '</span>' +
+        '<button class="ghost" id="dNext">▶</button></div>'
       : '') +
     '<div class="bar">' +
-      (on ? '<button disabled>현재 선택됨</button>'
-          : have ? '<button id="pPick">이 파일럿 쓰기</button>' : '') +
-      '<button class="ghost" id="dClose">닫기</button>' +
+      (on ? '<button class="wide" disabled>사용 중</button>'
+          : have ? '<button class="wide" id="pPick">이 파일럿 쓰기</button>' : '') +
+      (back ? '<button class="ghost" id="pReset">되돌리기</button>' : '') +
+      '<button class="ghost thin" id="dClose">닫기</button>' +
     '</div>'
 
   const close = () => { panel.hidden = true; panel.onclick = null; modalOff() }
@@ -6498,6 +6550,7 @@ function newPilotPopup() {
   const back = stSpent(cur.id)
   const panel = document.getElementById('detail')
   const body = document.getElementById('detailBody')
+  body.className = 'dsheet'
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
 
   body.innerHTML =
@@ -6574,6 +6627,7 @@ function nextGradeLine() {
 function swapNotice(prev, now, back) {
   const panel = document.getElementById('detail')
   const body = document.getElementById('detailBody')
+  body.className = 'dsheet'
   if (!panel || !body) return
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
   body.innerHTML =
@@ -6869,6 +6923,7 @@ function demoShots(p, t) {
 function openDetail(p, list) {
   const panel = document.getElementById('detail')
   const body = document.getElementById('detailBody')
+  body.className = 'dsheet'
   const lv = upgOf(p.id)
   const ok = unlocked(p)
   const lab = unlockLabel(p)
@@ -10325,12 +10380,12 @@ const TICKET_STAGE_P = 0.30
  * 세지 않아서 보급이 뜰 때마다 그냥 떨어졌고, 판마다 열 개 넘게
  * 내려왔다. 상한이 상한 구실을 못 한 셈이다.
  *
- * 세는 자리를 옮긴다 - 떨어지는 것을 전부 세고 넷에서 끊는다.
+ * 세는 자리를 옮긴다 - 떨어지는 것을 전부 세고 여섯에서 끊는다.
  * 가챠권은 이 수에 안 넣는다. 성격이 다른 물건이고 판에 한 장이다.
  */
-const ITEM_CAP = 4
-/* 그 넷 중 강화 효과가 붙는 것의 상한 */
-const MOD_CAP = 4
+const ITEM_CAP = 6
+/* 그중 강화 효과가 붙는 것의 상한 */
+const MOD_CAP = 6
 /**
  * 이 판에 나올 개조의 수. 판마다 다르다.
  *
@@ -10346,15 +10401,15 @@ function rollModCap() {
    * 그 판은 그냥 버리는 판이 된다. 대신 넷이 나오는 판을 드물게 둔다.
    */
   const r = Math.random()
-  return r < 0.15 ? 1 : r < 0.50 ? 2 : r < 0.82 ? 3 : MOD_CAP
+  return r < 0.12 ? 2 : r < 0.42 ? 3 : r < 0.78 ? 4 : r < 0.94 ? 5 : MOD_CAP
 }
 
 /*
  * 보급 간격.
  *
- * 3.5~5.5초 붙박이였다. 넷에서 끊고 나면 네 개가 판 앞 20초에 다
- * 떨어지고 남은 시간은 아무것도 안 내려오는 판이 된다. 판 길이에서
- * 나눠 고르게 편다 - 50초 판은 8초, 65초 판은 10초 간격이 된다.
+ * 3.5~5.5초 붙박이였다. 상한에서 끊고 나면 앞 20초에 다 떨어지고
+ * 남은 시간은 아무것도 안 내려오는 판이 된다. 판 길이에서 나눠
+ * 고르게 편다 - 50초 판은 6.7초, 65초 판은 8.7초 간격이 된다.
  */
 function supplyGap() {
   const s = state
@@ -10406,7 +10461,7 @@ function dropSupply() {
       return
     }
   }
-  /* 넷을 다 내렸으면 더 안 내린다 */
+  /* 이 판의 몫을 다 내렸으면 더 안 내린다 */
   if (s.itemDrops >= ITEM_CAP) return
   s.itemDrops++
   dropItem(x, -24, true)
