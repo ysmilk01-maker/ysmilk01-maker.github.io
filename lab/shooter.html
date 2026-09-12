@@ -8917,9 +8917,14 @@ function nextZone() {
  * 것이다. 탄막은 지금 날아오는 것을 피하는 일이지만 이건 몇 초 뒤의
  * 화면을 보고 미리 자리를 잡는 일이다 - 판을 읽는 눈이 필요하다.
  *
- * 쏘면 떨어뜨릴 수 있다(체력 4). 지대공 미사일과 같은 원칙이다 -
+ * 쏘면 떨어뜨릴 수 있다(체력 40). 지대공 미사일과 같은 원칙이다 -
  * 못 막는 즉사는 사형선고지 게임이 아니다. 다만 넷을 다 요격하려면
  * 화력을 거기 쏟아야 하므로, 피하는 쪽이 대개 싸다.
+ *
+ * 체력을 넷에서 마흔으로 올렸다 (2026-09-12). 넷이면 지나가는 탄에도
+ * 지워져서 예고를 읽고 자리를 잡는 일 자체가 안 일어났다. 이제는
+ * 작정하고 화력을 부어야 한 발이 지워진다 - 그래서 남은 체력을
+ * 고리로 보여 준다. 안 보이면 맞고 있는지 몰라 아무도 안 쏜다.
  *
  * @param n 떨어지는 수
  */
@@ -8932,7 +8937,7 @@ function bombRaid(n) {
     s.ebullets.push({
       x: Math.max(30, Math.min(W - 30, off + gap * i + (Math.random() - .5) * 22)),
       y: -70, vx: 0, vy: 205, r: 15, age: 0,
-      sh: 'bomb', dmg: DMG.dive, hp: 4,
+      sh: 'bomb', dmg: DMG.dive, hp: 40, hpMax: 40,
       /* 이 시간 동안은 안 움직이고 안 맞는다. 경고만 뜬다 */
       warnT: 1.7 + Math.random() * 0.3,
     })
@@ -14485,6 +14490,19 @@ function draw() {
         g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill()
         g.fillStyle = C.core
         g.beginPath(); g.arc(b.x - b.r * .25, b.y - b.r * .25, b.r * .42, 0, Math.PI * 2); g.fill()
+      }
+      /* 요격 진행도. 맞고 있는 것이 안 보이면 아무도 안 쏜다 */
+      if (b.hpMax && b.hp < b.hpMax) {
+        const k = Math.max(0, b.hp / b.hpMax)
+        g.save(); g.translate(b.x, b.y)
+        g.lineWidth = 2.6
+        g.strokeStyle = 'rgba(255,255,255,.22)'
+        g.beginPath(); g.arc(0, 0, b.r * 1.55, 0, Math.PI * 2); g.stroke()
+        g.strokeStyle = k > .5 ? '#ffd27a' : '#ff7a5c'
+        g.beginPath()
+        g.arc(0, 0, b.r * 1.55, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k)
+        g.stroke()
+        g.restore()
       }
     }
   }
