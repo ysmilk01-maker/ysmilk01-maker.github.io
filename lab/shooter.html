@@ -2895,7 +2895,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-12 23:44'
+const BUILD_AT = '09-13 00:58'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -10460,7 +10460,36 @@ function mkGround(kind, x, y) {
      */
     sam:    { hp: 552, r: 20, cd: 2.2, score: 520 },
   }[kind]
-  return { kind, x, y, t: Math.random() * 2, phase: 'idle', ph: 0, lock: 0, aimX: 0, flash: 0, ...b }
+  /*
+   * 물 전선에서는 배로 선다 (2026-09-13).
+   *
+   * 04차 전함 그림을 넣고 보니 **너무 작았다.** 포좌 그림을 배로 갈아
+   * 끼웠을 뿐 크기는 그대로였기 때문이다 — 지름 45픽셀짜리 군함이
+   * 420픽셀 화면 위에 떠 있으니 배로 안 보이고 부표로 보였다.
+   *
+   * 그려지는 크기를 **다섯 배**로 키운다. 세 배로 해 봤더니 여전히
+   * 어선이었다 — 420픽셀 화면에서 134픽셀은 구축함 크기가 아니다.
+   *
+   * 다만 **맞는 크기는 다섯 배가 아니다.** 그림은 정사각인데 배는 세로로
+   * 길어서 가로가 칸의 40% 밖에 안 된다 — 네모 전체를 맞는 자리로 잡으면
+   * 뱃전 옆 빈 물에 쏴도 맞는다. 선체 폭까지만 잡는다.
+   *
+   *   그려지는 크기   r x 2.8 -> r x 14    (다섯 배)
+   *   맞는 반지름     r -> r x 2.8         (선체 폭의 절반)
+   *
+   * 포함이 224픽셀, 미사일 순양함이 280픽셀이 된다. 화면 폭의 절반이
+   * 넘으므로 여러 척이 동시에 서면 겹친다 — 겹치는 것이 함대로 보이는
+   * 쪽이라 그대로 둔다.
+   */
+  const th = (state.stage && state.stage.theme) || 'sea'
+  const sea = !!(WATER_THEME[th] && GROUND_IMG[kind + '_sea'])
+  return {
+    kind, x, y, t: Math.random() * 2, phase: 'idle', ph: 0, lock: 0, aimX: 0, flash: 0,
+    ...b,
+    r: sea ? Math.round(b.r * 2.8) : b.r,
+    /* 그려지는 지름. 없으면 drawGround 가 r x 2.8 로 계산한다 */
+    art: sea ? Math.round(b.r * 14) : 0,
+  }
 }
 /*
  * 화면 위에서 생겨 아래로 흐른다. 비행기가 앞으로 나아가니 땅은
@@ -15436,7 +15465,8 @@ function drawGround(u) {
 
   const art = groundArt(u.kind)
   if (art) {
-    const sz = u.r * 2.8
+    /* 배는 mkGround 가 미리 잡아 둔 크기로. 나머지는 예전처럼 r 에 맞춘다 */
+    const sz = u.art || u.r * 2.8
     if (u.flash > 0) g.globalAlpha = .6
     g.drawImage(art, -sz / 2, -sz / 2, sz, sz)
     if (u.flash > 0) {
