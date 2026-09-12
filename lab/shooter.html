@@ -890,6 +890,20 @@
   .rlv .rk { width: 34px; height: 34px; }
   .rlv .t1 { font-size: 15px; font-weight: 900; color: var(--gold, #ffd98a); }
   .rlv .t2 { font-size: 11px; color: var(--dim); }
+  /* 보스 도전 목록 */
+  .rushlist { display: grid; gap: 8px; margin-top: 8px; }
+  .rushrow {
+    display: grid; gap: 2px; text-align: left; width: 100%;
+    padding: 11px 13px; border-radius: 9px; cursor: pointer;
+    background: linear-gradient(90deg, rgba(255,90,90,.18), rgba(255,90,90,.04));
+    border: 1px solid rgba(255,120,120,.45); color: var(--ink);
+  }
+  .rushrow .rn { font-size: 14px; font-weight: 800; color: #ff9a8a; }
+  .rushrow .rs { font-size: 11px; color: var(--muted); }
+  .rushrow .rr { font-size: 11px; color: var(--gold, #ffd98a); font-weight: 700; }
+  .rushrow.lock { background: #141b26; border-color: var(--line); opacity: .6; cursor: default; }
+  .rushrow.lock .rn { color: var(--dim); }
+  .rushrow.done .rn { color: #7dffd4; }
   .rnext { font-size: 12px; margin-top: 11px; }
   .rnext b { color: var(--gold, #ffd98a); }
 
@@ -1919,7 +1933,11 @@ const ULT_GAIN = 2.0
  * 줄이는 것은 **버는 속도**지 총량이 아니다. 오래 붙어 있으면 두 번째도
  * 결국 찬다 - 그냥 늦게 온다.
  */
-function ultGainMul() { return (state && state.ultUsed > 0) ? 0.4 : 1 }
+function ultGainMul() {
+  /* 보스 도전은 길다. 여기서만 두 번째부터도 원래 속도로 찬다 */
+  if (state && state.rush >= 0) return 1
+  return (state && state.ultUsed > 0) ? 0.4 : 1
+}
 
 /* 기체 그림에 쓰는 무기 색. 그 무기가 쏘는 탄 색을 그대로 가져왔다 */
 const WEAPON_COLOR = {
@@ -5804,6 +5822,23 @@ function renderStage() {
     `<div class="up"><span class="lvl">적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}` +
     ` · 별 ${chapterStars(mapCh)}/${SUBS * 3}</span></div></div>` +
     `<div class="nodes">${nodes}</div>` +
+    /*
+     * 보스 도전 (2026-09-12). 파일럿 Lv.10 에 열린다.
+     * 앞의 것을 깨야 다음이 열리므로 목록이 한 줄로 이어진다.
+     */
+    (rushModeOpen()
+      ? `<div class="lab" style="margin-top:18px">보스 도전</div>` +
+        `<div class="rushlist">` + BOSS_RUSH.map((d, i) => {
+          const open = bossRushOpen(i), done = bossRushDone(i)
+          return `<button class="rushrow${open ? '' : ' lock'}${done ? ' done' : ''}"` +
+            ` data-rush="${i}"${open ? '' : ' disabled'}>` +
+            `<span class="rn">${d.name}</span>` +
+            `<span class="rs">${open ? d.sub : (i ? BOSS_RUSH[i-1].name + ' 을 먼저 깨야 합니다' : '')}</span>` +
+            `<span class="rr">${done ? '격파함' : '경험치 ' + d.xp.toLocaleString('ko-KR') + ' · 가챠권 ' + (done ? RUSH_TICKET_AGAIN : RUSH_TICKET_FIRST)}</span>` +
+            `</button>`
+        }).join('') + `</div>`
+      : `<div class="lab" style="margin-top:18px">보스 도전</div>` +
+        `<div class="empty">파일럿 Lv.${RUSH_LV} 에 열립니다.</div>`) +
     hardBox()
     /*
      * 끝없는 출격은 뺐다(2026-09-10). 판 진행·모드·보상과 따로 노는
@@ -5815,6 +5850,9 @@ function renderStage() {
   bindModes(el, renderStage)
   const zg = document.getElementById('zoneGo')
   if (zg) zg.onclick = (e) => { e.stopPropagation(); doLaunch(true) }
+  el.querySelectorAll('[data-rush]').forEach((b) => {
+    b.onclick = (e) => { e.stopPropagation(); startBossRush(+b.dataset.rush) }
+  })
 
   el.querySelectorAll('[data-ch]').forEach((b) => {
     const i = +b.dataset.ch
@@ -6570,8 +6608,9 @@ function newState() {
     muzzles: [], sparks: [],
     /* 끝없는 출격이면 첫 구역, 아니면 고른 판 */
     zone: zoneRun ? 1 : 0,
-    hard: runMode === 'hard' && !zoneRun,
-    crazy: runMode === 'crazy' && !zoneRun,
+    rush: bossRun,
+    hard: runMode === 'hard' && !zoneRun && bossRun < 0,
+    crazy: runMode === 'crazy' && !zoneRun && bossRun < 0,
     stage: zoneRun ? zoneStage(1) : curStage(),
     theme: THEMES[(zoneRun ? zoneStage(1) : curStage()).theme],
   }
@@ -8061,6 +8100,8 @@ function buildWaves(ch, sub) {
   }
 
   /* 5·10·15 단계는 중간보스, 20 단계는 보스 */
+  /* 보스 도전은 웨이브가 없다. 보스 하나만 바로 세운다 */
+  if (bossRun >= 0) return [{ at: 1.0, f: () => spawnBoss(false) }]
   out.push({ at: len + 1.2, f: () => spawnBoss(isMidStage(sub)) })
   return out
 }
@@ -8195,6 +8236,64 @@ function zoneStage(n) {
 
 /** 끝없는 출격으로 들어가는가. start() 가 이걸 보고 첫 구역을 만든다 */
 let zoneRun = false
+/* ================================================================
+ * 보스 도전 (2026-09-12)
+ *
+ * 웨이브 없이 **보스 하나만** 나온다. 화면 절반을 채우고 체력이 그 판
+ * 보스의 50배다. 한 판이 20분짜리 두들기기가 되지 않게, 궁극기 충전은
+ * 여기서만 원래 속도로 돌려 둔다(두 번째부터 40%가 아니라 100%).
+ *
+ * 여는 조건은 그 전선을 끝까지 깬 것이다 - 1번은 2챕터, 2번은 4챕터,
+ * 이런 식으로 두 챕터마다 하나씩 열린다.
+ *
+ * 그림은 아직 없다. 있는 보스 얼굴을 크게 늘려 쓰고, 부위 배치만
+ * 형태마다 따로 잡았다.
+ * ================================================================ */
+let bossRun = -1          /* -1 이면 보스 도전이 아니다 */
+let startingRush = false
+/*
+ * 다섯을 일반 전선처럼 층을 나눈다.
+ *
+ *   ch    체력·공격의 바탕이 되는 전선. 뒤로 갈수록 세다
+ *   mul   그 전선 보스의 몇 배인가
+ *   xp    깨면 주는 경험치. 판 하나가 300~900 이니 한참 크다
+ *
+ * 가챠권은 처음 깰 때 세 장, 두 번째부터 한 장이다. 세 장을 계속 주면
+ * 제일 쉬운 것만 반복하는 것이 최선의 수가 된다.
+ */
+const BOSS_RUSH = [
+  { key: 'tank',    name: '강습 전차',   sub: '화력을 앞세운 지상 요새',
+    ch: 2,  mul: 50, xp: 4000,  form: 'tank',    art: 'tank' },
+  { key: 'carrier', name: '기동 항모',   sub: '함재기를 끝없이 내보낸다',
+    ch: 4,  mul: 50, xp: 8000,  form: 'carrier', art: 'carrier' },
+  { key: 'fort',    name: '적 본부',     sub: '사방이 포문이다',
+    ch: 6,  mul: 50, xp: 14000, form: 'fort',    art: 'fort' },
+  { key: 'flak',    name: '대공포 진지', sub: '하늘을 통째로 덮는다',
+    ch: 8,  mul: 50, xp: 22000, form: 'flak',    art: 'fort' },
+  { key: 'void',    name: '성층권 전함', sub: '가장 크고 가장 단단하다',
+    ch: 10, mul: 50, xp: 32000, form: 'void',    art: 'ship' },
+]
+const RUSH_TICKET_FIRST = 3
+const RUSH_TICKET_AGAIN = 1
+/** 보스 도전 자체가 열렸나. 파일럿 Lv.10 */
+const RUSH_LV = 10
+function rushModeOpen() { return prog.pilot.lv >= RUSH_LV }
+/*
+ * 그 도전이 열렸나.
+ *
+ * 앞의 것을 깨야 다음이 열린다. 다섯을 한꺼번에 열어 두면 제일 쉬운
+ * 것만 반복하게 되고, 층을 나눈 뜻이 없어진다.
+ */
+function bossRushOpen(i) {
+  if (!rushModeOpen()) return false
+  if (i === 0) return true
+  return bossRushDone(i - 1)
+}
+/** 그 도전을 깼나 */
+function bossRushDone(i) {
+  const d = BOSS_RUSH[i]
+  return !!d && !!(prog.rush || {})[d.key]
+}
 /*
  * 이번 출격의 난이도.
  *
@@ -8921,7 +9020,14 @@ function spawnBoss(mid) {
    */
   /* 중간보스도 같은 이유로 바닥을 올린다 (2026-09-11) */
   const mm = 0.32 + ((state.stage && state.stage.sub) || 1) * 0.014
-  const base = Math.round(state.stage.bossHp * (mid ? mm : 0.55))
+  /*
+   * 보스 도전은 그 전선 보스의 mul 배다. 화면 절반을 채우도록 반지름도
+   * 키운다 - r 46 이 보통이고 여기서는 100 이라 가로로 거의 꽉 찬다.
+   */
+  const rush = state.rush >= 0 ? BOSS_RUSH[state.rush] : null
+  const base = rush
+    ? Math.round(state.stage.bossHp * 0.55 * rush.mul)
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55))
 
   /*
    * 형태.
@@ -8975,7 +9081,8 @@ function spawnBoss(mid) {
    * 네 벌을 판 번호로 돌린다. 부위 수도 자리도 다르므로 설 자리와 쏘는
    * 법이 달라진다 - 그게 형태를 나누는 이유다.
    */
-  const form = mid ? MID_FORMS[(bch * 3 + bsub) % MID_FORMS.length]
+  const form = rush ? rush.form
+    : mid ? MID_FORMS[(bch * 3 + bsub) % MID_FORMS.length]
     : pool[(bch * 2 + BOSS_AT.indexOf(bsub)) % pool.length]
   const mk = (key, name, dx, dy, r, mul, cd) => ({
     key, name, dx, dy, r, cd, flash: 0, alive: true,
@@ -8983,7 +9090,7 @@ function spawnBoss(mid) {
   })
   state.boss = {
     mid: !!mid,
-    x: W / 2, y: -120, r: mid ? 34 : 46, t: 0, cd: 1.2, entering: true,
+    x: W / 2, y: -120, r: rush ? 100 : mid ? 34 : 46, t: 0, cd: 1.2, entering: true,
     phase: 1, flash: 0, summonCd: mid ? 9 : 7, dashPh: 0, dashX: 0,
     lancePh: 0, lanceX: 0, lanceCd: 4,
     form,
@@ -9128,6 +9235,32 @@ function spawnBoss(mid) {
         mk('lt', '좌 사출기', -51, 71, 30, 0.20, 1.6),
         mk('rt', '우 사출기', 7, 82, 30, 0.17, 2.2),
         mk('en', '엘리베이터', -24, -71, 32, 0.17, 2.8),
+      ],
+      /*
+       * 대공포 진지 (보스 도전 전용).
+       *
+       * 포문이 사방에 박혀 있다. 다섯을 다 깨야 코어가 열리므로 제일
+       * 오래 걸린다 - 대신 하나하나는 얇다.
+       */
+      flak: [
+        mk('n', '북 포대', 0, -72, 30, 0.15, 1.0),
+        mk('s', '남 포대', 0, 72, 30, 0.15, 1.5),
+        mk('w', '서 포대', -72, 0, 30, 0.15, 2.0),
+        mk('e', '동 포대', 72, 0, 30, 0.15, 2.5),
+        mk('c', '중앙 관제', 0, 0, 38, 0.22, 3.0),
+      ],
+      /*
+       * 성층권 전함 (보스 도전 전용, 마지막).
+       *
+       * 길게 눕힌 몸. 부위가 여섯이라 화면 절반을 가로지른다.
+       */
+      void: [
+        mk('b1', '주포탑', 0, -80, 36, 0.14, 1.0),
+        mk('b2', '함교', 0, -18, 40, 0.18, 1.6),
+        mk('b3', '기관부', 0, 52, 38, 0.16, 2.2),
+        mk('l1', '좌 부포', -76, 10, 28, 0.12, 2.6),
+        mk('r1', '우 부포', 76, 10, 28, 0.12, 3.0),
+        mk('t1', '후방 포탑', 0, 104, 30, 0.13, 3.4),
       ],
     }[form],
     core: { hp: base, maxHp: base, open: false },
@@ -11526,6 +11659,12 @@ function bossArt(bs) {
   const ch = (st && st.id) || 1
   /* 형태가 정해진 보스는 그 그림을 쓴다 */
   /* 모선(air)도 제 그림이 생겼다. 전에는 챕터 대표 보스 얼굴을 빌렸다 */
+  /* 보스 도전은 표에 적어 둔 얼굴을 쓴다. 전용 그림은 아직 없다 */
+  if (bs && state && state.rush >= 0) {
+    const d = BOSS_RUSH[state.rush]
+    const rim = d && BOSS_IMG[d.art]
+    if (rim && rim.complete && rim.naturalWidth) return rim
+  }
   if (bs && bs.form && bs.form !== 'mid') {
     const fim = BOSS_IMG[bs.form]
     if (fim && fim.complete && fim.naturalWidth) return fim
@@ -15208,7 +15347,7 @@ function end(win) {
    * 깨면 별 하나, 한 대도 안 잃으면 둘, 체력까지 70% 넘게 남기면 셋.
    * 최고 기록만 남는다 - 두 번째부터는 별이 줄지 않는다.
    */
-  const key = zone ? null : stageKey(prog.chapter || 0, curSub())
+  const key = (zone || state.rush >= 0) ? null : stageKey(prog.chapter || 0, curSub())
   /*
    * 별은 맞은 횟수로 준다.
    *
@@ -15243,7 +15382,8 @@ function end(win) {
   const nextSub = curSub() + 1
   const nextCh = (prog.chapter || 0) + 1
   let opened = null
-  if (!zone && win) {
+  /* 보스 도전은 판 진행과 무관하다. 깨도 다음 단계로 안 옮긴다 */
+  if (!zone && win && state.rush < 0) {
     if (nextSub <= SUBS) prog.sub = nextSub
     else if (CHAPTERS[nextCh]) {
       prog.chapter = nextCh
@@ -15293,6 +15433,28 @@ function end(win) {
       prog.shardP[u.plane.id] = shardOf(u.plane.id) + n
       if (i === MAIN_SLOT) { shardGot = n; shardName = u.plane.name }
     })
+  }
+
+  /*
+   * 보스 도전 보상 (2026-09-12).
+   *
+   * 판 진행·별·조각과는 아무 상관이 없다 - 경험치와 가챠권만 준다.
+   * 가챠권은 처음 깰 때 셋, 두 번째부터 하나다. 셋을 계속 주면 제일
+   * 쉬운 것만 반복하는 것이 최선의 수가 된다.
+   */
+  let rushGot = null
+  if (state.rush >= 0) {
+    const d = BOSS_RUSH[state.rush]
+    if (win && d) {
+      if (!prog.rush) prog.rush = {}
+      const first = !prog.rush[d.key]
+      prog.rush[d.key] = true
+      const tk = first ? RUSH_TICKET_FIRST : RUSH_TICKET_AGAIN
+      prog.ticket += tk
+      addXpRaw(d.xp)
+      rushGot = { name: d.name, xp: d.xp, tk, first }
+      save()
+    }
   }
 
   const stars = win ? STAR_CLEAR : STAR_FAIL
@@ -15369,9 +15531,11 @@ function end(win) {
 
   const hardTag = state.hard ? '하드코어 · ' : state.crazy ? '크레이지 · ' : ''
   document.getElementById('overTitle').textContent =
-    zone ? `제 ${zone} 구역에서 격추`
-         : win ? `${hardTag}${sg.chapter} ${sg.sub}단계 클리어`
-               : `${hardTag}격추됨`
+    state.rush >= 0
+      ? (win ? BOSS_RUSH[state.rush].name + ' 격파' : BOSS_RUSH[state.rush].name + ' 앞에서 격추')
+      : zone ? `제 ${zone} 구역에서 격추`
+      : win ? `${hardTag}${sg.chapter} ${sg.sub}단계 클리어`
+            : `${hardTag}격추됨`
 
   /*
    * 보상은 칸으로 낸다.
@@ -15460,6 +15624,12 @@ function end(win) {
       (state.score >= st.best ? ' · 최고 기록' : '') +
       ' · 누적 ' + prog.total.toLocaleString('ko-KR') + '점</div>' +
     '<div class="rgrid">' + cells + '</div>' +
+    (rushGot
+      ? '<div class="rlv slotnew">＋ ' + rushGot.name + ' 격파 보상<br>' +
+        '<span class="t2">파일럿 경험치 ' + rushGot.xp.toLocaleString('ko-KR') +
+        ' · 가챠권 ' + rushGot.tk + '장' +
+        (rushGot.first ? ' (첫 격파)' : '') + '</span></div>'
+      : '') +
     (zone
       ? '<div class="rrate"><span class="stars" style="font-size:30px">제 ' + zone + ' 구역</span>' +
         '<span class="note">' +
@@ -15513,8 +15683,22 @@ function end(win) {
  *
  * @param zoneMode 끝없는 출격인가. start() 가 이 값을 보고 첫 구역을 만든다
  */
+/** 보스 도전을 시작한다 */
+function startBossRush(i) {
+  if (!bossRushOpen(i)) return false
+  bossRun = i
+  zoneRun = false
+  runMode = 'normal'
+  startingRush = true
+  const ok = doLaunch(false)
+  startingRush = false
+  if (!ok) bossRun = -1
+  return ok
+}
 function doLaunch(zoneMode) {
   zoneRun = zoneMode === true
+  /* 보스 도전이 아니면 반드시 꺼 둔다 - 켜진 채 일반 판에 들어가면 웨이브가 없다 */
+  if (!zoneMode && bossRun >= 0 && !startingRush) bossRun = -1
   /*
    * 아직 안 깬 판에 하드코어로 들어가지 않게 한다.
    *
