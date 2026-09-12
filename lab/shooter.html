@@ -2020,9 +2020,35 @@ const ULT_MAX = 100          // 게이지 가득. 적 하나에 얼마나 차는
  * 더 있는 대신 첫 발이 일찍 오고 간격이 촘촘하다.
  */
 const ULT_AT = [15, 40]
+/*
+ * 한 발 더 붙는 자리 (2026-09-12).
+ *
+ * 시각을 뒤에 덧붙이면(예: 60초) 짧은 판에서는 그 발이 영영 안 온다.
+ * 판이 제일 짧아도 50초라, 발수가 늘면 **표를 통째로 촘촘한 것으로
+ * 갈아 끼운다** - 마지막 발이 항상 50초 안에 들어오게.
+ *
+ *   기본          15 · 40
+ *   전설 기체      12 · 30 · 48
+ *   뇌성           10 · 30 · 50
+ *   전설 + 뇌성     8 · 22 · 36 · 50
+ */
+const ULT_AT_L = [12, 30, 48]
 const ULT_AT_N = [10, 30, 50]
+const ULT_AT_LN = [8, 22, 36, 50]
+
+/** 메인 기체가 전설인가. 궁극기 갈래를 정하는 것이 메인이라 메인만 본다 */
+function legendMain() {
+  const u = state && state.squad && state.squad[MAIN_SLOT]
+  return !!(u && u.plane && u.plane.tier === 'legend')
+}
+
 function ultTimes() {
-  return (perk('ultN') || 0) >= 1 ? ULT_AT_N.slice() : ULT_AT.slice()
+  const n = (perk('ultN') || 0) >= 1
+  const l = legendMain()
+  return (l && n) ? ULT_AT_LN.slice()
+       : l ? ULT_AT_L.slice()
+       : n ? ULT_AT_N.slice()
+       : ULT_AT.slice()
 }
 function ultCap() { return ULT_MAX * ultTimes().length }
 /*
@@ -2342,6 +2368,7 @@ const PLANES = []
    * 카드에는 「유도」라고 적혀 있는데 판에서는 아무 일도 안 일어나는 것이
    * 제일 나쁘다 - 산 사람이 속았다고 느낀다.
    */
+  /* 전설은 여기 적힌 것 말고도 궁극기를 한 발 더 쓴다 (ULT_AT_L) */
   const LEGEND_TRAIT = {
     rapid:  { extra: 1, speed: 1 },   // 송골매 더 많이, 더 빠르게
     spread: { extra: 1, bounce: 1 },  // 폭풍   넓게 퍼지고 벽에 튄다
