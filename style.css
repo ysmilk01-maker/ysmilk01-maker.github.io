@@ -1108,7 +1108,8 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
 /* 모바일은 브라우저 바가 펼쳐진 작은 뷰포트(svh)를 기준으로 제목과 3D를 한 화면에 넣는다.
  * 글자 확대·아주 낮은 화면에서는 내용 높이가 우선이라 필요한 만큼 스크롤을 허용한다. */
 @media (max-width: 760px) {
-  .hero--kinetic { padding-inline: 24px; padding-bottom: 8px; overflow: clip; }
+  .hero--kinetic { padding-inline: 24px; padding-bottom: 8px; overflow: hidden; }
+  .hero-atmosphere { overflow: hidden; }
   .kinetic-layout { display: grid; grid-template-rows: auto minmax(140px, 1fr); height: calc(100svh - 142px); min-height: min-content; align-items: stretch; }
   .kinetic-copy { padding: 18px 0 0; width: 100%; }
   /* 작은 화면의 문구는 즉시 보여 주고 시선은 회전하는 3D에 둔다. */
@@ -1123,9 +1124,7 @@ html.gsap .rise, html.gsap .phone.rise { transition: none; }
   .kinetic-cta > span { width: 30px; height: 30px; font-size: 20px; }
   .kinetic-secondary { font-size: 11px; gap: 8px; }
   .kinetic-platform { margin-top: 8px; font-size: 10px; }
-  .kinetic-art { position: relative; top: auto; right: auto; transform: none; width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; margin: 0; opacity: 1; container-type: size; }
-  .kinetic-art .art-surface { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); inset: 0; margin: auto; }
-  .kinetic-art .art-orbit { width: min(85cqw, 85cqh); height: min(85cqw, 85cqh); inset: 0; margin: auto; }
+  .kinetic-art { position: relative; top: auto; right: auto; transform: none; width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; margin: 0; opacity: 1; }
   .kinetic-poster { width: auto; height: 80%; max-width: 90%; object-fit: contain; left: 50%; top: 10%; transform: translateX(-50%); }
   .kinetic-foot { min-height: 48px; }
   .kinetic-down, .motion-toggle { font-size: 10px; }
