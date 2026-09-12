@@ -1247,6 +1247,29 @@
     padding: 20px 18px; width: min(420px, 100%); max-height: 86vh; overflow-y: auto;
   }
   .gbox h2 { margin-bottom: 12px; }
+
+  /* 알림·물음 창. 글은 왼쪽으로 흘리고 단추는 오른쪽에 모은다 */
+  .abox { width: min(360px, 92vw); text-align: left; padding: 20px 20px 18px; }
+  .abox h3 {
+    margin: 0 0 11px; font-size: 14px; font-weight: 800;
+    letter-spacing: .02em; color: var(--gold);
+  }
+  /* 줄바꿈을 글자 그대로 살린다 - 안내문이 여러 줄이다 */
+  .abox p {
+    margin: 0; font-size: 13.5px; line-height: 1.66;
+    color: var(--ink); white-space: pre-line;
+  }
+  .abox .arow { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .abox .arow button { margin: 0; min-width: 92px; padding: 11px 18px; font-size: 14px; }
+  .abox .arow button[hidden] { display: none !important; }
+  /*
+   * 「확인」에 출격 단추의 9분할 그림(--ui-btnMain)을 입혀 봤다가 뺐다.
+   *
+   * 그림을 이 크기로 줄이면 가운데 늘어난 자리에 이음매가 드러난다.
+   * 게다가 다른 알림창(unlockPop)의 주 단추가 이미 기본 단추 모양이라,
+   * 여기만 바꾸면 같은 자리에서 두 가지 단추를 쓰게 된다. 기본 단추를
+   * 그대로 쓰는 쪽이 화면 전체와 맞는다.
+   */
   .got {
     display: grid; place-items: center; gap: 6px; padding: 22px 10px;
     background: #0a1220; border: 1px solid var(--line); border-radius: 13px; margin-bottom: 14px;
@@ -1769,6 +1792,27 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
     <div class="tbtns">
       <button id="tourSkip" class="ghost">넘기기</button>
       <button id="tourNext">다음</button>
+    </div>
+  </div>
+</div>
+
+<!--
+  게임 안 알림·물음 (2026-09-12).
+
+  여기까지 alert/confirm 을 쓰고 있었다. 브라우저가 그리는 창이라 게임
+  위에 주소가 붙어 뜨고, 글꼴도 단추도 게임과 따로 논다. 「판을
+  버리시겠습니까」처럼 제일 무거운 물음이 제일 남의 옷을 입고 나왔다.
+
+  덮개(.panel)와 틀(.gbox)은 이미 쓰는 것을 그대로 쓴다. 단추 둘을
+  가로로 놓고, 알리기만 할 때는 왼쪽 것을 감춘다.
+-->
+<div class="panel" id="askPop" hidden>
+  <div class="gbox abox">
+    <h3 id="askTitle">안내</h3>
+    <p id="askBody"></p>
+    <div class="arow">
+      <button id="askNo" class="ghost">취소</button>
+      <button id="askOk">확인</button>
     </div>
   </div>
 </div>
@@ -5730,10 +5774,12 @@ document.getElementById('btnSet').onclick = () => { elSet.hidden = false; render
 let setTaps = 0
 document.getElementById('setTitle').onclick = () => { if (++setTaps >= 5) document.getElementById('setReset').hidden = false }
 document.getElementById('setReset').onclick = () => {
-  if (!confirm('저장을 전부 지우고 처음부터 시작합니다. 기체·파일럿·레벨·진행이 모두 사라집니다.')) return
-  if (!confirm('정말 지웁니까?')) return
-  try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(OLD_KEY) } catch {}
-  location.reload()
+  ask('저장을 전부 지우고 처음부터 시작합니다.\n기체·파일럿·레벨·진행이 모두 사라집니다.', () => {
+    ask('정말 지웁니까?', () => {
+      try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(OLD_KEY) } catch {}
+      location.reload()
+    }, { title: '한 번 더 묻습니다', ok: '지웁니다' })
+  }, { title: '처음부터 다시', ok: '계속' })
 }
 document.getElementById('setClose').onclick = () => { elSet.hidden = true; modalOff(); render() }
 
@@ -5779,8 +5825,8 @@ function renderPlanes() {
     b.onclick = () => {
       const i = +b.dataset.slot
       if (!slotOpen(i)) {
-        alert(SLOT_META[i].legend ? '전설 파일럿이 있어야 열립니다.'
-                                  : `파일럿 레벨 ${SLOT_META[i].lv} 이 필요합니다.`)
+        say(SLOT_META[i].legend ? '전설 파일럿이 있어야 열립니다.'
+                                : `파일럿 레벨 ${SLOT_META[i].lv} 이 필요합니다.`, '아직 잠긴 자리')
         return
       }
       activeSlot = i
@@ -6239,9 +6285,9 @@ function paintShop() {
     `<div class="empty">결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.</div>`
   body.querySelectorAll('[data-shop]').forEach((el) => {
     const it = SHOP[+el.dataset.shop]
-    el.onclick = () => alert(
+    el.onclick = () => say(
       `가챠권 ${it.n}장 · ${it.won.toLocaleString('ko-KR')}원\n\n` +
-      `결제는 아직 붙지 않았습니다.`)
+      `결제는 아직 붙지 않았습니다.`, '상점')
   })
 }
 
@@ -6313,7 +6359,7 @@ function openTossRank() {
   const fn = (window.AppsInToss && window.AppsInToss.openGameCenterLeaderboard) ||
              window.openGameCenterLeaderboard
   if (typeof fn !== 'function') {
-    alert('토스 앱 안에서, 게임으로 등록된 뒤에 열립니다.\n지금은 아래 내 기록만 봅니다.')
+    say('토스 앱 안에서, 게임으로 등록된 뒤에 열립니다.\n지금은 아래 내 기록만 봅니다.', '순위표')
     return
   }
   try { fn() } catch (e) { /* 옛 버전이면 조용히 넘어간다 */ }
@@ -6372,7 +6418,7 @@ function bindModes(root, rerender) {
       e.stopPropagation()
       const k = b.dataset.mode
       if (k !== 'normal' && !hardOpen()) {
-        alert('일반으로 한 번 깬 판만 하드코어·크레이지로 갈 수 있습니다.')
+        say('일반으로 한 번 깬 판만 하드코어·크레이지로 갈 수 있습니다.', '아직 못 갑니다')
         return
       }
       runMode = k
@@ -6479,7 +6525,7 @@ function renderStage() {
   el.querySelectorAll('[data-sub]').forEach((d) => {
     const sub = +d.dataset.sub
     d.onclick = () => {
-      if (!subOpen(mapCh, sub)) { alert(`${sub - 1}단계를 먼저 깨야 합니다.`); return }
+      if (!subOpen(mapCh, sub)) { say(`${sub - 1}단계를 먼저 깨야 합니다.`, '잠긴 단계'); return }
       prog.chapter = mapCh
       prog.sub = sub
       save(); renderStage()
@@ -6672,12 +6718,13 @@ function openPilot(pl, list) {
   const rs = document.getElementById('pReset')
   if (rs) rs.onclick = () => {
     /* 쓴 경험치를 그대로 돌려준다. 안 돌려주면 되돌리기가 벌이 된다 */
-    if (!confirm(pl.name + ' 의 스탯을 모두 되돌립니다.' + String.fromCharCode(10) +
-                 '경험치 ' + back.toLocaleString('ko-KR') + ' 을 돌려받습니다.')) return
-    const cur = stOf(pl.id)
-    ST_KEYS.forEach((k) => { cur[k] = 0 })
-    prog.pilot.xp = (prog.pilot.xp || 0) + back
-    save(); sfx('pick'); renderPilot(); openPilot(pl, list)
+    ask(pl.name + ' 의 스탯을 모두 되돌립니다.\n' +
+        '경험치 ' + back.toLocaleString('ko-KR') + ' 을 돌려받습니다.', () => {
+      const cur = stOf(pl.id)
+      ST_KEYS.forEach((k) => { cur[k] = 0 })
+      prog.pilot.xp = (prog.pilot.xp || 0) + back
+      save(); sfx('pick'); renderPilot(); openPilot(pl, list)
+    }, { title: '스탯 되돌리기', ok: '되돌립니다' })
   }
 
   const pk = document.getElementById('pPick')
@@ -6723,8 +6770,51 @@ function openPilot(pl, list) {
  * 안내가 셋(해금 창 · 스탯 안내 · 손가락)인데 서로를 몰랐다. 겹치면
  * 둘 다 안 읽히고, 뒤엣것이 앞엣것을 가리킨 자리를 덮는다.
  */
+/*
+ * 알림과 물음 (2026-09-12).
+ *
+ * alert/confirm 을 걷어낸 자리다.
+ *
+ * 브라우저 것과 결정적으로 다른 점이 하나 있다 - **기다려 주지 않는다.**
+ * confirm 은 눌릴 때까지 코드를 세워 놓고 참·거짓을 돌려주는데 이것은
+ * 못 한다. 그래서 부르는 쪽을 전부 「확인을 누르면 그때 한다」로 바꿨다.
+ * 새로 쓸 때도 `if (!ask(...)) return` 처럼 쓰면 안 된다 - ask 는 값을
+ * 안 돌려준다.
+ */
+const ASK = { ok: null }
+function askClose() {
+  document.getElementById('askPop').hidden = true
+  ASK.ok = null
+  modalOff()
+}
+function askOpen(text, title, okLabel, twoWay, onOk) {
+  const el = document.getElementById('askPop')
+  document.getElementById('askTitle').textContent = title
+  document.getElementById('askBody').textContent = text
+  document.getElementById('askOk').textContent = okLabel
+  document.getElementById('askNo').hidden = !twoWay
+  ASK.ok = onOk || null
+  el.hidden = false
+  sfx('pick')
+  modalOn(el, askClose)
+}
+/** 알리기만 한다. 단추 하나 */
+function say(text, title) { askOpen(text, title || '안내', '확인', false, null) }
+/** 묻는다. 확인을 누르면 그때 onOk 가 돈다 */
+function ask(text, onOk, opt) {
+  const o = opt || {}
+  askOpen(text, o.title || '확인', o.ok || '확인', true, onOk)
+}
+document.getElementById('askOk').onclick = () => {
+  /* 먼저 닫고 나서 한다 - 하는 일이 또 창을 열 수 있다 */
+  const fn = ASK.ok
+  askClose()
+  if (fn) fn()
+}
+document.getElementById('askNo').onclick = () => askClose()
+
 function anyOverlay() {
-  return ['detail', 'title', 'daily', 'unlockPop', 'gfx', 'upgfx']
+  return ['detail', 'title', 'daily', 'unlockPop', 'askPop', 'gfx', 'upgfx']
     .some((id) => { const e = document.getElementById(id); return e && !e.hidden })
 }
 
@@ -7040,9 +7130,8 @@ function renderPilot() {
 
   const buy = document.getElementById('buyLegend')
   if (buy) buy.onclick = () => {
-    alert('전설 파일럿 ' + LEGEND_PILOT.price.toLocaleString('ko-KR') + '원' +
-          String.fromCharCode(10, 10) +
-          '결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.')
+    say('전설 파일럿 ' + LEGEND_PILOT.price.toLocaleString('ko-KR') + '원\n\n' +
+        '결제는 아직 붙지 않았습니다. 등급분류와 인앱결제 심사가 남아 있습니다.', '전설 파일럿')
   }
 }
 
@@ -7256,7 +7345,7 @@ function openDetail(p, list) {
      */
     const dup = prog.squad.indexOf(p.id)
     if (dup === MAIN_SLOT && activeSlot !== MAIN_SLOT && !prog.squad[activeSlot]) {
-      alert('메인 자리는 비울 수 없습니다. 먼저 메인에 다른 기체를 넣고 옮겨 주세요.')
+      say('메인 자리는 비울 수 없습니다.\n먼저 메인에 다른 기체를 넣고 옮겨 주세요.', '메인 자리')
       return
     }
     if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
@@ -7730,12 +7819,13 @@ document.getElementById('pResume').onclick = () => {
 document.getElementById('pQuit').onclick = () => {
   if (!state || !state.running) return
   /* 무엇을 잃는지 말하고 묻는다. 출격권은 시작할 때 이미 나갔다 */
-  if (!confirm('이번 판을 버리고 출격 준비로 돌아갑니다.\n지금까지의 점수와 보상은 사라지고, 쓴 출격권은 돌아오지 않습니다.')) return
-  state.running = false
-  state.paused = false
-  pauseUI(false)
-  music('hangar')
-  go('squad')
+  ask('이번 판을 버리고 출격 준비로 돌아갑니다.\n지금까지의 점수와 보상은 사라지고, 쓴 출격권은 돌아오지 않습니다.', () => {
+    state.running = false
+    state.paused = false
+    pauseUI(false)
+    music('hangar')
+    go('squad')
+  }, { title: '판을 버립니다', ok: '버리고 나갑니다' })
 }
 const RESUME_WAIT = 2.0
 function slotPos(i) {
@@ -17515,7 +17605,7 @@ function doLaunch(zoneMode) {
    */
   if (energy() > 0) { energySpend(); start(); return true }
   if (adDayLeft() <= 0) {
-    alert('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.')
+    say('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.', '출격권')
     return false
   }
   showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
