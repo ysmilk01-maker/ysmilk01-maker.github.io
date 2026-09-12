@@ -12,54 +12,12 @@
 <meta property="og:image" content="https://ysmilk01-maker.github.io/img/og.png">
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=aad0e3533ab5">
-<!-- 로고 연출(2.2초) 뒤에 바로 서야 하므로 큰 두 장은 미리 받는다 -->
+<link rel="stylesheet" href="style.css?v=e03d130663cf">
+<!-- 첫 화면의 정적 대체 이미지는 WebGL 초기화 전에도 보인다. -->
 <link rel="preload" as="image" href="img/hero/hero-orb.webp" type="image/webp">
-<link rel="preload" as="image" href="img/hero/hero-ring.webp" type="image/webp">
-<script>
-/*
- * 첫 화면 로고 연출을 켤지 여기서 정한다.
- *
- * 본문 끝의 스크립트에서 정하면 히어로가 한 번 번쩍인 뒤에 덮개가 씌워진다.
- * head 에서 클래스만 미리 붙여 두면 그런 깜빡임이 없다.
- *
- * 두 가지 경우에 건너뛴다. 움직임을 줄여 달라고 한 사람, 그리고 자바스크립트가
- * 막힌 사람. 후자는 클래스가 안 붙으므로 덮개가 아예 뜨지 않는다 — 걷어낼 수
- * 없는 덮개를 남기지 않는다.
- *
- * 새로 고침하면 다시 나온다. 한 번 본 사람에게 안 보여주던 것을 없앴다 — 이
- * 연출이 이 페이지의 첫인상이고, 다시 열었다는 건 다시 보고 싶다는 뜻이다.
- */
-(function () {
-  try {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    document.documentElement.className += ' boot-on'
-  } catch (e) {
-    /* matchMedia 가 없는 환경이면 연출 없이 간다 */
-  }
-})()
-</script>
 <noscript><style>.rise, .phone.rise { opacity: 1; transform: none; }</style></noscript>
 </head>
 <body>
-
-<!--
-  로고 등장.
-
-  검은 바탕에서 빛이 번지고, 마크가 왼쪽부터 닦여 나오고, 그 위로 광택이
-  한 번 지나간다. 링이 한 번 퍼지고 전체가 걷히면 첫 화면이 올라온다.
--->
-<div class="boot" id="boot" aria-hidden="true">
-  <div class="boot-stage">
-    <span class="boot-glow"></span>
-    <span class="boot-ring"></span>
-    <span class="boot-ring boot-ring-2"></span>
-    <div class="boot-logo">
-      <img src="img/logo.png" width="501" height="78" alt="" fetchpriority="high">
-    </div>
-    <span class="boot-shine"></span>
-  </div>
-</div>
 
 <a class="skip" href="#main">본문으로 건너뛰기</a>
 
@@ -74,47 +32,34 @@
   </ul>
 </nav>
 
-<!-- 첫 화면은 할 수 있는 일과 실행 경로부터. 유리 조형물은 오른쪽에서 브랜드를 잇는다. -->
+<!-- 첫 화면: 제목과 실제 3D 조형물이 함께 드러난다. -->
 <main id="main">
-<header class="stage hero" id="top">
-  <div class="light" aria-hidden="true">
-    <span class="sheet"></span>
-    <span class="bloom"></span>
-    <span class="grain"></span>
-  </div>
-  <div class="inner">
-    <div class="hero-text">
-      <p class="eyebrow rise">게임과 앱을 만드는 작은 스튜디오</p>
-      <h1 class="rise">일상에,<br>작은 재미를.</h1>
-      <p class="sub rise">
-        잠깐 빠져드는 퍼즐, 부담 없이 해보는 모의 투자.<br>직접 써보고 싶은 아이디어를 게임과 앱으로 만듭니다.
-      </p>
-      <div class="hero-actions rise">
-        <div class="hero-buttons">
-          <a class="cta" href="#apps">서비스 둘러보기 <span aria-hidden="true">↗</span></a>
-          <a class="text-link" href="#in-progress">개발 중인 게임 <span aria-hidden="true">→</span></a>
-        </div>
-        <p class="platform-note">서비스 중인 앱은 토스·원스토어에서</p>
+<header class="stage hero hero--kinetic" id="top">
+  <div class="hero-atmosphere" aria-hidden="true"><span class="halo halo-a"></span><span class="halo halo-b"></span><span class="hero-grid"></span></div>
+  <div class="kinetic-layout">
+    <div class="kinetic-copy">
+      <p class="kinetic-kicker"><span aria-hidden="true">✳</span> 작은 호기심으로 만드는 새로운 즐거움</p>
+      <h1 aria-label="일상에, 작은 재미를."><span class="title-line" aria-hidden="true"><span>일상에,</span></span><span class="title-line" aria-hidden="true"><span>작은 <em>재미를.</em></span></span></h1>
+      <p class="kinetic-description">한 판의 몰입. 뜻밖의 발견.<br>당신의 일상에 새로운 즐거움을 더하는<br class="mobile-break"> 게임과 앱을 만듭니다.</p>
+      <div class="kinetic-actions">
+        <a class="kinetic-cta" href="#apps">즐거움 발견하기 <span aria-hidden="true">↗</span></a>
+        <a class="kinetic-secondary" href="#in-progress">다음 게임 미리보기 <span aria-hidden="true">→</span></a>
       </div>
+      <p class="kinetic-platform">토스 · 원스토어에서 만나요</p>
     </div>
-
-    <!--
-      유리 조형.
-
-      다섯 겹이다 — 고리, 방울, 구슬 셋, 원반, 눈물방울. 뒤에 있는 것일수록
-      느리게, 앞에 있는 것일수록 빠르게 움직여서(data-depth) 한 장짜리 그림이
-      아니라 물체로 읽힌다. 자리는 CSS 변수로, 움직임은 site.js 가 GSAP 으로.
-      움직임을 줄인 설정에서는 이 자리에 가만히 서 있다.
-    -->
-    <div class="sculpt" aria-hidden="true">
-      <img src="img/hero/hero-ring.webp" width="1000" height="816" alt="" data-depth="0.5" style="--x:2%; --y:12%; --w:96%" decoding="async">
-      <img src="img/hero/hero-orb.webp" width="880" height="855" alt="" data-depth="1" style="--x:22%; --y:18%; --w:60%" decoding="async">
-      <img src="img/hero/hero-shard-c.webp" width="340" height="379" alt="" data-depth="0.7" style="--x:0%; --y:56%; --w:28%" loading="lazy" decoding="async">
-      <img src="img/hero/hero-shard-b.webp" width="380" height="139" alt="" data-depth="1.3" style="--x:58%; --y:76%; --w:36%" loading="lazy" decoding="async">
-      <img src="img/hero/hero-shard-a.webp" width="360" height="353" alt="" data-depth="1.7" style="--x:70%; --y:2%; --w:26%" loading="lazy" decoding="async">
+    <div class="kinetic-art" aria-hidden="true">
+      <span class="art-orbit orbit-one"></span><span class="art-orbit orbit-two"></span>
+      <div class="art-surface">
+        <img class="kinetic-poster" src="img/hero/hero-orb.webp" width="880" height="855" alt="" fetchpriority="high">
+        <canvas class="kinetic-canvas" width="800" height="800"></canvas>
+      </div>
+      <span class="art-spark spark-one">✧</span><span class="art-spark spark-two">✦</span>
     </div>
   </div>
-  <div class="scroll-cue rise" aria-hidden="true"><span></span></div>
+  <div class="kinetic-foot">
+    <a class="kinetic-down" href="#apps"><span aria-hidden="true">↓</span> 스크롤해서 발견하세요</a>
+    <button class="motion-toggle" type="button" aria-pressed="false" hidden><span class="motion-icon" aria-hidden="true">Ⅱ</span><span class="motion-label">움직임 멈추기</span></button>
+  </div>
 </header>
 
 <!-- 서비스 버튼은 확인된 공식 플랫폼으로만 연결한다. 개발 중인 게임에는 실행 링크를 두지 않는다. -->
@@ -269,7 +214,7 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/SplitText.min.js"></script>
-<script src="site.js?v=7aaf69515d38"></script>
+<script src="site.js?v=c9ad068db314"></script>
 
 </body>
 </html>
