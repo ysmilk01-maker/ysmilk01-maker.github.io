@@ -7056,6 +7056,10 @@ function newState() {
     /* 이 판에서 지금까지 떨어뜨린 개조의 수와, 이 판의 상한 */
     modDrops: 0,
     modCap: rollModCap(),
+    /* 이 판에 가챠권이 나오는가. 나온다면 판의 어디쯤에서 */
+    tkPlan: Math.random() < TICKET_STAGE_P,
+    tkAt: 0.15 + Math.random() * 0.70,
+    tkDone: false,
     boss: null, waveIdx: 0, banner: null, bannerT: 0, cleared: false,
     /*
      * 타격감.
@@ -10258,7 +10262,18 @@ function banner(t) { state.banner = t; state.bannerT = 1.6 }
  * 0.022 로 올린다. 두어 판에 한 장쯤이라, 판을 도는 것 자체가
  * 뽑기로 이어진다.
  */
-const TICKET_DROP = 0.022
+/*
+ * 판 단위로 정한다 (2026-09-12).
+ *
+ * 전에는 보급 하나하나에 2.2% 를 굴렸다. 그러면 판이 길수록 잘 나와서,
+ * 판 길이를 손볼 때마다 가챠권 나오는 빈도가 딸려 움직였다 - 실제로
+ * 판을 50초 위로 올리면서 한 판에 나올 확률이 24%에서 31%로 저 혼자
+ * 올라갔다. 확률을 판에 걸면 길이와 무관해진다.
+ *
+ * 열 판에 세 판꼴로 한 장. 나오는 판에서는 판의 중간쯤(15~85% 지점)에
+ * 한 장만 내려 준다.
+ */
+const TICKET_STAGE_P = 0.30
 
 /*
  * 한 판에 나오는 강화 재료의 상한.
@@ -10271,7 +10286,8 @@ const TICKET_DROP = 0.022
  * 세는 것은 주운 수가 아니라 떨어뜨린 수다. 안 주우면 다음 것이 나오는
  * 식이면 상한이 상한 구실을 못 한다.
  */
-const MOD_CAP = 2
+/* 2 -> 4 (2026-09-12). 판이 50초 위로 올라와서 둘로는 심심하다 */
+const MOD_CAP = 4
 /**
  * 이 판에 나올 개조의 수. 판마다 다르다.
  *
@@ -10280,8 +10296,14 @@ const MOD_CAP = 2
  * 떨어졌을 때 반갑다.
  */
 function rollModCap() {
+  /*
+   * 하나에서 넷까지. 없는 판은 없앴다 (2026-09-12).
+   *
+   * 50초를 넘게 도는데 주울 것이 하나도 없는 판이 다섯에 하나면
+   * 그 판은 그냥 버리는 판이 된다. 대신 넷이 나오는 판을 드물게 둔다.
+   */
   const r = Math.random()
-  return r < 0.2 ? 0 : r < 0.6 ? 1 : MOD_CAP
+  return r < 0.15 ? 1 : r < 0.50 ? 2 : r < 0.82 ? 3 : MOD_CAP
 }
 
 /*
@@ -10311,15 +10333,27 @@ const SUPPLY_GAP = [3.5, 5.5]
 
 /** 화면 위 아무 자리에서 보급품 하나가 내려온다 */
 function dropSupply() {
-  dropItem(56 + Math.random() * (W - 112), -24, true)
+  const s = state
+  const x = 56 + Math.random() * (W - 112)
+  /* 이 판의 가챠권 자리에 닿았으면 그것을 내려 준다 */
+  if (s.tkPlan && !s.tkDone) {
+    const wv = s.stage && s.stage.waves
+    const total = (wv && wv.length) ? wv[wv.length - 1].at : 50
+    if (s.t >= total * s.tkAt) {
+      s.tkDone = true
+      const it = { x, y: -24, t: 0, r: 12, tk: true }
+      s.items.push(it)
+      /* 처음 보는 가챠권이면 표시해 둔다. 멈추는 것은 내려온 뒤다 */
+      if (!prog.tipTk && !s.tipWait) s.tipWait = it
+      return
+    }
+  }
+  dropItem(x, -24, true)
 }
 
 function dropItem(x, y, richer) {
   const s = state
-  if (Math.random() < TICKET_DROP) {
-    s.items.push({ x, y, t: 0, r: 12, tk: true })
-    return
-  }
+  /* 가챠권은 여기서 안 굴린다 - 판 단위로 dropSupply 가 정한다 */
   const wantMod = s.modDrops < s.modCap && Math.random() < (richer ? .55 : .35)
   const key = wantMod ? rollMod(s.mods) : null
   if (key) s.modDrops++
@@ -10348,10 +10382,13 @@ function itemTip(it) {
    * 본 것이라, 열쇠만 소진되고 고친 뒤로는 영영 안 뜬다. 이름을 바꿔
    * 한 번 더 준다.
    */
-  if (prog.tipItem2) return
+  /* 가챠권도 같은 안내를 쓴다. 열쇠만 따로 둔다 (2026-09-12) */
+  const tk = !!(it && it.tk)
+  if (tk ? prog.tipTk : prog.tipItem2) return
   if (!state || !state.running || state.paused) return
   if (state.ultGuide != null) return        /* 필살기 안내와 겹치지 않게 */
-  prog.tipItem2 = true
+  if (tk) prog.tipTk = true
+  else prog.tipItem2 = true
   save()
   state.paused = true
   state.resumeT = 0
@@ -15749,7 +15786,8 @@ function draw() {
     const bob = Math.abs(Math.sin(gd.t * 3))
     const ix = it.x, iy = it.y
     const M = it.mod && MODS[it.mod]
-    const tone = (M && M.color) || '#ffd166'
+    const tk = !!it.tk
+    const tone = tk ? '#ffd98a' : ((M && M.color) || '#ffd166')
     g.save()
     /*
      * 덮개에 구멍을 낸다.
@@ -15790,10 +15828,11 @@ function draw() {
     g.fillText('꼭 주우세요', W / 2, ty - 30)
     g.fillStyle = '#ffffff'
     g.font = 'bold 24px system-ui'
-    g.fillText('강화 아이템입니다', W / 2, ty)
+    g.fillText(tk ? '가챠권입니다' : '강화 아이템입니다', W / 2, ty)
     g.fillStyle = 'rgba(232,238,247,.95)'
     g.font = 'bold 15px system-ui'
-    g.fillText('획득하면 강화 효과를 얻을 수 있어요', W / 2, ty + 28)
+    g.fillText(tk ? '뽑기에서 새 기체와 파일럿이 나옵니다'
+                  : '획득하면 강화 효과를 얻을 수 있어요', W / 2, ty + 28)
     if (M) {
       g.fillStyle = tone
       g.font = 'bold 14px system-ui'
@@ -15801,7 +15840,8 @@ function draw() {
     }
     g.fillStyle = 'rgba(190,206,224,.8)'
     g.font = '12.5px system-ui'
-    g.fillText('한 판에 셋까지 쌓이고, 쌓일수록 세집니다', W / 2, ty + 76)
+    g.fillText(tk ? '판이 끝나도 남습니다. 뽑기 화면에서 씁니다'
+                  : '한 판에 셋까지 쌓이고, 쌓일수록 세집니다', W / 2, ty + 76)
     g.fillStyle = 'rgba(150,168,190,.7)'
     g.font = '12px system-ui'
     g.fillText('아무 곳이나 누르면 이어집니다', W / 2, ty + 100)
