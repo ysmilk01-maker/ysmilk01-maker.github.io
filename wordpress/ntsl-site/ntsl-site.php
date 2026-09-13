@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 나인투식스랩 사이트
  * Description: 깃 저장소(dev/ninetosix-site)의 정적 홈페이지를 워드프레스에서 그대로 서빙하고, 블로그와 일반 페이지에도 같은 네비게이션·푸터·색을 씌웁니다. 카페24 매니지드 워드프레스는 FTP·파일매니저가 없어 테마 파일을 올릴 수 없으므로 플러그인 방식을 씁니다.
- * Version: 1.3.9
+ * Version: 1.3.10
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * License: GPL-2.0-or-later
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 define( 'NTSL_SITE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'NTSL_SITE_URL', plugin_dir_url( __FILE__ ) );
-define( 'NTSL_SITE_VER', '1.3.9' );
+define( 'NTSL_SITE_VER', '1.3.10' );
 
 // 2026-09-13 서비스 종료: 이전 버전의 지분공시 예약 작업이 있으면 해제한다.
 add_action( 'admin_init', function () {
@@ -200,7 +200,19 @@ function ntsl_shell_part( $tag, $class ) {
 
 	$re = '#<' . $tag . '[^>]*class="' . preg_quote( $class, '#' ) . '"[^>]*>.*?</' . $tag . '>#is';
 	if ( preg_match( $re, $html, $m ) ) {
-		$cache[ $key ] = ntsl_add_nav_links( ntsl_rewrite_links( $m[0], 'index.html' ) );
+		$part = ntsl_rewrite_links( $m[0], 'index.html' );
+		// 홈에서 가져온 메뉴의 앵커는 글·목록 페이지에 없으므로 홈 주소로 연결한다.
+		if ( 'nav' === $tag ) {
+			$part = strtr( $part, array(
+				'href="#top"'  => 'href="' . esc_url( home_url( '/' ) ) . '"',
+				'href="#apps"' => 'href="' . esc_url( home_url( '/#apps' ) ) . '"',
+				'href="#way"'  => 'href="' . esc_url( home_url( '/#way' ) ) . '"',
+			) );
+		} elseif ( 'footer' === $tag ) {
+			// 일반 테마 페이지에서는 현재 페이지의 본문 시작점으로 돌아간다.
+			$part = str_replace( 'href="#top"', 'href="#content"', $part );
+		}
+		$cache[ $key ] = ntsl_add_nav_links( $part );
 	}
 
 	return $cache[ $key ];
