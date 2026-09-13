@@ -44,7 +44,7 @@ check(ntsl_d_key()==='', 'no key');
 check(ntsl_d_fetch('majorstock.json',array())->code==='key','key is required');
 $secret=str_repeat('a',40);$iv=random_bytes(12);$tag='';
 $cipher=openssl_encrypt($secret,'aes-256-gcm',hash('sha256',wp_salt('auth'),true),OPENSSL_RAW_DATA,$iv,$tag);
-$options['ntsl_d_key']=base64_encode(json_encode(array(base64_encode($cipher),base64_encode($iv),base64_encode($tag))));
+$options['ntsl_d_key']=json_encode(array(bin2hex($cipher),bin2hex($iv),bin2hex($tag)));
 check(strpos($options['ntsl_d_key'],$secret)===false,'encrypted option');
 check(ntsl_d_key()===$secret,'encrypted key roundtrip');
 $error=ntsl_d_fetch('majorstock.json',array('corp_code'=>'00000001'));

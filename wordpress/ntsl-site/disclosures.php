@@ -8,9 +8,12 @@ function ntsl_d_key() {
     if ( defined( 'NTSL_DART_KEY' ) && preg_match( '/^[a-f0-9]{40}$/iD', NTSL_DART_KEY ) ) { return NTSL_DART_KEY; }
     $stored = get_option( 'ntsl_d_key', '' );
     if ( ! $stored || ! function_exists( 'openssl_decrypt' ) ) { return ''; }
-    $parts = json_decode( base64_decode( $stored, true ), true );
+    $parts = json_decode( $stored, true );
     if ( ! is_array( $parts ) || count( $parts ) !== 3 ) { return ''; }
-    $key = openssl_decrypt( base64_decode( $parts[0] ), 'aes-256-gcm', hash( 'sha256', wp_salt( 'auth' ), true ), OPENSSL_RAW_DATA, base64_decode( $parts[1] ), base64_decode( $parts[2] ) );
+    foreach ( array( 80, 24, 32 ) as $index => $length ) {
+        if ( ! isset( $parts[$index] ) || ! is_string( $parts[$index] ) || strlen( $parts[$index] ) !== $length || ! ctype_xdigit( $parts[$index] ) ) { return ''; }
+    }
+    $key = openssl_decrypt( hex2bin( $parts[0] ), 'aes-256-gcm', hash( 'sha256', wp_salt( 'auth' ), true ), OPENSSL_RAW_DATA, hex2bin( $parts[1] ), hex2bin( $parts[2] ) );
     return is_string( $key ) && preg_match( '/^[a-f0-9]{40}$/iD', $key ) ? $key : '';
 }
 
@@ -160,7 +163,7 @@ function ntsl_d_admin() {
                 $iv = random_bytes( 12 ); $tag = '';
                 $cipher = openssl_encrypt( $key, 'aes-256-gcm', hash( 'sha256', wp_salt( 'auth' ), true ), OPENSSL_RAW_DATA, $iv, $tag );
                 if ( $cipher === false ) { $message = '인증키 암호화에 실패했습니다.'; }
-                else { update_option( 'ntsl_d_key', base64_encode( wp_json_encode( array( base64_encode( $cipher ), base64_encode( $iv ), base64_encode( $tag ) ) ) ), false ); $message = '키를 서버에 저장했습니다. 브라우저와 저장소에는 공개하지 않습니다.'; }
+                else { update_option( 'ntsl_d_key', wp_json_encode( array( bin2hex( $cipher ), bin2hex( $iv ), bin2hex( $tag ) ) ), false ); $message = '키를 서버에 저장했습니다. 브라우저와 저장소에는 공개하지 않습니다.'; }
             }
         }
         if ( isset( $_POST['ntsl_sync'] ) ) { ntsl_d_sync(); $message = '수집 작업 한 회를 실행했습니다.'; }
