@@ -16,6 +16,8 @@ define( 'NTSL_SITE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'NTSL_SITE_URL', plugin_dir_url( __FILE__ ) );
 define( 'NTSL_SITE_VER', '1.3.6' );
 
+require_once NTSL_SITE_DIR . 'disclosures.php';
+
 /**
  * 홈페이지 GA4. 정적 페이지와 블로그가 모두 호출하는 wp_head에 한 번만 삽입한다.
  * 분석 태그는 이 플러그인에서만 관리한다. Site Kit/다른 삽입 도구에 중복 등록하지 않는다.
@@ -160,6 +162,11 @@ function ntsl_add_nav_links( $html ) {
 	$blog = ntsl_blog_url();
 	if ( $blog ) {
 		$items .= '<li><a href="' . esc_url( $blog ) . '">블로그</a></li>';
+	}
+
+	$disclosures = get_page_by_path( 'stock-disclosures' );
+	if ( $disclosures && 'publish' === $disclosures->post_status ) {
+		$items .= '<li><a href="' . esc_url( get_permalink( $disclosures ) ) . '">지분공시</a></li>';
 	}
 
 	if ( '' === $items ) {
