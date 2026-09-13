@@ -1809,6 +1809,25 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 @media(max-height:650px){.hg-top{min-height:45px;padding-top:5px}.hg-res{padding-block:8px}.hg-footer{padding-top:5px;padding-bottom:5px}.hg-destination{margin-bottom:6px}#scSquad #launch{min-height:46px;font-size:19px}.hg-hint{margin-top:6px}.hg-scroll{scrollbar-width:thin}}
 @media(max-height:650px) and (max-width:600px){.hg-hero{height:255px}.hg-plane-name{top:4px}.hg-plane-name strong{font-size:20px}.hg-plane-name>span{font-size:10px}#scSquad .hg-main{left:35%;top:25px;width:62%;height:64%}.hg-change{font-size:9px;top:-19px;right:5px;padding:3px 8px}#scSquad .hg-pilot{left:3%;bottom:0;width:38%;height:66%}.hg-wings{right:4%;bottom:0;width:47%}.hg-wing-title{font-size:9px;margin-bottom:5px}#scSquad .hg-wing{height:49px}.hg-wing img{height:23px}.hg-wing small{display:none}.hg-wing svg{height:18px}.hg-wings p{font-size:9px;min-height:0;margin-top:5px}.hg-pilot-label small{font-size:9px}.hg-pilot-label strong{font-size:14px}.hg-pilot-label em{font-size:10px}}
 
+
+  /* ── 상세 시트를 한 화면에 (2026-09-13) ─────────────────────
+   * 줄 높이를 줄이고 두 줄씩 합쳐 짧은 폰(667)에서도 스크롤이 없다.
+   */
+  #detail .dsheet { max-height: calc(100vh - 36px); overflow: hidden; }
+  #detail .dsheet canvas.demo { height: 128px; margin: 8px 0 6px; }
+  #detail .dsheet .cap { display: none; }
+  #detail .dsheet .rows { gap: 4px; margin-top: 6px; }
+  #detail .dsheet .r2 { padding: 4px 9px; font-size: 11.5px; }
+  #detail .dsheet .note2 { margin-top: 6px; font-size: 11px; line-height: 1.5; }
+  #detail .dsheet .bar { margin-top: 10px; }
+  #detail .dsheet .bar button { padding: 10px 14px; font-size: 13.5px; }
+  #detail .dsheet .bar.nav { margin-top: 6px; }
+  #detail .dsheet .bar.nav button { padding: 6px 12px; font-size: 12px; }
+  #detail .dsheet .rdiff { margin-top: 8px; }
+  #detail .dsheet .rushlist { gap: 6px; margin-top: 6px; }
+  #detail .dsheet .rushrow { padding: 7px 10px; }
+  #detail .dsheet .sum { gap: 5px; margin-top: 8px; }
+  #detail .dsheet .miss { gap: 5px; margin-top: 8px; }
 </style>
 
 <div class="boot" id="boot">
@@ -3032,7 +3051,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 16:26'
+const BUILD_AT = '09-13 16:43'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7746,12 +7765,10 @@ function openDetail(p, list) {
                          .map((k) => MODS[k].desc).join(' · '))) : '') +
       row('전투력', `${planeScore(p).toLocaleString('ko-KR')} ` +
           dim('등급과 강화를 합친 값')) +
-      row('등급 화력', `×${p.power.toFixed(2)}`) +
-      row('등급 연사', `×${p.rate.toFixed(2)} ` + dim('작을수록 빠름')) +
+      row('등급 배수', `화력 ×${p.power.toFixed(2)} · 간격 ×${p.rate.toFixed(2)} ` + dim('간격은 작을수록 빠름')) +
       row('강화', `${lv}/${UPG_MAX}` +
           (lv ? ' ' + dim(`화력 +${Math.round((upgPower(p.id) - 1) * 100)}% · 간격 -${Math.round((1 - upgRate(p.id)) * 100)}%`) : '')) +
-      row('사격 간격', `${realRate.toFixed(2)}초 ` + dim(`기본 ${baseRate(p.weapon).toFixed(2)}`)) +
-      row('초당 발수', `${shots.toFixed(1)}발`) +
+      row('사격', `${realRate.toFixed(2)}초 · 초당 ${shots.toFixed(1)}발 ` + dim(`기본 ${baseRate(p.weapon).toFixed(2)}초`)) +
       row('조각', ok ? `${shardOf(p.id)}개` : `${shardOf(p.id)} / ${shardNeed(p)}`) +
     `</div>` +
     (ok ? '' : `<div class="note2">아직 잠겨 있습니다. ${lab}</div>`) +
@@ -7790,6 +7807,8 @@ function openDetail(p, list) {
      */
     c.save()
     c.scale(w / 264, w / 264)
+    /* 캔버스가 128px 로 낮아졌다(2026-09-13). 264 좌표계에서 기체(y 152)가 바닥 위에 오도록 내려 놓는다 */
+    c.translate(0, h / (w / 264) - 178)
     const t = (now - t0) / 1000
     for (const b of demoShots(p, t)) demoBullet(c, b)
     /* 기체는 아래에서 조금 띄운다. 바닥에 붙으면 엔진 불꽃이 잘린다 */
