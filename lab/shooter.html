@@ -1828,6 +1828,24 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   #detail .dsheet .rushrow { padding: 7px 10px; }
   #detail .dsheet .sum { gap: 5px; margin-top: 8px; }
   #detail .dsheet .miss { gap: 5px; margin-top: 8px; }
+
+  /* ── 등급별 바탕색 (2026-09-13) ──────────────────────────
+   * 일반 회청 · 중급 파랑 · 상급 보라 · 레전드 금. 태그 색과 같은 계열이라
+   * 카드·태그·상점 줄이 한 색으로 읽힌다. 형광 테두리(선택)는 따로 얹힌다.
+   */
+  .t-high { background: #2c1c4d; color: #c9a6ff; }
+  .card.cp.tier-common, .pcard.g-normal, .gcard.tier-common, .pnow.g-normal {
+    background: var(--tex, none) repeat, #1b202c; border-color: #343c4c; }
+  .card.cp.tier-rare, .pcard.g-mid, .gcard.tier-rare, .pnow.g-mid {
+    background: var(--tex, none) repeat, #10283f; border-color: #275a80; }
+  .card.cp.tier-high, .pcard.g-high, .gcard.tier-high, .pnow.g-high {
+    background: var(--tex, none) repeat, #24173f; border-color: #5a3d94; }
+  .card.cp.tier-legend, .pcard.g-legend, .gcard.tier-legend, .pnow.g-legend {
+    background: var(--tex, none) repeat, #33260a; border-color: #8a6a1e; }
+  /* 잠긴 것은 색을 죽인다 - 가진 것과 못 가진 것이 같은 세기로 빛나면 안 된다 */
+  .card.cp.locked, .pcard.no, .gcard.no { filter: saturate(.55); }
+  /* 태운 파일럿 큰 칸의 등급 색. 선택 테두리(accent)는 그대로 */
+  .pnow.g-normal, .pnow.g-mid, .pnow.g-high, .pnow.g-legend { border-color: var(--accent); }
 </style>
 
 <div class="boot" id="boot">
@@ -3051,7 +3069,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 16:43'
+const BUILD_AT = '09-13 16:48'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4586,19 +4604,19 @@ function renderShop() {
   if (!body) return
   const won = (v) => v.toLocaleString('ko-KR') + '원'
   const left = adTkLeft()
-  const card = (id, name, de, right, off) =>
-    '<div class="gcard' + (off ? ' no' : '') + '" data-buy="' + id + '" role="button" tabindex="0">' +
+  const card = (id, name, de, right, off, tier) =>
+    '<div class="gcard' + (off ? ' no' : '') + (tier ? ' tier-' + tier : '') + '" data-buy="' + id + '" role="button" tabindex="0">' +
     '<div><div class="nm">' + name + '</div><div class="de">' + de + '</div></div>' +
     '<span class="rt">' + right + '</span></div>'
   const pilots = (grade) => PILOTS.filter((p) => p.grade === grade).map((p) => {
     const have = hasGrade(grade) || pilotBought(p)
     return card('pilot:' + p.id, p.name + ' · ' + GRADES[grade].name, p.desc,
-                have ? '보유' : won(PILOT_PRICE[grade]), have)
+                have ? '보유' : won(PILOT_PRICE[grade]), have, grade === 'legend' ? 'legend' : 'high')
   })
   const planes = (tier, price) => PLANES.filter((p) => p.tier === tier).map((p) => {
     const have = unlocked(p)
     return card('plane:' + p.id, p.name + ' · ' + TIERS[tier], WEAPONS[p.weapon].name,
-                have ? '보유' : won(price(p)), have)
+                have ? '보유' : won(price(p)), have, tier)
   })
   /* 항목을 높이와 함께 늘어놓고 페이지에 차례로 담는다. 세로 스크롤 없음 */
   const items = []
@@ -4682,7 +4700,7 @@ function unlockLabel(p) {
 const GRADES = {
   normal: { name: '일반',   base: 1.00, rear: false, tag: 't-common' },
   mid:    { name: '중급',   base: 1.10, rear: false, tag: 't-rare' },
-  high:   { name: '상급',   base: 1.20, rear: false, tag: 't-rare' },
+  high:   { name: '상급',   base: 1.20, rear: false, tag: 't-high' },
   legend: { name: '레전드', base: 1.00, rear: true,  tag: 't-legend' },
 }
 const GRADE_KEYS = ['normal', 'mid', 'high', 'legend']
@@ -6395,7 +6413,7 @@ function renderPlanes() {
     const picked = prog.squad[activeSlot] === p.id
     const c = document.createElement('div')
     /* usedIn 에 있으면 어느 자리든 지금 태우고 있는 기체다 */
-    c.className = 'card cp' + (ok ? '' : ' locked') + (picked ? ' picked' : '') +
+    c.className = 'card cp tier-' + p.tier + (ok ? '' : ' locked') + (picked ? ' picked' : '') +
       (canUpg(p) ? ' can' : '') + (usedIn[p.id] ? ' used' : '')
     c.style.height = PLANE_CARD_H + 'px'
     kbClickable(c)
@@ -7508,7 +7526,7 @@ function renderPilot() {
       : '<div class="pf none"><div class="rk ' + pl.grade + '"></div></div>'
     const ready = !owned && GRADE_NEED[pl.grade] > 0 && shardG(pl.grade) >= GRADE_NEED[pl.grade]
     const canAny = owned && ST_KEYS.some((k) => canStat(k, pl.id))
-    return '<div class="pcard' + (on ? ' on' : '') + (owned ? '' : ' no') +
+    return '<div class="pcard g-' + pl.grade + (on ? ' on' : '') + (owned ? '' : ' no') +
       (ready || canAny ? ' can' : '') + '" data-who="' + pl.id + '" role="button" tabindex="0">' +
       pic +
       '<div class="tx"><div class="nm">' + pl.name + '</div>' +
@@ -7561,7 +7579,7 @@ function renderPilot() {
       '<span class="k">' + S.name + '</span><span class="v">' + eff + '</span></div>'
   }).join('')
   const nowBox =
-    '<div class="pnow" id="pilotNowCard">' +
+    '<div class="pnow g-' + nowP.grade + '" id="pilotNowCard">' +
     (nowFace ? '<div class="pf" style="--face:var(--gc-' + nowFace + ')"></div>'
              : '<div class="pf none"><div class="rk ' + nowP.grade + '"></div></div>') +
     '<div class="tx">' +
