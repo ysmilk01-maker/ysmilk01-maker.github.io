@@ -1921,6 +1921,10 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 
   .pfil { margin: 6px 0 0; }
   .pfil .frow button { padding: 5px 0; font-size: 11.5px; }
+
+  .pilotsheet .pgup { margin-top: 8px; }
+  .pilotsheet .pgup .n { color: var(--gold); }
+  .pilotsheet .pgnote { font-size: 10.5px; color: var(--dim); margin-top: 4px; }
 </style>
 
 <div class="boot" id="boot">
@@ -3159,7 +3163,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 18:19'
+const BUILD_AT = '09-13 18:26'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3191,6 +3195,8 @@ function load() {
     pilotOwned: { normal: true },   // 가진 파일럿 등급
     shardP: {},                     // 기체 조각. 기체 id -> 개수
     shardG: {},                     // 파일럿 조각. 등급 -> 개수
+    gradeUp: {},                    // 파일럿 등급 강화 단계. 등급 -> 0~5 (2026-09-13)
+    shardAny: 0,                    // 공용 조각. 다 올린 등급의 조각이 여기로 온다
     pull: { plane: 0, pilot: 0 },   // 뽑은 횟수. 천장 계산용
     stats: { runs: 0, kills: 0, best: 0, clears: 0, zoneBest: 0 },
     scores: [],
@@ -3225,6 +3231,7 @@ function load() {
         pilotOwned: { ...base.pilotOwned, ...(got.pilotOwned || {}) },
         shardP: got.shardP || {},
         shardG: got.shardG || {},
+        gradeUp: got.gradeUp || {},
         pull: { ...base.pull, ...(got.pull || {}) },
         stats: { ...base.stats, ...(got.stats || {}) },
         scores: got.scores || [],
@@ -4484,7 +4491,10 @@ function pull(kind) {
     /* 이미 가진 등급에 걸리면 조각 열 개로 바꿔 준다. 아니면 그냥 꽝이 된다 */
     let big = false
     if (jack) { n = JACK_SHARD; big = true }
-    prog.shardG[tier] = shardG(tier) + n
+    /* 5단계를 다 올린 등급이면 공용 조각으로 (2026-09-13) */
+    let any = false
+    if (hasGrade(tier) && gradeLv(tier) >= GRADE_UP_MAX) { prog.shardAny = shardAny() + n; any = true }
+    else prog.shardG[tier] = shardG(tier) + n
     const got = fresh && prog.shardG[tier] >= GRADE_NEED[tier]
     if (got) {
       prog.pilotOwned[tier] = true
@@ -4492,7 +4502,7 @@ function pull(kind) {
       markNewPilots(PILOTS.filter((p) => p.grade === tier && pilotOpen(p)).map((p) => p.id))
     }
     save()
-    return { kind, tier, n, big, name: GRADES[tier].name + ' 파일럿 조각', got }
+    return { kind, tier, n, big, any, name: any ? '공용 파일럿 조각' : GRADES[tier].name + ' 파일럿 조각', got }
   }
 
   /*
@@ -5179,6 +5189,39 @@ function xpFromScore(score) { return Math.round(score * 0.03) }
 function statCost(n) { return 900 + 700 * n }
 
 function grade() { return GRADES[prog.pilot.grade] || GRADES.normal }
+/*
+ * 파일럿 등급 강화 (2026-09-13 대표 지정).
+ *
+ * 그 등급 조각으로 등급 배수를 단계당 +2%, 최대 5단계. 같은 등급 셋이 같이
+ * 오른다. 5단계를 다 올린 등급의 조각은 더 쌓이지 않고 **공용 조각**이 되어
+ * 어느 등급 강화에든 쓴다 - 다 올린 뒤에 나오는 조각이 죽은 재화가 되지 않게.
+ */
+const GRADE_UP_MAX = 5
+const GRADE_UP_PER = 0.02
+const GRADE_UP_COST = [10, 20, 30, 50, 80]
+function gradeLv(k) { return (prog.gradeUp && prog.gradeUp[k]) || 0 }
+/** 등급 배수에 강화를 얹은 값 */
+function gradeMul(k) { return (GRADES[k] || GRADES.normal).base * (1 + GRADE_UP_PER * gradeLv(k)) }
+function gradeUpCost(k) { const lv = gradeLv(k); return lv >= GRADE_UP_MAX ? 0 : GRADE_UP_COST[lv] }
+function shardAny() { return prog.shardAny || 0 }
+/** 그 등급 조각 + 공용 조각으로 다음 단계를 살 수 있나 */
+function canGradeUp(k) {
+  if (!hasGrade(k) || gradeLv(k) >= GRADE_UP_MAX) return false
+  return shardG(k) + shardAny() >= gradeUpCost(k)
+}
+/** 등급 조각을 먼저 쓰고 모자란 몫만 공용 조각으로 */
+function doGradeUp(k) {
+  if (!canGradeUp(k)) return false
+  let need = gradeUpCost(k)
+  const own = Math.min(need, shardG(k))
+  prog.shardG[k] = shardG(k) - own
+  need -= own
+  if (need > 0) prog.shardAny = shardAny() - need
+  prog.gradeUp = prog.gradeUp || {}
+  prog.gradeUp[k] = gradeLv(k) + 1
+  save()
+  return true
+}
 function hasGrade(k) { return k === 'normal' || !!prog.pilotOwned[k] }
 
 /*
@@ -5249,11 +5292,11 @@ function isLegend() { return PLANES.some((p) => p.tier === 'legend' && unlocked(
  * 연사와 탄폭에까지 곱하면 상급 파일럿 하나로 모든 축이 한꺼번에 올라
  * 스탯 투자가 의미를 잃는다. 두 축은 투자로만 오른다.
  */
-function pilotPow()  { return grade().base * (1 + pilotSt().pow * 0.025) * perk('pow') }
+function pilotPow()  { return gradeMul(prog.pilot.grade) * (1 + pilotSt().pow * 0.025) * perk('pow') }
 function pilotRate() { return (1 - pilotSt().rate * 0.015) * perk('rate') }
 function pilotRng()  { return (1 + pilotSt().rng * 0.02) * perk('rng') }
 function pilotHp()   {
-  return Math.round(PLAYER_HP * (grade().base - 1)) + pilotSt().hp * 6 + perk('hp')
+  return Math.round(PLAYER_HP * (gradeMul(prog.pilot.grade) - 1)) + pilotSt().hp * 6 + perk('hp')
 }
 
 /** 경험치를 그대로 넣는다. 포션처럼 점수를 거치지 않는 것이 쓴다 */
@@ -7082,7 +7125,7 @@ function paintGacha(res) {
     return
   }
 
-  const label = res.hard ? '100장 확정!' : res.jack ? '완성품!' : res.big ? `조각 ${res.n}개 (완성품 대체)` : `조각 ${res.n}개`
+  const label = res.hard ? '100장 확정!' : res.jack ? '완성품!' : res.big ? `조각 ${res.n}개 (완성품 대체)` : res.any ? `공용 조각 ${res.n}개` : `조각 ${res.n}개`
   /* 기체 그림. 이름만 있으면 무엇을 뽑았는지 모른다 */
   const shipIm = res.plane && SHIP_IMG[res.plane.id]
   const pic = shipIm && shipIm.complete && shipIm.naturalWidth
@@ -7581,12 +7624,25 @@ function openPilot(pl, list) {
           : '<div class="pf none"><div class="rk ' + pl.grade + '"></div></div>') +
     '<div><h3>' + pl.name + '</h3>' +
     '<div class="sub2">' + G.name +
-      ' · 화력·체력 ×' + G.base.toFixed(2) + '</div>' +
+      ' · 화력·체력 ×' + gradeMul(pl.grade).toFixed(2) + '</div>' +
     '<div class="de">' + pl.desc + '</div></div></div>' +
     '<div class="pxp">' +
       '<span>쓸 수 있는 경험치 <b>' + pilotXp().toLocaleString('ko-KR') + '</b></span>' +
       '<span>부은 것 <b>' + back.toLocaleString('ko-KR') + '</b></span>' +
     '</div>' +
+    /* 등급 강화 - 같은 등급 셋이 같이 오른다 */
+    (() => {
+      const k = pl.grade, lv = gradeLv(k), max = lv >= GRADE_UP_MAX, cost = gradeUpCost(k)
+      const pips = Array.from({ length: GRADE_UP_MAX }, (_, i) => '<i class="' + (i < lv ? 'on' : '') + '"></i>').join('')
+      return '<div class="pst pgup" title="' + G.name + ' 등급 셋이 같이 오릅니다">' +
+        '<span class="n">등급</span>' +
+        '<span class="v">' + (lv ? '+' + Math.round(lv * GRADE_UP_PER * 100) + '%' : '-') + '</span>' +
+        '<span class="pp">' + pips + '</span>' +
+        '<button id="pGradeUp" ' + (canGradeUp(k) ? '' : 'disabled') + '>' +
+        (max ? '최대' : '조각 ' + cost) + '</button></div>' +
+        '<div class="pgnote">' + G.name + ' 조각 ' + shardG(k) + (shardAny() ? ' · 공용 ' + shardAny() : '') +
+        (max ? ' · 다 올렸습니다. 이 등급 조각은 공용 조각이 됩니다' : ' · 단계마다 화력·체력 +2%, 셋이 같이') + '</div>'
+    })() +
     '<div class="pstats">' + statHtml + '</div>' +
     (have ? '' : '<div class="pnote">아직 잠겨 있습니다. ' + G.name + ' 조각 ' +
       shardG(pl.grade) + '/' + GRADE_NEED[pl.grade] + '개.</div>') +
@@ -7633,6 +7689,12 @@ function openPilot(pl, list) {
     }
   })
 
+  const gu = document.getElementById('pGradeUp')
+  if (gu) gu.onclick = () => {
+    if (!doGradeUp(pl.grade)) return
+    sfx('ready'); haptic('ult')
+    renderPilot(); openPilot(pl, list)
+  }
   const rs = document.getElementById('pReset')
   if (rs) rs.onclick = () => {
     /* 쓴 경험치를 그대로 돌려준다. 안 돌려주면 되돌리기가 벌이 된다 */
@@ -8827,7 +8889,7 @@ const SQUAD_DMG = 1.15
 const SQUAD_RATE = 1.15
 
 function baseRate(w) {
-  return { rapid: .10, spread: .30, laser: .05, homing: .38, pierce: .26,
+  return { rapid: .10, spread: .30, laser: .055, homing: .38, pierce: .26,   /* laser .05 → .055 (2026-09-13, 연사 10% 하향) */
            wave: .22, orb: 1.2, mine: .52, beam: .85, boomer: .55, chain: .34 }[w]
 }
 
@@ -8978,7 +9040,8 @@ function shoot(u, i, dt) {
     case 'laser':
       // 굵은 빔 하나 대신 얇은 관통탄을 아주 빠르게 쏜다. 보기엔 이어진
       // 선이고, 충돌 판정은 기존 코드를 그대로 쓴다.
-      add({ vx: 0, vy: -1100, r: 1.8, pierce: 2 + tier, kind: 'laser', dmg: dmg * 0.76 })
+      /* 2026-09-13 대표 지정: 화력 10% 하향 (0.76 → 0.684). 연사는 baseRate 에서 10% 늦춤 */
+      add({ vx: 0, vy: -1100, r: 1.8, pierce: 2 + tier, kind: 'laser', dmg: dmg * 0.684 })
       break
     case 'homing': {
       const n = 1 + tier + M.extra
