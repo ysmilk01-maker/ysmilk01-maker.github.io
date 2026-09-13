@@ -3167,7 +3167,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 19:47'
+const BUILD_AT = '09-13 19:55'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9587,8 +9587,8 @@ const CHAPTERS = [
      * 체력 0.85 · 발사 2.3 · 보스 1200 · 챕터 밀도 오프셋 6 · 밀도 기울기
      * 0.35 로 광선 32 · 산탄 35 /60. 2-14 부터는 아직 0~1 이다.
      */
-    /* 2전선부터 적 체력 ×1.2 (2026-09-13 대표 지정, 0.85 → 1.02). 15전선까지 전부 1.2 배. 보스 체력은 그대로 */
-    bossHp: 3740, hpMul: 1.02, spMul: 1.22, fireMul: 2.3,
+    /* 2전선부터 적 체력 ×1.2 (2026-09-13 대표 지정, 0.85 → 1.02). 15전선까지 전부 1.2 배. 보스·중간보스 체력(bossHp)도 같은 밤 ×1.2 (3740 → 4488) */
+    bossHp: 4488, hpMul: 1.02, spMul: 1.22, fireMul: 2.3,
     pool: [
       [4, (r) => ground(['turret', 'flak', 'radar', 'laser'][(r() * 4) | 0], 60 + r() * (W - 120))],
       [3, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
@@ -9622,7 +9622,7 @@ const CHAPTERS = [
      * 몸은 강화 3~4 · Lv4~5 에서 더 안 큰다 - 계단은 몸이 아니라 판이 맞춰야
      * 한다.
      */
-    bossHp: 4990, hpMul: 1.26, spMul: 1.28, fireMul: 2.0,
+    bossHp: 5988, hpMul: 1.26, spMul: 1.28, fireMul: 2.0,
     pool: [
       [4, (r) => dive(3 + ((r() * 3) | 0))],
       [3, (r) => line(1 + ((r() * 3) | 0), 'tank')],
@@ -9659,7 +9659,7 @@ const CHAPTERS = [
      * 난이도는 사람의 실력으로만 넘는 것이라 계단이 얕아야 한다.
      */
     /* 3챕터와 같은 비율. 시뮬로 재기 전 값 */
-    bossHp: 7490, hpMul: 1.62, spMul: 1.36, fireMul: 1.6,
+    bossHp: 8988, hpMul: 1.62, spMul: 1.36, fireMul: 1.6,
     /*
      * 성격은 「전부 한꺼번에」다.
      *
@@ -9689,7 +9689,7 @@ const CHAPTERS = [
   },
   {
     id: 5, name: '재의 평원', sub: '분화가 끝나고 재만 남은 땅', theme: 'ash2',
-    bossHp: 9360, hpMul: 1.86, spMul: 1.4, fireMul: 1.5,
+    bossHp: 11232, hpMul: 1.86, spMul: 1.4, fireMul: 1.5,
     /* 5전선 — 재만 남은 땅이라 지상 위협과 폭격이 주인공이다 */
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9718,7 +9718,7 @@ const CHAPTERS = [
   },
   {
     id: 6, name: '늪지대', sub: '안개가 걷히지 않는 검은 물', theme: 'swamp',
-    bossHp: 11700, hpMul: 2.1, spMul: 1.44, fireMul: 1.42,
+    bossHp: 14040, hpMul: 2.1, spMul: 1.44, fireMul: 1.42,
     /* 6전선 — 늪이라 전부 느리고 단단하다. 치우지 못하면 쌓인다 */
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9747,7 +9747,7 @@ const CHAPTERS = [
   },
   {
     id: 7, name: '공중 요새', sub: '구름 위에 떠 있는 인공 구조물', theme: 'sky',
-    bossHp: 14560, hpMul: 2.34, spMul: 1.48, fireMul: 1.34,
+    bossHp: 17472, hpMul: 2.34, spMul: 1.48, fireMul: 1.34,
     /* 7전선 — 땅이 없다. 지상 위협이 하나도 안 나오고 공중이 물량으로 민다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9775,7 +9775,7 @@ const CHAPTERS = [
   },
   {
     id: 8, name: '협곡', sub: '벼랑 사이로 난 좁은 길', theme: 'canyon',
-    bossHp: 17940, hpMul: 2.62, spMul: 1.52, fireMul: 1.27,
+    bossHp: 21528, hpMul: 2.62, spMul: 1.52, fireMul: 1.27,
     /* 8전선 — 좁은 협곡이라 옆에서 오고, 서는 탄이 길을 막는다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9804,7 +9804,7 @@ const CHAPTERS = [
   },
   {
     id: 9, name: '공업지대', sub: '매연이 하늘을 덮은 공장 지대', theme: 'steel',
-    bossHp: 22100, hpMul: 2.9, spMul: 1.56, fireMul: 1.2,
+    bossHp: 26520, hpMul: 2.9, spMul: 1.56, fireMul: 1.2,
     /* 9전선 — 공장 지붕마다 포대다. 아래를 계속 봐야 한다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9833,7 +9833,7 @@ const CHAPTERS = [
   },
   {
     id: 10, name: '적 본거지', sub: '모든 것이 시작된 곳', theme: 'core',
-    bossHp: 27300, hpMul: 3.24, spMul: 1.6, fireMul: 1.13,
+    bossHp: 32760, hpMul: 3.24, spMul: 1.6, fireMul: 1.13,
     /* 10전선 — 본거지답게 편대로 나온다. 한 마리씩 오는 것이 없다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9862,7 +9862,7 @@ const CHAPTERS = [
   },
   {
     id: 11, name: '빙벽', sub: '수백 미터 얼음 절벽 사이', theme: 'glacier',
-    bossHp: 33150, hpMul: 3.6, spMul: 1.63, fireMul: 1.07,
+    bossHp: 39780, hpMul: 3.6, spMul: 1.63, fireMul: 1.07,
     /* 11전선 — 얼음 사이를 돌진해 온다. 무리로 흩어지고 다시 모인다 */
     pool: [
       [2, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9891,7 +9891,7 @@ const CHAPTERS = [
   },
   {
     id: 12, name: '폐허 도시', sub: '불타고 남은 옛 수도', theme: 'ruin',
-    bossHp: 39650, hpMul: 3.98, spMul: 1.66, fireMul: 1.02,
+    bossHp: 47580, hpMul: 3.98, spMul: 1.66, fireMul: 1.02,
     /* 12전선 — 폐허에 숨어 방패를 세우고, 부수면 갈라진다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9920,7 +9920,7 @@ const CHAPTERS = [
   },
   {
     id: 13, name: '대염호', sub: '소금이 하얗게 굳은 호수', theme: 'salt',
-    bossHp: 46800, hpMul: 4.39, spMul: 1.69, fireMul: 0.97,
+    bossHp: 56160, hpMul: 4.39, spMul: 1.69, fireMul: 0.97,
     /* 13전선 — 반사가 심한 소금 바닥. 가로 빔과 유도탄이 사방에서 온다 */
     pool: [
       [2, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9949,7 +9949,7 @@ const CHAPTERS = [
   },
   {
     id: 14, name: '화염 유전', sub: '불기둥이 솟는 유전지대', theme: 'oil',
-    bossHp: 54600, hpMul: 4.82, spMul: 1.72, fireMul: 0.93,
+    bossHp: 65520, hpMul: 4.82, spMul: 1.72, fireMul: 0.93,
     /* 14전선 — 불기둥 사이로 폭격과 미사일이 쏟아진다 */
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -9978,7 +9978,7 @@ const CHAPTERS = [
   },
   {
     id: 15, name: '최후 결전장', sub: '더 갈 곳이 없다', theme: 'final',
-    bossHp: 63700, hpMul: 5.28, spMul: 1.75, fireMul: 0.89,
+    bossHp: 76440, hpMul: 5.28, spMul: 1.75, fireMul: 0.89,
     /* 15전선 — 마지막이다. 지금까지 나온 것이 전부, 제일 두껍게 나온다 */
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
