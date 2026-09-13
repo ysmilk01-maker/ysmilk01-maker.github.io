@@ -2336,7 +2336,7 @@ const ULT = {
   rapid:  { name: '난사', desc: '3.5초간 발사 속도가 2.1배가 됩니다' },
   spread: { name: '전면 소사', desc: '화면 폭을 훑는 광선이 2.5초간 지나갑니다' },
   laser:  { name: '관통 광선', desc: '굵은 광선이 3초간 위를 뚫습니다' },
-  homing: { name: '분신 전개', desc: '분신 셋이 5초간 따라오며 같이 쏩니다' },
+  homing: { name: '분신 전개', desc: '분신 셋이 15초간 따라오며 두 배 속도로 쏩니다' },
   pierce: { name: '돌격', desc: '무적으로 위로 뚫고 올라갑니다' },
   wave:   { name: 'EMP 펄스', desc: '화면의 적탄을 전부 지우고 적을 마비시킵니다' },
   orb:    { name: '반사 방벽', desc: '막은 만큼 모았다가 펄스로 되돌려 줍니다' },
@@ -2422,7 +2422,8 @@ const CLONES = [
   { lag: 8,  dx: 46,  mul: 0.45 },
   { lag: 18, dx: 0,   mul: 0.45 },
 ]
-const CLONE_TIME = 5.0
+/* 5.0 → 15.0 (2026-09-13 대표 지정, 세 배). 분신은 발사 간격도 절반이다 - shoot() 의 u.at 분기 */
+const CLONE_TIME = 15.0
 
 /*
  * 「편대 일제 사격」.
@@ -3166,7 +3167,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 18:50'
+const BUILD_AT = '09-13 19:30'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8991,6 +8992,8 @@ function shoot(u, i, dt) {
    * 어디에 설지를 고르게 된다. 대신 적은 더 많이 나오되 무르게 했다.
    */
   u.cd = rate * PLAYER_CD / SQUAD_RATE
+  /* 분신(u.at 이 있는 것)은 두 배로 쏜다 (2026-09-13 대표 지정) */
+  if (u.at) u.cd *= 0.5
   sfx('shot', tierStep(p.tier))
 
   /* 분신은 제 자리를 들고 온다. 편대 자리 계산을 안 탄다 */
