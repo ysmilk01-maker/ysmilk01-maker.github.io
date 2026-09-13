@@ -1918,6 +1918,9 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   .dsheet .pwbig small { font-size: 11px; color: var(--muted); font-weight: 700; }
   .dsheet .pwbig .d { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--dim); }
   .dsheet .pwbig .d.up { color: #7dffd4; } .dsheet .pwbig .d.dn { color: #ff9a8a; } .dsheet .pwbig .d.same { color: var(--gold); }
+
+  .pfil { margin: 6px 0 0; }
+  .pfil .frow button { padding: 5px 0; font-size: 11.5px; }
 </style>
 
 <div class="boot" id="boot">
@@ -2295,10 +2298,10 @@ const WEAPONS = {
   homing:  { name: '유도탄', desc: '가까운 적을 쫓아갑니다' },
   pierce:  { name: '관통탄', desc: '적을 뚫고 계속 갑니다' },
   wave:    { name: '파동탄', desc: '좌우로 흔들리며 나아갑니다' },
-  orb:     { name: '궤도구슬', desc: '기체 둘레를 돌며 부딪칩니다' },
+  orb:     { name: '궤도구슬', desc: '구슬이 모이면 정면으로 쏩니다' },
   mine:    { name: '미사일', desc: '느리게 날아가 닿으면 터집니다' },
   beam:    { name: '집속포', desc: '굵고 느리게, 크게 터집니다' },
-  boomer:  { name: '부메랑', desc: '나갔다가 되돌아옵니다' },
+  boomer:  { name: '부메랑', desc: '화면 끝까지 갔다가 돌아옵니다' },
   chain:   { name: '연쇄뇌격', desc: '맞은 적에서 번개가 옆으로 튑니다' },
 }
 
@@ -3151,7 +3154,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 17:39'
+const BUILD_AT = '09-13 17:43'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7893,6 +7896,7 @@ function swapNotice(prev, now, back) {
   }
 }
 
+let pilotOwn = 'all'
 function renderPilot() {
   const pt = prog.pilot
   const have = pilotXp()
@@ -7916,8 +7920,15 @@ function renderPilot() {
    * 누를 수 있는 것은 둘이다. 등급을 하나라도 더 열면 그때 전부 편다 -
    * 그때부터는 잠긴 칸이 목표로 읽힌다.
    */
-  const early = GRADE_KEYS.filter((k) => hasGrade(k)).length <= 1
-  const list = PILOTS.filter((pl) => pilotOpen(pl) || (!early && !hasGrade(pl.grade)))
+  /*
+   * 전원을 보여 준다 (2026-09-13). 전에는 초반에 가진 것만 보였는데,
+   * 잠긴 사람이 목표로 읽히려면 처음부터 보여야 한다. 보유 / 미보유 탭으로 거른다.
+   */
+  const early = false
+  const list = PILOTS.filter((pl) => {
+    const own = hasGrade(pl.grade) || pilotBought(pl)
+    return pilotOwn === 'all' || (pilotOwn === 'own' ? own : !own)
+  })
   const cardArr = list.map((pl) => {
     const G = GRADES[pl.grade]
     const owned = hasGrade(pl.grade) || pilotBought(pl)
@@ -7934,7 +7945,8 @@ function renderPilot() {
       '<div class="tx"><div class="nm">' + pl.name + '</div>' +
       '<div class="gr ' + G.tag + '">' + G.name + '</div>' +
       '<div class="de">' + pl.desc + '</div>' +
-      '<div class="stx">' + (owned ? stLine(pl.id)
+      '<div class="stx">' + (owned
+        ? (pilotOpen(pl) ? stLine(pl.id) : '파일럿 Lv.' + pilotNeedLv(pl) + ' 에 합류')
         : '조각 ' + shardG(pl.grade) + '/' + GRADE_NEED[pl.grade]) + '</div>' +
       '</div>' +
       (on ? '<span class="rt">사용 중</span>'
@@ -8019,7 +8031,15 @@ function renderPilot() {
       (maxed ? '' : '<div class="xpbar"><i style="width:' +
         Math.min(100, (got / need) * 100).toFixed(1) + '%"></i></div>') +
       '<div class="x">쓸 수 있는 경험치 <b>' + have.toLocaleString('ko-KR') + '</b></div>' +
-    '</div>'
+    '</div>' +
+    /* 보유 / 미보유 갈피 */
+    '<div class="filters pfil"><div class="frow"><span class="fl">보유</span>' +
+    [['all', '전체'], ['own', '보유'], ['none', '미보유']].map(([k, t]) =>
+      '<button data-po="' + k + '" class="' + (pilotOwn === k ? 'on' : '') + '">' + t + '</button>').join('') +
+    '</div></div>'
+  pHead.querySelectorAll('[data-po]').forEach((b) => {
+    b.onclick = () => { pilotOwn = b.dataset.po; pBody._page = 0; renderPilot() }
+  })
   const tail =
     (early ? '<div class="empty" style="padding:6px 2px">' + nextGradeLine() + '</div>' : '') +
     '<div class="bar" style="margin-top:8px"><button class="ghost small" id="pilotGacha">' +
@@ -8983,8 +9003,10 @@ function shoot(u, i, dt) {
        */
       const n = 2 + tier + M.extra
       for (let k = 0; k < n; k++)
+        /* 둘레를 돌며 모여들다가(gather 초) 다 모이면 정면으로 나간다 (2026-09-13) */
         add({ kind: 'orb', owner: i, a: (k / n) * Math.PI * 2, rad: 40 + tier * 8,
-              x: pos.x, y: pos.y, r: 6, dmg: dmg * 7.0, pierce: 99, life: 2.4 })
+              x: pos.x, y: pos.y, r: 6, dmg: dmg * 7.0, pierce: 99, life: 3.0,
+              gather: 0.85, go: false })
       break
     }
     case 'mine':
@@ -9019,8 +9041,9 @@ function shoot(u, i, dt) {
     case 'boomer': {
       const n = 1 + tier
       for (let k = 0; k < n; k++)
-        add({ vx: (k - (n - 1) / 2) * 140, vy: -520, kind: 'boomer', t0: 0,
-              pierce: 99, r: 5, dmg: dmg * 5.9, home: i })
+        /* 화면 끝까지 곧게 갔다가 기체로 돌아온다 (2026-09-13). 돌아오는 길에도 맞는다 */
+        add({ vx: (k - (n - 1) / 2) * 140, vy: -560, kind: 'boomer', t0: 0, back: false,
+              pierce: 99, r: 5, dmg: dmg * 5.9, home: i, life: 4.5 })
       break
     }
   }
@@ -13480,10 +13503,21 @@ function update(dt) {
         b.x = b.x0 + Math.sin(b.age * 7 + b.ph) * b.amp * Math.min(1, b.age * 3)
         break
       case 'orb': {
+        /*
+         * 모였다가 쏜다 (2026-09-13).
+         *
+         * 전에는 2.4초 동안 둘레만 돌았다. 이제 gather 초 동안 돌면서 반지름이
+         * 줄어 기체 앞에 모이고, 다 모이면 그 자리에서 정면으로 곧게 나간다.
+         * 돌 때도 닿는 적은 깎는다 - 모이는 동안 놀지는 않는다.
+         */
+        if (b.go) break
         const p = slotPos(b.owner)
         b.a += dt * 4.5
-        b.x = p.x + Math.cos(b.a) * b.rad
-        b.y = p.y + Math.sin(b.a) * b.rad
+        const t = Math.min(1, b.age / (b.gather || 0.85))
+        const rr = b.rad * (1 - t) + 9 * t
+        b.x = p.x + Math.cos(b.a) * rr
+        b.y = p.y - 14 * t + Math.sin(b.a) * rr
+        if (t >= 1) { b.go = true; b.vx = Math.cos(b.a) * 60; b.vy = -640 }
         break
       }
       case 'mine': {
@@ -13518,12 +13552,27 @@ function update(dt) {
         if (hit || (bs && !bs.entering && near(b, bs, bs.r + b.r))) missileBurst(b)
         break
       }
-      case 'boomer':
-        b.vy += 900 * dt
-        if (b.age > 1.6) b.dead = true
+      case 'boomer': {
+        /*
+         * 전에는 중력처럼 느려지다 1.6초에 사라졌다 - 화면 중간에서 되돌아
+         * 「끝까지 안 가는 부메랑」이었다. 위 끝에 닿으면 그때 돌아서고,
+         * 돌아올 때는 기체를 향해 날아와 손에 닿으면 사라진다.
+         */
+        if (!b.back) {
+          if (b.y <= 10 || b.age > 2.2) b.back = true
+        } else {
+          const p = slotPos(b.home != null ? b.home : MAIN_SLOT)
+          const dx = p.x - b.x, dy = p.y - b.y
+          const d = Math.hypot(dx, dy) || 1
+          const sp = 600
+          b.vx = (dx / d) * sp
+          b.vy = (dy / d) * sp
+          if (d < 18) b.dead = true
+        }
         break
+      }
     }
-    if (b.kind !== 'orb') { b.x += b.vx * dt; b.y += b.vy * dt }
+    if (b.kind !== 'orb' || b.go) { b.x += b.vx * dt; b.y += b.vy * dt }
     /* 반사 — 옆 벽에서만 튕긴다. 위아래로도 튕기면 탄이 화면에 갇힌다 */
     if (b.bounce > 0) {
       if (b.x < 6 && b.vx < 0) { b.vx = -b.vx; b.bounce-- }
