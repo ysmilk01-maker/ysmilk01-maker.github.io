@@ -777,7 +777,8 @@
   .card.cp.picked { padding-bottom: 5px; }
   .card.cp .tag { font-size: 8.5px; padding: 1px 5px; }
   .card.cp .inuse { top: 5px; right: 5px; font-size: 8px; padding: 1px 5px; }
-  .card.cp .pv { width: 100%; height: 40px; display: block; margin-top: 11px; }
+  .card.cp .pv { width: 100%; height: 44px; display: block; margin-top: 0; }
+  .card.cp .tag, .card.cp .inuse { z-index: 2; }
   .card.cp .cmp { font-size: 9px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card.cp .nm { font-size: 11.5px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card.cp .wp { font-size: 9.5px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1901,6 +1902,22 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   .shopsheet .pbig { height: 150px; }
   .shopsheet .price { font-size: 20px; font-weight: 900; color: var(--gold); text-align: right; margin-top: 8px; }
   .shopsheet .price small { font-size: 11px; color: var(--dim); font-weight: 600; margin-right: 6px; }
+
+  /* ── 전투력을 앞에 (2026-09-13) ─────────────────────────── */
+  .card.cp .cmp { display: block; font-size: 9px; margin-top: 1px; overflow: hidden; }
+  .card.cp .cmp b { display: block; font-size: 15px; font-weight: 900; color: var(--gold); line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .card.cp .cmp b small { font-size: 7.5px; font-weight: 700; color: var(--muted); margin-right: 2px; }
+  .card.cp .cmp span { display: block; font-size: 8.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+  .card.cp .cmp.up span { color: #7dffd4; } .card.cp .cmp.dn span { color: #ff9a8a; } .card.cp .cmp.same span { color: var(--gold); }
+  .card.cp .cmp.dn b { color: #d9dee8; }
+  .card.cp .wp { display: none; }
+  .card.cp .nm .wpn { font-weight: 600; color: var(--muted); font-size: 9px; }
+  .card.cp .nm .wpn .wi { vertical-align: -2px; margin-right: 1px; }
+  .gcard .de .pw { color: var(--gold); font-weight: 900; font-size: 12.5px; }
+  .dsheet .pwbig { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; font-size: 28px; font-weight: 900; color: var(--gold); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .dsheet .pwbig small { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .dsheet .pwbig .d { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--dim); }
+  .dsheet .pwbig .d.up { color: #7dffd4; } .dsheet .pwbig .d.dn { color: #ff9a8a; } .dsheet .pwbig .d.same { color: var(--gold); }
 </style>
 
 <div class="boot" id="boot">
@@ -3134,7 +3151,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 17:23'
+const BUILD_AT = '09-13 17:39'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3650,8 +3667,13 @@ const PILOTS = [
   { id: 'h1', grade: 'high', face: 0, name: '응안',
     perk: { rng: 1.10 }, desc: '탄폭 +10%' },
   /* 鐵甲 도 마찬가지. 붉은 스카프의 초상이고 특성은 버텨 주는 쪽이다 */
+  /*
+   * 단심의 「보급 회복 두 배」는 2026-09-12 에 보급 회복 자체가 사라지면서
+   * 뜻을 잃었다(perk heal 은 어디서도 안 읽는다). 설명이 거짓이 되어
+   * 최대 체력으로 바꾼다 (2026-09-13).
+   */
   { id: 'h2', grade: 'high', face: 1, name: '단심',
-    perk: { heal: 5, inv: 0.12 }, desc: '보급 회복 두 배 · 피격 무적 +0.12초' },
+    perk: { hp: 10, inv: 0.12 }, desc: '최대 체력 +10 · 피격 무적 +0.12초' },
 
   /* 「홍련」은 반대로 노년 남성 장교 초상에 붙어 있었다. 특성과 맞춰 고친다 */
   { id: 'l1', grade: 'legend', face: 0, name: '열화',
@@ -4912,6 +4934,7 @@ function renderShop() {
       const have = unlocked(p)
       const pic = '<img class="gimg" src="' + hangarPlaneImage(p) + '" alt="">'
       card('plane:' + p.id, 'tier-' + p.tier, pic, p.name, tag('t-' + p.tier, TIERS[p.tier]),
+           '<b class="pw">전투력 ' + planeScore(p).toLocaleString('ko-KR') + '</b> · ' +
            WEAPONS[p.weapon].name + (p.el ? ' · ' + ELS[p.el].name : ''), have ? '보유' : won(planePrice(p)), have)
     }
   }
@@ -4975,11 +4998,12 @@ function openShopItem(id) {
     const have = unlocked(p)
     html = '<h3>' + p.name + ' <span class="gtag t-' + p.tier + '">' + TIERS[p.tier] + '</span></h3>' +
       '<div class="sub2">' + WEAPONS[p.weapon].name + ' · ' + TIERS[p.tier] + '</div>' +
+      '<div class="pwbig"><small>전투력</small>' + planeScore(p).toLocaleString('ko-KR') +
+      '<span class="d same">강화 전 · 등급과 무기를 합친 값</span></div>' +
       '<img class="simg" src="' + hangarPlaneImage(p) + '" alt="">' +
       '<div class="rows">' + r2('무기', WEAPONS[p.weapon].desc) +
       (p.el ? r2('속성', '<span class="el el-' + p.el + '">' + ELS[p.el].name + '</span> ' + ELS[p.el].desc) : '') +
       (p.trait ? r2('고유 성질', traitText(p)) : '') +
-      r2('전투력', planeScore(p).toLocaleString('ko-KR') + ' (강화 전)') +
       r2('조각으로도', shardOf(p.id) + ' / ' + shardNeed(p)) + '</div>' +
       (have ? '' : '<div class="price">' + won(planePrice(p)) + '</div>')
     okLabel = have ? '보유 중' : '구매'
@@ -5922,7 +5946,19 @@ function kbClickable(el) {
 /** 시트를 다시 열 때 지킬 스크롤. -1 이면 맨 위로 */
 let KEEP_SHEET = -1
 const MODAL = { el: null, close: null, back: null, key: null }
+/*
+ * 창이 겹치지 않게 (2026-09-13).
+ *
+ * 파일럿 시트 위에 「되돌리기」 물음, 우편함 위에 「받았습니다」 알림처럼
+ * 창 위에 창이 뜨면 둘 다 반쯤 보였다. 새 창이 뜰 때 뒤 창을 숨겨 두고,
+ * 새 창이 닫히면 뒤 창을 그 자리에 되돌린다. 화면에 창은 늘 하나다.
+ */
+const MODAL_STACK = []
 function modalOn(panel, close) {
+  if (MODAL.el && MODAL.el !== panel) {
+    MODAL_STACK.push({ el: MODAL.el, close: MODAL.close, back: MODAL.back, key: MODAL.key })
+    MODAL.el.hidden = true
+  }
   /*
    * 「다음·이전」으로 안에서 다시 그릴 때는 복귀 대상을 덮지 않는다.
    * 덮으면 Escape 뒤 초점이 BODY 로 떨어졌다(코덱스 재검증). 리스너도
@@ -5978,6 +6014,16 @@ function modalOff() {
   }
   if (back && back.focus) back.focus({ preventScroll: true })
   MODAL.back = null
+  /* 뒤에 숨겨 둔 창이 있으면 되돌린다 */
+  const prev = MODAL_STACK.pop()
+  if (prev && prev.el) {
+    prev.el.hidden = false
+    MODAL.el = prev.el; MODAL.close = prev.close; MODAL.back = prev.back; MODAL.key = prev.key
+    if (prev.key) document.addEventListener('keydown', prev.key)
+    titleInert(true)
+    const h = prev.el.querySelector('h3, h2')
+    if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) }
+  }
 }
 
 /* 마지막 화면 전환 시각. 손가락 안내가 전환 애니메이션이 끝난 뒤에 자리를 재도록 */
@@ -6797,16 +6843,16 @@ function renderPlanes() {
        */
       /* 전투력이 먼저다. 등급과 강화를 다 먹은 숫자라 이것 하나로 줄이 선다 */
       (() => {
-        const sc = `<b>전투력 ${planeScore(p).toLocaleString('ko-KR')}</b>`
+        /* 전투력이 이 카드의 얼굴이다 (2026-09-13). 숫자를 제일 크게, 지금 것과의 차이는 옆에 작게 */
+        const sc = `<b><small>전투력</small>${planeScore(p).toLocaleString('ko-KR')}</b>`
         if (!ok || !nowDps) return `<div class="cmp dn">${sc}</div>`
-        if (p.id === here) return `<div class="cmp same">${sc} · 지금 이것</div>`
+        if (p.id === here) return `<div class="cmp same">${sc}<span>현재</span></div>`
         const d = Math.round((planeDps(p) / nowDps - 1) * 100)
-        return d > 0 ? `<div class="cmp up">${sc} · +${d}%</div>`
-             : d < 0 ? `<div class="cmp dn">${sc} · ${d}%</div>`
-                     : `<div class="cmp same">${sc} · 같음</div>`
+        return d > 0 ? `<div class="cmp up">${sc}<span>+${d}%</span></div>`
+             : d < 0 ? `<div class="cmp dn">${sc}<span>${d}%</span></div>`
+                     : `<div class="cmp same">${sc}<span>같음</span></div>`
       })() +
-      `<div class="nm">${p.name}</div>` +
-      `<div class="wp"><i class="wi w-${p.weapon}"></i>${WEAPONS[p.weapon].name}</div>` +
+      `<div class="nm">${p.name}<span class="wpn"> <i class="wi w-${p.weapon}"></i>${WEAPONS[p.weapon].name}</span></div>` +
       /* 무기 설명은 상세로 뺐다. 같은 무기끼리 같은 줄이 반복돼 자리만 먹었다 */
       /* 전설만 붙는 줄. 여기가 등급 값을 눈으로 가르는 자리다 */
       (p.el
@@ -8125,9 +8171,18 @@ function openDetail(p, list) {
                    (0.85 + L.mult * 0.15) * PLAYER_CD / SQUAD_RATE
   const shots = realRate > 0 ? (1 / realRate) : 0
 
+  /* 전투력을 이름 바로 밑에 크게. 지금 이 자리 기체와의 차이를 옆에 (2026-09-13) */
+  const nowP = planeById(prog.squad[activeSlot])
+  const nowD = nowP ? planeDps(nowP) : 0
+  const dd = nowD && p.id !== nowP.id ? Math.round((planeDps(p) / nowD - 1) * 100) : null
+  const pwbig = `<div class="pwbig"><small>전투력</small>${planeScore(p).toLocaleString('ko-KR')}` +
+    (dd == null ? (nowP && p.id === nowP.id ? `<span class="d same">지금 이것</span>` : '')
+               : `<span class="d ${dd > 0 ? 'up' : dd < 0 ? 'dn' : 'same'}">지금보다 ${dd > 0 ? '+' : ''}${dd}%</span>`) +
+    `</div>`
   body.innerHTML =
     `<h3>${p.name}</h3>` +
     `<div class="sub2">${WEAPONS[p.weapon].name} · ${TIERS[p.tier]}</div>` +
+    pwbig +
     `<canvas class="demo"></canvas>` +
     `<div class="cap">게임에서 나가는 모습입니다</div>` +
     `<div class="rows">` +
@@ -8137,8 +8192,6 @@ function openDetail(p, list) {
       (p.trait ? row('고유 성질', traitText(p) + ' ' +
                      dim(MOD_KEYS.filter((k) => p.trait[k])
                          .map((k) => MODS[k].desc).join(' · '))) : '') +
-      row('전투력', `${planeScore(p).toLocaleString('ko-KR')} ` +
-          dim('등급과 강화를 합친 값')) +
       row('등급 배수', `화력 ×${p.power.toFixed(2)} · 간격 ×${p.rate.toFixed(2)} ` + dim('간격은 작을수록 빠름')) +
       row('강화', `${lv}/${UPG_MAX}` +
           (lv ? ' ' + dim(`화력 +${Math.round((upgPower(p.id) - 1) * 100)}% · 간격 -${Math.round((1 - upgRate(p.id)) * 100)}%`) : '')) +
@@ -8698,13 +8751,14 @@ document.getElementById('pResume').onclick = () => {
 document.getElementById('pQuit').onclick = () => {
   if (!state || !state.running) return
   /* 무엇을 잃는지 말하고 묻는다. 출격권은 시작할 때 이미 나갔다 */
+  /* 묻는 동안 일시정지 창은 숨긴다. 둘이 겹쳐 반쯤 읽혔다 (2026-09-13) */
+  pauseUI(false)
   ask('이번 판을 버리고 출격 준비로 돌아갑니다.\n지금까지의 점수와 보상은 사라지고, 쓴 출격권은 돌아오지 않습니다.', () => {
     state.running = false
     state.paused = false
-    pauseUI(false)
     music('hangar')
     go('squad')
-  }, { title: '판을 버립니다', ok: '버리고 나갑니다' })
+  }, { title: '판을 버립니다', ok: '버리고 나갑니다', no: '계속 멈춤', onNo: () => { if (state && state.paused) pauseUI(true) } })
 }
 const RESUME_WAIT = 2.0
 function slotPos(i) {
