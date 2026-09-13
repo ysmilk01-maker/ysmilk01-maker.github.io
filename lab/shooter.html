@@ -3154,7 +3154,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 17:43'
+const BUILD_AT = '09-13 17:59'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3659,7 +3659,7 @@ const PILOTS = [
    * 그대로 읽히게 - 서리는 단단하게 언 것이다.
    */
   { id: 'n2', grade: 'normal', face: 1, name: '서리',
-    perk: { hp: 14 }, desc: '최대 체력 +14' },
+    perk: { hp: 10 }, desc: '최대 체력 +10' },
 
   { id: 'm1', grade: 'mid', face: 0, name: '적호',
     perk: { pow: 1.06 }, desc: '화력 +6%' },
@@ -3676,13 +3676,13 @@ const PILOTS = [
    * 최대 체력으로 바꾼다 (2026-09-13).
    */
   { id: 'h2', grade: 'high', face: 1, name: '단심',
-    perk: { hp: 10, inv: 0.12 }, desc: '최대 체력 +10 · 피격 무적 +0.12초' },
+    perk: { rate: 0.90, inv: 0.2 }, desc: '사격 간격 -10% · 피격 무적 +0.2초' },
 
   /* 「홍련」은 반대로 노년 남성 장교 초상에 붙어 있었다. 특성과 맞춰 고친다 */
   { id: 'l1', grade: 'legend', face: 0, name: '열화',
-    perk: { ultPow: 1.10 }, desc: '필살기 위력 +10%' },
+    perk: { pow: 1.10, ultPow: 1.10 }, desc: '화력 +10% · 필살기 위력 +10%' },
   { id: 'l2', grade: 'legend', face: 1, name: '은월',
-    perk: { hp: 20, inv: 0.2 }, desc: '최대 체력 +20 · 피격 무적 +0.2초' },
+    perk: { hp: 20, rate: 0.90 }, desc: '최대 체력 +20 · 사격 간격 -10%' },
 
   /*
    * 등급마다 셋째. 초상 넉 장이 들어와서 여덟에서 열둘로 늘린다.
@@ -3710,13 +3710,16 @@ const PILOTS = [
    * supN 으로 상한 자체를 하나 올린다. 간격 단축은 남겨 둔다 - 하나 더를
    * 늦게 받으면 그 하나가 판에 못 쓰이고 끝난다.
    */
+  /* 2026-09-13 대표 지정: 보급 특성 → 화력 +3% */
   { id: 'n3', grade: 'normal', face: 2, name: '우설',
-    perk: { sup: 0.82, supN: 1 }, desc: '보급품을 하나 더, 더 자주 받습니다' },
+    perk: { pow: 1.03 }, desc: '화력 +3%' },
+  /* 2026-09-13 대표 지정: 조각 +30% → 최대 체력 +20 */
   { id: 'm3', grade: 'mid', face: 2, name: '결승',
-    perk: { shard: 1.30 }, desc: '조각을 30% 더 얻습니다' },
+    perk: { hp: 20 }, desc: '최대 체력 +20' },
   /* 霜月 은 반대로 부드럽다. 초상은 남성이고 특성은 전공(점수)이다 */
+  /* 2026-09-13 대표 지정: 점수 +12% → 화력 +10% */
   { id: 'h3', grade: 'high', face: 2, name: '수훈',
-    perk: { score: 1.12 }, desc: '점수가 12% 더 붙습니다' },
+    perk: { pow: 1.10 }, desc: '화력 +10%' },
   { id: 'l3', grade: 'legend', face: 2, name: '뇌성',
     perk: { ultN: 1 }, desc: '필살기가 10·30·50초에 세 번 찹니다' },
 ]
@@ -4987,7 +4990,7 @@ function openShopItem(id) {
     const have = hasGrade(p.grade) || pilotBought(p)
     const face = pilotFace(p)
     html = '<h3>' + p.name + ' <span class="gtag ' + G.tag + '">' + G.name + '</span></h3>' +
-      '<div class="sub2">' + G.name + ' 파일럿' + (p.grade === 'legend' ? ' · 후방 자리 열쇠' : ' · 화력·체력 ×' + G.base.toFixed(2)) + '</div>' +
+      '<div class="sub2">' + G.name + ' 파일럿' + ' · 화력·체력 ×' + G.base.toFixed(2) + '</div>' +
       (face ? '<div class="pbig" style="--face:var(--gc-' + face + ')"></div>' : '') +
       '<div class="rows">' + r2('특성', p.desc) +
       r2('조각으로도', G.name + ' 조각 ' + shardG(p.grade) + ' / ' + GRADE_NEED[p.grade]) + '</div>' +
@@ -7571,8 +7574,7 @@ function openPilot(pl, list) {
           : '<div class="pf none"><div class="rk ' + pl.grade + '"></div></div>') +
     '<div><h3>' + pl.name + '</h3>' +
     '<div class="sub2">' + G.name +
-      (pl.grade === 'legend' ? ' · 후방 자리'
-                             : ' · 화력·체력 ×' + G.base.toFixed(2)) + '</div>' +
+      ' · 화력·체력 ×' + G.base.toFixed(2) + '</div>' +
     '<div class="de">' + pl.desc + '</div></div></div>' +
     '<div class="pxp">' +
       '<span>쓸 수 있는 경험치 <b>' + pilotXp().toLocaleString('ko-KR') + '</b></span>' +
