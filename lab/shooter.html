@@ -3154,7 +3154,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 17:59'
+const BUILD_AT = '09-13 18:05'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5077,11 +5077,12 @@ function unlockLabel(p) {
  * 레전드가 스탯은 제일 낮지만 자리를 하나 더 준다. 상급을 위로 두면 등급이
  * 그냥 사다리가 되는데, 이렇게 두면 "화력이냐 자리냐"를 고르게 된다.
  */
+/* 2026-09-13 대표 지정: 1.00 / 1.05 / 1.10 / 1.20. 레전드가 제일 높다 - 후방 자리 열쇠 역할은 9/12 에 전설 기체로 갔다 */
 const GRADES = {
   normal: { name: '일반',   base: 1.00, rear: false, tag: 't-common' },
-  mid:    { name: '중급',   base: 1.10, rear: false, tag: 't-rare' },
-  high:   { name: '상급',   base: 1.20, rear: false, tag: 't-high' },
-  legend: { name: '레전드', base: 1.00, rear: true,  tag: 't-legend' },
+  mid:    { name: '중급',   base: 1.05, rear: false, tag: 't-rare' },
+  high:   { name: '상급',   base: 1.10, rear: false, tag: 't-high' },
+  legend: { name: '레전드', base: 1.20, rear: true,  tag: 't-legend' },
 }
 const GRADE_KEYS = ['normal', 'mid', 'high', 'legend']
 /** 그 등급을 열려면 필요한 조각 */
