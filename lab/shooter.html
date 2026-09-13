@@ -3166,7 +3166,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 18:39'
+const BUILD_AT = '09-13 18:50'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9409,8 +9409,14 @@ const SUBS = 12
  * 이제 **다섯 판마다 보스**, 그 사이 **모든 판에 중간보스**가 선다.
  * 판마다 관문이 하나씩 있는 셈이다.
  */
-/* 네 판마다 보스. 12판이면 셋이다 */
-const BOSS_AT = [4, 8, 12]
+/*
+ * 보스 판 둘 (2026-09-13 대표 지정). 전에는 4·8·12 셋이었다.
+ *
+ *   6   전선 보스. 전에 12단계에 서던 형태가 여기로 왔다
+ *   12  보스 도전의 보스가 선다 (finalRushBoss). 체력은 전선 보스 값
+ *       그대로 - 보스 도전의 세 배는 안 곱한다
+ */
+const BOSS_AT = [6, 12]
 /** 보스 형태 다섯. 전함·전차·요새·모선·항모 */
 const BOSS_FORMS = ['ship', 'tank', 'fort', 'air', 'carrier']
 /*
@@ -10542,6 +10548,20 @@ const BOSS_RUSH = [
  * 체력이라도 훨씬 무겁다.
  */
 const RUSH_HP_MUL = 3
+/*
+ * 12단계 보스 (2026-09-13 대표 지정).
+ *
+ * 전선의 마지막 판에는 보스 도전의 보스가 선다. 물 전선에는 항모·성층권
+ * 전함, 뭍 전선에는 전차·본부·대공포 진지·성층권 전함을 전선 번호로
+ * 돌린다. 체력은 그 전선 보스 값 그대로다 - RUSH_HP_MUL 은 안 곱한다.
+ */
+function finalRushBoss(stage) {
+  const th = (stage && stage.theme) || 'sea'
+  const ch = ((stage && stage.id) || 1) - 1
+  const keys = WATER_THEME[th] ? ['carrier', 'void'] : ['tank', 'fort', 'flak', 'void']
+  const key = keys[ch % keys.length]
+  return BOSS_RUSH.find((d) => d.key === key) || BOSS_RUSH[0]
+}
 const RUSH_DIFF = [
   { key: 'easy',  name: '쉬움',     off: 0, xp: 1.0, tk: 1 },
   { key: 'norm',  name: '보통',     off: 1, xp: 1.7, tk: 1 },
@@ -11940,9 +11960,19 @@ function spawnBoss(mid) {
    * 네 벌을 판 번호로 돌린다. 부위 수도 자리도 다르므로 설 자리와 쏘는
    * 법이 달라진다 - 그게 형태를 나누는 이유다.
    */
+  /* 12단계는 보스 도전의 보스. 6단계는 전에 12단계에 서던 형태(표의 셋째) */
+  const fin = (!rush && !mid && bsub === SUBS) ? finalRushBoss(state.stage) : null
+  /*
+   * 6단계가 12단계와 같은 형태면 한 칸 민다. 1전선은 둘 다 항모,
+   * 2전선은 둘 다 요새가 되기 때문이다 - 한 전선에 같은 보스 둘은 안 세운다.
+   */
+  const finForm = (!rush && !mid) ? finalRushBoss(state.stage).form : null
   const form = rush ? rush.form
+    : fin ? fin.form
     : mid ? MID_FORMS[(bch * 3 + bsub) % MID_FORMS.length]
-    : pool[(bch * 2 + BOSS_AT.indexOf(bsub)) % pool.length]
+    : pool[(bch * 2 + 2) % pool.length] !== finForm
+      ? pool[(bch * 2 + 2) % pool.length]
+      : pool[(bch * 2 + 3) % pool.length]
   const mk = (key, name, dx, dy, r, mul, cd) => ({
     key, name, dx, dy, r, cd, flash: 0, alive: true,
     hp: Math.round(base * mul), maxHp: Math.round(base * mul),
@@ -11960,10 +11990,12 @@ function spawnBoss(mid) {
   state.boss = {
     mid: !!mid,
     pat,
-    x: W / 2, y: -120, r: rush ? 100 : mid ? 34 : 46, t: 0, cd: 1.2, entering: true,
+    x: W / 2, y: -120, r: (rush || fin) ? 100 : mid ? 34 : 46, t: 0, cd: 1.2, entering: true,
     phase: 1, flash: 0, summonCd: mid ? 9 : 7, dashPh: 0, dashX: 0,
     lancePh: 0, lanceX: 0, lanceCd: 4,
     form,
+    /* 보스 도전 얼굴을 쓰는 보스. 도전 모드와 12단계 둘 다 */
+    rushKey: rush ? rush.key : fin ? fin.key : null,
     /*
      * 부위는 형태에 맞춰 놓는다. 그림 위에 엉뚱한 자리에 뜨면
      * 어디를 쏴야 하는지 알 수 없다.
@@ -12178,7 +12210,7 @@ function spawnBoss(mid) {
    * 이제 판이 시작한 뒤로 체력은 **한 번도 안 오른다.** 들고 간 만큼으로
    * 보스를 만난다 - 접근 구간을 깨끗하게 넘어오는 것이 곧 보스전 준비다.
    */
-  banner(mid ? '중간보스' : '보스')
+  banner(mid ? '중간보스' : fin ? fin.name : '보스')
   sfx('alarm')
   music('boss')
 }
@@ -14813,8 +14845,8 @@ function bossArt(bs) {
   /* 형태가 정해진 보스는 그 그림을 쓴다 */
   /* 모선(air)도 제 그림이 생겼다. 전에는 챕터 대표 보스 얼굴을 빌렸다 */
   /* 보스 도전은 표에 적어 둔 얼굴을 쓴다. 전용 그림은 아직 없다 */
-  if (bs && state && state.rush >= 0) {
-    const d = BOSS_RUSH[state.rush]
+  if (bs && bs.rushKey) {
+    const d = BOSS_RUSH.find((x) => x.key === bs.rushKey)
     const rim = d && (BOSS_IMG['rush_' + d.key] || BOSS_IMG[d.art])
     if (rim && rim.complete && rim.naturalWidth) return rim
   }
