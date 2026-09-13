@@ -2856,10 +2856,8 @@ const PLANES = []
      * 같은 레벨에 묶어 두면 「열렸다 → 넣는다」가 한 번에 끝난다.
      * Lv.3 에 주던 것을 Lv.2 로 당긴 이유가 그것이다.
      */
-    common: (i) => (i === 0 ? { kind: 'free' }
-                  : i === 1 ? { kind: 'lv', v: 2 }
-                  : i === 2 ? { kind: 'lv', v: 5 }
-                  : { kind: 'gacha' }),
+    /* 2026-09-13 대표 지정: 레벨로 주는 기체는 섬전(Lv.10) 하나. 산개·섬광도 뽑기로 */
+    common: (i) => (i === 0 ? { kind: 'free' } : { kind: 'gacha' }),
     /*
      * 희귀도 뽑기로만 (2026-09-11).
      *
@@ -2875,7 +2873,8 @@ const PLANES = []
      * 못 잡은 판은 1~2챕터에서 끝났다. 한 대를 확실히 쥐여 주고 나머지
      * 아홉은 뽑기로 둔다. **거저 열리는 것은 여기까지다.**
      */
-    rare:   (i) => (i === 0 ? { kind: 'lv', v: 10 } : { kind: 'gacha' }),
+    /* i === 2 가 레이저(섬전). 2026-09-13 대표 지정으로 연발(참매)에서 옮겼다 */
+    rare:   (i) => (i === 2 ? { kind: 'lv', v: 10 } : { kind: 'gacha' }),
     /* 상급은 뽑기로도, 3,000원으로도 연다 (2026-09-13) */
     high:   () => ({ kind: 'gacha', price: 3000 }),
     /* 레전드 5,000 ~ 8,000원 (2026-09-13, 1,200~3,900 에서) */
@@ -3178,7 +3177,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 20:16'
+const BUILD_AT = '09-13 21:40'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3783,8 +3782,14 @@ const PILOT_BY = Object.fromEntries(PILOTS.map((p) => [p.id, p]))
  * Lv.5 · Lv.10 에 하나씩 붙이면, 그때마다 알릴 거리가 생기고 「스탯을
  * 옮길 수 있다」를 가르칠 자리도 같이 생긴다.
  */
-const PILOT_OPEN_LV = [1, 5, 10]
+/*
+ * 2026-09-13 대표 지정: 레벨로 주는 것은 **일반 셋뿐** - 초연(처음) · 서리(Lv.2) ·
+ * 우설(Lv.10). 중급 이상은 등급이 열리면(뽑기·구매) 셋이 바로 쓸 수 있다.
+ * 기체도 마찬가지로 레벨 지급은 섬전(Lv.10) 하나다 - UNLOCK 참조.
+ */
+const PILOT_OPEN_LV = [1, 2, 10]
 function pilotNeedLv(pl) {
+  if (pl.grade !== 'normal') return 1
   const n = PILOTS.filter((p) => p.grade === pl.grade).indexOf(pl)
   return PILOT_OPEN_LV[n] || 1
 }
@@ -7762,17 +7767,25 @@ function openPilot(pl, list) {
      */
     const prev = pilotNow()
     const back = prev.id === pl.id ? 0 : stSpent(prev.id)
-    if (back > 0) {
-      const old = stOf(prev.id)
-      ST_KEYS.forEach((k) => { old[k] = 0 })
-      prog.pilot.xp = (prog.pilot.xp || 0) + back
+    /* 2026-09-13 대표 지정: 되돌릴 것이 있으면 바꾸기 전에 먼저 알린다. 초기화는 저절로 */
+    const doSwap = () => {
+      if (back > 0) {
+        const old = stOf(prev.id)
+        ST_KEYS.forEach((k) => { old[k] = 0 })
+        prog.pilot.xp = (prog.pilot.xp || 0) + back
+      }
+      /* 세기는 등급이, 특성은 사람이 정한다. 둘을 같이 옮긴다 */
+      prog.pilot.grade = pl.grade
+      prog.pilot.who = pl.id
+      save(); sfx('pick'); close(); renderPilot()
+      go('squad')
+      if (back > 0) swapNotice(prev, pl, back)
     }
-    /* 세기는 등급이, 특성은 사람이 정한다. 둘을 같이 옮긴다 */
-    prog.pilot.grade = pl.grade
-    prog.pilot.who = pl.id
-    save(); sfx('pick'); close(); renderPilot()
-    go('squad')
-    if (back > 0) swapNotice(prev, pl, back)
+    if (back > 0) {
+      ask('파일럿을 바꾸면 이전에 사용하시던 ' + prev.name + '의 스탯을 초기화합니다.\n' +
+          '부어 둔 경험치 ' + back.toLocaleString('ko-KR') + ' 은 전부 돌려받습니다.',
+          doSwap, { title: '파일럿 바꾸기', ok: '바꿉니다' })
+    } else doSwap()
   }
 }
 
