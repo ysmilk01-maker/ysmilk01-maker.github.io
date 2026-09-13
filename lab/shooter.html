@@ -735,6 +735,125 @@
   }
   .tabs button.on { color: var(--accent); background: rgba(79,209,255,.10); font-weight: 700; }
 
+  /* ── 가로 넘김 (2026-09-13) ──────────────────────────────
+   * 게임 안 화면에서 세로 스크롤을 없앤다. 한 화면에 안 들어가는 것은
+   * 오른쪽 페이지로 보내고, 오른쪽에 더 있다는 것을 가장자리 그늘·
+   * 화살표·점으로 알린다. 아래로 굴리는 화면은 어디까지 있는지가
+   * 안 보이는데, 페이지는 「3 / 5」로 끝이 보인다.
+   */
+  .hp { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+  .hp-track {
+    flex: 1; min-height: 0; display: flex; gap: 14px;
+    overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+  }
+  .hp-track::-webkit-scrollbar { display: none; }
+  .hp-page { flex: 0 0 100%; width: 100%; min-width: 100%; scroll-snap-align: start; scroll-snap-stop: always; overflow: hidden; }
+  .hp-more {
+    position: absolute; top: 0; right: -18px; bottom: 26px; width: 54px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(8,9,13,.9) 72%);
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 6px;
+    transition: opacity .2s;
+  }
+  .hp-more i {
+    font-style: normal; font-size: 28px; font-weight: 800; color: var(--gold);
+    text-shadow: 0 0 8px rgba(255,217,138,.6); animation: hpNudge 1.1s ease-in-out infinite;
+  }
+  @keyframes hpNudge { 0%,100% { transform: translateX(0) } 50% { transform: translateX(5px) } }
+  @media (prefers-reduced-motion: reduce) { .hp-more i { animation: none } }
+  .hp.end .hp-more, .hp.single .hp-more { opacity: 0; }
+  .hp-dots { flex: none; display: flex; justify-content: center; align-items: center; gap: 6px; height: 26px; }
+  .hp-dots i { width: 6px; height: 6px; border-radius: 3px; background: #33475a; transition: width .2s, background .2s; }
+  .hp-dots i.on { width: 18px; background: var(--gold); }
+  .hp-dots .hpn { font-size: 10.5px; color: var(--dim); margin-left: 8px; font-variant-numeric: tabular-nums; }
+  .hp.single .hp-dots { visibility: hidden; }
+  .stack { display: grid; gap: 8px; align-content: start; }
+  .stack .lab { margin: 6px 0 0; }
+  .nos { overflow: hidden !important; }
+
+  /* 기체 카드 - 한 페이지에 3×N 이 들어가는 크기로 */
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-content: start; }
+  .card.cp { overflow: hidden; padding: 6px 7px 5px; border-radius: 11px; }
+  .card.cp.picked { padding-bottom: 5px; }
+  .card.cp .tag { font-size: 8.5px; padding: 1px 5px; }
+  .card.cp .inuse { top: 5px; right: 5px; font-size: 8px; padding: 1px 5px; }
+  .card.cp .pv { width: 100%; height: 40px; display: block; margin-top: 11px; }
+  .card.cp .cmp { font-size: 9px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.cp .nm { font-size: 11.5px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.cp .wp { font-size: 9.5px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.cp .elrow { margin-top: 2px; }
+  .card.cp .elrow .el { font-size: 8.5px; padding: 0 5px; }
+  .card.cp .elrow .tr { display: none; }
+  .card.cp .lock, .card.cp .shard { font-size: 9px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.cp .up { margin-top: 3px; }
+  .card.cp .up .lvl { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.cp .up .need { font-size: 8.5px; }
+  .card.cp .up button { width: 100%; padding: 3px 0; font-size: 10.5px; border-radius: 7px; margin-top: 2px; }
+  /* 「현재 선택됨」 띠는 뺀다 - 형광 테두리가 그 말을 한다. 띠가 마지막 줄을 가렸다 */
+  .card.cp.picked::after { content: none; }
+  /*
+   * 형광 테두리는 지금 고른 것 하나만 (2026-09-13).
+   * 다른 자리에 쓰는 기체는 「적용중」 글자 표만 붙고 빛나지 않는다.
+   * 올릴 수 있는 것의 금색 숨쉬기도 여기서는 끈다 - 셋이 같이 빛나면
+   * 무엇이 고른 것인지 안 갈린다. 강화는 단추가 말한다.
+   */
+  .card.cp.picked, .card.cp.picked.can {
+    border-color: #39ff88; animation: none;
+    box-shadow: 0 0 0 2px #39ff88, 0 0 16px rgba(57,255,136,.55);
+  }
+  .card.cp.picked::after { background: #39ff88; }
+  .card.cp.used::before { content: none; }
+  .card.cp.can { animation: none; border-color: var(--line); box-shadow: none; }
+  .pcard.on { border-color: #39ff88; box-shadow: 0 0 0 2px #39ff88, 0 0 14px rgba(57,255,136,.5); }
+  .pcard.on .rt { background: #39ff88; }
+
+  /* 뒤로 단추를 제목 줄에 붙인다 - 한 줄(44px)을 아낀다 */
+  #scPlanes, #scPilot, #scRank { position: fixed; }
+  #scPlanes .hg-back, #scPilot .hg-back, #scRank .hg-back { position: absolute; top: 18px; right: 18px; margin: 0; z-index: 2; }
+  #scPlanes h1, #scPilot h1, #scRank h1 { padding-right: 90px; }
+  /* 뽑기 - 한 줄 설명은 뺀다. 확률 표가 한 화면에 들어가야 한다 */
+  #gaSub { display: none; }
+  #scGacha .gcrate { margin: 8px 0 2px; }
+  #scGacha .gcrate img { width: 120px; height: 120px; }
+  #scGacha .gapity { margin-bottom: 4px; }
+  /* 파일럿 - 위에 태운 사람, 아래는 페이지 */
+  #pilotSub { display: none; }
+  .pilothead { flex: none; margin-bottom: 8px; }
+  .pilothead .pnow .pf { min-height: 96px; width: 84px; }
+  .pilothead .pnow .tx { padding: 8px 10px 8px 0; }
+  .pilothead .pnow .de { display: none; }
+  .pilothead .pnow .cells { margin-top: 5px; }
+  .pilothead .rank1 { margin-top: 6px; padding: 7px 10px; }
+  .pilothead .rank1 .x { margin-top: 4px; }
+  .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
+  .pgrid .pcard { height: 88px; }
+  .pgrid .pcard .pf { width: 56px; }
+  .pgrid .pcard .tx { padding: 7px 8px 7px 0; }
+  .pgrid .pcard .de { display: none; }
+
+  /* 전선 - 한 화면에 */
+  #scStage > .sub { display: none; }
+  #scStage .body { overflow: hidden; }
+  #scStage .chbar { margin-bottom: 6px; }
+  #scStage .card.stg { padding: 8px 11px; }
+  #scStage .card.stg .pv { height: 52px; }
+  #scStage .card.stg .nm { font-size: 13px; }
+  #scStage .card.stg .de { display: none; }
+  #scStage .card.stg .up { margin-top: 2px; }
+  #scStage .nodes { gap: 5px; margin-top: 8px; }
+  #scStage .node { padding: 4px 2px 3px; border-radius: 9px; }
+  #scStage .node .n { font-size: 12px; }
+  #scStage .rushopen { margin-top: 8px; }
+  #scStage .modes { display: none; }
+
+  /* 편대 - 굴리지 않는다. 임무·정보는 눌러서 시트로 연다 */
+  .hg-scroll { display: flex; flex-direction: column; overflow: hidden !important; }
+  .hg-hero { flex: 1 1 auto; height: auto !important; min-height: 230px; max-height: 435px; width: 100%; }
+  .hg-drow { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 20px; }
+  .hg-drow .hg-details { margin: 0; }
+  .hg-drow .hg-details summary { font-size: 11.5px; min-height: 40px; }
+  .hg-drow .hg-details > :not(summary) { display: none; }
+
   /* ── 처음 안내 투어 ──────────────────────────────────────
    * 가리키는 자리만 남기고 바깥을 덮는다. 구멍을 파는 대신 그 자리에
    * 아주 큰 그림자를 둘러 화면을 채우는 쪽이다 - 자리가 바뀌어도
@@ -1720,8 +1839,10 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
       <button class="hg-pilot" id="hgPilot" aria-label="파일럿 선택"><img id="hgPilotImage" alt=""><span class="hg-pilot-label"><small id="hgPilotMeta"></small><strong id="hgPilotName"></strong><em id="hgPilotChange">변경 ›</em></span></button>
       <div class="hg-wings"><div class="hg-wing-title">윙맨 · 후방 지원</div><div id="slots" class="hg-wing-row"></div><p id="squadSub"></p></div>
     </div>
+    <div class="hg-drow">
     <details class="hg-details" id="hgMissions"><summary>오늘의 임무 <span id="hgMissionStatus"></span></summary><div class="miss" id="missBody"></div></details>
     <details class="hg-details hg-info"><summary>편대 정보 <span id="hgPower"></span></summary><div class="sum" id="squadSum"></div><p id="hgPilotStats"></p><p id="wallet"></p></details>
+    </div>
   </div>
   <footer class="hg-footer">
     <div class="hg-destination"><button id="hgStage" aria-label="출격 전선 선택"><strong id="hgDestination"></strong><small>전선 선택 ›</small></button>
@@ -1745,7 +1866,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <div class="slotTabs" id="slotTabs"></div>
   <!-- 지금 그 자리에 있는 기체. 목록 위에 크게 세운다 -->
   <div class="filters" id="planeFilters"></div>
-  <div class="body"><div class="grid" id="planes"></div></div>
+  <div class="hp" id="planes"></div>
 </div>
 
 <!--
@@ -1777,7 +1898,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div class="screen bgpic" id="scStage" hidden>
   <h1>스테이지</h1>
   <p class="sub">앞 단계를 깨야 다음이 열립니다. 고르면 바로 나갈 수 있습니다.</p>
-  <div class="body"><div class="stages" id="stageBody"></div></div>
+  <div class="body nos"><div class="stages" id="stageBody"></div></div>
   <div class="bar">
     <span class="hint" id="stageHint"></span>
     <span class="grow"></span>
@@ -1790,7 +1911,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <button class="hg-back" data-hangar-back>‹ 편대로</button>
   <h1>랭킹</h1>
   <p class="sub">아직 내 기록만 나옵니다. 다른 사람 순위는 게임 등록 뒤에 붙습니다.</p>
-  <div class="body" id="rankBody"></div>
+  <div class="hp" id="rankBody"></div>
 </div>
 
 <!-- 파일럿 -->
@@ -1798,7 +1919,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <button class="hg-back" data-hangar-back>‹ 편대로</button>
   <h1>파일럿</h1>
   <p class="sub" id="pilotSub"></p>
-  <div class="body" id="pilotBody"></div>
+  <div class="pilothead" id="pilotHead"></div>
+  <div class="hp" id="pilotBody"></div>
 </div>
 
 <!--
@@ -1815,15 +1937,13 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div class="screen bgpic" id="scGacha" hidden>
   <h1>뽑기</h1>
   <p class="sub" id="gaSub"></p>
-  <div class="body">
-    <div class="gapity" id="gaPity"></div>
-    <div class="gatab" id="gaTabs">
-      <button data-t="pull" class="on">뽑기</button>
-      <button data-t="rates">확률</button>
-      <button data-t="shop">가챠권</button>
-    </div>
-    <div id="gBody"></div>
+  <div class="gapity" id="gaPity"></div>
+  <div class="gatab" id="gaTabs">
+    <button data-t="pull" class="on">뽑기</button>
+    <button data-t="rates">확률</button>
+    <button data-t="shop">가챠권</button>
   </div>
+  <div class="hp nos" id="gBody"></div>
   <div class="bar gmain" id="gaBar">
     <button id="gPull">뽑기</button>
     <button id="gPull10">10연차</button>
@@ -1942,7 +2062,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div class="screen bgpic" id="scShop" hidden>
   <h1>상점</h1>
   <p class="sub" id="shopSub">가챠권은 광고로 하루 다섯 장까지. 결제 상품은 곧 열립니다.</p>
-  <div class="body" id="shopBody"></div>
+  <div class="hp" id="shopBody"></div>
 </div>
 
 <nav class="tabs" id="tabs" aria-label="주 메뉴">
@@ -2912,7 +3032,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 14:53'
+const BUILD_AT = '09-13 16:26'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4181,12 +4301,12 @@ function paintGacha10(list) {
       `<div class="n">${r.got ? '열림' : ''}</div>` +
       `</div>`
   }).join('')
-  body.innerHTML = head +
+  hpPlain(body, head +
     `<div class="g10sum"><b>${list.length}장</b> 중 가장 좋은 것은 ` +
     `<b style="color:${gTone(top.tier).main}">` +
     `${GRADES[top.tier] ? GRADES[top.tier].name : TIERS[top.tier]}</b> · ` +
     `${gotN ? `<b>${gotN}개</b>가 열렸습니다` : '열린 것은 없습니다'}</div>` +
-    `<div class="grid10">${cells}</div>`
+    `<div class="grid10">${cells}</div>`)
 }
 
 function pull(kind) {
@@ -4455,24 +4575,29 @@ function renderShop() {
     const have = hasGrade(grade) || pilotBought(p)
     return card('pilot:' + p.id, p.name + ' · ' + GRADES[grade].name, p.desc,
                 have ? '보유' : won(PILOT_PRICE[grade]), have)
-  }).join('')
+  })
   const planes = (tier, price) => PLANES.filter((p) => p.tier === tier).map((p) => {
     const have = unlocked(p)
     return card('plane:' + p.id, p.name + ' · ' + TIERS[tier], WEAPONS[p.weapon].name,
                 have ? '보유' : won(price(p)), have)
-  }).join('')
-  body.innerHTML =
-    '<div class="lab">광고로 받기</div>' +
-    card('adTk', '가챠권 1장', '광고를 끝까지 보면 한 장 · 오늘 ' + (AD_TK_DAY - left) + '/' + AD_TK_DAY,
-         left > 0 ? '광고 보기' : '내일 다시', left <= 0) +
-    '<div class="lab">가챠권</div>' +
-    SHOP.map((it, i) => card('pack:' + i, '가챠권 ' + it.n + '장', '장당 ' + Math.round(it.won / it.n) + '원', won(it.won), false)).join('') +
-    '<div class="lab">레전드 파일럿 · 한 명씩</div>' + pilots('legend') +
-    '<div class="lab">상급 파일럿</div>' + pilots('high') +
-    '<div class="lab">레전드 기체 · 지정 구매</div>' + planes('legend', (p) => p.unlock.v) +
-    '<div class="lab">상급 기체</div>' + planes('high', (p) => p.unlock.price || 3000) +
-    '<div class="empty">결제는 곧 열립니다. 지금은 광고로 받는 가챠권만 됩니다.<br>' +
-    '기체·파일럿은 뽑기로도 열립니다.</div>'
+  })
+  /* 항목을 높이와 함께 늘어놓고 페이지에 차례로 담는다. 세로 스크롤 없음 */
+  const items = []
+  const lab = (t) => items.push({ h: 22, html: '<div class="lab">' + t + '</div>' })
+  const row = (html) => items.push({ h: 56, html })
+  lab('광고로 받기')
+  row(card('adTk', '가챠권 1장', '광고를 끝까지 보면 한 장 · 오늘 ' + (AD_TK_DAY - left) + '/' + AD_TK_DAY,
+           left > 0 ? '광고 보기' : '내일 다시', left <= 0))
+  lab('가챠권')
+  SHOP.forEach((it, i) => row(card('pack:' + i, '가챠권 ' + it.n + '장', '장당 ' + Math.round(it.won / it.n) + '원', won(it.won), false)))
+  lab('레전드 파일럿 · 한 명씩'); pilots('legend').forEach(row)
+  lab('상급 파일럿'); pilots('high').forEach(row)
+  lab('레전드 기체 · 지정 구매'); planes('legend', (p) => p.unlock.v).forEach(row)
+  lab('상급 기체'); planes('high', (p) => p.unlock.price || 3000).forEach(row)
+  items.push({ h: 70, html: '<div class="empty" style="padding:10px 2px">결제는 곧 열립니다. 지금은 광고로 받는 가챠권만 됩니다.<br>기체·파일럿은 뽑기로도 열립니다.</div>' })
+  const keepPage = body._page || 0
+  const pages = hpChunk(body, items, 8)
+  hpager(body, pages, { page: Math.min(keepPage, pages.length - 1), onPage: (i) => { body._page = i } })
   body.querySelectorAll('[data-buy]').forEach((el) => {
     kbClickable(el)
     el.onclick = () => {
@@ -4903,6 +5028,70 @@ let activeSlot = 1
 const NO_MODS = { pierce: 0, split: 0, extra: 0, seek: 0, rate: 0, big: 0, bounce: 0, speed: 0 }
 const elSlots = document.getElementById('slots')
 const elPlanes = document.getElementById('planes')
+/* ================================================================
+ * 가로 넘김 (2026-09-13)
+ *
+ * host 는 .hp 로 만든다. pages 는 페이지마다 HTML 문자열이거나 요소
+ * 배열이다. 점과 오른쪽 화살표는 여기서 그리고, 스크롤을 따라 갱신한다.
+ * ================================================================ */
+function hpager(host, pages, opt) {
+  const o = opt || {}
+  host.classList.add('hp')
+  host.classList.remove('single', 'end')
+  host.innerHTML =
+    '<div class="hp-track"></div>' +
+    '<div class="hp-more" aria-hidden="true"><i>›</i></div>' +
+    '<div class="hp-dots">' + pages.map((_, i) => '<i' + (i === 0 ? ' class="on"' : '') + '></i>').join('') +
+    '<span class="hpn"></span></div>'
+  const track = host.querySelector('.hp-track')
+  for (const pg of pages) {
+    const d = document.createElement('div')
+    d.className = 'hp-page'
+    if (typeof pg === 'string') d.innerHTML = pg
+    else if (Array.isArray(pg)) pg.forEach((n) => d.appendChild(n))
+    else if (pg) d.appendChild(pg)
+    track.appendChild(d)
+  }
+  host.classList.toggle('single', pages.length <= 1)
+  const dots = host.querySelectorAll('.hp-dots i')
+  const num = host.querySelector('.hpn')
+  const step = () => track.clientWidth + 14
+  const upd = () => {
+    const i = Math.max(0, Math.min(pages.length - 1, Math.round(track.scrollLeft / step())))
+    dots.forEach((d, k) => d.classList.toggle('on', k === i))
+    if (num) num.textContent = pages.length > 1 ? (i + 1) + ' / ' + pages.length : ''
+    host.classList.toggle('end', track.scrollLeft + track.clientWidth >= track.scrollWidth - 4)
+    if (o.onPage) o.onPage(i)
+  }
+  track.addEventListener('scroll', upd, { passive: true })
+  if (o.page) track.scrollLeft = o.page * step()
+  upd()
+  return { track, go: (i) => track.scrollTo({ left: i * step(), behavior: 'smooth' }) }
+}
+/** 한 페이지에 몇 줄이 들어가나. 점 줄(26px)을 뺀 높이로 센다 */
+function hpRows(host, rowH, gap) {
+  const h = host.clientHeight - 26
+  return Math.max(1, Math.floor((h + gap) / (rowH + gap)))
+}
+/** 높이가 제각각인 항목을 페이지에 차례로 담는다. items: [{h, html}] */
+function hpChunk(host, items, gap) {
+  const avail = Math.max(120, host.clientHeight - 26)
+  const pages = []
+  let cur = [], used = 0
+  for (const it of items) {
+    const need = it.h + (cur.length ? gap : 0)
+    if (cur.length && used + need > avail) { pages.push(cur); cur = []; used = 0 }
+    cur.push(it); used += (cur.length > 1 ? gap : 0) + it.h
+  }
+  if (cur.length) pages.push(cur)
+  return pages.map((pg) => '<div class="stack">' + pg.map((it) => it.html).join('') + '</div>')
+}
+/** 넘김 없이 그냥 채울 때. 지난번 넘김의 흔적을 지운다 */
+function hpPlain(host, html) {
+  host.classList.remove('single', 'end')
+  host.innerHTML = html
+}
+const PLANE_CARD_H = 182
 const elWallet = document.getElementById('wallet')
 
 function planeById(id) { return PLANES.find((p) => p.id === id) }
@@ -6139,9 +6328,9 @@ function renderPlanes() {
    * 잘린다. 강화 단추를 누르면 화면이 맨 위로 튀어서, 아래쪽 기체를
    * 올리던 사람은 누를 때마다 다시 내려와야 했다.
    */
-  const scBody = elPlanes.closest('.body')
-  const keepTop = scBody ? scBody.scrollTop : 0
-  elPlanes.innerHTML = ''
+  /* 보고 있던 페이지를 지킨다. 강화를 누르면 목록을 다시 그리는데 그때 1페이지로 튀면 안 된다 */
+  const keepPage = elPlanes._page || 0
+  const cards = []
   /* 두 축을 같이 건다. 하나가 '전체' 면 그 축은 안 거른다 */
   const list = PLANES.filter((p) =>
     (planeOwn === 'all' || (planeOwn === 'own' ? unlocked(p) : !unlocked(p))) &&
@@ -6171,7 +6360,7 @@ function renderPlanes() {
   const nowDps = planeDps(planeById(here))
 
   if (!list.length) {
-    elPlanes.innerHTML = '<div class="empty">여기 해당하는 기체가 없습니다.</div>'
+    hpPlain(elPlanes, '<div class="empty">여기 해당하는 기체가 없습니다.</div>')
     return
   }
 
@@ -6187,9 +6376,11 @@ function renderPlanes() {
     const picked = prog.squad[activeSlot] === p.id
     const c = document.createElement('div')
     /* usedIn 에 있으면 어느 자리든 지금 태우고 있는 기체다 */
-    c.className = 'card' + (ok ? '' : ' locked') + (picked ? ' picked' : '') +
+    c.className = 'card cp' + (ok ? '' : ' locked') + (picked ? ' picked' : '') +
       (canUpg(p) ? ' can' : '') + (usedIn[p.id] ? ' used' : '')
+    c.style.height = PLANE_CARD_H + 'px'
     kbClickable(c)
+    c.dataset.pid = p.id
     const lab = unlockLabel(p)
     const lv = upgOf(p.id)
     const cost = upgCost(p, lv)
@@ -6231,7 +6422,7 @@ function renderPlanes() {
         : '') +
       (lab ? `<div class="lock">${p.unlock.kind === 'paid' ? '🔒 ' : ''}${lab}</div>` : '') +
       (ok
-        ? (shardOf(p.id) ? `<div class="shard">조각 ${shardOf(p.id)}개</div>` : '')
+        ? ''   /* 가진 기체의 남은 조각은 상세에서 본다 - 카드 한 줄이 아깝다 (2026-09-13) */
         : `<div class="shard">조각 ${shardOf(p.id)} / ${shardNeed(p)}</div>`) +
       (ok
         /*
@@ -6241,13 +6432,15 @@ function renderPlanes() {
          * 일은 고르는 것인데 제일 큰 단추가 다른 일을 가리켰고, 카드가
          * 그만큼 길어져 두 줄이 채 안 보였다. 못 올리면 글줄로 적는다.
          */
-        ? `<div class="up"><span class="lvl">강화 ${lv}/${UPG_MAX}` +
-          (lv ? ` · 화력 +${Math.round((upgPower(p.id) - 1) * 100)}%` : '') + `</span>` +
-          (lv >= UPG_MAX
+        ? `<div class="up">` +
+          /* 올릴 수 있으면 단추 한 줄로 끝낸다. 단계는 단추에 적는다 (2026-09-13) */
+          (canUpg(p) && lv < UPG_MAX
+            ? `<button>강화 ${lv} → ${lv + 1}</button>`
+            : `<span class="lvl">강화 ${lv}/${UPG_MAX}` +
+              (lv ? ` · 화력 +${Math.round((upgPower(p.id) - 1) * 100)}%` : '') + `</span>`) +
+          (lv >= UPG_MAX || canUpg(p)
             ? ''
-            : canUpg(p)
-              ? `<button>강화하기</button>`
-              : `<div class="need">` +
+            : `<div class="need">` +
                 `<span class="${prog.parts < cost ? 'no' : ''}">부품 ${cost.toLocaleString('ko-KR')}</span> · ` +
                 `<span class="${shardOf(p.id) < shardUpg(p, lv) ? 'no' : ''}">조각 ${shardUpg(p, lv)}</span></div>`) +
           `</div>`
@@ -6283,11 +6476,27 @@ function renderPlanes() {
      * 모을 마음이 든다.
      */
     c.onclick = () => openDetail(p, list)
-    elPlanes.appendChild(c)
-    paintPlane(c.querySelector('.pv'), p, 1.1)
+    cards.push(c)
   }
-  /* 다 채운 뒤에 보던 자리로 돌려놓는다 */
-  if (scBody && keepTop) scBody.scrollTop = keepTop
+  /*
+   * 3열 × 들어가는 만큼의 줄을 한 페이지로 (2026-09-13).
+   * 줄 수는 화면 높이로 센다 - 짧은 폰은 한 줄, 긴 폰은 두 줄.
+   */
+  const rows = hpRows(elPlanes, PLANE_CARD_H, 8)
+  const per = 3 * rows
+  const pages = []
+  for (let i = 0; i < cards.length; i += per) {
+    const g = document.createElement('div')
+    g.className = 'grid3'
+    cards.slice(i, i + per).forEach((c) => g.appendChild(c))
+    pages.push(g)
+  }
+  hpager(elPlanes, pages, { page: Math.min(keepPage, pages.length - 1), onPage: (i) => { elPlanes._page = i } })
+  /* 그림은 붙인 뒤에 그린다 - 붙기 전 캔버스는 크기가 0 이다 */
+  for (const c of cards) {
+    const p = list.find((q) => q.id === c.dataset.pid)
+    if (p) paintPlane(c.querySelector('.pv'), p, 1.1)
+  }
 }
 
 /* ── 접속 보상 ─────────────────────────────────────────────────── */
@@ -6414,10 +6623,10 @@ function paintGacha(res) {
      * 보였다 - 여기가 「누르면 열린다」를 알리는 자리다.
      */
     const crate = gc('crateC')
-    body.innerHTML = head +
+    hpPlain(body, head +
       (crate ? `<div class="gcrate"><img src="${crate.src}" alt=""></div>` : '') +
       `<div class="empty">조각을 모으면 열립니다. 남는 조각은 강화에 씁니다.<br>` +
-      `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.</div>`
+      `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.</div>`)
     return
   }
 
@@ -6426,7 +6635,7 @@ function paintGacha(res) {
   const shipIm = res.plane && SHIP_IMG[res.plane.id]
   const pic = shipIm && shipIm.complete && shipIm.naturalWidth
     ? `<img src="${shipIm.src}" alt="">` : ''
-  body.innerHTML = head +
+  hpPlain(body, head +
     `<div class="got">` + pic +
     `<span class="tag ${GRADES[res.tier] ? GRADES[res.tier].tag : 't-' + res.tier}" style="position:static">` +
     `${GRADES[res.tier] ? GRADES[res.tier].name : TIERS[res.tier]}</span>` +
@@ -6439,7 +6648,7 @@ function paintGacha(res) {
        바로 안 읽히는 경우가 있다 */
     `<span class="cnt">${res.kind === 'pilot' ? '파일럿' : '기체'} · ${label}</span>` +
     (res.got ? `<span class="msg">${res.jack ? '바로 열렸습니다' : '조각이 다 모여 열렸습니다'}</span>` : '') +
-    `</div>`
+    `</div>`)
 }
 
 /*
@@ -6496,19 +6705,24 @@ function paintRates() {
           `${GRADES[pity.tier] ? GRADES[pity.tier].name : TIERS[pity.tier]} 이상 확정</span></div>`
         : '')
   }
-  body.innerHTML =
-    `<div class="lab">무엇이 나오는가</div>` +
+  /* 세 페이지로 넘긴다 (2026-09-13). 한 화면에 표 둘이 안 들어간다 */
+  const pages = [
+    `<div class="lab" style="margin-top:0">무엇이 나오는가</div>` +
     `<div class="rate"><span>기체</span><span class="v">${100 - pilotPct}%</span></div>` +
     `<div class="rate"><span>파일럿</span><span class="v">${pilotPct}%` +
     (pilotPct ? '' : ' (다 모아서 안 나옵니다)') + `</span></div>` +
-    block('plane') +
-    (pilotPct ? block('pilot') : '') +
+    block('plane'),
+  ]
+  if (pilotPct) pages.push(block('pilot'))
+  pages.push(
+    `<div class="lab" style="margin-top:0">그 밖의 규칙</div>` +
     `<div class="rate"><span>완성품이 이미 가진 것이면</span><span class="v">조각 ${JACK_SHARD}개</span></div>` +
     `<div class="rate"><span>기체 ${HARD_PITY}장째</span>` +
     `<span class="v">기체 하나 확정 (등급 랜덤)</span></div>` +
-    `<div class="empty">아래 확률은 그 갈래가 걸렸을 때의 값입니다.<br>` +
+    `<div class="empty">등급별 확률은 그 갈래가 걸렸을 때의 값입니다.<br>` +
     `가챠권은 별 ${STAR_TICKET}개마다 한 장입니다. 별은 판을 깨면 ` +
-    `${STAR_CLEAR}개가 차고, 실패하면 차지 않습니다.</div>`
+    `${STAR_CLEAR}개가 차고, 실패하면 차지 않습니다.</div>`)
+  hpager(body, pages)
 }
 
 document.getElementById('gPull').onclick = () => {
@@ -6530,14 +6744,14 @@ document.getElementById('gPull10').onclick = () => {
 }
 function paintShop() {
   const body = document.getElementById('gBody')
-  body.innerHTML =
-    `<div class="lab">가챠권 사기</div>` +
+  hpPlain(body,
+    `<div class="lab" style="margin-top:0">가챠권 사기</div>` +
     SHOP.map((it, i) =>
       `<div class="gcard" data-shop="${i}">` +
       `<div><div class="nm">가챠권 ${it.n}장</div>` +
       `<div class="de">장당 ${Math.round(it.won / it.n)}원</div></div>` +
       `<span class="rt">${it.won.toLocaleString('ko-KR')}원</span></div>`).join('') +
-    `<div class="empty">광고로 받는 가챠권(하루 ${AD_TK_DAY}장)과 결제 상품은 「상점」 탭에 있습니다.</div>`
+    `<div class="empty">광고로 받는 가챠권(하루 ${AD_TK_DAY}장)과 결제 상품은 「상점」 탭에 있습니다.</div>`)
   body.querySelectorAll('[data-shop]').forEach((el) => {
     el.onclick = () => go('shop')
   })
@@ -6743,8 +6957,8 @@ function renderStage() {
         `${BOSS_RUSH.filter((d, i) => rushBest(i) >= rushDiff()).length}` +
         ` / ${BOSS_RUSH.length} 격파</span><span class="go">▸</span></button>`
       : `<div class="lab" style="margin-top:18px">보스 도전</div>` +
-        `<div class="empty">파일럿 Lv.${RUSH_LV} 에 열립니다.</div>`) +
-    hardBox()
+        `<div class="empty">파일럿 Lv.${RUSH_LV} 에 열립니다.</div>`)
+    /* 모드(하드코어·크레이지) 상자는 편대 화면에 있다. 여기 또 두면 한 화면에 안 들어간다 (2026-09-13) */
     /*
      * 끝없는 출격은 뺐다(2026-09-10). 판 진행·모드·보상과 따로 노는
      * 갈래라 배울 게 하나 더 늘 뿐이었다. 코드(zoneRun·zoneStage)는
@@ -6800,23 +7014,24 @@ function renderRank() {
     const d = new Date(t)
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
   }
-  document.getElementById('rankBody').innerHTML =
-    '<div class="sum">' +
+  const host = document.getElementById('rankBody')
+  const items = [
+    { h: 186, html: '<div class="sum" style="margin-top:0">' +
       row('최고 점수', st.best.toLocaleString('ko-KR'), true) +
       row('출격', st.runs.toLocaleString('ko-KR') + '판') +
       row('클리어', st.clears.toLocaleString('ko-KR') + '회') +
-      row('총 격추', st.kills.toLocaleString('ko-KR')) +
-    '</div>' +
-    '<div class="bar"><button class="ghost small" id="tossRank">토스 랭킹 열기</button></div>' +
-    '<div class="lab">내 기록 상위 20</div>' +
-    (list.length
-      ? list.map((r, i) =>
-          `<div class="rank${i === 0 ? ' top' : ''}">` +
-          `<span class="no">${i + 1}</span>` +
-          `<span class="sc">${r.s.toLocaleString('ko-KR')}</span>` +
-          `<span class="k">${r.w ? '클리어' : ''}</span>` +
-          `<span class="dt">${when(r.t)}</span></div>`).join('')
-      : '<div class="empty">아직 기록이 없습니다.<br>한 판 하고 오세요.</div>')
+      row('총 격추', st.kills.toLocaleString('ko-KR')) + '</div>' },
+    { h: 54, html: '<div class="bar" style="margin-top:0"><button class="ghost small" id="tossRank">토스 랭킹 열기</button></div>' },
+    { h: 30, html: '<div class="lab">내 기록 상위 20</div>' },
+  ]
+  if (list.length) list.forEach((r, i) => items.push({ h: 42, html:
+    `<div class="rank${i === 0 ? ' top' : ''}">` +
+    `<span class="no">${i + 1}</span>` +
+    `<span class="sc">${r.s.toLocaleString('ko-KR')}</span>` +
+    `<span class="k">${r.w ? '클리어' : ''}</span>` +
+    `<span class="dt">${when(r.t)}</span></div>` }))
+  else items.push({ h: 60, html: '<div class="empty">아직 기록이 없습니다.<br>한 판 하고 오세요.</div>' })
+  hpager(host, hpChunk(host, items, 0))
   const tr = document.getElementById('tossRank')
   if (tr) tr.onclick = openTossRank
 }
@@ -7264,7 +7479,7 @@ function renderPilot() {
    */
   const early = GRADE_KEYS.filter((k) => hasGrade(k)).length <= 1
   const list = PILOTS.filter((pl) => pilotOpen(pl) || (!early && !hasGrade(pl.grade)))
-  const cards = list.map((pl) => {
+  const cardArr = list.map((pl) => {
     const G = GRADES[pl.grade]
     const owned = hasGrade(pl.grade) || pilotBought(pl)
     const on = pilotNow().id === pl.id
@@ -7286,7 +7501,7 @@ function renderPilot() {
       (on ? '<span class="rt">사용 중</span>'
           : owned ? '' : '<span class="rt lk">잠김</span>') +
       '</div>'
-  }).join('')
+  })
 
   /*
    * 전설 파일럿 상품은 이제 자리를 열어 주지 않는다 (2026-09-12).
@@ -7342,11 +7557,15 @@ function renderPilot() {
         : '<div class="go">상세 보기 ▸</div>') +
     '</div></div>'
 
-  /* 여기도 같은 이유로 자리를 지킨다 - 스탯을 찍을 때마다 맨 위로 튀었다 */
+  /*
+   * 위에 태운 사람과 계급, 아래는 카드 페이지 (2026-09-13).
+   * 세로 스크롤이 없어졌다. 카드가 열둘이면 두 줄씩 세 페이지다.
+   */
   const pBody = document.getElementById('pilotBody')
-  const pTop = pBody.scrollTop
-  pBody.innerHTML =
-    '<div class="lab">지금 태운 파일럿</div>' + nowBox +
+  const pHead = document.getElementById('pilotHead')
+  const keepPage = pBody._page || 0
+  pHead.innerHTML =
+    nowBox +
     /*
      * 계급을 세 줄에서 한 칸으로 (2026-09-12).
      *
@@ -7361,12 +7580,10 @@ function renderPilot() {
       (maxed ? '' : '<div class="xpbar"><i style="width:' +
         Math.min(100, (got / need) * 100).toFixed(1) + '%"></i></div>') +
       '<div class="x">쓸 수 있는 경험치 <b>' + have.toLocaleString('ko-KR') + '</b></div>' +
-    '</div>' +
-
-    '<div class="lab">파일럿</div>' +
-    '<div class="pcards">' + cards + '</div>' +
-    (early ? '<div class="empty" style="padding:10px 2px">' + nextGradeLine() + '</div>' : '') +
-    '<div class="bar"><button class="ghost small" id="pilotGacha">' +
+    '</div>'
+  const tail =
+    (early ? '<div class="empty" style="padding:6px 2px">' + nextGradeLine() + '</div>' : '') +
+    '<div class="bar" style="margin-top:8px"><button class="ghost small" id="pilotGacha">' +
     '뽑기 · 가챠권 ' + prog.ticket + '장</button></div>' +
 
     /*
@@ -7376,9 +7593,19 @@ function renderPilot() {
      * 네 덩어리가 더 붙어 있어서 정작 파일럿 카드가 화면 밖에서
      * 시작했다. 한 번 정하고 마는 것들은 설정에 둔다.
      */
-    '<div class="lab">편대</div><div class="sum">' + legendBox + '</div>'
-
-  if (pTop) pBody.scrollTop = pTop
+    '<div class="sum" style="margin-top:8px">' + legendBox + '</div>'
+  const rows = hpRows(pBody, 88, 8)
+  const per = 2 * rows
+  const pages = []
+  const tailH = 150 + (early ? 44 : 0)
+  for (let i = 0; i < list.length; i += per) {
+    pages.push('<div class="pgrid">' + cardArr.slice(i, i + per).join('') + '</div>')
+  }
+  /* 꼬리(뽑기 단추 · 상점 안내)는 마지막 페이지에 자리가 남으면 붙이고, 아니면 한 장 더 */
+  const lastN = pages.length ? list.length - (pages.length - 1) * per : 0
+  if (pages.length && Math.ceil(lastN / 2) * 96 + tailH <= pBody.clientHeight - 26) pages[pages.length - 1] += tail
+  else pages.push(tail)
+  hpager(pBody, pages, { page: Math.min(keepPage, pages.length - 1), onPage: (i) => { pBody._page = i } })
 
   /* 카드를 누르면 상세가 열린다. 쓸지 말지는 거기서 정한다 - 기체와 같다 */
   document.querySelectorAll('.pcard[data-who]').forEach((el) => {
@@ -18255,6 +18482,39 @@ function doLaunch(zoneMode) {
   showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
   return true
 }
+/*
+ * 편대 화면의 「오늘의 임무」「편대 정보」 (2026-09-13).
+ *
+ * 세로 스크롤을 없애면서 펼침 대신 시트로 연다. 안의 요소를 시트로
+ * **옮겼다가** 닫을 때 되돌린다 - 복사하면 임무 보상 단추의 클릭이 죽는다.
+ */
+document.querySelectorAll('.hg-drow details').forEach((d) => {
+  d.addEventListener('toggle', () => {
+    if (!d.open) return
+    d.open = false
+    const panel = document.getElementById('detail')
+    const body = document.getElementById('detailBody')
+    if (!panel || !body) return
+    cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
+    body.className = 'dsheet'
+    const sm = d.querySelector('summary')
+    body.innerHTML = '<h3>' + (sm ? sm.firstChild.textContent.trim() : '') + '</h3>'
+    const inner = [...d.children].filter((c) => c.tagName !== 'SUMMARY')
+    inner.forEach((c) => { c.style.display = ''; body.appendChild(c) })
+    const bar = document.createElement('div')
+    bar.className = 'bar'
+    bar.innerHTML = '<button class="ghost" id="dClose">닫기</button>'
+    body.appendChild(bar)
+    const close = () => {
+      inner.forEach((c) => { c.style.display = ''; d.appendChild(c) })
+      panel.hidden = true; panel.onclick = null; modalOff()
+    }
+    panel.hidden = false
+    modalOn(panel, close)
+    panel.onclick = (e) => { if (e.target === panel) close() }
+    document.getElementById('dClose').onclick = close
+  })
+})
 document.getElementById('tourNext').onclick = () => { tourAt++; tourPaint() }
 document.getElementById('tourSkip').onclick = () => tourEnd()
 document.getElementById('hgGuide').onclick = () => tourStart(true)
