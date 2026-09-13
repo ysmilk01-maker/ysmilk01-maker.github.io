@@ -683,6 +683,17 @@
   .panel[hidden] { display: none !important; }
 
   /*
+   * 결과 창 단추 (2026-09-13).
+   *
+   * 단추가 inline-block 이라 셋이 한 줄에 안 들어가면 다음 줄로 넘어가는데,
+   * 줄 사이가 0 이라 「광고 보고 이어하기」 밑에 「격납고로」가 붙어 겹쳐 보였다.
+   * 세로로 쌓고 사이를 띄운다. 주 단추가 맨 위, 격납고는 맨 아래.
+   */
+  #over > div { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  #over h2 { margin: 0 0 2px; }
+  #over > div > button { width: min(340px, 88vw); }
+
+  /*
    * 새 챕터 알림.
    *
    * 결과 창 안의 한 줄로만 알리던 것을 따로 뺐다. 스무 판을 깨고 나서
@@ -3167,7 +3178,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 19:55'
+const BUILD_AT = '09-13 20:01'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
