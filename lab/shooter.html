@@ -1846,6 +1846,61 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   .card.cp.locked, .pcard.no, .gcard.no { filter: saturate(.55); }
   /* 태운 파일럿 큰 칸의 등급 색. 선택 테두리(accent)는 그대로 */
   .pnow.g-normal, .pnow.g-mid, .pnow.g-high, .pnow.g-legend { border-color: var(--accent); }
+
+  /* ── 우편함 · 출격 패스 · 상점 (2026-09-13) ─────────────────── */
+  #scSquad .hg-icon { position: relative; }
+  .hg-icon .badge {
+    position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px;
+    border-radius: 8px; background: #ff5d5d; color: #fff; font-size: 10px; font-weight: 800;
+    line-height: 16px; text-align: center; box-shadow: 0 0 0 2px #0b141a;
+  }
+  .hg-icon .badge[hidden] { display: none; }
+  .mailsheet .mtab { margin: 8px 0 6px; grid-template-columns: 1fr 1fr; }
+  .mailsheet .hp { height: 330px; }
+  .mail {
+    background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 10px; margin-bottom: 6px;
+  }
+  .mail.new { border-color: rgba(255,217,138,.55); }
+  .mail .mh { display: flex; align-items: baseline; gap: 8px; }
+  .mail .mt { font-size: 12.5px; font-weight: 800; flex: 1; min-width: 0; }
+  .mail.new .mt::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); margin-right: 5px; vertical-align: 1px; }
+  .mail .md { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .mail .mb { font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 3px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .mail .mi { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--gold); font-weight: 700; }
+  .mail .mi button { margin-left: auto; padding: 5px 14px; font-size: 12px; border-radius: 8px; }
+  .mail .mi .got { margin-left: auto; color: var(--dim); font-weight: 600; }
+  .shoptab { margin: 0 0 8px; grid-template-columns: repeat(4, 1fr); }
+  .gcard .gimg { width: 60px; height: 44px; object-fit: contain; margin-left: 10px; flex: none; }
+  .gcard .gtag { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: 8.5px; border-radius: 4px; vertical-align: 1px; }
+  .passcard {
+    background: linear-gradient(160deg, #2a2408, #16130a 60%, #111319);
+    border: 1px solid #8a6a1e; border-radius: 16px; padding: 14px 14px 12px;
+    box-shadow: 0 0 0 1px rgba(255,217,138,.15), 0 10px 30px rgba(0,0,0,.5);
+  }
+  .passcard .pc-head { display: flex; align-items: baseline; gap: 8px; }
+  .passcard .pc-name { font-size: 20px; font-weight: 900; color: var(--gold); letter-spacing: -.01em; }
+  .passcard .pc-price { margin-left: auto; font-size: 15px; font-weight: 800; }
+  .passcard .pc-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .passcard .pc-ben { display: grid; grid-template-columns: 34px 1fr; gap: 2px 10px; align-items: center; margin-top: 9px; }
+  .passcard .pc-ben i {
+    grid-row: span 2; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
+    font-style: normal; font-size: 10.5px; font-weight: 900; background: rgba(255,217,138,.14); color: var(--gold);
+    border: 1px solid rgba(255,217,138,.35);
+  }
+  .passcard .pc-ben b { font-size: 13px; color: var(--ink); }
+  .passcard .pc-ben span { font-size: 10.5px; color: var(--muted); }
+  .passcard button { width: 100%; margin-top: 12px; padding: 12px 0; font-size: 15px;
+    background: linear-gradient(#ffe2a0, #d8b45c); color: #1b1405; border: 1px solid #f2dc9a; }
+  .passcard .pc-note { font-size: 10.5px; color: var(--dim); text-align: center; margin-top: 7px; }
+  .passcard.on { border-color: #39ff88; }
+  .passcard.on button { background: #1b2736; color: #9fb0c6; border-color: #2c3e55; }
+  .shopsheet .simg { width: 100%; height: 132px; object-fit: contain; display: block; margin: 8px 0 4px;
+    background: radial-gradient(ellipse at 50% 70%, #16243a 0%, #0a111c 74%); border-radius: 11px; }
+  .shopsheet .pbig { height: 150px; }
+  .shopsheet .price { font-size: 20px; font-weight: 900; color: var(--gold); text-align: right; margin-top: 8px; }
+  .shopsheet .price small { font-size: 11px; color: var(--dim); font-weight: 600; margin-right: 6px; }
 </style>
 
 <div class="boot" id="boot">
@@ -1865,6 +1920,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <h1 class="hg-sr">편대</h1>
   <div class="hg-res" id="resBar"></div>
   <header class="hg-top"><span class="hg-brand">오늘도 출격</span><div class="hg-actions">
+    <button id="hgMail" class="hg-icon" aria-label="우편함" title="우편함"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></svg><span class="badge" id="hgMailBadge" hidden></span></button>
     <button id="hgRank" class="hg-icon" aria-label="랭킹" title="랭킹"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Z M8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 13v6m-4 2h8"/></svg></button>
     <button id="hgGuide" class="hg-icon" aria-label="가이드" title="가이드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 1 1 3.6 2.7c-.5.2-.8.7-.8 1.2v.6"/><path d="M12 17h.01"/></svg></button>
     <button id="btnSet" class="hg-icon" aria-label="설정" title="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3 1-1h4l1 3 3 1 3 3-1 3 1 3-3 3-3 1-1 3h-4l-1-3-3-1-3-3 1-3-1-3 3-3 3-1Z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -2098,7 +2154,13 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 -->
 <div class="screen bgpic" id="scShop" hidden>
   <h1>상점</h1>
-  <p class="sub" id="shopSub">가챠권은 광고로 하루 다섯 장까지. 결제 상품은 곧 열립니다.</p>
+  <p class="sub" id="shopSub">월정액 하나로 광고 없이, 더 자주, 더 많이.</p>
+  <div class="gatab shoptab" id="shopTabs">
+    <button data-st="pass" class="on">패스</button>
+    <button data-st="ticket">가챠권</button>
+    <button data-st="pilot">파일럿</button>
+    <button data-st="plane">기체</button>
+  </div>
   <div class="hp" id="shopBody"></div>
 </div>
 
@@ -3041,7 +3103,10 @@ const EN_MAX = 8
 const EN_MAX_HI = 10             // 파일럿 Lv.10 부터
 const EN_LV = 10
 /** 저절로 차는 상한. 보상으로 받은 것은 이 위로도 쌓인다 */
-function enMax() { return prog.pilot.lv >= EN_LV ? EN_MAX_HI : EN_MAX }
+function enMax() {
+  if (typeof passActive === 'function' && passActive()) return PASS.enMax
+  return prog.pilot.lv >= EN_LV ? EN_MAX_HI : EN_MAX
+}
 const EN_REGEN = 10 * 60 * 1000        // 10분에 하나
 const AD_ENERGY_DAY = 10               // 하루에 광고로 채울 수 있는 횟수
 
@@ -3069,7 +3134,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 16:48'
+const BUILD_AT = '09-13 17:02'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3118,6 +3183,8 @@ function load() {
     adDay: { d: '', n: 0 },         // 오늘 광고로 채운 횟수
     adTk: { d: '', n: 0 },          // 오늘 광고로 받은 가챠권
     pilotBought: {},                // 한 명씩 산 파일럿
+    mail: [],                       // 우편함
+    pass: null,                     // 출격 패스 { until, lastDaily }
   }
   try {
     // 구조가 바뀌었다. 새 칸이 없으면 예전 저장을 그대로 옮겨 온다
@@ -4593,59 +4660,331 @@ function adTicket() {
     say('가챠권 1장을 받았습니다. 오늘 ' + (AD_TK_DAY - adTkLeft()) + '/' + AD_TK_DAY + '장.', '가챠권')
   })
 }
-/*
- * 상점 화면.
+/* ================================================================
+ * 우편함 (2026-09-13)
  *
- * 결제가 붙기 전이라 단추를 누르면 「곧 열립니다」만 뜬다. 상품과 값은
- * 여기 한 곳에서 읽는다 - 콘솔에 상품을 등록할 때도 이 표를 그대로 옮긴다.
- */
+ * 공지와 지급 아이템이 여기로 온다. 코드에 적힌 공지(MAIL_NOTICES)는
+ * 처음 볼 때 한 번 들어오고, 패스 일일 지급·보상 같은 것은 mailAdd 로
+ * 들어온다. 아이템은 「받기」를 눌러야 들어간다 - 받은 줄 모르고
+ * 지나가는 지급은 지급이 아니다.
+ * ================================================================ */
+const MAIL_NOTICES = [
+  { id: 'n-welcome', at: '2026-09-13', title: '오늘도 출격에 오신 것을 환영합니다',
+    body: '편대를 짜고 전선으로 나가세요. 판에서 떨어지는 강화 아이템은 꼭 주우세요 - 클리어를 가릅니다. 첫 선물로 가챠권 3장을 보냅니다.',
+    items: { ticket: 3 } },
+  { id: 'n-shop', at: '2026-09-13', title: '상점과 출격 패스 안내',
+    body: '아래 「상점」 탭에서 가챠권·기체·파일럿과 월정액 「출격 패스」를 볼 수 있습니다. 결제는 곧 열립니다. 광고로 받는 가챠권(하루 5장)은 지금 됩니다.' },
+]
+function mailList() { if (!Array.isArray(prog.mail)) prog.mail = []; return prog.mail }
+function mailSync() {
+  const list = mailList()
+  let added = 0
+  for (const n of MAIL_NOTICES) {
+    if (list.some((m) => m.id === n.id)) continue
+    list.push({ id: n.id, at: n.at, title: n.title, body: n.body, items: n.items || null,
+                read: false, claimed: !n.items })
+    added++
+  }
+  if (added) save()
+  return added
+}
+function mailAdd(m) {
+  const list = mailList()
+  list.unshift({ id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                 at: dayKey(), read: false, claimed: !m.items, ...m })
+  if (list.length > 60) list.length = 60
+  save()
+  paintMailBadge()
+}
+function mailUnread() { return mailList().filter((m) => !m.read || (m.items && !m.claimed)).length }
+function paintMailBadge() {
+  const b = document.getElementById('hgMailBadge')
+  if (!b) return
+  const n = mailUnread()
+  b.hidden = !n
+  b.textContent = n > 9 ? '9+' : String(n)
+}
+const ITEM_NAME = { ticket: ['가챠권', '장'], parts: ['부품', ''], energy: ['출격권', '장'], xp: ['경험치', ''] }
+function itemText(items) {
+  return Object.entries(items || {}).map(([k, v]) => {
+    if (k === 'plane') { const p = planeById(v); return (p ? p.name : '기체') + ' 기체' }
+    if (k === 'pilot') { const p = PILOT_BY[v]; return (p ? p.name : '파일럿') + ' 파일럿' }
+    const nm = ITEM_NAME[k]
+    return nm ? nm[0] + ' ' + Number(v).toLocaleString('ko-KR') + nm[1] : k
+  }).join(' · ')
+}
+function grantItems(items) {
+  for (const [k, v] of Object.entries(items || {})) {
+    if (k === 'ticket') prog.ticket += v
+    else if (k === 'parts') prog.parts += v
+    else if (k === 'energy') prog.energy.n = energy() + v
+    else if (k === 'xp') addXpRaw(v)
+    else if (k === 'plane') { if (!prog.owned.includes(v)) prog.owned.push(v) }
+    else if (k === 'pilot') { prog.pilotBought = prog.pilotBought || {}; prog.pilotBought[v] = true }
+  }
+  save()
+  renderWallet()
+}
+let mailTab = 'box'
+function openMail(tab) {
+  mailSync()
+  if (tab) mailTab = tab
+  const panel = document.getElementById('detail')
+  const body = document.getElementById('detailBody')
+  if (!panel || !body) return
+  cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
+  body.className = 'dsheet mailsheet'
+  const list = mailList().slice().sort((x, y) => (y.at > x.at ? 1 : y.at < x.at ? -1 : 0))
+  const boxes = list.filter((m) => m.items), notes = list.filter((m) => !m.items)
+  const cur = mailTab === 'box' ? boxes : notes
+  const dot = (n) => (n ? ' ●' : '')
+  body.innerHTML =
+    '<h3>우편함</h3>' +
+    '<div class="gatab mtab">' +
+      '<button data-mt="box" class="' + (mailTab === 'box' ? 'on' : '') + '">보관함' + dot(boxes.filter((m) => !m.claimed).length) + '</button>' +
+      '<button data-mt="notice" class="' + (mailTab === 'notice' ? 'on' : '') + '">공지' + dot(notes.filter((m) => !m.read).length) + '</button>' +
+    '</div>' +
+    '<div class="hp" id="mailHost"></div>' +
+    '<div class="bar"><button class="ghost" id="dClose">닫기</button></div>'
+  const rowHtml = (m) =>
+    '<div class="mail' + (m.read ? '' : ' new') + '" data-mail="' + m.id + '">' +
+      '<div class="mh"><span class="mt">' + m.title + '</span><span class="md">' + m.at + '</span></div>' +
+      '<div class="mb">' + m.body + '</div>' +
+      (m.items
+        ? '<div class="mi"><span>' + itemText(m.items) + '</span>' +
+          (m.claimed ? '<span class="got">받음</span>' : '<button data-claim="' + m.id + '">받기</button>') + '</div>'
+        : '') +
+    '</div>'
+  const host = document.getElementById('mailHost')
+  const per = 4, pages = []
+  for (let i = 0; i < cur.length; i += per) pages.push(cur.slice(i, i + per).map(rowHtml).join(''))
+  if (!pages.length) pages.push('<div class="empty">비어 있습니다.</div>')
+  hpager(host, pages)
+  /* 공지는 보는 순간 읽은 것으로. 아이템은 받아야 끝난다 */
+  let changed = false
+  cur.forEach((m) => { if (!m.read) { m.read = true; changed = true } })
+  if (changed) save()
+  paintMailBadge()
+
+  const close = () => { panel.hidden = true; panel.onclick = null; modalOff() }
+  panel.hidden = false
+  modalOn(panel, close)
+  panel.onclick = (e) => { if (e.target === panel) close() }
+  document.getElementById('dClose').onclick = close
+  body.querySelectorAll('[data-mt]').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); openMail(b.dataset.mt) } })
+  body.querySelectorAll('[data-claim]').forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation()
+      const m = mailList().find((x) => x.id === b.dataset.claim)
+      if (!m || m.claimed) return
+      m.claimed = true
+      grantItems(m.items)
+      sfx('ready')
+      openMail()
+      say(itemText(m.items) + '을(를) 받았습니다.', '우편함')
+    }
+  })
+}
+
+/* ================================================================
+ * 출격 패스 - 월정액 (2026-09-13)
+ *
+ * 광고 없음 · 출격권 자연 충전 한도 10 · 매일 가챠권 10장(우편함) ·
+ * 결제할 때마다 상급 기체 1기(우편함). 결제가 붙기 전이라 살 수는 없고,
+ * prog.pass.until 이 미래면 켜진 것으로 본다.
+ * ================================================================ */
+const PASS = { price: 9900, name: '출격 패스', tickets: 10, enMax: 10 }
+function passActive() { return !!(prog.pass && prog.pass.until && prog.pass.until > Date.now()) }
+function passDaily() {
+  if (!passActive()) return
+  const k = dayKey()
+  if (prog.pass.lastDaily === k) return
+  prog.pass.lastDaily = k
+  save()
+  mailAdd({ title: '출격 패스 · 오늘의 가챠권',
+            body: '출격 패스 혜택으로 매일 가챠권 ' + PASS.tickets + '장을 보냅니다.',
+            items: { ticket: PASS.tickets } })
+}
+/** 결제(갱신)될 때마다 한 번. 못 가진 상급 기체 중 하나, 다 가졌으면 가챠권 20장 */
+function passGrantPlane() {
+  const pool = PLANES.filter((p) => p.tier === 'high' && !unlocked(p))
+  const p = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null
+  mailAdd({ title: '출격 패스 · 이달의 상급 기체',
+            body: p ? p.name + ' 기체를 보냅니다. 편대에 넣어 보세요.'
+                    : '상급 기체를 모두 가지고 계셔서 가챠권 20장으로 대신 보냅니다.',
+            items: p ? { plane: p.id } : { ticket: 20 } })
+}
+const PASS_BEN = [
+  ['광고', '광고 없음', '광고 자리마다 보상만 바로 받습니다'],
+  ['출격', '출격권 한도 10장', '자연 충전 상한 10장 (기본 ' + EN_MAX + '장)'],
+  ['가챠', '매일 가챠권 ' + PASS.tickets + '장', '우편함으로 매일 도착합니다'],
+  ['기체', '매월 상급 기체 1기', '결제할 때마다 상급 기체 랜덤 1기'],
+]
+function passCard() {
+  const on = passActive()
+  return '<div class="passcard' + (on ? ' on' : '') + '" data-buy="pass" role="button" tabindex="0">' +
+    '<div class="pc-head"><span class="pc-name">' + PASS.name + '</span>' +
+    '<span class="pc-price">월 ' + PASS.price.toLocaleString('ko-KR') + '원</span></div>' +
+    '<div class="pc-sub">' + (on ? '이용 중 · ' + new Date(prog.pass.until).toLocaleDateString('ko-KR') + ' 까지' : '한 달 동안 네 가지 혜택') + '</div>' +
+    PASS_BEN.map(([i, b, t]) => '<div class="pc-ben"><i>' + i + '</i><b>' + b + '</b><span>' + t + '</span></div>').join('') +
+    '<button id="passBuy">' + (on ? '이용 중' : '구독하기 · 월 ' + PASS.price.toLocaleString('ko-KR') + '원') + '</button>' +
+    '<div class="pc-note">언제든 해지할 수 있습니다. 결제는 곧 열립니다.</div>' +
+    '</div>'
+}
+
+/* ================================================================
+ * 상점 (2026-09-13 재구성)
+ *
+ * 갈피 넷 - 패스 · 가챠권 · 파일럿 · 기체. 줄을 누르면 상세 시트가
+ * 열리고 거기서 산다. 결제가 붙기 전이라 「구매」는 안내만 띄운다.
+ * 값과 상품 목록은 여기가 원본이다 - 콘솔에 등록할 때 이 표를 옮긴다.
+ * ================================================================ */
+let shopTab = 'pass'
+const SHOP_SUB = {
+  pass: '월정액 하나로 광고 없이, 더 자주, 더 많이.',
+  ticket: '가챠권은 광고로 하루 ' + AD_TK_DAY + '장까지. 묶음은 곧 열립니다.',
+  pilot: '한 명씩 삽니다. 조각을 모아도 열립니다.',
+  plane: '지정 구매 - 확률형이 아닙니다. 조각을 모아도 열립니다.',
+}
+const won = (v) => v.toLocaleString('ko-KR') + '원'
+function shopPlanes() {
+  const legend = PLANES.filter((p) => p.tier === 'legend')
+  const high = PLANES.filter((p) => p.tier === 'high')
+  return legend.concat(high)
+}
+function shopPilots() {
+  return PILOTS.filter((p) => p.grade === 'legend').concat(PILOTS.filter((p) => p.grade === 'high'))
+}
+function planePrice(p) { return p.unlock.kind === 'paid' ? p.unlock.v : (p.unlock.price || 3000) }
 function renderShop() {
   const body = document.getElementById('shopBody')
   if (!body) return
-  const won = (v) => v.toLocaleString('ko-KR') + '원'
-  const left = adTkLeft()
-  const card = (id, name, de, right, off, tier) =>
-    '<div class="gcard' + (off ? ' no' : '') + (tier ? ' tier-' + tier : '') + '" data-buy="' + id + '" role="button" tabindex="0">' +
-    '<div><div class="nm">' + name + '</div><div class="de">' + de + '</div></div>' +
-    '<span class="rt">' + right + '</span></div>'
-  const pilots = (grade) => PILOTS.filter((p) => p.grade === grade).map((p) => {
-    const have = hasGrade(grade) || pilotBought(p)
-    return card('pilot:' + p.id, p.name + ' · ' + GRADES[grade].name, p.desc,
-                have ? '보유' : won(PILOT_PRICE[grade]), have, grade === 'legend' ? 'legend' : 'high')
+  document.querySelectorAll('#shopTabs button').forEach((b) => {
+    b.className = b.dataset.st === shopTab ? 'on' : ''
+    b.onclick = () => { shopTab = b.dataset.st; body._page = 0; renderShop() }
   })
-  const planes = (tier, price) => PLANES.filter((p) => p.tier === tier).map((p) => {
-    const have = unlocked(p)
-    return card('plane:' + p.id, p.name + ' · ' + TIERS[tier], WEAPONS[p.weapon].name,
-                have ? '보유' : won(price(p)), have, tier)
+  const subEl = document.getElementById('shopSub')
+  if (subEl) subEl.textContent = SHOP_SUB[shopTab] || ''
+
+  const bind = () => body.querySelectorAll('[data-buy]').forEach((el) => {
+    kbClickable(el)
+    el.onclick = () => openShopItem(el.dataset.buy)
   })
-  /* 항목을 높이와 함께 늘어놓고 페이지에 차례로 담는다. 세로 스크롤 없음 */
+  if (shopTab === 'pass') { hpPlain(body, passCard()); bind(); return }
+
   const items = []
   const lab = (t) => items.push({ h: 22, html: '<div class="lab">' + t + '</div>' })
-  const row = (html) => items.push({ h: 56, html })
-  lab('광고로 받기')
-  row(card('adTk', '가챠권 1장', '광고를 끝까지 보면 한 장 · 오늘 ' + (AD_TK_DAY - left) + '/' + AD_TK_DAY,
-           left > 0 ? '광고 보기' : '내일 다시', left <= 0))
-  lab('가챠권')
-  SHOP.forEach((it, i) => row(card('pack:' + i, '가챠권 ' + it.n + '장', '장당 ' + Math.round(it.won / it.n) + '원', won(it.won), false)))
-  lab('레전드 파일럿 · 한 명씩'); pilots('legend').forEach(row)
-  lab('상급 파일럿'); pilots('high').forEach(row)
-  lab('레전드 기체 · 지정 구매'); planes('legend', (p) => p.unlock.v).forEach(row)
-  lab('상급 기체'); planes('high', (p) => p.unlock.price || 3000).forEach(row)
-  items.push({ h: 70, html: '<div class="empty" style="padding:10px 2px">결제는 곧 열립니다. 지금은 광고로 받는 가챠권만 됩니다.<br>기체·파일럿은 뽑기로도 열립니다.</div>' })
+  const card = (id, cls, pic, name, tag, de, right, off) => items.push({ h: pic && pic.indexOf('class="pf"') >= 0 ? 94 : 58, html:
+    '<div class="gcard' + (off ? ' no' : '') + (cls ? ' ' + cls : '') + '" data-buy="' + id + '" role="button" tabindex="0">' +
+    pic + '<div style="flex:1;min-width:0;padding:8px 0"><div class="nm">' + name + (tag || '') + '</div><div class="de">' + de + '</div></div>' +
+    '<span class="rt">' + right + '</span></div>' })
+  const tag = (cls, t) => '<span class="gtag ' + cls + '">' + t + '</span>'
+  if (shopTab === 'ticket') {
+    const left = adTkLeft()
+    lab('광고로 받기')
+    card('adTk', '', '<div style="width:10px"></div>', '가챠권 1장', '', '광고를 끝까지 보면 한 장 · 오늘 ' + (AD_TK_DAY - left) + '/' + AD_TK_DAY,
+         left > 0 ? '광고 보기' : '내일 다시', left <= 0)
+    lab('묶음')
+    SHOP.forEach((it, i) => card('pack:' + i, '', '<div style="width:10px"></div>', '가챠권 ' + it.n + '장', '', '장당 ' + Math.round(it.won / it.n) + '원', won(it.won), false))
+  } else if (shopTab === 'pilot') {
+    let last = ''
+    for (const p of shopPilots()) {
+      const G = GRADES[p.grade]
+      if (last !== p.grade) { lab(G.name + ' 파일럿 · 한 명 ' + won(PILOT_PRICE[p.grade])); last = p.grade }
+      const have = hasGrade(p.grade) || pilotBought(p)
+      const face = pilotFace(p)
+      const pic = face ? '<div class="pf" style="--face:var(--gc-' + face + ')"></div>' : '<div class="pf"></div>'
+      card('pilot:' + p.id, 'tier-' + p.grade, pic, p.name, tag(G.tag, G.name), p.desc, have ? '보유' : won(PILOT_PRICE[p.grade]), have)
+    }
+  } else {
+    let last = ''
+    for (const p of shopPlanes()) {
+      if (last !== p.tier) { lab(TIERS[p.tier] + ' 기체 · ' + (p.tier === 'legend' ? '지정 구매' : '한 대 ' + won(3000))); last = p.tier }
+      const have = unlocked(p)
+      const pic = '<img class="gimg" src="' + hangarPlaneImage(p) + '" alt="">'
+      card('plane:' + p.id, 'tier-' + p.tier, pic, p.name, tag('t-' + p.tier, TIERS[p.tier]),
+           WEAPONS[p.weapon].name + (p.el ? ' · ' + ELS[p.el].name : ''), have ? '보유' : won(planePrice(p)), have)
+    }
+  }
   const keepPage = body._page || 0
   const pages = hpChunk(body, items, 8)
   hpager(body, pages, { page: Math.min(keepPage, pages.length - 1), onPage: (i) => { body._page = i } })
-  body.querySelectorAll('[data-buy]').forEach((el) => {
-    kbClickable(el)
-    el.onclick = () => {
-      const id = el.dataset.buy
-      if (id === 'adTk') { adTicket(); return }
-      if (el.classList.contains('no')) return
-      const nm = el.querySelector('.nm').textContent
-      const rt = el.querySelector('.rt').textContent
-      say(nm + ' · ' + rt + '\n\n결제는 곧 열립니다.', '상점')
-    }
-  })
+  bind()
+}
+/** 상품 상세. 여기서 산다(지금은 안내만) */
+function openShopItem(id) {
+  const panel = document.getElementById('detail')
+  const body = document.getElementById('detailBody')
+  if (!panel || !body) return
+  cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
+  body.className = 'dsheet shopsheet'
+  const r2 = (k, v) => '<div class="r2"><span>' + k + '</span><span>' + v + '</span></div>'
+  const soon = (nm, price) => say(nm + ' · ' + price + '\n\n결제는 곧 열립니다.', '상점')
+  let html = '', okLabel = '구매', onOk = null
+  if (id === 'pass') {
+    const on = passActive()
+    html = '<h3>' + PASS.name + '</h3><div class="sub2">월정액 · 월 ' + won(PASS.price) + '</div>' +
+      '<div class="rows">' + PASS_BEN.map(([i, b, t]) => r2(b, t)).join('') + '</div>' +
+      '<div class="note2">결제일마다 자동으로 갱신되고 언제든 해지할 수 있습니다. 해지해도 남은 기간은 그대로 씁니다. ' +
+      '매일 가챠권과 이달의 기체는 우편함으로 옵니다.</div>' +
+      '<div class="price"><small>월</small>' + won(PASS.price) + '</div>'
+    okLabel = on ? '이용 중' : '구독하기'
+    onOk = on ? null : () => soon(PASS.name, '월 ' + won(PASS.price))
+  } else if (id === 'adTk') {
+    const left = adTkLeft()
+    html = '<h3>가챠권 1장</h3><div class="sub2">광고 보고 받기</div>' +
+      '<div class="rows">' + r2('오늘', (AD_TK_DAY - left) + ' / ' + AD_TK_DAY + '장') + r2('조건', '광고를 끝까지 보면 지급') + '</div>' +
+      '<div class="note2">중간에 닫으면 받지 못합니다. 하루 ' + AD_TK_DAY + '장까지이고 자정에 다시 셉니다.</div>'
+    okLabel = left > 0 ? '광고 보기' : '내일 다시'
+    onOk = left > 0 ? () => adTicket() : null
+  } else if (id.startsWith('pack:')) {
+    const it = SHOP[+id.slice(5)]
+    html = '<h3>가챠권 ' + it.n + '장</h3><div class="sub2">묶음</div>' +
+      '<div class="rows">' + r2('장당', Math.round(it.won / it.n) + '원') + r2('쓰는 곳', '뽑기 화면 · 기체와 파일럿 조각') + '</div>' +
+      '<div class="price">' + won(it.won) + '</div>'
+    onOk = () => soon('가챠권 ' + it.n + '장', won(it.won))
+  } else if (id.startsWith('pilot:')) {
+    const p = PILOT_BY[id.slice(6)]
+    if (!p) return
+    const G = GRADES[p.grade]
+    const have = hasGrade(p.grade) || pilotBought(p)
+    const face = pilotFace(p)
+    html = '<h3>' + p.name + ' <span class="gtag ' + G.tag + '">' + G.name + '</span></h3>' +
+      '<div class="sub2">' + G.name + ' 파일럿' + (p.grade === 'legend' ? ' · 후방 자리 열쇠' : ' · 화력·체력 ×' + G.base.toFixed(2)) + '</div>' +
+      (face ? '<div class="pbig" style="--face:var(--gc-' + face + ')"></div>' : '') +
+      '<div class="rows">' + r2('특성', p.desc) +
+      r2('조각으로도', G.name + ' 조각 ' + shardG(p.grade) + ' / ' + GRADE_NEED[p.grade]) + '</div>' +
+      '<div class="note2">사면 합류 레벨을 기다리지 않고 바로 씁니다. 스탯은 파일럿마다 따로 올립니다.</div>' +
+      (have ? '' : '<div class="price">' + won(PILOT_PRICE[p.grade]) + '</div>')
+    okLabel = have ? '보유 중' : '구매'
+    onOk = have ? null : () => soon(p.name + ' 파일럿', won(PILOT_PRICE[p.grade]))
+  } else if (id.startsWith('plane:')) {
+    const p = planeById(id.slice(6))
+    if (!p) return
+    const have = unlocked(p)
+    html = '<h3>' + p.name + ' <span class="gtag t-' + p.tier + '">' + TIERS[p.tier] + '</span></h3>' +
+      '<div class="sub2">' + WEAPONS[p.weapon].name + ' · ' + TIERS[p.tier] + '</div>' +
+      '<img class="simg" src="' + hangarPlaneImage(p) + '" alt="">' +
+      '<div class="rows">' + r2('무기', WEAPONS[p.weapon].desc) +
+      (p.el ? r2('속성', '<span class="el el-' + p.el + '">' + ELS[p.el].name + '</span> ' + ELS[p.el].desc) : '') +
+      (p.trait ? r2('고유 성질', traitText(p)) : '') +
+      r2('전투력', planeScore(p).toLocaleString('ko-KR') + ' (강화 전)') +
+      r2('조각으로도', shardOf(p.id) + ' / ' + shardNeed(p)) + '</div>' +
+      (have ? '' : '<div class="price">' + won(planePrice(p)) + '</div>')
+    okLabel = have ? '보유 중' : '구매'
+    onOk = have ? null : () => soon(p.name + ' 기체', won(planePrice(p)))
+  } else return
+  body.innerHTML = html +
+    '<div class="bar">' +
+    '<button id="sOk"' + (onOk ? '' : ' disabled') + '>' + okLabel + '</button>' +
+    '<button class="ghost" id="dClose">닫기</button></div>'
+  const close = () => { panel.hidden = true; panel.onclick = null; modalOff() }
+  panel.hidden = false
+  modalOn(panel, close)
+  panel.onclick = (e) => { if (e.target === panel) close() }
+  document.getElementById('dClose').onclick = close
+  const ok = document.getElementById('sOk')
+  if (ok && onOk) ok.onclick = () => { close(); onOk() }
 }
 function adDayLeft() {
   if (FREE_PLAY) return 99
@@ -5115,8 +5454,12 @@ function hpChunk(host, items, gap) {
   const avail = Math.max(120, host.clientHeight - 26)
   const pages = []
   let cur = [], used = 0
-  for (const it of items) {
-    const need = it.h + (cur.length ? gap : 0)
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i]
+    /* 소제목은 다음 줄과 같이 간다 - 페이지 끝에 소제목만 남으면 빈 약속이다 */
+    const isLab = /^<div class="lab"/.test(it.html)
+    const nxt = isLab ? items[i + 1] : null
+    const need = it.h + (cur.length ? gap : 0) + (nxt ? gap + nxt.h : 0)
     if (cur.length && used + need > avail) { pages.push(cur); cur = []; used = 0 }
     cur.push(it); used += (cur.length > 1 ? gap : 0) + it.h
   }
@@ -6002,6 +6345,7 @@ function paintHangarStatus() {
 }
 function renderSquad() {
   const $ = id => document.getElementById(id)
+  mailSync(); passDaily(); paintMailBadge()
   const main = planeById(prog.squad[MAIN_SLOT])
   const pl = pilotNow(), pt = prog.pilot
   const mb = $('squadModes')
@@ -6249,6 +6593,7 @@ function renderSet() {
     }
   })
 }
+document.getElementById('hgMail').onclick = () => openMail()
 document.getElementById('btnSet').onclick = () => { elSet.hidden = false; renderSet(); setTaps = 0; document.getElementById('setReset').hidden = true; modalOn(elSet, () => document.getElementById('setClose').click()) }
 /* 테스트용 초기화 - 제목 다섯 번 두드리면 버튼이 나온다 */
 let setTaps = 0
@@ -12292,6 +12637,8 @@ function reviveLimit() {
 const scAd = document.getElementById('adv')
 
 function showAd(title, onDone) {
+  /* 출격 패스는 광고를 건너뛴다. 보상은 그대로 준다 */
+  if (passActive()) { sfx('pick'); onDone(); return }
   const btn = document.getElementById('advSkip')
   document.getElementById('advTitle').textContent = title
   scAd.hidden = false
