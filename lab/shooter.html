@@ -3134,7 +3134,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 17:02'
+const BUILD_AT = '09-13 17:23'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4795,6 +4795,15 @@ function openMail(tab) {
  * ================================================================ */
 const PASS = { price: 9900, name: '출격 패스', tickets: 10, enMax: 10 }
 function passActive() { return !!(prog.pass && prog.pass.until && prog.pass.until > Date.now()) }
+/** 이용 기간 「2026.09.13 ~ 2026.10.13」. since 가 없으면(옛 저장) 끝에서 30일을 뺀 날로 */
+function passRange() {
+  if (!passActive()) return ''
+  const f = (t) => { const d = new Date(t); return d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0') }
+  const since = prog.pass.since || (prog.pass.until - 30 * 86400e3)
+  return f(since) + ' ~ ' + f(prog.pass.until)
+}
+/** 남은 날 수 */
+function passDaysLeft() { return passActive() ? Math.max(1, Math.ceil((prog.pass.until - Date.now()) / 86400e3)) : 0 }
 function passDaily() {
   if (!passActive()) return
   const k = dayKey()
@@ -4825,7 +4834,7 @@ function passCard() {
   return '<div class="passcard' + (on ? ' on' : '') + '" data-buy="pass" role="button" tabindex="0">' +
     '<div class="pc-head"><span class="pc-name">' + PASS.name + '</span>' +
     '<span class="pc-price">월 ' + PASS.price.toLocaleString('ko-KR') + '원</span></div>' +
-    '<div class="pc-sub">' + (on ? '이용 중 · ' + new Date(prog.pass.until).toLocaleDateString('ko-KR') + ' 까지' : '한 달 동안 네 가지 혜택') + '</div>' +
+    '<div class="pc-sub">' + (on ? '이용 중 · ' + passRange() + ' · ' + passDaysLeft() + '일 남음' : '한 달 동안 네 가지 혜택') + '</div>' +
     PASS_BEN.map(([i, b, t]) => '<div class="pc-ben"><i>' + i + '</i><b>' + b + '</b><span>' + t + '</span></div>').join('') +
     '<button id="passBuy">' + (on ? '이용 중' : '구독하기 · 월 ' + PASS.price.toLocaleString('ko-KR') + '원') + '</button>' +
     '<div class="pc-note">언제든 해지할 수 있습니다. 결제는 곧 열립니다.</div>' +
@@ -4923,8 +4932,10 @@ function openShopItem(id) {
   let html = '', okLabel = '구매', onOk = null
   if (id === 'pass') {
     const on = passActive()
-    html = '<h3>' + PASS.name + '</h3><div class="sub2">월정액 · 월 ' + won(PASS.price) + '</div>' +
-      '<div class="rows">' + PASS_BEN.map(([i, b, t]) => r2(b, t)).join('') + '</div>' +
+    html = '<h3>' + PASS.name + '</h3><div class="sub2">월정액 · 월 ' + won(PASS.price) + (on ? ' · 이용 중' : '') + '</div>' +
+      '<div class="rows">' +
+      (on ? r2('이용 기간', passRange() + ' <span style="color:var(--dim);font-weight:500">(' + passDaysLeft() + '일 남음)</span>') : '') +
+      PASS_BEN.map(([i, b, t]) => r2(b, t)).join('') + '</div>' +
       '<div class="note2">결제일마다 자동으로 갱신되고 언제든 해지할 수 있습니다. 해지해도 남은 기간은 그대로 씁니다. ' +
       '매일 가챠권과 이달의 기체는 우편함으로 옵니다.</div>' +
       '<div class="price"><small>월</small>' + won(PASS.price) + '</div>'
