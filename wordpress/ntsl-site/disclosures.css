@@ -3,6 +3,8 @@
 .ntsl-disclosure-page .inside-article { background: var(--black) !important; border: 0; padding: 20px 0 !important; }
 .ntsl-disclosure-page .entry-header { margin-bottom: 28px; }
 .ntsl-disclosure-page .entry-title { font-size: var(--text-lead); color: var(--body-dark) !important; }
+/* 공시 검색 화면에는 블로그용 자동 목차가 필요하지 않다. */
+#ntsl-disclosures #ez-toc-container { display: none !important; }
 #ntsl-disclosures { color: var(--ink-on-dark); font-family: var(--font); word-break: keep-all; overflow-wrap: anywhere; }
 #ntsl-disclosures * { box-sizing: border-box; }
 #ntsl-disclosures p { margin: 0 0 14px; }
