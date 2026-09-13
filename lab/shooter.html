@@ -2694,7 +2694,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-13 22:08'
+const BUILD_AT = '09-14 08:21'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5015,6 +5015,79 @@ function showUnlockPop() {
 }
 
 let guideNav = false
+
+const GUIDE = { active: null }
+let SWAP_NOTE = null
+function guideFlags() { return (prog.guide = prog.guide || {}) }
+function guideDone(k) { const g = guideFlags(); if (!g[k]) { g[k] = true; save() } GUIDE.active = null }
+
+function sparePlanes(i) {
+  const used = new Set(SLOT_META.map((m, j) => (j !== i && slotOpen(j)) ? prog.squad[j] : null))
+  return PLANES.filter((p) => unlocked(p) && !used.has(p.id))
+}
+function guideNext() {
+  const g = guideFlags()
+  const tour = document.getElementById('tour')
+  if (tour && !tour.hidden) return false
+  const point = (sel, title, text, active) => {
+    if (!document.querySelector(sel)) return false
+    GUIDE.active = active || null
+    guideNav = true
+    tourRun([[sel, title, text]], null)
+    return true
+  }
+
+  if (!g.stat && pilotSpent() === 0 && pilotXp() >= statCost(0))
+    return point('#hgPilot', '경험치가 모였습니다',
+      '판을 돌면 경험치가 쌓입니다. 여기를 눌러 파일럿의 화력·연사를 올리세요. 잘못 찍어도 되돌려 받습니다.', 'stat')
+
+  const gift = mailList().find((m) => m.items && !m.claimed)
+  if (gift && g.mailAt !== gift.id) {
+    g.mailAt = gift.id; save()
+    return point('#hgMail', '선물이 도착했습니다', '「' + gift.title + '」 - 우편함을 열어 「받기」를 누르세요.', 'mail')
+  }
+
+  for (const i of [0, 2, 3]) {
+    if (!slotOpen(i) || prog.squad[i] || g['slot' + i]) continue
+    if (!sparePlanes(i).length) continue
+    return point('#hgWing' + i, SLOT_META[i].role + ' 자리가 비어 있습니다',
+      '여기를 눌러 기체를 넣으세요. 이 자리 기체는 화력 ' + Math.round(slotMul(i) * 100) + '% 몫으로 같이 쏩니다.', 'slot')
+  }
+
+  const fresh = (Array.isArray(prog.newPilot) ? prog.newPilot : []).map((i) => PILOT_BY[i]).filter((p) => p && pilotOpen(p))
+  if (fresh.length) {
+    prog.newPilot = null; save()
+    return point('#hgPilot', fresh.map((p) => p.name).join(' · ') + ' 합류',
+      fresh.map((p) => p.name + ' - ' + p.desc).join(' / ') +
+      '. 파일럿 카드에서 바꿀 수 있습니다. 바꾸면 이전 파일럿 스탯은 초기화되고 경험치는 전부 돌아옵니다.', null)
+  }
+
+  if (!g.upg && anyUpg())
+    return point('#hgMain', '기체를 강화할 수 있습니다',
+      '부품이 모였습니다. 여기를 눌러 메인 기체를 강화하세요. 강화는 그 기체에만 쌓입니다.', 'upg')
+  return false
+}
+
+function guideFollow(where, pl) {
+  const a = GUIDE.active
+  if (!a) return
+  const run = (sel, title, text) => setTimeout(() => {
+    if (!document.querySelector(sel)) return
+    tourRun([[sel, title, text]], null)
+  }, 80)
+  if (where === 'pilotSheet' && a === 'stat') {
+    if (!pl || pilotNow().id !== pl.id) return
+    run('#detailBody button[data-st]:not([disabled])', '스탯 올리기',
+      '단추의 숫자가 드는 경험치입니다. 화력부터 올려 보세요. 되돌리기는 언제든 무료입니다.')
+  } else if (where === 'planes' && a === 'slot') {
+    run('.card.cp:not(.locked):not(.used):not(.picked)', '기체를 고르세요',
+      '카드를 누르면 발사 모습과 전투력이 뜹니다. 거기서 「적용」을 누르면 자리에 들어갑니다.')
+  } else if (where === 'planeSheet' && a === 'slot') {
+    run('#dPick', '적용', '이 기체를 자리에 넣습니다.')
+  } else if (where === 'planes' && a === 'upg') {
+    run('.card.cp.can .up button', '강화', '부품과 조각으로 화력이 오릅니다. 단추를 누르세요.')
+  }
+}
 const STAT_GUIDE_LV = 5
 function showStatGuide() {
   if (prog.seenStatGuide) return
@@ -5054,7 +5127,7 @@ function showStatGuide() {
   document.getElementById('unlockClose').onclick = () => { el.hidden = true; modalOff() }
 }
 
-const TOUR = [
+const TOUR_FULL = [
   ['#resBar', '가진 것', '출격권으로 나가고, 부품과 조각으로 기체를 강화합니다. 뽑기권은 새 기체를 엽니다.'],
   ['#hgMain', '메인 기체', '화력의 대부분이 여기서 나옵니다. 눌러서 기체를 바꾸고 강화합니다.'],
   ['#hgPilot', '파일럿', '경험치로 화력·연사를 올립니다. 올릴 것이 있으면 금색으로 빛납니다.'],
@@ -5063,9 +5136,14 @@ const TOUR = [
   ['#launch', '출격', '준비가 끝나면 여기를 누릅니다. 이동은 드래그, 공격은 자동입니다. 판에서 떨어지는 강화 아이템은 꼭 주우세요 - 클리어를 가릅니다.'],
   ['#tabs', '아래 메뉴', '전선·격납고·뽑기로 오갑니다. 할 일이 있으면 노란 점이 켜집니다.'],
 ]
+
+const TOUR_FIRST = [
+  ['#hgMain', '당신의 기체', '지금은 한 대뿐입니다. 판을 돌면 경험치와 부품이 쌓이고, 레벨이 오르면 새 기체와 자리가 열립니다.'],
+  ['#launch', '출격', '여기를 누르면 바로 나갑니다. 이동은 드래그, 공격은 자동입니다. 판에서 떨어지는 강화 아이템은 꼭 드세요 - 클리어를 가릅니다.'],
+]
 let tourAt = 0
 
-let tourSteps = TOUR
+let tourSteps = TOUR_FIRST
 let tourKey = 'tourDone2'
 
 let tourAfter = null
@@ -5102,7 +5180,7 @@ function tourRun(steps, key, after) {
   tourShow()
 }
 function tourStart(force) {
-  tourSteps = TOUR
+  tourSteps = force ? TOUR_FULL : TOUR_FIRST
   tourKey = 'tourDone2'
   if (!force && prog.tourDone2) return
 
@@ -5112,7 +5190,7 @@ function tourStart(force) {
   if (dd && !dd.hidden) return
 
   const tv = document.getElementById('tour')
-  if (tv && !tv.hidden && tourSteps === TOUR) return
+  if (tv && !tv.hidden && (tourSteps === TOUR_FIRST || tourSteps === TOUR_FULL)) return
   if (curScreen !== 'squad') go('squad')
   tourAt = 0
   tourAfter = null
@@ -5160,14 +5238,14 @@ function tourPaint() {
   document.getElementById('tourTitle').textContent = step[1]
   document.getElementById('tourText').textContent = step[2]
   document.getElementById('tourNext').textContent =
-    tourAt === tourSteps.length - 1 ? (tourSteps === TOUR ? '시작하기' : '알겠습니다') : '다음'
+    tourAt === tourSteps.length - 1 ? ((tourSteps === TOUR_FIRST || tourSteps === TOUR_FULL) ? '시작하기' : '알겠습니다') : '다음'
 }
 function tourEnd() {
   if (tourKey) { prog[tourKey] = true; save() }
   const el = document.getElementById('tour')
   if (el) el.hidden = true
   clearInterval(tourIv); tourIv = 0
-  tourSteps = TOUR
+  tourSteps = TOUR_FIRST
   tourKey = 'tourDone2'
   const fn = tourAfter
   tourAfter = null
@@ -5248,10 +5326,9 @@ function renderSquad() {
     if (guideNav) return
 
     if (anyOverlay()) return
-    if (newPilotPopup()) return
     if (rushOpenPopup()) return
-    showUnlockPop(); showStatGuide()
-    upgReadyGuide()
+
+    guideNext()
   }, 0)
   elSlots.replaceChildren()
   for (const i of [0, 2, 3]) {
@@ -5264,7 +5341,11 @@ function renderSquad() {
     b.innerHTML = (open ? (p ? '<img alt="" src="' + hangarPlaneImage(p) + '">' : '<span aria-hidden="true">＋</span>') : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>') +
       '<span class="hg-wing-name">' + (open ? m.role : m.lv ? 'Lv.' + m.lv : '전설') + '</span>' +
       (open ? '<small>' + (p ? p.name : '기체 선택') + '</small>' : '')
-    b.onclick = () => hangarChoose(open ? 'planes' : 'pilot', open ? i : null, b.id)
+    b.onclick = () => {
+
+      if (!open) { say(m.role + ' 자리는 ' + slotWhy(i) + (m.legend ? '가 있어야' : '에') + ' 열립니다.', '아직 잠긴 자리'); return }
+      hangarChoose('planes', i, b.id)
+    }
     elSlots.append(b)
   }
 
@@ -5556,6 +5637,7 @@ function renderPlanes() {
         prog.parts -= cost
         prog.shardP[p.id] = shardOf(p.id) - shardUpg(p, lv)
         prog.upg[p.id] = lv + 1
+        guideDone('upg')
         save()
         sfx('ready')
         haptic('ult')
@@ -5583,6 +5665,7 @@ function renderPlanes() {
     const p = list.find((q) => q.id === c.dataset.pid)
     if (p) paintPlane(c.querySelector('.pv'), p, 1.1)
   }
+  guideFollow('planes')
 }
 
 function showDaily(got) {
@@ -6061,6 +6144,8 @@ function openPilot(pl, list) {
     '<div class="sub2">' + G.name +
       ' · 화력·체력 ×' + gradeMul(pl.grade).toFixed(2) + '</div>' +
     '<div class="de">' + pl.desc + '</div></div></div>' +
+    (SWAP_NOTE ? '<div class="pnote">' + SWAP_NOTE.prev + '의 스탯을 초기화하고 경험치 ' +
+      SWAP_NOTE.back.toLocaleString('ko-KR') + ' 을 돌려받았습니다. 이제 ' + pl.name + '에게 부으세요.</div>' : '') +
     '<div class="pxp">' +
       '<span>쓸 수 있는 경험치 <b>' + pilotXp().toLocaleString('ko-KR') + '</b></span>' +
       '<span>부은 것 <b>' + back.toLocaleString('ko-KR') + '</b></span>' +
@@ -6098,6 +6183,8 @@ function openPilot(pl, list) {
   modalOn(panel, close)
   panel.onclick = (e) => { if (e.target === panel) close() }
   document.getElementById('dClose').onclick = close
+  guideFollow('pilotSheet', pl)
+  SWAP_NOTE = null
 
   if (list && list.length > 1) {
     const at = list.indexOf(pl)
@@ -6114,6 +6201,7 @@ function openPilot(pl, list) {
       prog.pilot.xp -= statCost(cur[k])
       cur[k]++
       save(); sfx('ready'); haptic('ult')
+      guideDone('stat')
       const pa = PILOT_ART[pl.grade]
       const img = PC_IMG[pl.grade] || (pa && GC[pa.face[pl.face]]) || (pa && GC[pa.face[0]])
       const sh = panel.querySelector('.dsheet')
@@ -6157,8 +6245,9 @@ function openPilot(pl, list) {
       prog.pilot.grade = pl.grade
       prog.pilot.who = pl.id
       save(); sfx('pick'); close(); renderPilot()
-      go('squad')
-      if (back > 0) swapNotice(prev, pl, back)
+
+      SWAP_NOTE = back > 0 ? { prev: prev.name, back } : null
+      openPilot(pl, PILOTS.filter(pilotOpen))
     }
     if (back > 0) {
       ask('파일럿을 바꾸면 이전에 사용하시던 ' + prev.name + '의 스탯을 초기화합니다.\n' +
@@ -6630,6 +6719,7 @@ function openDetail(p, list) {
     if (nx) nx.onclick = () => go2(1)
   }
 
+  guideFollow('planeSheet')
   const dp = document.getElementById('dPick')
   if (dp) dp.onclick = () => {
 
@@ -6640,6 +6730,7 @@ function openDetail(p, list) {
     }
     if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
     prog.squad[activeSlot] = p.id
+    guideDone('slot' + activeSlot)
     save(); close(); renderPlanes()
 
     go('squad')
@@ -13571,6 +13662,7 @@ const scOver = document.getElementById('over')
 
 function start() {
   guideNav = false
+  GUIDE.active = null
   state = newState(); seedStars(state); seedGround(state); state.running = true
 
   const th0 = state.stage && state.stage.theme
