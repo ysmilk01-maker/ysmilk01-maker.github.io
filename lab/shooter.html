@@ -3159,7 +3159,7 @@ const BUILD_TAG = '0.9.1'
  * 새로 올린 것이 안 보이면 폰에서 새로고침을 길게 눌러 강제로 다시
  * 받거나, 주소 뒤에 ?v=아무거나 를 붙이면 된다.
  */
-const BUILD_AT = '09-13 18:07'
+const BUILD_AT = '09-13 18:19'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4226,15 +4226,14 @@ function gfxPlay(list, done) {
       if (n > popped) {
         popped = n
         const r = list[n - 1]
-        sfx(gTone(r.tier).rank >= 2 ? 'ready' : 'pick', 0.5)
+        sfx('reveal', gTone(r.tier).rank)
       }
     }
 
     /* 등급에 따라 다른 등장음. 전설은 한 겹 더 얹는다 */
     if (rang === 0 && t > T1) { sfx('pick'); rang = 1 }
     if (rang === 1 && t > T2) {
-      sfx(tone.rank >= 2 ? 'ready' : 'pick')
-      if (tone.rank >= 3) setTimeout(() => sfx('alarm'), 90)
+      sfx('reveal', tone.rank)
       rang = 2
     }
 
@@ -4687,7 +4686,7 @@ function adTicket() {
     prog.adTk.n++
     prog.ticket++
     save()
-    sfx('ready')
+    sfx('got')
     renderWallet()
     if (curScreen === 'shop') renderShop()
     say('가챠권 1장을 받았습니다. 오늘 ' + (AD_TK_DAY - adTkLeft()) + '/' + AD_TK_DAY + '장.', '가챠권')
@@ -4812,7 +4811,7 @@ function openMail(tab) {
       if (!m || m.claimed) return
       m.claimed = true
       grantItems(m.items)
-      sfx('ready')
+      sfx('got')
       openMail()
       say(itemText(m.items) + '을(를) 받았습니다.', '우편함')
     }
@@ -4901,6 +4900,7 @@ function planePrice(p) { return p.unlock.kind === 'paid' ? p.unlock.v : (p.unloc
 function renderShop() {
   const body = document.getElementById('shopBody')
   if (!body) return
+  if (prog.shopSeen !== dayKey()) { prog.shopSeen = dayKey(); save(); renderTabs() }
   document.querySelectorAll('#shopTabs button').forEach((b) => {
     b.className = b.dataset.st === shopTab ? 'on' : ''
     b.onclick = () => { shopTab = b.dataset.st; body._page = 0; renderShop() }
@@ -6093,7 +6093,8 @@ function renderTabs() {
     if (b) b.classList.toggle('dot', !!on)
   }
   set('gacha', prog.ticket >= GACHA.plane.cost)
-  set('shop', adTkLeft() > 0)
+  /* 상점 점은 하루에 한 번, 상점을 열어 보기 전까지만. 종일 켜 두면 잔소리다 (2026-09-13) */
+  set('shop', adTkLeft() > 0 && prog.shopSeen !== dayKey())
   set('planes', anyUpg())
   set('pilot', anyPilotUp())
   set('squad', anyUpg() || anyPilotUp() || anySlotEmpty())
@@ -14540,7 +14541,7 @@ function collide() {
         prog.ticket += 1
         save()
         banner('가챠권 +1')
-        sfx('ready')
+        sfx('got')
         haptic('ult')
         boom(e.x, e.y, 40, '#ffd27a')
       }
@@ -14609,7 +14610,7 @@ function collide() {
       prog.ticket++
       save()
       banner('가챠권 +1')
-      sfx('ready')
+      sfx('got')
     } else if (it.mod) {
       /*
        * 한 개가 두 칸을 올린다.
@@ -18336,9 +18337,84 @@ function auHiss(f0, f1, dur, peak, type) {
   s.start(t, Math.random() * 0.4); s.stop(t + dur + 0.05)
 }
 
+/*
+ * 종소리 (2026-09-13).
+ *
+ * 「삐용」(triangle 두 음)이 받는 소리와 뽑기 소리를 다 맡고 있었다.
+ * 유리 종처럼 - 기음 sine 에 한 옥타브 위 triangle 을 얇게, 6센트 어긋난
+ * 두 번째 sine 으로 반짝임, 짧은 고음 노이즈로 「챙」, 되먹임 딜레이로
+ * 잔향. 음 여러 개를 간격을 두고 늘어놓으면 아르페지오가 된다.
+ */
+function auVerb() {
+  const c = AU.ctx
+  if (AU.verb) return AU.verb
+  const d = c.createDelay(0.5); d.delayTime.value = 0.115
+  const fb = c.createGain(); fb.gain.value = 0.34
+  const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3600
+  const wet = c.createGain(); wet.gain.value = 0.42
+  d.connect(lp); lp.connect(fb); fb.connect(d)
+  d.connect(wet); wet.connect(AU.sfxBus)
+  AU.verb = d
+  return d
+}
+function auChime(notes, opt) {
+  const c = AU.ctx, o = opt || {}
+  const t0 = o.t0 == null ? c.currentTime : o.t0
+  const gap = o.gap == null ? 0.08 : o.gap
+  const dur = o.dur == null ? 0.55 : o.dur
+  const peak = o.peak == null ? 0.11 : o.peak
+  const verb = auVerb()
+  notes.forEach((hz, i) => {
+    const t = t0 + i * gap
+    const g = c.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(peak, t + 0.008)
+    g.gain.exponentialRampToValueAtTime(0.0004, t + dur)
+    g.connect(AU.sfxBus); g.connect(verb)
+    const mk = (type, f, detune, vol) => {
+      const osc = c.createOscillator(), gg = c.createGain()
+      osc.type = type; osc.frequency.value = f; osc.detune.value = detune || 0
+      gg.gain.value = vol
+      osc.connect(gg); gg.connect(g)
+      osc.start(t); osc.stop(t + dur + 0.05)
+    }
+    mk('sine', hz, 0, 1)
+    mk('sine', hz, 6, 0.45)
+    mk('triangle', hz * 2, 0, 0.16)
+    /* 「챙」 - 첫 순간의 아주 짧은 고음 */
+    const s2 = c.createBufferSource(); s2.buffer = auNoise(c)
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6500
+    const ng = c.createGain()
+    ng.gain.setValueAtTime(0.0001, t)
+    ng.gain.linearRampToValueAtTime(peak * 0.35, t + 0.004)
+    ng.gain.exponentialRampToValueAtTime(0.0004, t + 0.06)
+    s2.connect(hp); hp.connect(ng); ng.connect(AU.sfxBus)
+    s2.start(t, Math.random() * 0.3); s2.stop(t + 0.1)
+  })
+}
 function sfx(kind, arg) {
   if (!AU.on.sfx || !AU.ctx) return
   switch (kind) {
+    case 'got':
+      /* 가챠권·우편 아이템을 받았다. 짧고 밝게 두 음 */
+      if (!auGate('got', 0.08)) return
+      auChime([1568, 2093], { gap: 0.07, dur: 0.5, peak: 0.1 })
+      break
+    case 'reveal': {
+      /* 뽑기 등급 공개. 등급이 오를수록 음이 늘고 길어진다. arg = rank 0~3 */
+      const rk = arg | 0
+      const t0 = AU.ctx.currentTime
+      if (rk <= 0) { auChime([1046.5], { dur: 0.45, peak: 0.08, t0 }); break }
+      if (rk === 1) { auChime([1046.5, 1568], { gap: 0.09, dur: 0.55, peak: 0.1, t0 }); break }
+      if (rk === 2) { auChime([1046.5, 1318.5, 1568, 2093], { gap: 0.075, dur: 0.7, peak: 0.11, t0 }); break }
+      /* 레전드 - 낮게 한 번 울리고, 다섯 음 아르페지오, 밑에 깔리는 화음 */
+      auTone('sine', 110, 55, 0.5, 0.18, t0)
+      auTone('triangle', 523.25, 523.25, 1.3, 0.05, t0 + 0.05)
+      auTone('triangle', 659.25, 659.25, 1.3, 0.04, t0 + 0.05)
+      auChime([1046.5, 1318.5, 1568, 2093, 2637], { gap: 0.085, dur: 1.0, peak: 0.12, t0: t0 + 0.06 })
+      auChime([3136], { dur: 1.2, peak: 0.05, t0: t0 + 0.55 })
+      break
+    }
     case 'shot': {
       if (!auGate('shot', 0.045)) return
       const base = [500, 640, 760][arg | 0] || 500
