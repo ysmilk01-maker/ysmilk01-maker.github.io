@@ -2821,7 +2821,8 @@ function claimDaily() {
   if (r.kind === 'parts') prog.parts += r.n
   else if (r.kind === 'ticket') prog.ticket += r.n
   else if (r.kind === 'energy') prog.energy.n = energy() + r.n
-  else if (r.kind === 'xp') up = addXpRaw(r.n)
+
+  else if (r.kind === 'xp') prog.pilot.xp = (prog.pilot.xp || 0) + r.n
   save()
   return { ...r, idx, up, streak: prog.login.streak }
 }
@@ -2920,7 +2921,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 06:54'
+const BUILD_AT = '09-15 06:57'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
