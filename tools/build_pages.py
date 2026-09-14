@@ -481,6 +481,9 @@ def page(a):
     <dl class="biz">
       <div><dt>상호</dt><dd>나인투식스랩</dd></div>
       <div><dt>대표</dt><dd>김정민</dd></div>
+      <div><dt>사업자등록번호</dt><dd>561-23-02332</dd></div>
+      <div><dt>통신판매업 신고번호</dt><dd>2026-충남아산-0905</dd></div>
+      <div><dt>대표자 전화번호</dt><dd><a href="tel:01080063985">010-8006-3985</a></dd></div>
     </dl>
     <div class="foot-links">
       <a href="../privacy.html">개인정보처리방침</a>
