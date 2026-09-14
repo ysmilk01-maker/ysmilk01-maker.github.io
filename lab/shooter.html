@@ -2096,6 +2096,11 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .card.cp .stars,.card.cp .nm,.card.cp .shard{flex:0 0 auto}
 .card.cp .cmp{flex:0 0 auto;margin-top:auto;padding-top:2px;font-size:9.5px;line-height:1.2}
 .card.cp .cmp b{font-size:15px}
+/* 파워 상자: 자리별 몫 + 컬렉션 (2026-09-15) */
+.pl-diag .pd-pow{min-width:0;max-width:52%}.pl-diag .pd-pow .pd-bd{display:flex;flex-wrap:wrap;gap:2px 6px;margin-top:3px;font-size:9px;color:#c9d6de;font-variant-numeric:tabular-nums}
+.pl-diag .pd-pow .pd-bd .off{color:#5b6a80}
+.pl-diag .pd-coll{margin-top:4px;padding:2px 7px;font-size:9.5px;border-radius:8px;background:#20414a;border:1px solid #a2c6bd88;color:#eaf6f2;box-shadow:none;min-height:0}
+.pl-diag .pd-name small{white-space:normal;line-height:1.35}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2948,7 +2953,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:12'
+const BUILD_AT = '09-15 07:14'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5833,15 +5838,25 @@ function renderPlanes() {
   const dg = document.getElementById('planeDiag')
   if (dg) {
     const cur = planeById(prog.squad[activeSlot])
-    const total = SLOT_META.reduce((a, m, i) => { const q = slotOpen(i) ? planeById(prog.squad[i]) : null; return a + (q ? Math.round(planeScore(q) * slotMul(i)) : 0) }, 0)
+
+    const parts = SLOT_META.map((m, i) => { const q = slotOpen(i) ? planeById(prog.squad[i]) : null; return { role: m.role, open: slotOpen(i), v: q ? Math.round(planeScore(q) * slotMul(i)) : 0 } })
+    const total = parts.reduce((a, x) => a + x.v, 0)
+    const shortRole = (r) => r.replace(' 윙맨', '')
+    const breakdown = parts.map((x) => `<span class="${x.open ? '' : 'off'}">${shortRole(x.role)} ${x.open ? x.v.toLocaleString('ko-KR') : '-'}</span>`).join('')
+    const collPct = Math.round((collectionMul() - 1) * 1000) / 10
+    const powBox = `<div class="pd-pow"><span class="k">편대 파워 합계</span><b>${total.toLocaleString('ko-KR')}</b>` +
+      `<div class="pd-bd">${breakdown}</div>` +
+      `<button class="pd-coll" id="pdColl">컬렉션 +${collPct}% ›</button></div>`
     dg.innerHTML = (cur
-      ? `<div class="pd-pow"><span class="k">편대 파워</span><b>${total.toLocaleString('ko-KR')}</b><small>이 자리 몫 +${Math.round(planeScore(cur) * slotMul(activeSlot)).toLocaleString('ko-KR')} (${planeScore(cur).toLocaleString('ko-KR')}×${Math.round(slotMul(activeSlot) * 100)}%)</small></div>` +
+      ? powBox +
         `<img class="pd-img" src="${hangarPlaneImage(cur)}" alt="">` +
-        `<div class="pd-name"><b>${cur.name}</b><small>${TIERS[cur.tier]} · ${WEAPONS[cur.weapon].name} · 강화 ${upgOf(cur.id)}/${UPG_MAX}</small>` +
+        `<div class="pd-name"><b>${cur.name}</b><small>${TIERS[cur.tier]} · ${WEAPONS[cur.weapon].name} · 강화 ${upgOf(cur.id)}/${UPG_MAX} · 이 자리 몫 +${Math.round(planeScore(cur) * slotMul(activeSlot)).toLocaleString('ko-KR')} (${planeScore(cur).toLocaleString('ko-KR')}×${Math.round(slotMul(activeSlot) * 100)}%)</small>` +
         `<div class="pd-bar"><i style="width:${Math.round(upgOf(cur.id) / UPG_MAX * 100)}%"></i></div></div>` +
         `<span class="pd-more">정보 ›</span>`
-      : `<div class="pd-pow"><span class="k">편대 파워</span><b>${total.toLocaleString('ko-KR')}</b><small>이 자리 몫 +0 (비었음)</small></div>` +
+      : powBox +
         `<div class="pd-empty"><span class="plus" aria-hidden="true">＋</span>${SLOT_META[activeSlot].role} 자리가 비었습니다<small>아래에서 기체를 눌러 「사용」</small></div>`)
+    const pc = document.getElementById('pdColl')
+    if (pc) pc.onclick = (e) => { e.stopPropagation(); openCollectionSheet() }
     dg.onclick = () => { if (cur) openDetail(cur, PLANES.filter(unlocked)) }
   }
   const ef = document.getElementById('planeFilters')
