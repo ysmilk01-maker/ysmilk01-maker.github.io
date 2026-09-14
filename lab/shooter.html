@@ -1987,9 +1987,9 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 /* 모드·보스 도전을 출격 단추 위에 펼친다 (2026-09-14 대표 지정) */
 #scSquad.v3 .hg-modes{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:stretch;margin-bottom:8px}
 #scSquad.v3 #squadModes{position:static;width:auto;background:transparent;border:0;box-shadow:none;padding:0;min-width:0}
-#scSquad.v3 #squadModes .modes{margin:0}#scSquad.v3 #squadModes .mtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-#scSquad.v3 #squadModes .mtabs button{min-height:36px;padding:4px 2px;font-size:11px;border-radius:9px;background:#10202880;border:1px solid #4d626b77;color:#cfe0e6;box-shadow:none}
-#scSquad.v3 #squadModes .mtabs button.on{background:#20414a;border-color:#a2c6bd;color:#eaf6f2}#scSquad.v3 #squadModes .mtabs button.on.hard{background:#4a2020;border-color:#e08a8a}#scSquad.v3 #squadModes .mtabs button.on.crazy{background:#4a3a12;border-color:#e9c86a}
+#scSquad.v3 #squadModes .modes{margin:0}#scSquad.v3 #squadModes .mtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+#scSquad.v3 #squadModes .mtabs button{min-height:36px;padding:4px 1px;font-size:10px;border-radius:9px;background:#10202880;border:1px solid #4d626b77;color:#cfe0e6;box-shadow:none}
+#scSquad.v3 #squadModes .mtabs button.on{background:#20414a;border-color:#a2c6bd;color:#eaf6f2}#scSquad.v3 #squadModes .mtabs button.on.hard{background:#4a2020;border-color:#e08a8a}#scSquad.v3 #squadModes .mtabs button.on.crazy{background:#4a3a12;border-color:#e9c86a}#scSquad.v3 #squadModes .mtabs button.on.extreme{background:#3a2450;border-color:#c9a6ff}
 #scSquad.v3 #squadModes .mtabs button:disabled{opacity:.45}
 #scSquad.v3 #squadModes .ds{font-size:9.5px;color:#9fb9c5;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #scSquad.v3 .rushbtn{min-height:36px;align-self:start;padding:4px 10px;font-size:11px;font-weight:800;border-radius:9px;background:linear-gradient(#5a2a2a,#3a1414);border:1px solid #e08a8a;color:#ffd7d7;box-shadow:none;white-space:nowrap}
@@ -2047,6 +2047,12 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scStage.v3 .rushopen{margin-top:8px}
 #scStage.v3 .bar{margin-top:6px}#scStage.v3 #launch2{min-height:48px;font-size:18px;font-weight:800;background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f;border-radius:12px;padding:8px 26px}
 @media(max-height:700px){.mapwrap{height:clamp(280px,46vh,400px)}}
+/* 조각 합성 · 컬렉션 (2026-09-14 밤) */
+.merge{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:6px}.merge .fl{font-size:10.5px;color:var(--dim);margin-right:2px}
+.merge button{padding:5px 9px;font-size:10.5px;border-radius:9px;background:#1b3a45;border:1px solid #a2c6bd;color:#eaf6f2;box-shadow:none}.merge button:disabled{opacity:.4;background:#10202880;border-color:#4d626b77}
+.collhp{max-height:46vh;overflow-y:auto;margin-top:6px}.collgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:6px}
+.collc{background:#0f1b22cc;border:1px solid #3f545d77;border-radius:9px;padding:4px 2px;text-align:center;font-size:9.5px;opacity:.45;filter:grayscale(1)}
+.collc.ok{opacity:1;filter:none;border-color:#a2c6bd88}.collc img{width:100%;height:30px;object-fit:contain}.collc span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.collc small{display:block;font-size:8.5px;color:#9fb9c5}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2090,6 +2096,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
         <button class="hg-ico" id="hgGoMiss"><span class="ie" aria-hidden="true">📋</span><span>임무</span><b class="mdot" id="hgMissDot" hidden></b></button>
         <button class="hg-ico" id="hgGoRush"><span class="ie" aria-hidden="true">💀</span><span>보스 도전</span></button>
         <button class="hg-ico" id="hgGoInfo"><span class="ie" aria-hidden="true">📊</span><span>편대 정보</span></button>
+        <button class="hg-ico" id="hgGoColl"><span class="ie" aria-hidden="true">🏆</span><span>컬렉션</span></button>
       </div>
     </div>
     <div id="hgHidden" hidden><span id="hgMissionStatus"></span><span id="hgPower"></span><div id="squadSum"></div><p id="hgPilotStats"></p><p id="wallet"></p></div>
@@ -2527,7 +2534,14 @@ function planeUltMul() {
   const u = state && state.squad && state.squad[MAIN_SLOT]
   const p = u && u.plane
   if (!p) return 1
-  return (p.power / p.rate) * upgPower(p.id) * ULT_DMG
+  return (p.power / p.rate) * upgPower(p.id) * ULT_DMG * collectionMul()
+}
+
+const COLL_PER_PLANE = 0.005, COLL_PER_UPG = 0.001
+function collectionMul() {
+  let n = 0, u = 0
+  for (const p of PLANES) if (unlocked(p)) { n++; u += upgOf(p.id) }
+  return 1 + n * COLL_PER_PLANE + u * COLL_PER_UPG
 }
 
 const STRIKE = { scan: 0.6, n: 100, gap: 0.022, dmg: 7.5 }
@@ -2803,11 +2817,12 @@ const MISSIONS = [
   { id: 'clear', say: (n) => `단계 ${n}개 클리어`,         ns: [3],   give: ['ticket', 1] },
   { id: 'hard',  say: (n) => `하드코어 클리어 ${n}판`,     ns: [1],   give: ['ticket', 1] },
   { id: 'crazy', say: (n) => `크레이지 클리어 ${n}판`,     ns: [1],   give: ['ticket', 1] },
+  { id: 'extreme', say: (n) => `익스트림 클리어 ${n}판`,   ns: [1],   give: ['ticket', 1] },
   { id: 'upg',   say: (n) => `기체 강화 ${n}번`,           ns: [1],   give: ['ticket', 1] },
   { id: 'stat',  say: (n) => `파일럿 스탯 ${n}번 올리기`,   ns: [1],   give: ['ticket', 1] },
   { id: 'rush',  say: (n) => `보스 도전 ${n}번 격파`,       ns: [1],   give: ['ticket', 1] },
 ]
-const MISS_VER = 2
+const MISS_VER = 3
 
 function missions() {
   const today = dayKey()
@@ -2846,6 +2861,7 @@ function bumpMissions(win, rate, bossRun) {
       case 'boss':  if (win && bossRun) q.p++; break
       case 'hard':  if (win && s.hard) q.p++; break
       case 'crazy': if (win && s.crazy) q.p++; break
+      case 'extreme': if (win && s.extreme) q.p++; break
       case 'rush':  if (win && s.rush >= 0) q.p++; break
     }
     if (q.p > q.n) q.p = q.n
@@ -2867,7 +2883,7 @@ function takeMission(i) {
 
 const HARD_TICKET = 3
 
-const HARD_REVIVE = 1
+const HARD_REVIVE = 0
 
 const CRAZY_DMG = 2
 const CRAZY_TICKET = 1
@@ -2889,7 +2905,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 19:40'
+const BUILD_AT = '09-14 19:49'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -2917,6 +2933,7 @@ function load() {
     stars: {},
     hard: {},
     crazy: {},
+    extreme: {},
     stageBest: {},
     energy: { n: EN_MAX, t: 0 },
     login: { last: '', streak: 0 },
@@ -2952,6 +2969,7 @@ function load() {
         stars: got.stars || {},
         hard: got.hard || {},
         crazy: got.crazy || {},
+        extreme: got.extreme || {},
         stageBest: got.stageBest || {},
         energy: { ...base.energy, ...(got.energy || {}) },
         login: { ...base.login, ...(got.login || {}) },
@@ -3008,6 +3026,23 @@ function rollKind() {
 
 function shardOf(id) { return prog.shardP[id] || 0 }
 function shardG(k) { return prog.shardG[k] || 0 }
+
+const MERGE_UP = { normal: 'mid', mid: 'high', high: 'legend' }
+const MERGE_N = 5
+function mergeShards(from) {
+  const to = MERGE_UP[from]
+  if (!to || shardG(from) < MERGE_N) return false
+  prog.shardG[from] = shardG(from) - MERGE_N
+  prog.shardG[to] = shardG(to) + 1
+
+  if (GRADE_NEED[to] > 0 && !hasGrade(to) && prog.shardG[to] >= GRADE_NEED[to]) {
+    prog.pilotOwned[to] = true
+    prog.shardG[to] -= GRADE_NEED[to]
+    markNewPilots(PILOTS.filter((p) => p.grade === to && pilotOpen(p)).map((p) => p.id))
+  }
+  save()
+  return true
+}
 function shardNeed(p) { return SHARD_NEED[p.tier] }
 function shardUpg(p, lv) { return SHARD_UPG[lv] || 0 }
 
@@ -3898,6 +3933,17 @@ function pull(kind) {
   prog.ticket -= g.cost
   prog.pull[kind]++
 
+  if (kind === 'pilot' && prog.pull.pilot % HARD_PITY === 0) {
+    const W = [['mid', 70], ['high', 24], ['legend', 6]].filter(([t]) => !hasGrade(t))
+    if (W.length) {
+      let r = Math.random() * W.reduce((a, [, w]) => a + w, 0), tier = W[W.length - 1][0]
+      for (const [t, w] of W) { if ((r -= w) < 0) { tier = t; break } }
+      prog.pilotOwned[tier] = true
+      markNewPilots(PILOTS.filter((p) => p.grade === tier && pilotOpen(p)).map((p) => p.id))
+      save()
+      return { kind, tier, n: 1, name: GRADES[tier].name + ' 파일럿', got: true, jack: true, hard: true }
+    }
+  }
   if (kind === 'plane' && prog.pull.plane % HARD_PITY === 0) {
     const locked = PLANES.filter((p) => !unlocked(p))
     if (locked.length) {
@@ -4462,7 +4508,8 @@ function xpNeed(lv) {
 }
 function xpFromScore(score) { return Math.round(score * 0.03) }
 
-function statCost(n) { return 900 + 700 * n }
+const STAT_COST_MUL = { normal: 1, mid: 1.4, high: 1.9, legend: 2.6 }
+function statCost(n, grade) { return Math.round((900 + 700 * n) * (STAT_COST_MUL[grade || 'normal'] || 1)) }
 
 function grade() { return GRADES[prog.pilot.grade] || GRADES.normal }
 
@@ -4511,7 +4558,7 @@ function pilotSt() { return stOf(pilotNow().id) }
 function stSpent(id) {
   const st = stOf(id)
   let back = 0
-  ST_KEYS.forEach((k) => { for (let i = 0; i < (st[k] || 0); i++) back += statCost(i) })
+  ST_KEYS.forEach((k) => { for (let i = 0; i < (st[k] || 0); i++) back += statCost(i, (PILOT_BY[id] || {}).grade) })
   return back
 }
 function pilotSpent() { const st = pilotSt(); return ST_KEYS.reduce((a, k) => a + (st[k] || 0), 0) }
@@ -4520,7 +4567,7 @@ function pilotXp() { return Math.max(0, prog.pilot.xp || 0) }
 
 function canStat(k, id) {
   const v = stOf(id || pilotNow().id)[k] || 0
-  return v < ST_MAX && pilotXp() >= statCost(v)
+  return v < ST_MAX && pilotXp() >= statCost(v, (PILOT_BY[id] || {}).grade)
 }
 function pilotRank() {
   const lv = prog.pilot.lv
@@ -5537,6 +5584,7 @@ function renderSquad() {
   $('hgGoPass').onclick = () => go('shop')
   $('hgGoMiss').onclick = () => openMissionSheet()
   $('hgGoInfo').onclick = () => openInfoSheet()
+  $('hgGoColl').onclick = () => openCollectionSheet()
   $('hgGoRush').onclick = () => { if (rushModeOpen()) openRushSheet(); else say('파일럿 Lv.' + RUSH_LV + ' 에 열립니다.', '보스 도전') }
   $('hgGachaDot').hidden = !(prog.ticket >= GACHA.plane.cost)
   fxNum($('vParts'), prog.parts, 'parts')
@@ -5571,6 +5619,23 @@ function openHgSheet(title, html, after) {
   panel.onclick = (e) => { if (e.target === panel) close() }
   document.getElementById('dClose').onclick = close
   if (after) after(close)
+}
+function openCollectionSheet() {
+  const own = PLANES.filter(unlocked)
+  const ups = own.reduce((a, p) => a + upgOf(p.id), 0)
+  const bonus = Math.round((collectionMul() - 1) * 1000) / 10
+  const grid = TIER_ORDER.map((t) => '<div class="lab">' + TIERS[t] + '</div><div class="collgrid">' +
+    PLANES.filter((p) => p.tier === t).map((p) => {
+      const ok = unlocked(p)
+      return '<div class="collc' + (ok ? ' ok' : '') + '"><img src="' + hangarPlaneImage(p) + '" alt=""><span>' + p.name + '</span>' +
+        (ok ? '<small>강화 ' + upgOf(p.id) + '</small>' : '<small>' + shardOf(p.id) + '/' + shardNeed(p) + '</small>') + '</div>'
+    }).join('') + '</div>').join('')
+  openHgSheet('기체 컬렉션', '<div class="sum">' +
+    row('보유 기체', own.length + ' / ' + PLANES.length + '대') +
+    row('강화 합계', ups + '단계') +
+    row('전역 공격 보너스', '+' + bonus + '%', true) + '</div>' +
+    '<p class="note2">기체 한 대마다 +0.5%, 강화 한 단계마다 +0.1%. 편대에 없는 기체도 셉니다.</p>' +
+    '<div class="hp collhp">' + grid + '</div>')
 }
 function openMissionSheet() { openHgSheet('오늘의 임무', '<div class="miss" id="missBody"></div>', () => renderMissions()) }
 function openInfoSheet() {
@@ -6306,7 +6371,20 @@ function renderRank() {
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
   }
   const host = document.getElementById('rankBody')
+
+  const farthest = (has) => {
+    let best = null, cnt = 0
+    CHAPTERS.forEach((c, ci) => { for (let k = 1; k <= SUBS; k++) if (has(ci, k)) { cnt++; best = [ci, k] } })
+    return best ? { txt: CHAPTERS[best[0]].id + '장 ' + best[1] + '단계', cnt } : { txt: '-', cnt: 0 }
+  }
+  const modeRows = MODES.map(([k, nm]) => {
+    const r = k === 'normal' ? farthest((ci, sub) => starOf(ci, sub) > 0)
+                             : farthest((ci, sub) => !!(prog[k] || {})[stageKey(ci, sub)])
+    return row(nm, r.txt + (r.cnt ? ' · ' + r.cnt + '판' : ''), k === 'normal')
+  }).join('')
   const items = [
+    { h: 30, html: '<div class="lab" style="margin-top:0">모드별 진행</div>' },
+    { h: 36 * MODES.length + 12, html: '<div class="sum" style="margin-top:0">' + modeRows + '</div>' },
     { h: 186, html: '<div class="sum" style="margin-top:0">' +
       row('최고 점수', st.best.toLocaleString('ko-KR'), true) +
       row('출격', st.runs.toLocaleString('ko-KR') + '판') +
@@ -6360,7 +6438,7 @@ function openPilot(pl, list) {
       : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
     const pips = Array.from({ length: ST_MAX },
       (_, i) => '<i class="' + (i < v ? 'on' : '') + '"></i>').join('')
-    const cost = v < ST_MAX ? statCost(v) : 0
+    const cost = v < ST_MAX ? statCost(v, pl.grade) : 0
     const can = have && canStat(k, pl.id)
     return '<div class="pst" title="' + S.desc + '">' +
       '<span class="n">' + S.name + '</span>' +
@@ -6433,7 +6511,7 @@ function openPilot(pl, list) {
       const k = b.dataset.st
       if (!hasGrade(pl.grade) || !canStat(k, pl.id)) return
       const cur = stOf(pl.id)
-      prog.pilot.xp -= statCost(cur[k])
+      prog.pilot.xp -= statCost(cur[k], pl.grade)
       cur[k]++
       save(); sfx('ready'); haptic('ult')
       missBump('stat')
@@ -6785,7 +6863,15 @@ function renderPilot() {
     '<div class="filters pfil"><div class="frow"><span class="fl">보유</span>' +
     [['all', '전체'], ['own', '보유'], ['none', '미보유']].map(([k, t]) =>
       '<button data-po="' + k + '" class="' + (pilotOwn === k ? 'on' : '') + '">' + t + '</button>').join('') +
-    '</div></div>'
+    '</div></div>' +
+
+    '<div class="merge"><span class="fl">조각 합성 ' + MERGE_N + ':1</span>' +
+    Object.entries(MERGE_UP).map(([f, t]) =>
+      '<button data-merge="' + f + '"' + (shardG(f) < MERGE_N ? ' disabled' : '') + '>' +
+      GRADES[f].name + ' ' + shardG(f) + ' → ' + GRADES[t].name + '</button>').join('') + '</div>'
+  pHead.querySelectorAll('[data-merge]').forEach((b) => {
+    b.onclick = () => { if (mergeShards(b.dataset.merge)) { sfx('ready'); renderPilot() } }
+  })
   pHead.querySelectorAll('[data-po]').forEach((b) => {
     b.onclick = () => { pilotOwn = b.dataset.po; pBody._page = 0; renderPilot() }
   })
@@ -7064,6 +7150,7 @@ function newState() {
     rushD: rushDiff(),
     hard: runMode === 'hard' && !zoneRun && bossRun < 0,
     crazy: runMode === 'crazy' && !zoneRun && bossRun < 0,
+    extreme: runMode === 'extreme' && !zoneRun && bossRun < 0,
     stage: zoneRun ? zoneStage(1) : curStage(),
     theme: THEMES[(zoneRun ? zoneStage(1) : curStage()).theme],
   }
@@ -7351,7 +7438,7 @@ function shoot(u, i, dt) {
   state.muzzles.push({ x: pos.x, y: pos.y - 12, age: 0,
                        k: ['mz1', 'mz2', 'mz3'][tierStep(p.tier)] })
 
-  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD * SQUAD_DMG
+  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD * SQUAD_DMG * collectionMul()
     * (state.ultKind === 'rapid' && state.ultT > 0 ? ULT_TUNE.rapidDmg : 1)
   const tier = tierStep(p.tier)
   const B = state.bullets
@@ -8208,17 +8295,18 @@ function chapterStars(ci) {
   return n
 }
 
+function subUp(sub) { return sub <= 1 ? 1 : 1.15 + 0.10 * (sub - 2) }
 function curStage() {
   const ch = curChapter()
   const sub = curSub()
-  const k = subScale(sub)
+  const k = subScale(sub) * subUp(sub)
   return {
     id: ch.id, sub, name: ch.name + ' ' + sub, chapter: ch.name,
 
     theme: THEME_ART[ch.theme] || ch.theme,
     waves: buildWaves(ch, sub),
 
-    bossHp: Math.round(ch.bossHp * (0.78 + sub * 0.0967)),
+    bossHp: Math.round(ch.bossHp * (0.78 + sub * 0.0967) * subUp(sub)),
     hpMul: ch.hpMul * k, spMul: ch.spMul * (1 + (sub - 1) * 0.0207),
 
     fireMul: (ch.fireMul || 1) * (1 - (sub - 1) * 0.0104),
@@ -8449,11 +8537,21 @@ function bossRushDone(i) {
 }
 
 let runMode = 'normal'
+
+const EXTREME_MUL = 1.5
+const EXTREME_TICKET = 1
 const MODES = [
-  ['normal', '일반', '', 0],
-  ['crazy',  '크레이지', `적 체력·공격 ×${CRAZY_DMG}`, CRAZY_TICKET],
-  ['hard',   '하드코어', '한 대 맞으면 끝', HARD_TICKET],
+  ['normal',  '일반', '', 0],
+  ['extreme', '익스트림', `적 체력·공격 ×${EXTREME_MUL}`, EXTREME_TICKET],
+  ['crazy',   '크레이지', `적 체력·공격 ×${CRAZY_DMG}`, CRAZY_TICKET],
+  ['hard',    '하드코어', '한 대 맞으면 끝 · 부활 없음', HARD_TICKET],
 ]
+
+function modeHp() { return state && state.crazy ? CRAZY_HP : state && state.extreme ? EXTREME_MUL : 1 }
+
+function modeDmg() { return state && state.crazy ? CRAZY_DMG : state && state.extreme ? EXTREME_MUL : 1 }
+
+function modeKeyOf(st) { return st.hard ? 'hard' : st.crazy ? 'crazy' : st.extreme ? 'extreme' : 'normal' }
 function modeDef(k) { return MODES.find((m) => m[0] === k) || MODES[0] }
 
 function zoneOpen() { return starOf(0, SUBS) > 0 }
@@ -8708,7 +8806,7 @@ function mkEnemy(kind, x, y, drift) {
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
 
-           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * (state && state.crazy ? CRAZY_HP : 1) * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
+           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
 
            sp: Math.round(b.sp * SG.spMul * SPD_K),
            dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
@@ -8778,7 +8876,7 @@ function mkGround(kind, x, y) {
 
     art: sea ? Math.round(b.r * 7) : 0,
 
-    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * (state && state.crazy ? CRAZY_HP : 1)),
+    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * modeHp()),
   }
 }
 
@@ -9028,7 +9126,7 @@ function spawnBoss(mid) {
 
     ? Math.round((CHAPTERS[rushCh(state.rush, state.rushD) - 1] || CHAPTERS[0]).bossHp
                  * 0.55 * RUSH_HP_MUL)
-    : Math.round(state.stage.bossHp * (mid ? mm : 0.55) * BOSS_HP_UP * (state.crazy ? CRAZY_HP : 1))
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55) * BOSS_HP_UP * modeHp())
 
   const bsub = (state.stage && state.stage.sub) || 1
 
@@ -9943,7 +10041,7 @@ function hitPlayer(dmg) {
 
   pl.inv = HIT_INV + perk('inv')
 
-  pl.hp -= (dmg || DMG.bullet) * (state.crazy ? CRAZY_DMG : 1)
+  pl.hp -= (dmg || DMG.bullet) * modeDmg()
   boom(pl.x, pl.y, dmg >= 20 ? 22 : 10, '#7fd6ff')
 
   const k = Math.min(1, (dmg || 8) / 26)
@@ -12512,9 +12610,9 @@ function hudTopPaint(s) {
   c.textAlign = 'left'; c.textBaseline = 'top'
   c.fillText(String(s.score).padStart(6, '0'), 14, 30)
   {
-    const tag = s.hard ? '하드코어' : s.crazy ? '크레이지' : '일반'
-    const bg = s.hard ? 'rgba(168,50,74,.9)' : s.crazy ? 'rgba(176,104,26,.9)' : 'rgba(38,52,74,.85)'
-    const fg = s.hard ? '#ffc9d4' : s.crazy ? '#ffe0b0' : '#b9cbe6'
+    const tag = s.hard ? '하드코어' : s.crazy ? '크레이지' : s.extreme ? '익스트림' : '일반'
+    const bg = s.hard ? 'rgba(168,50,74,.9)' : s.crazy ? 'rgba(176,104,26,.9)' : s.extreme ? 'rgba(120,60,160,.9)' : 'rgba(38,52,74,.85)'
+    const fg = s.hard ? '#ffc9d4' : s.crazy ? '#ffe0b0' : s.extreme ? '#e6d0ff' : '#b9cbe6'
     const sg = s.stage
     const where = s.zone ? '제 ' + s.zone + ' 구역'
                          : sg ? sg.chapter + ' ' + sg.sub : ''
@@ -14063,8 +14161,8 @@ function end(win) {
 
   let hardGot = 0
   let modeName = ''
-  if (win && key && (state.hard || state.crazy)) {
-    const mk = state.hard ? 'hard' : 'crazy'
+  if (win && key && (state.hard || state.crazy || state.extreme)) {
+    const mk = modeKeyOf(state)
     const box = prog[mk]
     const md = modeDef(mk)
     modeName = md[1]
@@ -14110,7 +14208,7 @@ function end(win) {
     goHangar.classList.add('ghost')
   }
 
-  const hardTag = state.hard ? '하드코어 · ' : state.crazy ? '크레이지 · ' : ''
+  const hardTag = state.hard ? '하드코어 · ' : state.crazy ? '크레이지 · ' : state.extreme ? '익스트림 · ' : ''
   document.getElementById('overTitle').textContent =
     state.rush >= 0
       ? (win ? BOSS_RUSH[state.rush].name + ' 격파' : BOSS_RUSH[state.rush].name + ' 앞에서 격추')
