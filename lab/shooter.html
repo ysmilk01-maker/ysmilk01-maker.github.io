@@ -2967,7 +2967,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:24'
+const BUILD_AT = '09-15 07:28'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6501,7 +6501,7 @@ function openPilot(pl, list) {
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
 
   const G = GRADES[pl.grade]
-  const have = hasGrade(pl.grade)
+  const have = (hasGrade(pl.grade)) && pilotOpen(pl)
   const on = pilotNow().id === pl.id
   const face = pilotFace(pl)
   const st = stOf(pl.id)
@@ -6868,7 +6868,9 @@ function renderPilot() {
       : '<div class="pf none"><div class="rk ' + pl.grade + '"></div></div>'
     const ready = !owned && GRADE_NEED[pl.grade] > 0 && shardG(pl.grade) >= GRADE_NEED[pl.grade]
     const canAny = owned && ST_KEYS.some((k) => canStat(k, pl.id))
-    return '<div class="pcard g-' + pl.grade + (on ? ' on' : '') + (owned ? '' : ' no') +
+
+    const lvLock = owned && !pilotOpen(pl)
+    return '<div class="pcard g-' + pl.grade + (on ? ' on' : '') + (owned && !lvLock ? '' : ' no') +
       (ready || canAny ? ' can' : '') + '" data-who="' + pl.id + '" role="button" tabindex="0">' +
       pic +
       '<div class="tx"><div class="nm">' + pl.name + '</div>' +
@@ -6879,6 +6881,7 @@ function renderPilot() {
         : '조각 ' + shardG(pl.grade) + '/' + GRADE_NEED[pl.grade]) + '</div>' +
       '</div>' +
       (on ? '<span class="rt">사용 중</span>'
+          : lvLock ? '<span class="rt lk">Lv.' + pilotNeedLv(pl) + '</span>'
           : owned ? '<span class="rt idle">미사용</span>' : '<span class="rt lk">잠김</span>') +
       '</div>'
   })
