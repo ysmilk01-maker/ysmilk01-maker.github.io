@@ -2053,6 +2053,20 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .collhp{max-height:46vh;overflow-y:auto;margin-top:6px}.collgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:6px}
 .collc{background:#0f1b22cc;border:1px solid #3f545d77;border-radius:9px;padding:4px 2px;text-align:center;font-size:9.5px;opacity:.45;filter:grayscale(1)}
 .collc.ok{opacity:1;filter:none;border-color:#a2c6bd88}.collc img{width:100%;height:30px;object-fit:contain}.collc span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.collc small{display:block;font-size:8.5px;color:#9fb9c5}
+/* ── 기체 상세 v3 (2026-09-14) ── */
+#detail .dsheet .dhead{display:flex;align-items:center;gap:8px}#detail .dsheet .dhead h3{margin:0;font-size:20px}#detail .dsheet .dtier{position:static;font-size:10px;padding:2px 7px}
+#detail .dsheet .dstars{font-size:13px;color:#ffd98a;letter-spacing:2px;line-height:1;margin-top:2px}#detail .dsheet .dstars span{color:#3a4654}
+#detail .dsheet .dpic{position:relative;height:150px;margin-top:8px;border-radius:12px;border:1px solid #3f545d77;background:radial-gradient(ellipse at 50% 45%,#1b3a45aa,transparent 62%),#0b161d99;overflow:hidden}
+#detail .dsheet .dpic img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:62%;height:118px;object-fit:contain;filter:drop-shadow(0 12px 8px #0009)}
+#detail .dsheet .dpic .dlv{position:absolute;left:8px;bottom:8px;font-size:10.5px;font-weight:800;color:#ffd98a;background:#0a151cd9;border:1px solid #3f545d;border-radius:8px;padding:3px 8px}
+#detail .dsheet .dpic .pwbig{position:absolute;right:8px;top:8px;margin:0;background:#0a151cd9;border:1px solid #3f545d;border-radius:9px;padding:4px 9px;font-size:17px;line-height:1.1;text-align:right}
+#detail .dsheet .dpic .pwbig small{display:block;font-size:9.5px}#detail .dsheet .dpic .pwbig .d{display:block;font-size:9.5px;margin:2px 0 0}
+#detail .dsheet .ddesc{font-size:11px;line-height:1.5;color:#c9d6de;margin-top:8px}#detail .dsheet .ddesc b{color:#eaf6f2}
+#detail .dsheet canvas.demo{height:86px;margin:6px 0 4px}
+#detail .dsheet .dupg{margin-top:8px;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+#detail .dsheet .pips{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}#detail .dsheet .pips i{display:block;height:10px;border-radius:5px;background:#1a2a33;border:1px solid #2e3f49}#detail .dsheet .pips i.on{background:linear-gradient(90deg,#e9c86a,#ffd98a);border-color:#ffe6a8}
+#detail .dsheet #dUpg{min-height:38px;font-size:12px;font-weight:800;border-radius:10px;background:linear-gradient(#e9c86a,#c9a44a);border:1px solid #ffe6a8;color:#1a1a0a;box-shadow:none}#detail .dsheet #dUpg:disabled{opacity:.5;filter:saturate(.5)}
+#detail .dsheet .dupg .lvl{font-size:11px;color:#9fb9c5;text-align:center}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2905,7 +2919,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 19:49'
+const BUILD_AT = '09-14 19:53'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5901,20 +5915,7 @@ function renderPlanes() {
 
     const btn = c.querySelector('.up button')
     if (btn && !btn.disabled) {
-      btn.onclick = (ev) => {
-        ev.stopPropagation()
-        if (prog.parts < cost || shardOf(p.id) < shardUpg(p, lv)) return
-        prog.parts -= cost
-        prog.shardP[p.id] = shardOf(p.id) - shardUpg(p, lv)
-        prog.upg[p.id] = lv + 1
-        missBump('upg')
-        guideDone('upg')
-        save()
-        sfx('ready')
-        haptic('ult')
-        upgPlay(shipArt(p.id), p.name, lv + 1, gTone(p.tier).main,
-                () => { renderPlanes(); renderWallet() })
-      }
+      btn.onclick = (ev) => { ev.stopPropagation(); upgradePlane(p, () => { renderPlanes(); renderWallet() }) }
     }
 
     c.onclick = () => {
@@ -6952,6 +6953,20 @@ function demoShots(p, t) {
   return out
 }
 
+function upgradePlane(p, after) {
+  const lv = upgOf(p.id), cost = upgCost(p, lv)
+  if (lv >= UPG_MAX || prog.parts < cost || shardOf(p.id) < shardUpg(p, lv)) return false
+  prog.parts -= cost
+  prog.shardP[p.id] = shardOf(p.id) - shardUpg(p, lv)
+  prog.upg[p.id] = lv + 1
+  missBump('upg')
+  guideDone('upg')
+  save()
+  sfx('ready')
+  haptic('ult')
+  upgPlay(shipArt(p.id), p.name, lv + 1, gTone(p.tier).main, after)
+  return true
+}
 function openDetail(p, list) {
   const panel = document.getElementById('detail')
   const body = document.getElementById('detailBody')
@@ -6975,32 +6990,34 @@ function openDetail(p, list) {
     (dd == null ? (nowP && p.id === nowP.id ? `<span class="d same">지금 이것</span>` : '')
                : `<span class="d ${dd > 0 ? 'up' : dd < 0 ? 'dn' : 'same'}">지금보다 ${dd > 0 ? '+' : ''}${dd}%</span>`) +
     `</div>`
+
+  const tierN = TIER_ORDER.indexOf(p.tier) + 1
+  const cost = upgCost(p, lv)
+  const pips = Array.from({ length: UPG_MAX }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')
+  const canUp = ok && lv < UPG_MAX && prog.parts >= cost && shardOf(p.id) >= shardUpg(p, lv)
   body.innerHTML =
-    `<h3>${p.name}</h3>` +
-    `<div class="sub2">${WEAPONS[p.weapon].name} · ${TIERS[p.tier]}</div>` +
-    pwbig +
+    `<div class="dhead"><h3>${p.name}</h3><span class="dtier tag t-${p.tier}">${TIERS[p.tier]}</span></div>` +
+    `<div class="dstars" aria-label="${tierN}성">${'★'.repeat(tierN)}<span>${'★'.repeat(4 - tierN)}</span></div>` +
+    `<div class="dpic"><img src="${hangarPlaneImage(p)}" alt=""><span class="dlv">강화 ${lv}/${UPG_MAX}</span>${pwbig}</div>` +
+    `<div class="ddesc"><b>${WEAPONS[p.weapon].name}</b> ${WEAPONS[p.weapon].desc}` +
+      (p.el ? ` · <span class="el el-${p.el}">${ELS[p.el].name}</span> ${ELS[p.el].desc}` : '') +
+      (p.trait ? ` · ${traitText(p)}` : '') + `</div>` +
     `<canvas class="demo"></canvas>` +
-    `<div class="cap">게임에서 나가는 모습입니다</div>` +
     `<div class="rows">` +
-      row('무기', WEAPONS[p.weapon].desc) +
-      (p.el ? row('속성', `<span class="el el-${p.el}">${ELS[p.el].name}</span> ` +
-                          dim(ELS[p.el].desc)) : '') +
-      (p.trait ? row('고유 성질', traitText(p) + ' ' +
-                     dim(MOD_KEYS.filter((k) => p.trait[k])
-                         .map((k) => MODS[k].desc).join(' · '))) : '') +
-      row('등급 배수', `화력 ×${p.power.toFixed(2)} · 간격 ×${p.rate.toFixed(2)} ` + dim('간격은 작을수록 빠름')) +
-      row('강화', `${lv}/${UPG_MAX}` +
-          (lv ? ' ' + dim(`화력 +${Math.round((upgPower(p.id) - 1) * 100)}% · 간격 -${Math.round((1 - upgRate(p.id)) * 100)}%`) : '')) +
-      row('사격', `${realRate.toFixed(2)}초 · 초당 ${shots.toFixed(1)}발 ` + dim(`기본 ${baseRate(p.weapon).toFixed(2)}초`)) +
+      row('등급 배수', `화력 ×${p.power.toFixed(2)} · 간격 ×${p.rate.toFixed(2)}`) +
+      row('사격', `${realRate.toFixed(2)}초 · 초당 ${shots.toFixed(1)}발`) +
+      row('강화 효과', lv ? `화력 +${Math.round((upgPower(p.id) - 1) * 100)}% · 간격 -${Math.round((1 - upgRate(p.id)) * 100)}%` : '아직 없음') +
       row('조각', ok ? `${shardOf(p.id)}개` : `${shardOf(p.id)} / ${shardNeed(p)}`) +
     `</div>` +
-    (ok ? '' : `<div class="note2">아직 잠겨 있습니다. ${lab}</div>`) +
-
+    `<div class="dupg"><div class="pips">${pips}</div>` +
+      (ok ? (lv < UPG_MAX
+        ? `<button id="dUpg"${canUp ? '' : ' disabled'}>강화 ${lv} → ${lv + 1} · 부품 ${cost.toLocaleString('ko-KR')} · 조각 ${shardUpg(p, lv)}</button>`
+        : `<span class="lvl">최대 강화</span>`) : `<span class="lvl">${lab || '잠김'}</span>`) +
+    `</div>` +
     `<div class="bar">` +
       (ok ? `<button id="dPick">적용</button>` : '') +
       `<button class="ghost" id="dClose">닫기</button>` +
     `</div>` +
-
     (list && list.length > 1
       ? `<div class="bar nav"><button class="ghost" id="dPrev">◀ 이전</button>` +
         `<span class="pos">${list.indexOf(p) + 1} / ${list.length}</span>` +
@@ -7054,6 +7071,8 @@ function openDetail(p, list) {
   guideFollow('planeSheet')
   const dp = document.getElementById('dPick')
   if (dp) dp.onclick = () => pickPlaneTo(p, close)
+  const du = document.getElementById('dUpg')
+  if (du) du.onclick = () => upgradePlane(p, () => { renderPlanes(); renderWallet(); openDetail(p, list) })
 }
 
 function pickPlaneTo(p, done) {
