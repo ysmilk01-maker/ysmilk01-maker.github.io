@@ -210,6 +210,14 @@
   /* 메인은 금색, 안 쓰는 것은 회색 「미적용」 - 적용 중과 아닌 것이 한눈에 갈리게 (2026-09-14) */
   .card .inuse.main { background: rgba(255,210,122,.18); border-color: rgba(255,210,122,.7); color: #ffd27a; }
   .card .inuse.idle { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.18); color: #98a3b3; font-weight: 600; }
+  /* 격납고 안 짧은 알림. 적용한 뒤 화면을 안 옮기고 여기서 알린다 (2026-09-14) */
+  #hgToast {
+    position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%);
+    background: rgba(18,24,34,.95); color: #eaf1ff; border: 1px solid rgba(255,255,255,.16);
+    border-radius: 999px; padding: 8px 15px; font-size: 12px; font-weight: 700; white-space: nowrap;
+    z-index: 60; opacity: 0; transition: opacity .18s; pointer-events: none;
+  }
+  #hgToast.on { opacity: 1; }
   .slotTabs button i { display: block; font-style: normal; font-size: 10px; font-weight: 500; margin-top: 2px; }
 
   /* 지금 고른 기체 - 크게 한 대 */
@@ -2765,7 +2773,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 18:14'
+const BUILD_AT = '09-14 18:21'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6379,6 +6387,16 @@ function askOpen(text, title, okLabel, twoWay, onOk) {
 
 function say(text, title) { askOpen(text, title || '안내', '확인', false, null) }
 
+let hgToastT = 0
+function hgToast(text) {
+  let el = document.getElementById('hgToast')
+  if (!el) { el = document.createElement('div'); el.id = 'hgToast'; document.body.appendChild(el) }
+  el.textContent = text
+  el.classList.add('on')
+  clearTimeout(hgToastT)
+  hgToastT = setTimeout(() => el.classList.remove('on'), 1800)
+}
+
 function ask(text, onOk, opt) {
   const o = opt || {}
   askOpen(text, o.title || '확인', o.ok || '확인', true, onOk)
@@ -6833,7 +6851,7 @@ function openDetail(p, list) {
       guideDone('slot' + activeSlot)
       save(); close(); renderPlanes()
 
-      go('squad')
+      hgToast(SLOT_META[activeSlot].role + ' → 「' + p.name + '」 적용')
     }
 
     if (dup >= 0 && dup !== activeSlot) {
