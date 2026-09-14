@@ -2982,7 +2982,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:50'
+const BUILD_AT = '09-15 08:25'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8490,7 +8490,6 @@ const BOSS_HP_UP = 1.25 * 1.15 * 1.2
 const ENEMY_HP_UP = 1.15
 
 const ENEMY_HP_UP2 = 1.2
-const MID_HP_DOWN = 0.9
 const CRAZY_HP = 2
 
 function finalRushBoss(stage) {
@@ -8894,7 +8893,7 @@ function mkEnemy(kind, x, y, drift) {
 
     small:  { hp: 4,  r: 13, sp: 78, score: 90,  fire: 2.4, art: 30 },
 
-    mid:    { hp: 80, r: 20, sp: 52, score: 220, fire: 1.5, art: 46 },
+    mid:    { hp: 60, r: 20, sp: 52, score: 220, fire: 1.5, art: 46 },
 
     dive:   { hp: 5,  r: 15, sp: 40, score: 180, fire: 99,  art: 34, aim: .9, dashSp: 430 },
 
@@ -8902,13 +8901,13 @@ function mkEnemy(kind, x, y, drift) {
 
     tank:   { hp: 70, r: 24, sp: 30, score: 420, fire: 2.6, art: 54 },
 
-    lancer: { hp: 86, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
+    lancer: { hp: 60, r: 19, sp: 32, score: 340, fire: 3.4, art: 44, lance: true },
 
     beamer: { hp: 34, r: 19, sp: 36, score: 380, fire: 4.2, art: 46, hbeam: true },
 
     weaver: { hp: 30, r: 17, sp: 58, score: 300, fire: 1.5, art: 42, sway: 150, sideShot: true },
 
-    miner: { hp: 64, r: 20, sp: 40, score: 420, fire: 1.1, art: 48, layMine: true },
+    miner: { hp: 70, r: 20, sp: 40, score: 420, fire: 1.1, art: 48, layMine: true },
 
     swarm: { hp: 3, r: 11, sp: 92, score: 70, fire: 3.0, art: 26 },
 
@@ -8916,7 +8915,7 @@ function mkEnemy(kind, x, y, drift) {
 
     split:  { hp: 40, r: 19, sp: 46, score: 300, fire: 2.2, art: 44, splits: 2 },
 
-    bomber: { hp: 26, r: 17, sp: 66, score: 340, fire: 99, art: 38, boomR: 96 },
+    bomber: { hp: 45, r: 17, sp: 66, score: 340, fire: 99, art: 38, boomR: 96 },
 
     guard:  { hp: 46, r: 18, sp: 38, score: 400, fire: 99, art: 42, auraR: 118 },
 
@@ -8928,7 +8927,7 @@ function mkEnemy(kind, x, y, drift) {
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
 
-           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * (kind === 'mid' ? MID_HP_DOWN : ENEMY_HP_UP2) * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
+           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
 
            sp: Math.round(b.sp * SG.spMul * SPD_K),
            dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
