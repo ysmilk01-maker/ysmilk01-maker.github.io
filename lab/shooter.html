@@ -2101,6 +2101,16 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .pl-diag .pd-pow .pd-bd .off{color:#5b6a80}
 .pl-diag .pd-coll{margin-top:4px;padding:2px 7px;font-size:9.5px;border-radius:8px;background:#20414a;border:1px solid #a2c6bd88;color:#eaf6f2;box-shadow:none;min-height:0}
 .pl-diag .pd-name small{white-space:normal;line-height:1.35}
+/* 기체 화면 위쪽을 줄여 목록 두 줄이 보이게 (2026-09-15) */
+#scPlanes h1{font-size:14px;margin:0 0 2px}
+.slotTabs.v3{margin:0 0 6px;gap:5px}.slotTabs.v3 button{min-height:62px;padding:3px 2px}.slotTabs.v3 button img{height:30px}.slotTabs.v3 button .plus{height:30px;line-height:30px;font-size:19px}
+.pl-diag{height:122px;margin-bottom:6px}.pl-diag .pd-img{height:84px;top:4px}.pl-diag .pd-pow{padding:4px 8px}.pl-diag .pd-pow b{font-size:15px}.pl-diag .pd-pow .pd-bd{margin-top:2px}.pl-diag .pd-coll{margin-top:3px}
+.pl-diag .pd-name{bottom:4px}.pl-diag .pd-name b{font-size:13px}.pl-diag .pd-name small{font-size:9px}.pl-diag .pd-bar{margin-top:3px;height:4px}
+.filters.v3{margin-bottom:4px}.filters.v3 .frow button{padding:4px 7px;font-size:10px}
+.card.cp .pimg{height:42px;margin-top:20px}.card.cp .wpn{font-size:9px;color:#9fb9c5;text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.cp .wpn .wi{width:10px;height:10px;vertical-align:-1px;margin-right:2px}
+.card.cp .nm{font-size:11px;margin-top:1px}.card.cp .stars{font-size:9px}.card.cp .cmp b{font-size:14px}
+.hp-page{padding:2px 3px 3px}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2967,7 +2977,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:28'
+const BUILD_AT = '09-15 07:40'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4848,7 +4858,7 @@ function hpPlain(host, html) {
   host.classList.remove('single', 'end')
   host.innerHTML = html
 }
-const PLANE_CARD_H = 170
+const PLANE_CARD_H = 168
 const elWallet = document.getElementById('wallet')
 
 function planeById(id) { return PLANES.find((p) => p.id === id) }
@@ -5955,6 +5965,7 @@ function renderPlanes() {
       `<img class="pimg" src="${hangarPlaneImage(p)}" alt="">` +
       `<div class="stars" aria-label="${tierN}성">${'★'.repeat(tierN)}<span>${'★'.repeat(4 - tierN)}</span></div>` +
       `<div class="nm">${p.name}</div>` +
+      `<div class="wpn"><i class="wi w-${p.weapon}"></i>${WEAPONS[p.weapon].name}</div>` +
       (() => {
         const sc = `<b><small>전투력</small>${planeScore(p).toLocaleString('ko-KR')}</b>`
         if (!ok || !nowDps) return `<div class="cmp dn">${sc}</div>`
@@ -13752,6 +13763,8 @@ function appShown() {
 document.addEventListener('visibilitychange', () => { document.hidden ? appHidden() : appShown() })
 addEventListener('pagehide', appHidden)
 addEventListener('pageshow', appShown)
+
+const GAME_SPEED = 1.15
 function frame(now) {
   requestAnimationFrame(frame)
   if (!state || !state.running) return
@@ -13769,7 +13782,7 @@ function frame(now) {
     return
   }
   try {
-    update(dt); draw()
+    update(dt * GAME_SPEED); draw()
     frameErrs = 0
   } catch (err) {
     if (frameErrs++ === 0) console.error('frame', err)
