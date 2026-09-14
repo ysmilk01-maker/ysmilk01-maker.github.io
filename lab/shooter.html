@@ -1994,6 +1994,35 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad.v3 #squadModes .ds{font-size:9.5px;color:#9fb9c5;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #scSquad.v3 .rushbtn{min-height:36px;align-self:start;padding:4px 10px;font-size:11px;font-weight:800;border-radius:9px;background:linear-gradient(#5a2a2a,#3a1414);border:1px solid #e08a8a;color:#ffd7d7;box-shadow:none;white-space:nowrap}
 #scSquad.v3 .rushbtn.lock{opacity:.5;filter:saturate(.4)}
+/* ── 기체 화면 v3 (2026-09-14): 자리 상자 / 큰 그림+파워 / 등급 탭 / 3열 카드 ── */
+#scPlanes h1{font-size:16px;margin:0 0 4px}
+.slotTabs.v3{gap:6px;margin:0 0 8px}.slotTabs.v3 button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:74px;padding:4px 2px;font-size:10px;background:#0f1b22cc;border:1px solid #4d626b77;border-radius:12px}
+.slotTabs.v3 button img{width:100%;height:36px;object-fit:contain}.slotTabs.v3 button .plus{display:block;height:36px;line-height:36px;font-size:22px;color:#8aa3ae}
+.slotTabs.v3 button i{margin-top:0;font-size:10px;font-weight:700}.slotTabs.v3 button small{font-size:9px;color:#9fb9c5;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slotTabs.v3 button.on{background:#1b3a45;border-color:#a2c6bd}.slotTabs.v3 button.need{border-color:#edc879}.slotTabs.v3 button.lock{opacity:.5}
+.pl-diag{position:relative;height:150px;margin-bottom:8px;border-radius:14px;border:1px solid #3f545d77;background:radial-gradient(ellipse at 55% 45%,#1b3a45aa,transparent 62%),#0b161d99;overflow:hidden;cursor:pointer}
+.pl-diag .pd-pow{position:absolute;left:8px;top:8px;background:#0a151cd9;border:1px solid #3f545d;border-radius:9px;padding:5px 9px;min-width:86px}
+.pl-diag .pd-pow .k{display:block;font-size:9.5px;color:#9fb9c5}.pl-diag .pd-pow b{display:block;font-size:17px;color:#ffd98a;font-variant-numeric:tabular-nums;line-height:1.1}.pl-diag .pd-pow small{display:block;font-size:9px;color:#8fa5b0;margin-top:2px;white-space:nowrap}
+.pl-diag .pd-img{position:absolute;right:6%;top:6px;width:52%;height:100px;object-fit:contain;filter:drop-shadow(0 12px 8px #0009)}
+.pl-diag .pd-name{position:absolute;left:8px;right:8px;bottom:6px}.pl-diag .pd-name b{font-size:14px;display:block}.pl-diag .pd-name small{font-size:9.5px;color:#9fb9c5;display:block;margin-top:1px}
+.pl-diag .pd-bar{height:5px;border-radius:3px;background:#1a2a33;margin-top:5px;overflow:hidden}.pl-diag .pd-bar i{display:block;height:100%;background:linear-gradient(90deg,#e9c86a,#ffd98a)}
+.pl-diag .pd-more{position:absolute;right:10px;bottom:10px;font-size:10px;color:#c2e4e7;border:1px solid #63878f88;background:#143039e0;border-radius:12px;padding:3px 9px}
+.pl-diag .pd-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;color:#cfe0e6;font-weight:700}.pl-diag .pd-empty .plus{font-size:30px;color:#edc879;line-height:1}.pl-diag .pd-empty small{font-size:10px;color:#9fb9c5;font-weight:500}
+.filters.v3 .frow{gap:4px}.filters.v3 .frow button{padding:5px 8px;font-size:10.5px;border-radius:9px}
+.card.cp .pimg{display:block;width:100%;height:58px;object-fit:contain;margin-top:14px;filter:drop-shadow(0 6px 5px #0008)}
+.card.cp .stars{font-size:10px;color:#ffd98a;letter-spacing:1px;line-height:1;margin-top:2px;text-align:center}.card.cp .stars span{color:#3a4654}
+.card.cp .nm{font-size:11.5px;text-align:center;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.card.cp .cmp{text-align:center}
+.card.cp .shard{font-size:9.5px;color:#9fb9c5;text-align:center;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.cp .act{display:none;position:absolute;inset:auto 0 0 0;padding:5px;background:linear-gradient(transparent,#07101ae8 30%);z-index:3}
+.card.cp.sel .act{display:block}.card.cp.sel{border-color:#a2c6bd;box-shadow:0 0 0 1px #a2c6bd66}
+.card.cp .act .arow{display:grid;grid-template-columns:1fr 1fr;gap:4px}.card.cp .act .arow button{min-height:30px;padding:4px 2px;font-size:11px;border-radius:8px}
+.card.cp .act .binfo{background:#20414a;border:1px solid #a2c6bd;color:#eaf6f2}.card.cp .act .buse{background:linear-gradient(#e9c86a,#c9a44a);border:1px solid #ffe6a8;color:#1a1a0a;font-weight:800}
+.card.cp .act .buse:disabled{opacity:.6}.card.cp .act .arow:has(.binfo:only-child){grid-template-columns:1fr}
+.card.cp .act .up{margin-top:4px}.card.cp .act .up button{width:100%;min-height:28px;padding:3px;font-size:10.5px;border-radius:8px}.card.cp .act .up .lvl{display:block;font-size:9px;color:#9fb9c5;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 카드 v3 손질: 적용중 띠는 맨 위 한 줄, 등급 태그는 그 아래 (겹침 방지) */
+.card.cp .inuse{top:0;left:0;right:0;width:auto;border-radius:10px 10px 0 0;border-width:0 0 1px;text-align:center;font-size:9.5px;padding:2px 4px}
+.card.cp .inuse.idle{background:#101820}.card.cp .tag{top:20px;left:6px}
+.card.cp .pimg{margin-top:26px;height:56px}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2061,9 +2090,10 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
     전에는 「지금 좌 윙맨 자리를 채웁니다」라는 글 한 줄이었다. 글은
     읽어야 알고, 탭은 보면 안다.
   -->
-  <div class="slotTabs" id="slotTabs"></div>
-  <!-- 지금 그 자리에 있는 기체. 목록 위에 크게 세운다 -->
-  <div class="filters" id="planeFilters"></div>
+  <div class="slotTabs v3" id="slotTabs"></div>
+  <!-- 고른 자리의 기체를 크게. 파워와 강화 단계가 같이 (UI v3, 2026-09-14) -->
+  <div class="pl-diag" id="planeDiag"></div>
+  <div class="filters v3" id="planeFilters"></div>
   <div class="hp" id="planes"></div>
 </div>
 
@@ -2745,30 +2775,34 @@ function claimDaily() {
 }
 
 const MISSIONS = [
-  { id: 'kill',  say: (n) => `적기 ${n}대 격추`,        ns: [70, 100, 140],  give: ['parts', 800] },
-  { id: 'clear', say: (n) => `단계 ${n}개 클리어`,       ns: [2, 3],          give: ['ticket', 1] },
-  { id: 'star',  say: (n) => `별 ${n}개 모으기`,         ns: [3, 4, 6],       give: ['ticket', 1] },
-  { id: 'ult',   say: (n) => `필살기 ${n}번 쓰기`,       ns: [3, 5],          give: ['parts', 600] },
-  { id: 'nohit', say: (n) => `한 대도 안 맞고 클리어`,   ns: [1],             give: ['ticket', 2] },
-  { id: 'score', say: (n) => `한 판에 ${n.toLocaleString('ko-KR')}점`, ns: [12000, 18000], give: ['parts', 1000] },
-  { id: 'run',   say: (n) => `${n}판 출격`,              ns: [3, 5],          give: ['energy', 2] },
-  { id: 'boss',  say: (n) => `보스 ${n}번 격파`,         ns: [1, 2],          give: ['ticket', 2] },
+
+  { id: 'kill',  say: (n) => `적기 ${n}대 격추`,          ns: [100], give: ['ticket', 1] },
+  { id: 'clear', say: (n) => `단계 ${n}개 클리어`,         ns: [3],   give: ['ticket', 1] },
+  { id: 'hard',  say: (n) => `하드코어 클리어 ${n}판`,     ns: [1],   give: ['ticket', 1] },
+  { id: 'crazy', say: (n) => `크레이지 클리어 ${n}판`,     ns: [1],   give: ['ticket', 1] },
+  { id: 'upg',   say: (n) => `기체 강화 ${n}번`,           ns: [1],   give: ['ticket', 1] },
+  { id: 'stat',  say: (n) => `파일럿 스탯 ${n}번 올리기`,   ns: [1],   give: ['ticket', 1] },
+  { id: 'rush',  say: (n) => `보스 도전 ${n}번 격파`,       ns: [1],   give: ['ticket', 1] },
 ]
+const MISS_VER = 2
 
 function missions() {
   const today = dayKey()
-  if (prog.miss && prog.miss.d === today) return prog.miss
-  const r = seeded(today.split('-').join('') | 0)
-  const pool = MISSIONS.slice()
-  const list = []
-  for (let i = 0; i < 3 && pool.length; i++) {
-    const m = pool.splice((r() * pool.length) | 0, 1)[0]
-    const n = m.ns[(r() * m.ns.length) | 0]
-    list.push({ id: m.id, n, p: 0, taken: false })
-  }
-  prog.miss = { d: today, list }
+  if (prog.miss && prog.miss.d === today && prog.miss.v === MISS_VER) return prog.miss
+
+  const list = MISSIONS.map((m) => ({ id: m.id, n: m.ns[0], p: 0, taken: false }))
+  prog.miss = { d: today, v: MISS_VER, list }
   save()
   return prog.miss
+}
+
+function missBump(id, n) {
+  for (const q of missions().list) {
+    if (q.id !== id || missDone(q)) continue
+    q.p = Math.min(q.n, q.p + (n || 1))
+  }
+  save()
+  if (typeof renderTabs === 'function') renderTabs()
 }
 
 function missDef(id) { return MISSIONS.find((m) => m.id === id) || MISSIONS[0] }
@@ -2787,6 +2821,9 @@ function bumpMissions(win, rate, bossRun) {
       case 'score': q.p = Math.max(q.p, s.score); break
       case 'run':   q.p++; break
       case 'boss':  if (win && bossRun) q.p++; break
+      case 'hard':  if (win && s.hard) q.p++; break
+      case 'crazy': if (win && s.crazy) q.p++; break
+      case 'rush':  if (win && s.rush >= 0) q.p++; break
     }
     if (q.p > q.n) q.p = q.n
   }
@@ -2809,7 +2846,7 @@ const HARD_TICKET = 3
 
 const HARD_REVIVE = 1
 
-const CRAZY_DMG = 1.3
+const CRAZY_DMG = 2
 const CRAZY_TICKET = 1
 
 const STAR_FAIL = 0
@@ -2829,7 +2866,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 19:31'
+const BUILD_AT = '09-14 19:37'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4678,7 +4715,7 @@ function hpPlain(host, html) {
   host.classList.remove('single', 'end')
   host.innerHTML = html
 }
-const PLANE_CARD_H = 182
+const PLANE_CARD_H = 152
 const elWallet = document.getElementById('wallet')
 
 function planeById(id) { return PLANES.find((p) => p.id === id) }
@@ -5110,7 +5147,7 @@ function renderTabs() {
   set('shop', adTkLeft() > 0 && prog.shopSeen !== dayKey())
   set('planes', anyUpg())
   set('pilot', anyPilotUp())
-  set('squad', anyUpg() || anyPilotUp() || anySlotEmpty())
+  set('squad', anyUpg() || anyPilotUp() || anySlotEmpty() || missions().list.some((q) => !q.taken && missDone(q)))
   const navImage = document.getElementById('hgNavPlane')
   if (navImage) navImage.src = hangarPlaneImage(planeById(prog.squad[MAIN_SLOT]))
   const navFace = document.getElementById('hgNavPilot')
@@ -5642,8 +5679,9 @@ function renderPlanes() {
   stEl.innerHTML = SLOT_META.map((m, i) => {
     const open = slotOpen(i)
     const p = open ? planeById(prog.squad[i]) : null
-    return `<button data-slot="${i}" class="${i === activeSlot ? 'on' : ''}${open ? '' : ' lock'}">` +
-      m.role + `<i>${open ? (p ? p.name : '비었음') : '잠김'}</i></button>`
+    const pic = open ? (p ? `<img src="${hangarPlaneImage(p)}" alt="">` : '<span class="plus" aria-hidden="true">＋</span>') : '<span class="plus" aria-hidden="true">🔒</span>'
+    return `<button data-slot="${i}" class="${i === activeSlot ? 'on' : ''}${open ? '' : ' lock'}${open && !p ? ' need' : ''}">` +
+      pic + `<i>${m.role}</i><small>${open ? (p ? p.name : '비었음') : (m.legend ? '전설' : 'Lv.' + m.lv)}</small></button>`
   }).join('')
   stEl.querySelectorAll('[data-slot]').forEach((b) => {
     b.onclick = () => {
@@ -5658,6 +5696,20 @@ function renderPlanes() {
     }
   })
 
+  const dg = document.getElementById('planeDiag')
+  if (dg) {
+    const cur = planeById(prog.squad[activeSlot])
+    const total = SLOT_META.reduce((a, m, i) => { const q = slotOpen(i) ? planeById(prog.squad[i]) : null; return a + (q ? Math.round(planeScore(q) * slotMul(i)) : 0) }, 0)
+    dg.innerHTML = (cur
+      ? `<div class="pd-pow"><span class="k">파워</span><b>${total.toLocaleString('ko-KR')}</b><small>${SLOT_META[activeSlot].role} ${planeScore(cur).toLocaleString('ko-KR')} × ${Math.round(slotMul(activeSlot) * 100)}%</small></div>` +
+        `<img class="pd-img" src="${hangarPlaneImage(cur)}" alt="">` +
+        `<div class="pd-name"><b>${cur.name}</b><small>${TIERS[cur.tier]} · ${WEAPONS[cur.weapon].name} · 강화 ${upgOf(cur.id)}/${UPG_MAX}</small>` +
+        `<div class="pd-bar"><i style="width:${Math.round(upgOf(cur.id) / UPG_MAX * 100)}%"></i></div></div>` +
+        `<span class="pd-more">정보 ›</span>`
+      : `<div class="pd-pow"><span class="k">파워</span><b>${total.toLocaleString('ko-KR')}</b></div>` +
+        `<div class="pd-empty"><span class="plus" aria-hidden="true">＋</span>${SLOT_META[activeSlot].role} 자리가 비었습니다<small>아래에서 기체를 눌러 「사용」</small></div>`)
+    dg.onclick = () => { if (cur) openDetail(cur, PLANES.filter(unlocked)) }
+  }
   const ef = document.getElementById('planeFilters')
   ef.innerHTML = ''
 
@@ -5731,15 +5783,15 @@ function renderPlanes() {
     const lab = unlockLabel(p)
     const lv = upgOf(p.id)
     const cost = upgCost(p, lv)
+    const tierN = TIER_ORDER.indexOf(p.tier) + 1
     c.innerHTML =
       `<span class="tag t-${p.tier}">${TIERS[p.tier]}</span>` +
       (usedIn[p.id] ? `<span class="inuse${usedIn[p.id].includes('메인') ? ' main' : ''}">${usedIn[p.id].join(' · ')} 적용중</span>`
                     : ok ? '<span class="inuse idle">미적용</span>' : '') +
-
-      `<canvas class="pv" width="220" height="150"></canvas>` +
-
+      `<img class="pimg" src="${hangarPlaneImage(p)}" alt="">` +
+      `<div class="stars" aria-label="${tierN}성">${'★'.repeat(tierN)}<span>${'★'.repeat(4 - tierN)}</span></div>` +
+      `<div class="nm">${p.name}</div>` +
       (() => {
-
         const sc = `<b><small>전투력</small>${planeScore(p).toLocaleString('ko-KR')}</b>`
         if (!ok || !nowDps) return `<div class="cmp dn">${sc}</div>`
         if (p.id === here) return `<div class="cmp same">${sc}<span>현재</span></div>`
@@ -5748,31 +5800,16 @@ function renderPlanes() {
              : d < 0 ? `<div class="cmp dn">${sc}<span>${d}%</span></div>`
                      : `<div class="cmp same">${sc}<span>같음</span></div>`
       })() +
-      `<div class="nm">${p.name}<span class="wpn"> <i class="wi w-${p.weapon}"></i>${WEAPONS[p.weapon].name}</span></div>` +
+      (ok ? '' : `<div class="shard">${lab ? (p.unlock.kind === 'paid' ? '🔒 ' : '') + lab : '조각 ' + shardOf(p.id) + ' / ' + shardNeed(p)}</div>`) +
 
-      (p.el
-        ? `<div class="elrow"><span class="el el-${p.el}">${ELS[p.el].name}</span>` +
-          `<span class="tr">${traitText(p)}</span></div>`
-        : '') +
-      (lab ? `<div class="lock">${p.unlock.kind === 'paid' ? '🔒 ' : ''}${lab}</div>` : '') +
-      (ok
-        ? ''
-        : `<div class="shard">조각 ${shardOf(p.id)} / ${shardNeed(p)}</div>`) +
-      (ok
-
-        ? `<div class="up">` +
-
-          (canUpg(p) && lv < UPG_MAX
-            ? `<button>강화 ${lv} → ${lv + 1}</button>`
-            : `<span class="lvl">강화 ${lv}/${UPG_MAX}` +
-              (lv ? ` · 화력 +${Math.round((upgPower(p.id) - 1) * 100)}%` : '') + `</span>`) +
-          (lv >= UPG_MAX || canUpg(p)
-            ? ''
-            : `<div class="need">` +
-                `<span class="${prog.parts < cost ? 'no' : ''}">부품 ${cost.toLocaleString('ko-KR')}</span> · ` +
-                `<span class="${shardOf(p.id) < shardUpg(p, lv) ? 'no' : ''}">조각 ${shardUpg(p, lv)}</span></div>`) +
-          `</div>`
-        : '')
+      `<div class="act">` +
+        `<div class="arow"><button class="binfo">정보</button>` +
+        (ok ? `<button class="buse"${picked ? ' disabled' : ''}>${picked ? '사용 중' : '사용'}</button>` : '') + `</div>` +
+        (ok ? `<div class="up">` +
+          (canUpg(p) && lv < UPG_MAX ? `<button>강화 ${lv} → ${lv + 1}</button>`
+            : `<span class="lvl">강화 ${lv}/${UPG_MAX}` + (lv >= UPG_MAX ? '' : ` · 부품 ${cost.toLocaleString('ko-KR')} · 조각 ${shardUpg(p, lv)}`) + `</span>`) +
+          `</div>` : '') +
+      `</div>`
 
     const btn = c.querySelector('.up button')
     if (btn && !btn.disabled) {
@@ -5782,6 +5819,7 @@ function renderPlanes() {
         prog.parts -= cost
         prog.shardP[p.id] = shardOf(p.id) - shardUpg(p, lv)
         prog.upg[p.id] = lv + 1
+        missBump('upg')
         guideDone('upg')
         save()
         sfx('ready')
@@ -5791,7 +5829,15 @@ function renderPlanes() {
       }
     }
 
-    c.onclick = () => openDetail(p, list)
+    c.onclick = () => {
+      const was = c.classList.contains('sel')
+      elPlanes.querySelectorAll('.card.cp.sel').forEach((x) => x.classList.remove('sel'))
+      if (!was) c.classList.add('sel')
+    }
+    const bi = c.querySelector('.binfo')
+    if (bi) bi.onclick = (ev) => { ev.stopPropagation(); openDetail(p, list) }
+    const bu = c.querySelector('.buse')
+    if (bu) bu.onclick = (ev) => { ev.stopPropagation(); pickPlaneTo(p, null) }
     cards.push(c)
   }
 
@@ -6346,6 +6392,7 @@ function openPilot(pl, list) {
       prog.pilot.xp -= statCost(cur[k])
       cur[k]++
       save(); sfx('ready'); haptic('ult')
+      missBump('stat')
       guideDone('stat')
       const pa = PILOT_ART[pl.grade]
       const img = PC_IMG[pl.grade] || (pa && GC[pa.face[pl.face]]) || (pa && GC[pa.face[0]])
@@ -6876,32 +6923,32 @@ function openDetail(p, list) {
 
   guideFollow('planeSheet')
   const dp = document.getElementById('dPick')
-  if (dp) dp.onclick = () => {
+  if (dp) dp.onclick = () => pickPlaneTo(p, close)
+}
 
-    const dup = prog.squad.indexOf(p.id)
-    if (dup === MAIN_SLOT && activeSlot !== MAIN_SLOT && !prog.squad[activeSlot]) {
-      say('메인 자리는 비울 수 없습니다.\n먼저 메인에 다른 기체를 넣고 옮겨 주세요.', '메인 자리')
-      return
-    }
-    const apply = () => {
-      if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
-      prog.squad[activeSlot] = p.id
-      guideDone('slot' + activeSlot)
-      save(); close(); renderPlanes()
-
-      hgToast(SLOT_META[activeSlot].role + ' → 「' + p.name + '」 적용')
-    }
-
-    if (dup >= 0 && dup !== activeSlot) {
-      const back = planeById(prog.squad[activeSlot])
-      ask('「' + p.name + '」은(는) 현재 ' + SLOT_META[dup].role + '에 배치된 기체입니다.\n' +
-          SLOT_META[activeSlot].role + '(으)로 옮기고, ' + SLOT_META[dup].role + '에는 ' +
-          (back ? '지금 ' + SLOT_META[activeSlot].role + '의 「' + back.name + '」을(를) 넣습니다.' : '아무것도 넣지 않습니다.') +
-          '\n변경하시겠습니까?', apply, { title: '배치 변경', ok: '변경' })
-      return
-    }
-    apply()
+function pickPlaneTo(p, done) {
+  const dup = prog.squad.indexOf(p.id)
+  if (dup === MAIN_SLOT && activeSlot !== MAIN_SLOT && !prog.squad[activeSlot]) {
+    say('메인 자리는 비울 수 없습니다.\n먼저 메인에 다른 기체를 넣고 옮겨 주세요.', '메인 자리')
+    return
   }
+  const apply = () => {
+    if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
+    prog.squad[activeSlot] = p.id
+    guideDone('slot' + activeSlot)
+    save(); if (done) done(); renderPlanes()
+    hgToast(SLOT_META[activeSlot].role + ' → 「' + p.name + '」 적용')
+  }
+
+  if (dup >= 0 && dup !== activeSlot) {
+    const back = planeById(prog.squad[activeSlot])
+    ask('「' + p.name + '」은(는) 현재 ' + SLOT_META[dup].role + '에 배치된 기체입니다.\n' +
+        SLOT_META[activeSlot].role + '(으)로 옮기고, ' + SLOT_META[dup].role + '에는 ' +
+        (back ? '지금 ' + SLOT_META[activeSlot].role + '의 「' + back.name + '」을(를) 넣습니다.' : '아무것도 넣지 않습니다.') +
+        '\n변경하시겠습니까?', apply, { title: '배치 변경', ok: '변경' })
+    return
+  }
+  apply()
 }
 
 function paintPlane(cv, p, zoom) {
@@ -8187,7 +8234,10 @@ const BOSS_RUSH = [
 
 const RUSH_HP_MUL = 3
 
-const BOSS_HP_UP = 1.25
+const BOSS_HP_UP = 1.25 * 1.15
+
+const ENEMY_HP_UP = 1.15
+const CRAZY_HP = 2
 
 function finalRushBoss(stage) {
   const th = (stage && stage.theme) || 'sea'
@@ -8357,7 +8407,7 @@ function bossRushDone(i) {
 let runMode = 'normal'
 const MODES = [
   ['normal', '일반', '', 0],
-  ['crazy',  '크레이지', `적 공격 ×${CRAZY_DMG}`, CRAZY_TICKET],
+  ['crazy',  '크레이지', `적 체력·공격 ×${CRAZY_DMG}`, CRAZY_TICKET],
   ['hard',   '하드코어', '한 대 맞으면 끝', HARD_TICKET],
 ]
 function modeDef(k) { return MODES.find((m) => m[0] === k) || MODES[0] }
@@ -8614,7 +8664,7 @@ function mkEnemy(kind, x, y, drift) {
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
 
-           ...b, hp: Math.round(b.hp * SG.hpMul * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
+           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * (state && state.crazy ? CRAZY_HP : 1) * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
 
            sp: Math.round(b.sp * SG.spMul * SPD_K),
            dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
@@ -8684,7 +8734,7 @@ function mkGround(kind, x, y) {
 
     art: sea ? Math.round(b.r * 7) : 0,
 
-    hp: sea ? b.hp * 2 : b.hp,
+    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * (state && state.crazy ? CRAZY_HP : 1)),
   }
 }
 
@@ -8934,7 +8984,7 @@ function spawnBoss(mid) {
 
     ? Math.round((CHAPTERS[rushCh(state.rush, state.rushD) - 1] || CHAPTERS[0]).bossHp
                  * 0.55 * RUSH_HP_MUL)
-    : Math.round(state.stage.bossHp * (mid ? mm : 0.55) * BOSS_HP_UP)
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55) * BOSS_HP_UP * (state.crazy ? CRAZY_HP : 1))
 
   const bsub = (state.stage && state.stage.sub) || 1
 
