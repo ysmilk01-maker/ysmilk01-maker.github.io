@@ -2346,7 +2346,7 @@ const ORB_ULT = { hold: 3.6, rad: 72, r: 26, dps: 170,
 
 const ULT_TUNE = {
   rapidT: 5.0,
-  rapidDmg: 12,
+  rapidDmg: 10.8,
   spreadT: 3.0,
   beamBoss: { laser: 286, spread: 290 },
   dashBoss: 880,
@@ -2401,19 +2401,20 @@ function enemyMul(b) {
   return row[TIER_ORDER.indexOf(p.tier)] || 1
 }
 
+const ULT_DMG = 0.9
 function planeUltMul() {
   const u = state && state.squad && state.squad[MAIN_SLOT]
   const p = u && u.plane
   if (!p) return 1
-  return (p.power / p.rate) * upgPower(p.id)
+  return (p.power / p.rate) * upgPower(p.id) * ULT_DMG
 }
 
 const STRIKE = { scan: 0.6, n: 100, gap: 0.022, dmg: 7.5 }
 
 const CLONES = [
-  { lag: 8,  dx: -46, mul: 0.9 },
-  { lag: 8,  dx: 46,  mul: 0.9 },
-  { lag: 18, dx: 0,   mul: 0.9 },
+  { lag: 8,  dx: -46, mul: 0.81 },
+  { lag: 8,  dx: 46,  mul: 0.81 },
+  { lag: 18, dx: 0,   mul: 0.81 },
 ]
 
 const CLONE_TIME = 10.0
@@ -2760,7 +2761,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 13:11'
+const BUILD_AT = '09-14 13:28'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9442,7 +9443,7 @@ function fireUlt() {
       const save = CHAIN.range
       CHAIN.range = 9999
       chainFrom({ x: pl.x, y: pl.y - 20, dead: true },
-                { dmg: 115 * ultPow(), jumps: 16, falloff: 0.95 })
+                { dmg: 115 * ultPow() * ULT_DMG, jumps: 16, falloff: 0.95 })
       CHAIN.range = save
 
       if (s.boss && !s.boss.entering) { bossArea(s.boss, ULT_TUNE.chainBoss * ultPow() * planeUltMul()); s.boss.flash = .2 }
@@ -9531,7 +9532,7 @@ function updateUlt(dt) {
       const cx = k === 'spread' ? W / 2 + Math.sin(s.t * 3.2) * (W / 2 - 50) : pl.x
       s.sweeps = [{ x: cx, half }]
 
-      const dps = k === 'laser' ? 150 : 120
+      const dps = (k === 'laser' ? 150 : 120) * ULT_DMG
       for (const e of s.enemies) {
         if (Math.abs(e.x - cx) < half + e.r && e.y < pl.y) { e.hp -= dps * dt; e.flash = .08 }
       }
@@ -9546,7 +9547,7 @@ function updateUlt(dt) {
       pl.y -= 620 * dt
       pl.inv = Math.max(pl.inv, .2)
       for (const e of s.enemies) {
-        if (near(e, pl, e.r + 26)) { e.hp -= 90; e.flash = .1; boom(e.x, e.y, 8, '#ffe08a') }
+        if (near(e, pl, e.r + 26)) { e.hp -= 90 * ULT_DMG; e.flash = .1; boom(e.x, e.y, 8, '#ffe08a') }
       }
       if (s.boss && !s.dashHit && !s.boss.entering && near(s.boss, pl, s.boss.r + 26)) {
         s.dashHit = true
@@ -9598,7 +9599,7 @@ function updateUlt(dt) {
       for (const e of s.enemies) {
         if (e.dead) continue
         if ((e.x - pl.x) ** 2 + (e.y - pl.y) ** 2 < (R + e.r) ** 2) {
-          e.hp -= ORB_ULT.dps * dt; e.flash = .08
+          e.hp -= ORB_ULT.dps * ULT_DMG * dt; e.flash = .08
         }
       }
       if (s.boss && !s.boss.entering &&
@@ -9697,7 +9698,7 @@ function updateUlt(dt) {
       for (const e of s.enemies) {
         if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r && !e.shocked) {
 
-          e.shocked = true; e.hp -= 78 * ultPow(); e.flash = .1
+          e.shocked = true; e.hp -= 78 * ultPow() * ULT_DMG; e.flash = .1
         }
       }
 
@@ -9710,7 +9711,7 @@ function updateUlt(dt) {
     } else {
       sh.r += (sh.kind === 'shell' ? 420 : 330) * dt
 
-      const dmg = (sh.kind === 'shell' ? 90 : 44) * ultPow()
+      const dmg = (sh.kind === 'shell' ? 90 : 44) * ultPow() * ULT_DMG
       for (const e of s.enemies) {
         if (!e.hitBy || e.hitBy !== sh) {
           if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r) { e.hp -= dmg; e.flash = .1; e.hitBy = sh }
@@ -9720,7 +9721,7 @@ function updateUlt(dt) {
         if ((u.x - sh.x) ** 2 + (u.y - sh.y) ** 2 < sh.r * sh.r) { u.hp -= dmg * dt * 6; u.flash = .1 }
       }
       if (s.boss && (s.boss.x - sh.x) ** 2 + (s.boss.y - sh.y) ** 2 < sh.r * sh.r)
-        bossArea(s.boss, dmg * dt * 5 * (sh.kind === 'bomb' ? ULT_TUNE.bombBoss * planeUltMul() : 1))
+        bossArea(s.boss, dmg * dt * 5 * (sh.kind === 'bomb' ? ULT_TUNE.bombBoss * planeUltMul() / ULT_DMG : 1))
       if (sh.r > (sh.kind === 'shell' ? 130 : SHARD_R)) sh.done = true
     }
   }
