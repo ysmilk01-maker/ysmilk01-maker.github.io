@@ -2378,6 +2378,29 @@ function bossMul(b) {
   return row[TIER_ORDER.indexOf(p.tier)] || 1
 }
 
+const ENEMY_MUL = {
+  rapid:   [1.25, 0.899, 1.04, 0.593],
+  spread:  [1.45, 1.16, 1.45, 0.764],
+  laser:   [0.911, 1.06, 1.21, 1.09],
+  homing:  [0.92, 0.493, 0.668, 0.219],
+  pierce:  [0.566, 0.64, 0.65, 0.34],
+  wave:    [1, 0.58, 0.74, 0.159],
+  orb:     [0.82, 0.616, 0.642, 0.293],
+  mine:    [0.51, 0.352, 0.373, 0.285],
+  beam:    [0.453, 0.448, 0.494, 0.368],
+  boomer:  [0.522, 0.445, 0.492, 0.257],
+  chain:   [3.48, 3.48, 3.48, 3.48],
+}
+function enemyMul(b) {
+  if (b.ult) return 1
+  const u = state && state.squad && state.squad[b.owner]
+  const p = u && u.plane
+  if (!p) return 1
+  const row = ENEMY_MUL[p.weapon]
+  if (!row) return 1
+  return row[TIER_ORDER.indexOf(p.tier)] || 1
+}
+
 function planeUltMul() {
   const u = state && state.squad && state.squad[MAIN_SLOT]
   const p = u && u.plane
@@ -2737,7 +2760,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 09:33'
+const BUILD_AT = '09-14 10:02'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9124,6 +9147,7 @@ function itemGuideClose() {
 const MISSILE_R = 66
 
 function missileBurst(b) {
+  const em = enemyMul(b)
   const s = state
   b.dead = true
   boom(b.x, b.y, 22, '#ffd166')
@@ -9133,7 +9157,7 @@ function missileBurst(b) {
   for (const e of s.enemies) {
     if (e.dead) continue
     if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 >= rr) continue
-    e.hp -= b.dmg
+    e.hp -= b.dmg * em
     e.flash = .1
     if (e.hp > 0) continue
     e.dead = true
@@ -9146,7 +9170,7 @@ function missileBurst(b) {
   for (const u of s.grounds) {
     if (u.dead) continue
     if ((u.x - b.x) ** 2 + (u.y - b.y) ** 2 >= rr) continue
-    u.hp -= b.dmg
+    u.hp -= b.dmg * em
     u.flash = .1
     if (u.hp > 0) continue
     u.dead = true
@@ -10464,6 +10488,7 @@ function splitBullet(b) {
       x: b.x, y: b.y, vx: dir * (140 + b.split * 40), vy: -260,
       r: Math.max(2, b.r * .6), dmg: b.dmg * .45, pierce: 0,
       life: .8, age: 0, kind: 'normal',
+      owner: b.owner, ult: b.ult,
     })
   }
 }
@@ -10486,8 +10511,9 @@ function collide() {
       if (b.hitList && b.hitList.has(e)) continue
       if (near(b, e, e.r + b.r)) {
 
+        const em = enemyMul(b)
         if (e.shield > 0 && b.y > e.y - e.r * 0.35) {
-          e.shield -= b.dmg
+          e.shield -= b.dmg * em
           e.flash = .1
           boom(b.x, b.y, 2, '#9fd8ff')
           sfx('hit')
@@ -10496,14 +10522,14 @@ function collide() {
           continue
         }
 
-        e.hp -= b.dmg * (e.guarded ? 0.5 : 1)
+        e.hp -= b.dmg * em * (e.guarded ? 0.5 : 1)
         e.flash = .1
         sfx('hit')
 
         s.sparks.push({ x: b.x, y: b.y, age: 0, rot: Math.random() * 6.28,
                         k: b.dmg >= 26 ? 'sp3' : b.dmg >= 12 ? 'sp2' : 'sp1' })
-        if (b.kind === 'chain') chainFrom(e, b)
-        applyEl(e, b)
+        if (b.kind === 'chain') chainFrom(e, em === 1 ? b : { dmg: b.dmg * em, jumps: b.jumps, falloff: b.falloff })
+        applyEl(e, em === 1 ? b : { el: b.el, dmg: b.dmg * em, x: b.x, y: b.y })
         if (b.split > 0) splitBullet(b)
         if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || new Set()).add(e) }
         else b.dead = true
@@ -10519,7 +10545,7 @@ function collide() {
       if (u.dead || b.dead || u.y < -20) continue
       if (b.hitList && b.hitList.has(u)) continue
       if (near(b, u, u.r + b.r)) {
-        u.hp -= b.dmg; u.flash = .1
+        u.hp -= b.dmg * enemyMul(b); u.flash = .1
         if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || new Set()).add(u) }
         else b.dead = true
         if (u.hp <= 0) {
