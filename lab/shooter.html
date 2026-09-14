@@ -2953,7 +2953,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:14'
+const BUILD_AT = '09-15 07:19'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6250,6 +6250,18 @@ let mapCh = null
 
 function hardOpen() { return starOf(prog.chapter || 0, curSub()) > 0 }
 
+function anyHardOpen() { return CHAPTERS.some((c, ci) => { for (let k = 1; k <= SUBS; k++) if (starOf(ci, k) > 0) return true; return false }) }
+
+function jumpToModeStage(k) {
+  if (k === 'normal') return null
+  const ok = (ci, sub) => starOf(ci, sub) > 0 && !(prog[k] || {})[stageKey(ci, sub)]
+  if (ok(prog.chapter || 0, curSub())) return null
+  for (let ci = 0; ci < CHAPTERS.length; ci++) for (let sub = 1; sub <= SUBS; sub++) {
+    if (ok(ci, sub)) { prog.chapter = ci; prog.sub = sub; save(); return [ci, sub] }
+  }
+  return null
+}
+
 function modeDone(k) {
   return k !== 'normal' && !!(prog[k] || {})[stageKey(prog.chapter || 0, curSub())]
 }
@@ -6263,7 +6275,7 @@ function hardBox() {
   const done = modeDone(runMode)
   const tabs = MODES.map(([k, nm]) =>
     `<button data-mode="${k}" class="${k === runMode ? 'on ' + k : ''}"` +
-    `${open || k === 'normal' ? '' : ' disabled'}>${nm}` +
+    `${anyHardOpen() || k === 'normal' ? '' : ' disabled'}>${nm}` +
     `${modeDone(k) ? ' ✓' : ''}</button>`).join('')
   const ds = !open && runMode !== 'normal'
     ? '일반으로 한 번 깨면 열립니다'
@@ -6283,12 +6295,14 @@ function bindModes(root, rerender) {
     b.onclick = (e) => {
       e.stopPropagation()
       const k = b.dataset.mode
-      if (k !== 'normal' && !hardOpen()) {
-        say('일반으로 한 번 깬 판만 하드코어·크레이지로 갈 수 있습니다.', '아직 못 갑니다')
+      if (k !== 'normal' && !anyHardOpen()) {
+        say('일반으로 한 번 깬 판이 있어야 다른 모드로 갈 수 있습니다.', '아직 못 갑니다')
         return
       }
       runMode = k
+      const moved = jumpToModeStage(k)
       rerender()
+      if (moved && typeof hgToast === 'function') hgToast(modeDef(k)[1] + ' → ' + CHAPTERS[moved[0]].name + ' ' + moved[1] + '단계로 이동')
 
       if (typeof paintEnergy === 'function') paintEnergy()
     }
