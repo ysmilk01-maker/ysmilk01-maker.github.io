@@ -2908,7 +2908,7 @@ const STAR_FAIL = 0
 const STAR_CLEAR = 3
 const STAR_TICKET = 3
 
-const EN_MAX = 8
+const EN_MAX = 10
 const EN_MAX_HI = 10
 const EN_LV = 10
 
@@ -2921,8 +2921,8 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 06:57'
-const FREE_PLAY = true
+const BUILD_AT = '09-15 06:59'
+const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
 const OLD_KEY = 'shooter-proto-v2'
@@ -4266,7 +4266,7 @@ function openMail(tab) {
   })
 }
 
-const PASS = { price: 9900, name: '출격 패스', tickets: 10, enMax: 10 }
+const PASS = { price: 9900, name: '출격 패스', tickets: 10, enMax: 12 }
 function passActive() { return !!(prog.pass && prog.pass.until && prog.pass.until > Date.now()) }
 
 function passRange() {
@@ -4298,7 +4298,7 @@ function passGrantPlane() {
 }
 const PASS_BEN = [
   ['광고', '광고 없음', '광고 자리마다 보상만 바로 받습니다'],
-  ['출격', '출격권 한도 10장', '자연 충전 상한 10장 (기본 ' + EN_MAX + '장)'],
+  ['출격', '출격권 한도 ' + PASS.enMax + '장', '자연 충전 상한 ' + PASS.enMax + '장 (기본 ' + EN_MAX + '장)'],
   ['가챠', '매일 가챠권 ' + PASS.tickets + '장', '우편함으로 매일 도착합니다'],
   ['기체', '매월 상급 기체 1기', '결제할 때마다 상급 기체 랜덤 1기'],
 ]
