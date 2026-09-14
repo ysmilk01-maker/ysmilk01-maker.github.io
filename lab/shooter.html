@@ -2023,6 +2023,30 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .card.cp .inuse{top:0;left:0;right:0;width:auto;border-radius:10px 10px 0 0;border-width:0 0 1px;text-align:center;font-size:9.5px;padding:2px 4px}
 .card.cp .inuse.idle{background:#101820}.card.cp .tag{top:20px;left:6px}
 .card.cp .pimg{margin-top:26px;height:56px}
+/* ── 전선 지도 v3 (2026-09-14): 챕터 탭 / 배경 위 지그재그 노드 / 출격 ── */
+#scStage.v3{padding:10px 10px calc(var(--hg-nav) + 8px + env(safe-area-inset-bottom,0px))}
+#scStage.v3 .body{display:flex;flex-direction:column;min-height:0}
+.maptabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 8px;flex:none}.maptabs::-webkit-scrollbar{display:none}
+.maptabs .mtab{flex:none;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:74px;padding:5px 8px;font-size:10.5px;background:#0f1b22cc;border:1px solid #4d626b77;border-radius:10px;color:#cfe0e6;box-shadow:none}
+.maptabs .mtab b{font-size:10px;color:#ffd98a}.maptabs .mtab.on{background:#1b3a45;border-color:#a2c6bd}.maptabs .mtab.lock{opacity:.45}
+#scStage.v3 .chbar{margin-bottom:6px}#scStage.v3 .chbar .chcur .cn{font-size:15px}#scStage.v3 .chbar .chcur .cs{display:none}
+.mapwrap{position:relative;height:clamp(330px,52vh,470px);border-radius:16px;border:1px solid #3f545d77;overflow:hidden;background:#0b161d}
+.mapwrap .pv{position:absolute;inset:0;width:100%;height:100%;display:block;background:none;filter:saturate(.85) brightness(.85)}
+.mapwrap .mappath{position:absolute;inset:0;width:100%;height:100%}.mapwrap .mappath polyline{fill:none;stroke:#9fe8ffaa;stroke-width:.7;stroke-dasharray:1.6 1.6;vector-effect:non-scaling-stroke;stroke-width:2px}
+.mapnodes{position:absolute;inset:0}
+.mnode{position:absolute;width:52px;transform:translate(-50%,-50%);text-align:center;cursor:pointer}
+.mnode .mc{width:40px;height:40px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 50% 40%,#5fa96a,#2e6b3a 70%);border:3px solid #b9e4a0;box-shadow:0 0 0 3px #12301a,0 4px 10px #0009;display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1}
+.mnode.clear .mc::after,.mnode.perfect .mc::after{content:"";width:12px;height:12px;border-radius:50%;background:#f4f7c8;box-shadow:0 0 8px #fff}
+.mnode.mid .mc{background:radial-gradient(circle at 50% 40%,#c9d86a,#6f7e1e 70%);border-color:#eef7b0}
+.mnode.boss .mc{background:radial-gradient(circle at 50% 40%,#ff9d4a,#b2461a 70%);border-color:#ffd6a8;width:46px;height:46px;font-size:20px}
+.mnode.lock .mc{background:#1f2a31;border-color:#4d626b;box-shadow:0 0 0 3px #0b141a;font-size:14px;opacity:.85}
+.mnode.on .mc{box-shadow:0 0 0 3px #12301a,0 0 0 6px #9fe8ff,0 4px 10px #0009;animation:wingNeed 1.6s ease-in-out infinite}
+.mnode .ml{margin-top:2px;font-size:12px;font-weight:900;color:#f2fff4;text-shadow:0 1px 3px #000,0 0 6px #000}
+.mnode .st{display:flex;gap:2px;justify-content:center;margin-top:1px}.mnode .st i{width:9px;height:9px;background:#ffd23f;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}.mnode .st i.off{opacity:.25;filter:grayscale(1)}
+.mapinfo{position:absolute;right:8px;top:8px;background:#0a151cd9;border:1px solid #3f545d;border-radius:9px;padding:5px 9px;max-width:46%;text-align:right}.mapinfo b{display:block;font-size:13px}.mapinfo small{display:block;font-size:9.5px;color:#9fb9c5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#scStage.v3 .rushopen{margin-top:8px}
+#scStage.v3 .bar{margin-top:6px}#scStage.v3 #launch2{min-height:48px;font-size:18px;font-weight:800;background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f;border-radius:12px;padding:8px 26px}
+@media(max-height:700px){.mapwrap{height:clamp(280px,46vh,400px)}}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2123,9 +2147,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 </div>
 
 <!-- 스테이지 -->
-<div class="screen bgpic" id="scStage" hidden>
-  <h1>스테이지</h1>
-  <p class="sub">앞 단계를 깨야 다음이 열립니다. 고르면 바로 나갈 수 있습니다.</p>
+<div class="screen bgpic v3" id="scStage" hidden>
+  <h1 class="hg-sr">전선</h1>
   <div class="body nos"><div class="stages" id="stageBody"></div></div>
   <div class="bar">
     <span class="hint" id="stageHint"></span>
@@ -2866,7 +2889,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 19:37'
+const BUILD_AT = '09-14 19:40'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6195,23 +6218,44 @@ function renderStage() {
       `<div class="st">${stars}</div></div>`
   }).join('')
 
+  const tabs = CHAPTERS.map((c, i) => {
+    const open = chapterOpen(i)
+    return `<button class="mtab${i === mapCh ? ' on' : ''}${open ? '' : ' lock'}" data-ch="${i}"${open ? '' : ' disabled'}>` +
+      `<span>챕터 ${c.id}</span><b>${open ? chapterStars(i) + '/' + (SUBS * 3) + '★' : '잠김'}</b></button>`
+  }).join('')
+
+  const POS = [[14, 88], [38, 80], [62, 86], [84, 74], [66, 62], [40, 66], [16, 56], [30, 42], [56, 46], [80, 38], [60, 24], [34, 16]]
+  const mapNodes = Array.from({ length: SUBS }, (_, k) => {
+    const sub = k + 1
+    const open = subOpen(mapCh, sub)
+    const st = starOf(mapCh, sub)
+    const isBoss = sub === SUBS, isMid = BOSS_AT.includes(sub) && !isBoss
+    const pick = mapCh === (prog.chapter || 0) && sub === curSub()
+    const [x, y] = POS[k] || [50, 50]
+    const stars = [0, 1, 2].map((i) => `<i class="${i < st ? '' : 'off'}"></i>`).join('')
+    return `<div class="mnode${pick && open ? ' on' : ''}${open ? '' : ' lock'}${isBoss ? ' boss' : isMid ? ' mid' : ''}${st >= 3 ? ' perfect' : st > 0 ? ' clear' : ''}" data-sub="${sub}" style="left:${x}%;top:${y}%">` +
+      `<div class="mc">${open ? (isBoss || isMid ? '💀' : '') : '🔒'}</div>` +
+      `<div class="ml">${sub}</div><div class="st">${stars}</div></div>`
+  }).join('')
+  const path = POS.slice(0, SUBS).map(([x, y]) => x + ',' + y).join(' ')
   el.innerHTML =
+    `<div class="maptabs">${tabs}</div>` +
     bar +
     `<div class="chpage">` +
-    `<div class="card stg"><canvas class="pv" width="520" height="140"></canvas>` +
-    `<div class="nm">${ch.id}. ${ch.name}</div><div class="de">${ch.sub}</div>` +
-    `<div class="up"><span class="lvl">적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}` +
-    ` · 별 ${chapterStars(mapCh)}/${SUBS * 3}</span></div></div>` +
-    `<div class="nodes">${nodes}</div></div>` +
-
+    `<div class="mapwrap"><canvas class="pv" width="520" height="140"></canvas>` +
+    `<svg class="mappath" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${path}"/></svg>` +
+    `<div class="mapnodes">${mapNodes}</div>` +
+    `<div class="mapinfo"><b>${ch.name}</b><small>${ch.sub}</small><small>적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}</small></div>` +
+    `</div></div>` +
     (rushModeOpen()
       ? `<button class="rushopen" id="rushOpen">` +
         `<span class="rn">보스 도전</span>` +
         `<span class="rs">${RUSH_DIFF[rushDiff()].name} · ` +
         `${BOSS_RUSH.filter((d, i) => rushBest(i) >= rushDiff()).length}` +
         ` / ${BOSS_RUSH.length} 격파</span><span class="go">▸</span></button>`
-      : `<div class="lab" style="margin-top:18px">보스 도전</div>` +
-        `<div class="empty">파일럿 Lv.${RUSH_LV} 에 열립니다.</div>`)
+      : `<div class="lab" style="margin-top:8px">보스 도전 <span style="color:var(--dim);font-weight:500">- 파일럿 Lv.${RUSH_LV} 에 열립니다</span></div>`)
+  el.querySelectorAll('[data-ch]').forEach((t) => { t.onclick = () => { mapCh = +t.dataset.ch; renderStage() } })
+  const onTab = el.querySelector('.mtab.on'); if (onTab && onTab.scrollIntoView) onTab.scrollIntoView({ block: 'nearest', inline: 'center' })
 
   paintStage(el.querySelector('.pv'), ch)
   bindModes(el, renderStage)
