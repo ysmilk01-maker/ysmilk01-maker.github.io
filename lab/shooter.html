@@ -2108,7 +2108,6 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
       </div>
       <div class="hg-col">
         <button class="hg-ico" id="hgGoMiss"><span class="ie" aria-hidden="true">📋</span><span>임무</span><b class="mdot" id="hgMissDot" hidden></b></button>
-        <button class="hg-ico" id="hgGoRush"><span class="ie" aria-hidden="true">💀</span><span>보스 도전</span></button>
         <button class="hg-ico" id="hgGoInfo"><span class="ie" aria-hidden="true">📊</span><span>편대 정보</span></button>
         <button class="hg-ico" id="hgGoColl"><span class="ie" aria-hidden="true">🏆</span><span>컬렉션</span></button>
       </div>
@@ -2919,7 +2918,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 19:53'
+const BUILD_AT = '09-14 21:53'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5599,7 +5598,6 @@ function renderSquad() {
   $('hgGoMiss').onclick = () => openMissionSheet()
   $('hgGoInfo').onclick = () => openInfoSheet()
   $('hgGoColl').onclick = () => openCollectionSheet()
-  $('hgGoRush').onclick = () => { if (rushModeOpen()) openRushSheet(); else say('파일럿 Lv.' + RUSH_LV + ' 에 열립니다.', '보스 도전') }
   $('hgGachaDot').hidden = !(prog.ticket >= GACHA.plane.cost)
   fxNum($('vParts'), prog.parts, 'parts')
   fxNum($('vTicket'), prog.ticket, 'ticket')
