@@ -2111,6 +2111,11 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .card.cp .wpn .wi{width:10px;height:10px;vertical-align:-1px;margin-right:2px}
 .card.cp .nm{font-size:11px;margin-top:1px}.card.cp .stars{font-size:9px}.card.cp .cmp b{font-size:14px}
 .hp-page{padding:2px 3px 3px}
+/* 낮은 화면: 카드가 줄면 무기 줄·별을 뺀다. 홈 탭은 편대 화면에서만 도드라진다 (2026-09-15) */
+.card.cp.snug .pimg{height:36px;margin-top:20px}.card.cp.snug .stars{display:none}
+.card.cp.tight .pimg{height:28px;margin-top:20px}.card.cp.tight .stars{display:none}.card.cp.tight .cmp b{font-size:12px}.card.cp.tight .nm{font-size:10.5px}
+#tabs .hg-home:not(.on){background:transparent;border-color:transparent;box-shadow:none;top:0;width:66px;height:62px}
+#tabs .hg-home:not(.on)>img{width:44px;height:44px}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2977,7 +2982,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:40'
+const BUILD_AT = '09-15 07:50'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5915,6 +5920,10 @@ function renderPlanes() {
   }
 
   const keepPage = elPlanes._page || 0
+
+  const availH = elPlanes.clientHeight - 26
+  const cardH = availH >= 2 * PLANE_CARD_H + 8 ? PLANE_CARD_H : Math.max(118, Math.floor((availH - 8) / 2))
+  const tight = cardH < 150 ? ' tight' : cardH < 162 ? ' snug' : ''
   const cards = []
 
   const list = PLANES.filter((p) =>
@@ -5951,7 +5960,8 @@ function renderPlanes() {
 
     c.className = 'card cp tier-' + p.tier + (ok ? '' : ' locked') + (picked ? ' picked' : '') +
       (canUpg(p) ? ' can' : '') + (usedIn[p.id] ? ' used' : '')
-    c.style.height = PLANE_CARD_H + 'px'
+    c.style.height = cardH + 'px'
+    if (tight) c.className += tight
     kbClickable(c)
     c.dataset.pid = p.id
     const lab = unlockLabel(p)
@@ -6003,7 +6013,7 @@ function renderPlanes() {
     cards.push(c)
   }
 
-  const rows = hpRows(elPlanes, PLANE_CARD_H, 8)
+  const rows = Math.max(2, hpRows(elPlanes, cardH, 8))
   const per = 3 * rows
   const pages = []
   for (let i = 0; i < cards.length; i += per) {
