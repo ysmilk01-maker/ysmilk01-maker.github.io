@@ -2948,7 +2948,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:11'
+const BUILD_AT = '09-15 07:12'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5835,12 +5835,12 @@ function renderPlanes() {
     const cur = planeById(prog.squad[activeSlot])
     const total = SLOT_META.reduce((a, m, i) => { const q = slotOpen(i) ? planeById(prog.squad[i]) : null; return a + (q ? Math.round(planeScore(q) * slotMul(i)) : 0) }, 0)
     dg.innerHTML = (cur
-      ? `<div class="pd-pow"><span class="k">파워</span><b>${total.toLocaleString('ko-KR')}</b><small>${SLOT_META[activeSlot].role} ${planeScore(cur).toLocaleString('ko-KR')} × ${Math.round(slotMul(activeSlot) * 100)}%</small></div>` +
+      ? `<div class="pd-pow"><span class="k">편대 파워</span><b>${total.toLocaleString('ko-KR')}</b><small>이 자리 몫 +${Math.round(planeScore(cur) * slotMul(activeSlot)).toLocaleString('ko-KR')} (${planeScore(cur).toLocaleString('ko-KR')}×${Math.round(slotMul(activeSlot) * 100)}%)</small></div>` +
         `<img class="pd-img" src="${hangarPlaneImage(cur)}" alt="">` +
         `<div class="pd-name"><b>${cur.name}</b><small>${TIERS[cur.tier]} · ${WEAPONS[cur.weapon].name} · 강화 ${upgOf(cur.id)}/${UPG_MAX}</small>` +
         `<div class="pd-bar"><i style="width:${Math.round(upgOf(cur.id) / UPG_MAX * 100)}%"></i></div></div>` +
         `<span class="pd-more">정보 ›</span>`
-      : `<div class="pd-pow"><span class="k">파워</span><b>${total.toLocaleString('ko-KR')}</b></div>` +
+      : `<div class="pd-pow"><span class="k">편대 파워</span><b>${total.toLocaleString('ko-KR')}</b><small>이 자리 몫 +0 (비었음)</small></div>` +
         `<div class="pd-empty"><span class="plus" aria-hidden="true">＋</span>${SLOT_META[activeSlot].role} 자리가 비었습니다<small>아래에서 기체를 눌러 「사용」</small></div>`)
     dg.onclick = () => { if (cur) openDetail(cur, PLANES.filter(unlocked)) }
   }
