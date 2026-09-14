@@ -2336,7 +2336,7 @@ const ULT = {
   spread: { name: '전면 소사', desc: '화면 폭을 훑는 광선이 3초간 지나갑니다. 보스는 계속 맞습니다' },
   laser:  { name: '관통 광선', desc: '굵은 광선이 3초간 위를 뚫습니다' },
   homing: { name: '분신 전개', desc: '분신 셋이 10초간 따라오며 두 배 속도로 쏩니다' },
-  pierce: { name: '돌격', desc: '무적으로 위로 뚫고 올라갑니다. 보스를 뚫으면 크게 한 방' },
+  pierce: { name: '창격', desc: '거대한 관통창 열두 발을 위로 쏩니다. 전부 꿰뚫고, 보스가 앞에 있으면 크게 한 방' },
   wave:   { name: 'EMP 펄스', desc: '화면의 적탄을 전부 지우고 적을 마비시킵니다. 보스에도 한 번' },
   orb:    { name: '반사 방벽', desc: '막은 만큼 모았다가 펄스로 되돌려 줍니다' },
   mine:   { name: '융단 폭격', desc: '화면 전체에 폭탄 20발. 보스가 있으면 절반은 보스 위로' },
@@ -2413,6 +2413,7 @@ function enemyMul(b) {
   return row[TIER_ORDER.indexOf(p.tier)] || 1
 }
 
+const LANCE = { n: 12, gap: 0.11, dmg: 60, vy: -980, bossAt: 0.35 }
 const ULT_DMG = 0.9
 function planeUltMul() {
   const u = state && state.squad && state.squad[MAIN_SLOT]
@@ -2773,7 +2774,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 18:21'
+const BUILD_AT = '09-14 18:27'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9463,9 +9464,8 @@ function fireUlt() {
       break
     }
     case 'pierce':
-      s.ultT = 1.2 * ultPow()
-      s.dashHit = false
-      pl.inv = Math.max(pl.inv, 1.4)
+      s.ultT = 1.5 * ultPow()
+      s.lance = { left: LANCE.n, cd: 0, bossT: LANCE.bossAt, bossDone: false }
       break
     case 'wave': {
 
@@ -9592,15 +9592,31 @@ function updateUlt(dt) {
         bossArea(s.boss, ULT_TUNE.beamBoss[k] * planeUltMul() * dt)
     } else if (k === 'pierce') {
 
-      pl.y -= 620 * dt
-      pl.inv = Math.max(pl.inv, .2)
-      for (const e of s.enemies) {
-        if (near(e, pl, e.r + 26)) { e.hp -= 90 * ULT_DMG; e.flash = .1; boom(e.x, e.y, 8, '#ffe08a') }
-      }
-      if (s.boss && !s.dashHit && !s.boss.entering && near(s.boss, pl, s.boss.r + 26)) {
-        s.dashHit = true
-        bossArea(s.boss, ULT_TUNE.dashBoss * ultPow() * planeUltMul())
-        boom(pl.x, pl.y, 34, '#ffe08a'); s.shake = Math.max(s.shake, 10)
+      const L = s.lance
+      if (L) {
+        L.cd -= dt
+        while (L.cd <= 0 && L.left > 0) {
+          L.cd += LANCE.gap
+          const i = LANCE.n - L.left
+          L.left--
+
+          const lane = (i % 5) - 2
+          s.bullets.push({
+            x: pl.x + lane * 18, y: pl.y - 26, vx: lane * 95, vy: LANCE.vy, r: 10,
+            dmg: LANCE.dmg * ultPow() * ULT_DMG, kind: 'pierce', pierce: 99, life: 1.3, age: 0,
+            owner: MAIN_SLOT, bounce: 0, turn: 0, ult: true, noBoss: true, hitList: null,
+          })
+          boom(pl.x + lane * 18, pl.y - 30, 6, '#ffe08a')
+          if (i % 2 === 0) sfx('shot', 0)
+        }
+        L.bossT -= dt
+        if (!L.bossDone && L.bossT <= 0) {
+          L.bossDone = true
+          if (s.boss && !s.boss.entering && Math.abs(s.boss.x - pl.x) < s.boss.r + 70) {
+            bossArea(s.boss, ULT_TUNE.dashBoss * ultPow() * planeUltMul())
+            boom(s.boss.x, s.boss.y + s.boss.r * 0.6, 34, '#ffe08a'); s.shake = Math.max(s.shake, 10)
+          }
+        }
       }
     } else if (k === 'homing') {
 
@@ -10609,7 +10625,7 @@ function collide() {
 
     const bs = s.boss
 
-    if (bs && !b.dead && !bs.entering && near(b, bs, (bs.reach || bs.r) + b.r + 24)) {
+    if (bs && !b.dead && !b.noBoss && !bs.entering && near(b, bs, (bs.reach || bs.r) + b.r + 24)) {
       const bm = bossMul(b)
       const r = bossHit(bs, b.x, b.y, b.dmg * bm)
       if (r !== 'block') {
@@ -11964,7 +11980,10 @@ function drawBullet(b) {
       g.strokeStyle = '#9fffcf'; g.lineWidth = 3
       g.beginPath(); g.arc(b.x, b.y, b.r, b.age * 12, b.age * 12 + 4.2); g.stroke(); break
     case 'pierce':
-      g.fillStyle = '#ffe08a'; g.fillRect(b.x - b.r / 2, b.y - 12, b.r, 18); break
+      g.fillStyle = '#ffe08a'
+      if (b.ult) { g.fillRect(b.x - b.r / 2, b.y - 36, b.r, 50); g.fillStyle = '#fff6d6'; g.fillRect(b.x - 2, b.y - 46, 4, 62) }
+      else g.fillRect(b.x - b.r / 2, b.y - 12, b.r, 18)
+      break
     case 'wave':
       g.fillStyle = '#7dffd4'; g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill(); break
     default:
@@ -12740,27 +12759,11 @@ function draw() {
     const px = s.player.x, py = s.player.y
     g.save()
     g.globalCompositeOperation = 'lighter'
-    const tg = g.createLinearGradient(0, py - 30, 0, py + 190)
-    tg.addColorStop(0, 'rgba(' + tone + ',.55)')
-    tg.addColorStop(1, 'rgba(' + tone + ',0)')
-    g.fillStyle = tg
-    g.beginPath()
-    g.moveTo(px - 22, py); g.lineTo(px + 22, py)
-    g.lineTo(px + 5, py + 190); g.lineTo(px - 5, py + 190)
-    g.closePath(); g.fill()
-    for (let i = 0; i < 9; i++) {
-      const ox = px + ((i * 37) % 74) - 37
-      const yy = py + ((s.t * 1400 + i * 60) % 200)
-      g.strokeStyle = 'rgba(255,255,255,' + (0.35 - Math.abs(ox - px) / 220).toFixed(2) + ')'
-      g.lineWidth = 1.6
-      g.beginPath(); g.moveTo(ox, yy); g.lineTo(ox, yy + 26); g.stroke()
-    }
-
-    const hg = g.createRadialGradient(px, py - 26, 0, px, py - 26, 44)
-    hg.addColorStop(0, 'rgba(255,255,255,.7)')
+    const hg = g.createRadialGradient(px, py - 30, 0, px, py - 30, 40)
+    hg.addColorStop(0, 'rgba(255,255,255,.55)')
     hg.addColorStop(1, 'rgba(' + tone + ',0)')
     g.fillStyle = hg
-    g.beginPath(); g.arc(px, py - 26, 44, 0, Math.PI * 2); g.fill()
+    g.beginPath(); g.arc(px, py - 30, 40, 0, Math.PI * 2); g.fill()
     g.restore()
   }
 
