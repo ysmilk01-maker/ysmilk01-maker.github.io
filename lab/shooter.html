@@ -207,6 +207,9 @@
     background: rgba(95,212,138,.16); border: 1px solid rgba(95,212,138,.55);
     color: #8ef0b4; font-size: 9.5px; font-weight: 700; white-space: nowrap;
   }
+  /* 메인은 금색, 안 쓰는 것은 회색 「미적용」 - 적용 중과 아닌 것이 한눈에 갈리게 (2026-09-14) */
+  .card .inuse.main { background: rgba(255,210,122,.18); border-color: rgba(255,210,122,.7); color: #ffd27a; }
+  .card .inuse.idle { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.18); color: #98a3b3; font-weight: 600; }
   .slotTabs button i { display: block; font-style: normal; font-size: 10px; font-weight: 500; margin-top: 2px; }
 
   /* 지금 고른 기체 - 크게 한 대 */
@@ -791,7 +794,7 @@
   .card.cp { overflow: hidden; padding: 6px 7px 5px; border-radius: 11px; }
   .card.cp.picked { padding-bottom: 5px; }
   .card.cp .tag { font-size: 8.5px; padding: 1px 5px; }
-  .card.cp .inuse { top: 5px; right: 5px; font-size: 8px; padding: 1px 5px; }
+  .card.cp .inuse { top: 5px; right: 5px; font-size: 10px; padding: 2px 6px; }
   .card.cp .pv { width: 100%; height: 44px; display: block; margin-top: 0; }
   .card.cp .tag, .card.cp .inuse { z-index: 2; }
   .card.cp .cmp { font-size: 9px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1696,6 +1699,7 @@
     color: #04121a; background: var(--accent); border-radius: 5px; padding: 1px 5px;
   }
   .pcard .rt.lk { background: #2a3547; color: var(--dim); }
+  .pcard .rt.idle { background: #263041; color: #aab3c2; }
 
   /*
    * 지금 태운 파일럿.
@@ -2761,7 +2765,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 13:28'
+const BUILD_AT = '09-14 18:14'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4063,7 +4067,15 @@ function openMail(tab) {
       grantItems(m.items)
       sfx('got')
       openMail()
-      say(itemText(m.items) + '을(를) 받았습니다.', '우편함')
+
+      const empty = m.items && m.items.plane ? [0, 2, 3].find((i) => slotOpen(i) && !prog.squad[i]) : undefined
+      if (empty !== undefined) {
+        askOpen(itemText(m.items) + '을(를) 받았습니다.\n' + SLOT_META[empty].role + ' 자리가 비어 있습니다. 거기 넣으면 메인과 함께 쏩니다(화력 ' +
+                Math.round(slotMul(empty) * 100) + '% 몫). 비워 두면 아무것도 안 쏩니다.',
+                '우편함', '자리에 넣으러 가기', false, () => { close(); guideNav = false; go('squad') })
+      } else {
+        say(itemText(m.items) + '을(를) 받았습니다.', '우편함')
+      }
     }
   })
 }
@@ -4437,7 +4449,12 @@ function lvGifts(was, now) {
     const pool = PLANES.filter((p) => p.tier === 'common' && !prog.owned.includes(p.id) && !inMail.has(p.id))
     if (pool.length) {
       const p = pool[Math.floor(Math.random() * pool.length)]
-      mailAdd({ title: '파일럿 Lv.' + lv + ' 달성 선물', body: '일반 기체 「' + p.name + '」 한 대를 드립니다. 편대에 넣어 보세요.',
+
+      const sl = SLOT_META.findIndex((m) => m.lv === lv)
+      const where = sl >= 0
+        ? ' 이 레벨에 열린 ' + SLOT_META[sl].role + ' 자리에 넣으면 메인과 함께 쏩니다(화력 ' + Math.round(SLOT_META[sl].mul * 100) + '% 몫). 편대 화면에서 빈 자리를 누르세요.'
+        : ' 편대의 빈 자리에 넣으면 메인과 함께 쏩니다.'
+      mailAdd({ title: '파일럿 Lv.' + lv + ' 달성 선물', body: '일반 기체 「' + p.name + '」 한 대를 드립니다.' + where,
                 items: { plane: p.id } })
     } else {
       mailAdd({ title: '파일럿 Lv.' + lv + ' 달성 선물', body: '일반 기체를 다 가지고 계셔서 가챠권 3장으로 드립니다.',
@@ -5132,7 +5149,7 @@ function guideNext() {
     if (!slotOpen(i) || prog.squad[i] || g['slot' + i]) continue
     if (!sparePlanes(i).length) continue
     return point('#hgWing' + i, SLOT_META[i].role + ' 자리가 비어 있습니다',
-      '여기를 눌러 기체를 넣으세요. 이 자리 기체는 화력 ' + Math.round(slotMul(i) * 100) + '% 몫으로 같이 쏩니다.', 'slot')
+      '여기를 눌러 기체를 넣으세요. 여기 들어간 기체는 메인과 함께 쏩니다(화력 ' + Math.round(slotMul(i) * 100) + '% 몫). 비워 두면 아무것도 안 쏩니다.', 'slot')
   }
 
   const fresh = (Array.isArray(prog.newPilot) ? prog.newPilot : []).map((i) => PILOT_BY[i]).filter((p) => p && pilotOpen(p))
@@ -5670,7 +5687,8 @@ function renderPlanes() {
     const cost = upgCost(p, lv)
     c.innerHTML =
       `<span class="tag t-${p.tier}">${TIERS[p.tier]}</span>` +
-      (usedIn[p.id] ? `<span class="inuse">${usedIn[p.id].join(' · ')} 적용중</span>` : '') +
+      (usedIn[p.id] ? `<span class="inuse${usedIn[p.id].includes('메인') ? ' main' : ''}">${usedIn[p.id].join(' · ')} 적용중</span>`
+                    : ok ? '<span class="inuse idle">미적용</span>' : '') +
 
       `<canvas class="pv" width="220" height="150"></canvas>` +
 
@@ -6559,7 +6577,7 @@ function renderPilot() {
         : '조각 ' + shardG(pl.grade) + '/' + GRADE_NEED[pl.grade]) + '</div>' +
       '</div>' +
       (on ? '<span class="rt">사용 중</span>'
-          : owned ? '' : '<span class="rt lk">잠김</span>') +
+          : owned ? '<span class="rt idle">미사용</span>' : '<span class="rt lk">잠김</span>') +
       '</div>'
   })
 
@@ -6809,12 +6827,24 @@ function openDetail(p, list) {
       say('메인 자리는 비울 수 없습니다.\n먼저 메인에 다른 기체를 넣고 옮겨 주세요.', '메인 자리')
       return
     }
-    if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
-    prog.squad[activeSlot] = p.id
-    guideDone('slot' + activeSlot)
-    save(); close(); renderPlanes()
+    const apply = () => {
+      if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
+      prog.squad[activeSlot] = p.id
+      guideDone('slot' + activeSlot)
+      save(); close(); renderPlanes()
 
-    go('squad')
+      go('squad')
+    }
+
+    if (dup >= 0 && dup !== activeSlot) {
+      const back = planeById(prog.squad[activeSlot])
+      ask('「' + p.name + '」은(는) 현재 ' + SLOT_META[dup].role + '에 배치된 기체입니다.\n' +
+          SLOT_META[activeSlot].role + '(으)로 옮기고, ' + SLOT_META[dup].role + '에는 ' +
+          (back ? '지금 ' + SLOT_META[activeSlot].role + '의 「' + back.name + '」을(를) 넣습니다.' : '아무것도 넣지 않습니다.') +
+          '\n변경하시겠습니까?', apply, { title: '배치 변경', ok: '변경' })
+      return
+    }
+    apply()
   }
 }
 
