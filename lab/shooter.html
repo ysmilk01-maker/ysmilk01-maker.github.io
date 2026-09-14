@@ -2090,6 +2090,12 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .hgs-body .mrow .top{grid-column:1;font-size:11.5px;gap:6px}.hgs-body .mrow .top .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hgs-body .mrow .rw{font-size:10.5px}
 .hgs-body .mrow .bar2{grid-column:1;height:4px;margin-top:2px}
 .hgs-body .mrow button{grid-column:2;grid-row:1/3;margin:0;width:auto;min-width:66px;padding:6px 8px;font-size:11px;min-height:30px}
+/* 카드 안을 세로 flex 로. 전투력 줄이 맨 아래에 고정되고 그림이 남는 공간을 쓴다 (2026-09-15) */
+.card.cp{display:flex;flex-direction:column;padding-bottom:7px}
+.card.cp .pimg{flex:0 0 auto;height:52px;margin-top:24px}
+.card.cp .stars,.card.cp .nm,.card.cp .shard{flex:0 0 auto}
+.card.cp .cmp{flex:0 0 auto;margin-top:auto;padding-top:2px;font-size:9.5px;line-height:1.2}
+.card.cp .cmp b{font-size:15px}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2942,7 +2948,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:09'
+const BUILD_AT = '09-15 07:11'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4822,7 +4828,7 @@ function hpPlain(host, html) {
   host.classList.remove('single', 'end')
   host.innerHTML = html
 }
-const PLANE_CARD_H = 152
+const PLANE_CARD_H = 170
 const elWallet = document.getElementById('wallet')
 
 function planeById(id) { return PLANES.find((p) => p.id === id) }
