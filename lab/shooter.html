@@ -2760,7 +2760,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 10:02'
+const BUILD_AT = '09-14 13:11'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8100,6 +8100,8 @@ const BOSS_RUSH = [
 
 const RUSH_HP_MUL = 3
 
+const BOSS_HP_UP = 1.25
+
 function finalRushBoss(stage) {
   const th = (stage && stage.theme) || 'sea'
   const ch = ((stage && stage.id) || 1) - 1
@@ -8845,7 +8847,7 @@ function spawnBoss(mid) {
 
     ? Math.round((CHAPTERS[rushCh(state.rush, state.rushD) - 1] || CHAPTERS[0]).bossHp
                  * 0.55 * RUSH_HP_MUL)
-    : Math.round(state.stage.bossHp * (mid ? mm : 0.55))
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55) * BOSS_HP_UP)
 
   const bsub = (state.stage && state.stage.sub) || 1
 
