@@ -2317,6 +2317,8 @@ const WEAPONS = {
 
 const TIERS = { common: '일반', rare: '중급', high: '상급', legend: '레전드' }
 
+const TIER_ORDER = ['common', 'rare', 'high', 'legend']
+
 const ULT = {
   rapid:  { name: '난사', desc: '5초간 발사 속도 2.1배 · 한 발 12배' },
   spread: { name: '전면 소사', desc: '화면 폭을 훑는 광선이 3초간 지나갑니다. 보스는 계속 맞습니다' },
@@ -2350,7 +2352,30 @@ const ULT_TUNE = {
   dashBoss: 880,
   shockBoss: 830,
   bombBoss: 1.65,
-  chainBoss: 920,
+  chainBoss: 305,
+}
+
+const BOSS_MUL = {
+  rapid:   [2.384, 1.43, 1.683, 0.751],
+  spread:  [1.957, 1.457, 1.744, 1.252],
+  laser:   [0.64, 0.642, 0.677, 0.395],
+  homing:  [1.552, 0.903, 1.015, 0.591],
+  pierce:  [0.48, 0.36, 0.376, 0.174],
+  wave:    [1.003, 0.57, 0.653, 0.1],
+  orb:     [0.109, 0.095, 0.103, 0.044],
+  mine:    [0.779, 0.48, 0.536, 0.616],
+  beam:    [0.312, 0.25, 0.275, 0.147],
+  boomer:  [0.063, 0.032, 0.036, 0.025],
+  chain:   [5.34, 5.34, 5.34, 5.34],
+}
+function bossMul(b) {
+  if (b.ult) return 1
+  const u = state && state.squad && state.squad[b.owner]
+  const p = u && u.plane
+  if (!p) return 1
+  const row = BOSS_MUL[p.weapon]
+  if (!row) return 1
+  return row[TIER_ORDER.indexOf(p.tier)] || 1
 }
 
 function planeUltMul() {
@@ -2712,7 +2737,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-14 08:51'
+const BUILD_AT = '09-14 09:33'
 const FREE_PLAY = true
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3816,16 +3841,30 @@ function anyPilotUp() {
                                 shardG(k) >= GRADE_NEED[k])
 }
 
+const PLANE_SCORE = {
+  rapid:   [252, 390, 575, 766],
+  spread:  [258, 371, 545, 759],
+  laser:   [258, 391, 551, 775],
+  homing:  [271, 381, 545, 775],
+  pierce:  [258, 398, 526, 730],
+  wave:    [266, 385, 545, 777],
+  orb:     [258, 396, 548, 770],
+  mine:    [258, 390, 545, 816],
+  beam:    [258, 389, 544, 781],
+  boomer:  [256, 395, 527, 774],
+  chain:   [258, 390, 545, 772],
+}
 function planeDps(p) {
   if (!p) return 0
-  return (p.power * upgPower(p.id)) / (p.rate * upgRate(p.id))
+  const row = PLANE_SCORE[p.weapon]
+  const base = row ? (row[TIER_ORDER.indexOf(p.tier)] || row[0]) : 250
+  return base * upgPower(p.id) / upgRate(p.id)
 }
 
 let DPS_100 = 0
 function planeScore(p) {
   if (!p) return 0
-  if (!DPS_100) DPS_100 = Math.min(...PLANES.map((q) => q.power / q.rate))
-  return Math.round(planeDps(p) / DPS_100 * 100)
+  return Math.round(planeDps(p))
 }
 function upgPower(id) { return 1 + upgOf(id) * 0.12 }
 function upgRate(id) { return 1 - upgOf(id) * 0.04 }
@@ -7123,8 +7162,9 @@ function shoot(u, i, dt) {
     const b = { x: pos.x, y: pos.y - 10, vx: undefined, vy: undefined, r: 3, dmg, pierce: 0, life: 3, age: 0,
                 kind: 'normal', el: null, turn: 0, bounce: 0, split: 0, hitList: null, dead: false,
                 amp: 0, ph: 0, x0: 0, owner: 0, a: 0, rad: 0, gather: 0, go: false, back: false, home: null,
-                jumps: 0, t0: 0 }
+                jumps: 0, t0: 0, ult: false, owner: i }
     Object.assign(b, o)
+    if (u.at || (state.ultKind === 'rapid' && state.ultT > 0)) b.ult = true
 
     if (p.el) { b.el = p.el; b.dmg *= elAdd }
     b.pierce += M.pierce
@@ -9117,7 +9157,7 @@ function missileBurst(b) {
   }
 
   if (s.boss && (s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < (MISSILE_R + 14) ** 2) {
-    bossArea(s.boss, b.dmg)
+    bossArea(s.boss, b.dmg * bossMul(b))
   }
 }
 
@@ -9162,6 +9202,7 @@ function chainFrom(from, b) {
   const bit = [from]
   const jumps = b.jumps || 3
   const pool = chainTargets()
+  let done = 0
   for (let j = 0; j < jumps; j++) {
     let best = null, bd = CHAIN.range * CHAIN.range
     for (const t of pool) {
@@ -9190,6 +9231,13 @@ function chainFrom(from, b) {
     bit.push(best.e || best.o)
     cur = best
     dmg *= fo
+    done++
+  }
+
+  if (done < jumps && cur && cur.bs) {
+    let extra = 0, d = dmg
+    for (let k = done; k < jumps; k++) { extra += d; d *= fo }
+    if (extra > 0) { bossHit(cur.bs, cur.x, cur.y, extra); cur.bs.flash = .12 }
   }
 }
 
@@ -9501,7 +9549,7 @@ function updateUlt(dt) {
           const sx = W * (0.5 + Math.sin(t * Math.PI * 4) * 0.42)
           s.bullets.push({
             x: sx, y: H + 14, vx: (pl.x - sx) * 0.25, vy: -470,
-            r: 4.5, dmg: STRIKE.dmg * planeUltMul(), kind: 'homing', turn: PLAYER_HOMING_TURN * 1.6,
+            r: 4.5, dmg: STRIKE.dmg * planeUltMul(), kind: 'homing', turn: PLAYER_HOMING_TURN * 1.6, ult: true,
             life: 3.2, age: 0, owner: MAIN_SLOT, pierce: 0, bounce: 0,
           })
           if (V.i % 6 === 0) sfx('shot', 0)
@@ -9551,7 +9599,7 @@ function updateUlt(dt) {
 
           for (const dx of [-6, 6]) {
             s.bullets.push({ x: es.x + dx, y: es.y - 10, vx: 0, vy: -640, r: 4,
-                             dmg: WINGMEN.dmg * planeUltMul(), kind: 'rapid', life: 2, age: 0,
+                             dmg: WINGMEN.dmg * planeUltMul(), kind: 'rapid', life: 2, age: 0, ult: true,
                              owner: MAIN_SLOT, pierce: 1, bounce: 0 })
           }
         }
@@ -10485,10 +10533,13 @@ function collide() {
     const bs = s.boss
 
     if (bs && !b.dead && !bs.entering && near(b, bs, (bs.reach || bs.r) + b.r + 24)) {
-      const r = bossHit(bs, b.x, b.y, b.dmg)
+      const bm = bossMul(b)
+      const r = bossHit(bs, b.x, b.y, b.dmg * bm)
       if (r !== 'block') {
 
-        applyEl(bs, b)
+        if (b.kind === 'chain') chainFrom({ x: b.x, y: b.y, bs, dead: true }, { dmg: b.dmg * bm, jumps: b.jumps, falloff: b.falloff })
+
+        applyEl(bs, bm === 1 ? b : { el: b.el, dmg: b.dmg * bm, x: b.x, y: b.y })
         sfx('hit')
         boom(b.x, b.y, 2, r === 'core' ? '#9fe8ff' : '#ffd27a')
         if (b.pierce > 0) b.pierce--; else b.dead = true
