@@ -779,13 +779,19 @@ html.boot-done body { overflow: visible; }
   padding: 0;
 }
 
-@media (min-width: 620px) {
+@media (min-width: 760px) {
   .biz { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-.biz div { display: flex; gap: 12px; }
-.biz dt { flex: none; width: 62px; color: var(--muted-dim); margin: 0; }
-.biz dd { margin: 0; color: var(--ink-on-dark); }
+/* 긴 신고번호 항목은 작은 화면에서 항목명 아래로 내려 읽게 한다. */
+.biz div { display: flex; gap: 12px; min-width: 0; }
+.biz dt { flex: none; width: 9em; color: var(--muted-dim); margin: 0; }
+.biz dd { min-width: 0; margin: 0; color: var(--ink-on-dark); overflow-wrap: anywhere; }
+.biz a { display: inline-block; min-height: 24px; color: inherit; text-underline-offset: 3px; }
+@media (max-width: 420px) {
+  .biz div { flex-direction: column; gap: 2px; }
+  .biz dt { width: auto; }
+}
 
 .foot-links {
   display: flex;
