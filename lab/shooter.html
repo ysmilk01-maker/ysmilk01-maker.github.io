@@ -2080,6 +2080,15 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .card.cp:not(.picked):not(.sel){box-shadow:none!important;animation:none!important}
 .card.cp:not(.picked):not(.sel)::before{content:none!important;animation:none!important}
 .card.cp.can:not(.picked):not(.sel){border-color:rgba(120,140,160,.35)!important}
+/* 격납고 시트 v3: 머리줄 ✕ · 본문 스크롤 · 임무 줄 낮게 (2026-09-15) */
+.hgs-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hgs-head h2{margin:0}
+.hgs-x{width:34px;height:34px;padding:0;border-radius:9px;background:#1a2a33;border:1px solid #4d626b;color:#cfe0e6;font-size:15px;box-shadow:none}
+.hgs-body{max-height:min(62vh,560px);overflow-y:auto;overscroll-behavior:contain;padding-right:2px;margin-top:4px}
+.hgs-body .miss{gap:5px;margin-top:4px}
+.hgs-body .mrow{padding:6px 9px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:3px 8px}
+.hgs-body .mrow .top{grid-column:1;font-size:11.5px;gap:6px}.hgs-body .mrow .top .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hgs-body .mrow .rw{font-size:10.5px}
+.hgs-body .mrow .bar2{grid-column:1;height:4px;margin-top:2px}
+.hgs-body .mrow button{grid-column:2;grid-row:1/3;margin:0;width:auto;min-width:66px;padding:6px 8px;font-size:11px;min-height:30px}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2932,7 +2941,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 07:01'
+const BUILD_AT = '09-15 07:05'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5638,12 +5647,16 @@ function openHgSheet(title, html, after) {
   if (!panel || !body) return
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
   body.className = 'dsheet'
-  body.innerHTML = '<h2>' + title + '</h2>' + html + '<div class="bar"><button class="ghost thin" id="dClose">닫기</button></div>'
+
+  body.innerHTML = '<div class="hgs-head"><h2>' + title + '</h2><button class="hgs-x" id="dX" aria-label="닫기">✕</button></div>' +
+    '<div class="hgs-body">' + html + '</div>' +
+    '<div class="bar"><button class="ghost thin" id="dClose">닫기</button></div>'
   const close = () => { panel.hidden = true; panel.onclick = null; modalOff() }
   panel.hidden = false
   modalOn(panel, close)
   panel.onclick = (e) => { if (e.target === panel) close() }
   document.getElementById('dClose').onclick = close
+  document.getElementById('dX').onclick = close
   if (after) after(close)
 }
 function openCollectionSheet() {
