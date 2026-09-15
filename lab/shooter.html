@@ -2810,8 +2810,23 @@ function traitText(p) {
     .join(' · ')
 }
 
+const MOD_NO = {
+  rapid:  ['bounce'],
+  spread: [],
+  laser:  ['extra', 'seek', 'bounce'],
+  homing: ['seek'],
+  pierce: ['extra', 'bounce'],
+  wave:   ['extra', 'seek', 'bounce'],
+  orb:    ['pierce', 'seek', 'bounce', 'speed'],
+  mine:   ['pierce', 'split', 'seek'],
+  beam:   ['extra', 'seek', 'bounce'],
+  chain:  ['extra', 'seek', 'bounce'],
+  boomer: ['pierce', 'extra', 'seek'],
+}
 function rollMod(mods) {
-  const pool = MOD_KEYS.filter((k) => (mods[k] || 0) < MOD_MAX)
+  const u = state && state.squad && state.squad[MAIN_SLOT]
+  const no = (u && u.plane && MOD_NO[u.plane.weapon]) || []
+  const pool = MOD_KEYS.filter((k) => (mods[k] || 0) < MOD_MAX && !no.includes(k))
   if (!pool.length) return null
   return pool[(Math.random() * pool.length) | 0]
 }
@@ -3033,7 +3048,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 19:59'
+const BUILD_AT = '09-15 20:09'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
