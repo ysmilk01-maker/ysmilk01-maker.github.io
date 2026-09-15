@@ -3051,7 +3051,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 20:45'
+const BUILD_AT = '09-15 20:49'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -11294,6 +11294,7 @@ function collide() {
       s.mods[it.mod] = Math.min(MOD_MAX, s.mods[it.mod] + 2)
 
       banner(MODS[it.mod].name + ' ' + s.mods[it.mod] + ' · 메인')
+      voice('up')
     } else {
       levelUp()
       voice('up')
@@ -14306,7 +14307,7 @@ requestAnimationFrame(frame)
 const AUDIO_BASE = location.protocol === 'file:' ? 'https://ysmilk01-maker.github.io/lab/audio/' : 'audio/'
 const TRACKS = { hangar: 'hangar.m4a', battle: 'battle.m4a', boss: 'boss.m4a' }
 
-const VOICES = { up: 'voice_up.m4a?v=2' }
+const VOICES = { up: 'voice_up.m4a?v=3' }
 const MUS_VOL = 0.42
 const AU_KEY = 'shooter-audio-v1'
 
@@ -14396,7 +14397,7 @@ function voice(name) {
   if (!AU.on.sfx) return
   const c = auInit()
   if (!c || c.state !== 'running' || !VOICES[name]) return
-  if (!auGate('voice:' + name, 0.7)) return
+  if (!auGate('voice:' + name, 0.35)) return
   const key = 'voice:' + name
   const play = (buf) => {
     if (!buf) return
