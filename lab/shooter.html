@@ -2157,6 +2157,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 @media(prefers-reduced-motion:reduce){#gotPop .gpic::before,#gotPop .gpic img,#gotPop .gpic .pf{animation:none}}
 /* ── 2 카드 느낌표 배지: 카드가 overflow:hidden 이라 밖으로 내민 배지가 잘렸다 (2026-09-15 폰 스샷) ── */
 .card.cp .upbang{top:5px;right:5px}
+/* 파일럿 카드도 틀에 가려서 안쪽 아래로 (2026-09-16 폰 스샷). 위 오른쪽은 「사용 중」 표가 있다 */
+.pcard .upbang{top:auto;bottom:6px;right:6px}
 /* 뽑기 결과 「확인」 (2026-09-16) */
 #gfx{position:fixed}
 #gfx #gfxOk{position:absolute;left:50%;bottom:max(28px,env(safe-area-inset-bottom));transform:translateX(-50%);min-width:180px;min-height:46px;font-size:16px;font-weight:800;border-radius:12px;background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f}
@@ -3056,7 +3058,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 06:59'
+const BUILD_AT = '09-16 07:14'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4939,7 +4941,7 @@ const SLOT_META = [
   { role: '후방', mul: 0.2, legend: true },
 ]
 
-const REAR_MUL = 0.2
+const REAR_MUL = 0.3
 
 function anySlotEmpty() {
   return SLOT_META.some((m, i) => i !== MAIN_SLOT && slotOpen(i) && !prog.squad[i])
@@ -7072,7 +7074,8 @@ function renderPilot() {
       ? '<div class="pf" style="--face:var(--gc-' + face + ')"></div>'
       : '<div class="pf none"><div class="rk ' + pl.grade + '"></div></div>'
     const ready = !owned && GRADE_NEED[pl.grade] > 0 && shardG(pl.grade) >= GRADE_NEED[pl.grade]
-    const canAny = owned && ST_KEYS.some((k) => canStat(k, pl.id))
+
+    const canAny = owned && on && ST_KEYS.some((k) => canStat(k, pl.id))
 
     const lvLock = owned && !pilotOpen(pl)
     return '<div class="pcard g-' + pl.grade + (on ? ' on' : '') + (owned && !lvLock ? '' : ' no') +
@@ -7720,7 +7723,8 @@ function shoot(u, i, dt) {
   if (!p) return
   u.cd -= dt
   if (u.cd > 0) return
-  const lv = LV[state.player.lv]
+
+  const lv = i === MAIN_SLOT ? LV[state.player.lv] : LV[1]
 
   const picked = i === MAIN_SLOT ? state.mods : NO_MODS
   const M = p.trait
@@ -7729,6 +7733,7 @@ function shoot(u, i, dt) {
 
   let rate = baseRate(p.weapon) * p.rate * upgRate(p.id) * pilotRate()
     / (0.85 + lv.mult * 0.15) * (1 - M.rate * 0.18)
+  if (u.wult > 0) rate *= 0.45
 
   if (state.ultKind === 'rapid' && state.ultT > 0) rate /= 2.1
 
@@ -7743,6 +7748,7 @@ function shoot(u, i, dt) {
                        k: ['mz1', 'mz2', 'mz3'][tierStep(p.tier)] })
 
   const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD * SQUAD_DMG * collectionMul()
+    * (u.wult > 0 ? WING_ULT_DMG : 1)
     * (state.ultKind === 'rapid' && state.ultT > 0 ? ULT_TUNE.rapidDmg : 1)
   const tier = tierStep(p.tier)
   const B = state.bullets
@@ -7756,7 +7762,7 @@ function shoot(u, i, dt) {
                 amp: 0, ph: 0, x0: 0, owner: 0, a: 0, rad: 0, gather: 0, go: false, back: false, home: null,
                 jumps: 0, t0: 0, ult: false, owner: i }
     Object.assign(b, o)
-    if (u.at || (state.ultKind === 'rapid' && state.ultT > 0)) b.ult = true
+    if (u.at || u.wult > 0 || (state.ultKind === 'rapid' && state.ultT > 0)) b.ult = true
 
     if (p.el) { b.el = p.el; b.dmg *= elAdd }
     b.pierce += M.pierce
@@ -10170,6 +10176,42 @@ function fireUlt() {
       s.volley = { left: STRIKE.n, cd: STRIKE.scan, i: 0 }
       break
   }
+  wingUlts(s)
+}
+
+const WING_ULT = 0.2
+const WING_ULT_DMG = 1.5
+function wingUlts(s) {
+  for (let i = 0; i < s.squad.length; i++) {
+    if (i === MAIN_SLOT) continue
+    const u = s.squad[i]
+    if (!u || !u.plane) continue
+    const k = u.plane.weapon, pos = slotPos(i)
+    const P = ultPow() * WING_ULT
+    switch (k) {
+      case 'homing':
+        for (let j = 0; j < 4; j++) {
+          s.bullets.push({ x: pos.x, y: pos.y, vx: (j - 1.5) * 60, vy: -260, r: 5, dmg: 76 * P,
+                           kind: 'homing', turn: PLAYER_HOMING_TURN * 2, life: 3, age: 0,
+                           owner: i, pierce: 0, bounce: 0, ult: true })
+        }
+        break
+      case 'chain':
+        chainFrom({ x: pos.x, y: pos.y - 20, dead: true }, { dmg: 115 * P * ULT_DMG, jumps: 6, falloff: 0.95 })
+        break
+      case 'wave':
+        s.shards.push({ x: pos.x, y: pos.y, r: 10, kind: 'wshock', dmg: 78 * P * ULT_DMG })
+        break
+      case 'mine':
+        for (let j = 0; j < 4; j++) {
+          s.shards.push({ x: pos.x + (Math.random() - .5) * 160, y: 80 + Math.random() * H * 0.5,
+                          r: 0, kind: 'bomb', delay: j * 0.3 + Math.random() * 0.2, mul: WING_ULT })
+        }
+        break
+      default:
+        u.wult = 3.0
+    }
+  }
 }
 
 function updateUlt(dt) {
@@ -10379,6 +10421,21 @@ function updateUlt(dt) {
         bossArea(s.boss, sh.dmg)
       }
       if (sh.r > H * 1.1) sh.done = true
+    } else if (sh.kind === 'wshock') {
+
+      sh.r += 520 * dt
+      for (const b of s.ebullets) if ((b.x - sh.x) ** 2 + (b.y - sh.y) ** 2 < sh.r * sh.r) b.dead = true
+      sh.hit = sh.hit || []
+      for (const e of s.enemies) {
+        if (e.dead || sh.hit.includes(e)) continue
+        if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r) { e.hp -= sh.dmg; e.flash = .1; sh.hit.push(e) }
+      }
+      if (s.boss && !s.boss.entering && !sh.bossHit &&
+          (s.boss.x - sh.x) ** 2 + (s.boss.y - sh.y) ** 2 < sh.r * sh.r) {
+        sh.bossHit = true
+        bossArea(s.boss, ULT_TUNE.shockBoss * ultPow() * planeUltMul() * WING_ULT)
+      }
+      if (sh.r > 150) sh.done = true
     } else if (sh.kind === 'shock') {
       sh.r += 620 * dt
       for (const b of s.ebullets) if ((b.x - sh.x) ** 2 + (b.y - sh.y) ** 2 < sh.r * sh.r) b.dead = true
@@ -10398,7 +10455,7 @@ function updateUlt(dt) {
     } else {
       sh.r += (sh.kind === 'shell' ? 420 : 330) * dt
 
-      const dmg = (sh.kind === 'shell' ? 90 : 44) * ultPow() * ULT_DMG
+      const dmg = (sh.kind === 'shell' ? 90 : 44) * ultPow() * ULT_DMG * (sh.mul || 1)
       for (const e of s.enemies) {
         if (!e.hitBy || e.hitBy !== sh) {
           if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r) { e.hp -= dmg; e.flash = .1; e.hitBy = sh }
@@ -10503,7 +10560,7 @@ function update(dt) {
     if (s.trail.length > 40) s.trail.shift()
   }
 
-  s.squad.forEach((u, i) => shoot(u, i, dt))
+  s.squad.forEach((u, i) => { if (u && u.wult > 0) u.wult -= dt; shoot(u, i, dt) })
 
   bossDot(s.boss, dt)
 
