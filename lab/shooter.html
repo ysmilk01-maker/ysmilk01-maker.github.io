@@ -3058,7 +3058,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 07:50'
+const BUILD_AT = '09-16 07:58'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4255,8 +4255,13 @@ function canUpg(p) {
 function anyUpg() { return PLANES.some(canUpg) }
 
 function anyPilotUp() {
-  if (ST_KEYS.some(canStat)) return true
-  return anyRecruit()
+  const cur = pilotNow()
+  if (ST_KEYS.some((k) => canStat(k, cur.id))) return true
+  return higherPilotUsable()
+}
+function higherPilotUsable() {
+  const cur = GRADE_KEYS.indexOf(pilotNow().grade)
+  return PILOTS.some((p) => GRADE_KEYS.indexOf(p.grade) > cur && pilotOpen(p))
 }
 
 const PLANE_SCORE = {
@@ -7143,6 +7148,8 @@ function renderPilot() {
     const canAny = owned && on && ST_KEYS.some((k) => canStat(k, pl.id))
 
     const lvLock = owned && !pilotOpen(pl)
+
+    const higher = owned && !on && pilotOpen(pl) && GRADE_KEYS.indexOf(pl.grade) > GRADE_KEYS.indexOf(pilotNow().grade)
     return '<div class="pcard g-' + pl.grade + (on ? ' on' : '') + (owned && !lvLock ? '' : ' no') +
       (ready || canAny ? ' can' : '') + '" data-who="' + pl.id + '" role="button" tabindex="0">' +
       pic +
@@ -7154,7 +7161,8 @@ function renderPilot() {
         : ready ? '합류 가능 · 눌러서 확인 (무작위 1명)'
         : '조각 ' + shardG(pl.grade) + '/' + GRADE_NEED[pl.grade]) + '</div>' +
       '</div>' +
-      (canAny || ready ? '<span class="upbang" aria-label="' + (ready ? '합류 가능' : '스탯 올리기 가능') + '">!</span>' : '') +
+      (canAny ? '<span class="upbang" aria-label="스탯 올리기 가능">!</span>'
+        : higher ? '<span class="upbang" aria-label="더 높은 등급 · 쓸 수 있음">!</span>' : '') +
       (on ? '<span class="rt">사용 중</span>'
           : lvLock ? '<span class="rt lk">Lv.' + pilotNeedLv(pl) + '</span>'
           : owned ? '<span class="rt idle">미사용</span>'
