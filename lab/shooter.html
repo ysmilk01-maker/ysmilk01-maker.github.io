@@ -3005,7 +3005,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 18:34'
+const BUILD_AT = '09-15 19:43'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7277,7 +7277,7 @@ function newState() {
     adUsed: { revive: 0 },
     squad, lives: LIVES, score: 0, kills: 0, ultUsed: 0, hitCount: 0, clearWait: 0,
     bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [], elfx: [],
-    grounds: [], slabs: [], bands: [], zones: [], shadows: [], beams: [], arcs: [], blasts: [],
+    grounds: [], slabs: [], bands: [], zones: [], shadows: [], beams: [], arcs: [], blasts: [], wrecks: [],
 
     mods: Object.fromEntries(MOD_KEYS.map((k) => [k, 0])),
 
@@ -7381,7 +7381,7 @@ function seedGround(s) {
         h: (obj ? 44 + Math.random() * 30 : 20 + Math.random() * 32) * sc,
         seed: Math.random() * 6.28,
         kind: Math.random() < .3 ? 'reef' : 'isle',
-        far, sp: far ? 0.7 : 1, obj,
+        far, sp: far ? 0.7 : obj ? 1.08 : 1, obj,
       })
     }
   }
@@ -10166,7 +10166,7 @@ function updateUlt(dt) {
         if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r) {
           e.hp -= sh.dmg; e.flash = .12; sh.hit.push(e)
           if (e.hp <= 0 && !e.dead) {
-            e.dead = true; s.score += e.score; s.kills++
+            e.dead = true; s.score += e.score; s.kills++; if (e.kind === 'mid') spawnWreck(e)
             boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#c9a8ff')
           }
         }
@@ -10326,6 +10326,7 @@ function update(dt) {
     b.age += dt
     switch (b.kind) {
       case 'homing': {
+        smokeTrail(b, dt, false)
         const tgt = nearestEnemy(b.x, b.y)
         if (tgt) {
           const want = Math.atan2(tgt.y - b.y, tgt.x - b.x)
@@ -10417,7 +10418,7 @@ function update(dt) {
       if (d > 0) {
         e.hp -= d
         if (e.hp <= 0) {
-          e.dead = true; s.score += e.score; s.kills++
+          e.dead = true; s.score += e.score; s.kills++; if (e.kind === 'mid') spawnWreck(e)
           boom(e.x, e.y, e.kind === 'mid' ? 22 : 12,
                e.burn ? ELS.fire.color : ELS.psn.color)
           continue
@@ -10795,6 +10796,7 @@ function update(dt) {
       if (b.age > b.life) { b.dead = true; boom(b.x, b.y, 8, '#ff9a6b') }
     } else if (b.kind === 'missile') {
 
+      smokeTrail(b, dt, false)
       const want = Math.atan2(pl.y - b.y, pl.x - b.x)
       const cur = Math.atan2(b.vy, b.vx)
       let d = want - cur
@@ -10852,6 +10854,7 @@ function update(dt) {
   const damp = Math.pow(0.94, dt * 60)
   for (const p of s.parts) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= damp; p.vy *= damp }
   keepIf(s.parts, (p) => p.age < p.life)
+  tickWrecks(s, dt)
   tickElfx(dt)
 
   for (const a of s.arcs) a.age += dt
@@ -11032,7 +11035,7 @@ function collide() {
         if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || new Set()).add(e) }
         else b.dead = true
         if (e.hp <= 0) {
-          e.dead = true; s.score += e.score; s.kills++
+          e.dead = true; s.score += e.score; s.kills++; if (e.kind === 'mid') spawnWreck(e)
           boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
 
         }
@@ -11560,11 +11563,18 @@ function drawShipOn(g, x, y, opt) {
   const flame = opt.flame !== false
 
   if (opt.shadow !== false) {
-    g.save()
-    g.translate(x + 11 * scale, y + 15 * scale)
-    g.fillStyle = 'rgba(0,12,28,.26)'
-    g.beginPath(); g.ellipse(0, 0, span * .95, nose * .5, 0, 0, Math.PI * 2); g.fill()
-    g.restore()
+
+    const sArt = p && shipArt(p.id)
+    if (sArt) {
+      const s2 = (30 + lv * 3.6) * scale
+      drawShadowOn(g, sArt, x, y, s2, s2, .3, 0, 1.25)
+    } else {
+      g.save()
+      g.translate(x + 11 * scale, y + 15 * scale)
+      g.fillStyle = 'rgba(0,12,28,.26)'
+      g.beginPath(); g.ellipse(0, 0, span * .95, nose * .5, 0, 0, Math.PI * 2); g.fill()
+      g.restore()
+    }
   }
 
   g.save(); g.translate(x, y); g.scale(scale, scale)
@@ -11846,8 +11856,15 @@ function drawEnemy(e) {
     const m = Math.max(e.r * 2.5, e.auraR || 0)
     if (e.x < -m || e.x > W + m || e.y < -m || e.y > H + m) return
   }
-  g.fillStyle = 'rgba(0,12,28,.24)'
-  g.beginPath(); g.ellipse(e.x + e.r * .55, e.y + e.r * .75, e.r * .95, e.r * .5, 0, 0, Math.PI * 2); g.fill()
+  const art = e.ufo ? (bimg(BOSS_IMG, 'mid7') || enemyArt('tank')) : enemyArt(e.kind)
+  if (art) {
+
+    const sd = e.r * (big ? 3.1 : 2.9)
+    drawShadow(art, e.x, e.y, sd, sd, .3, 0, big ? 1.1 : .9)
+  } else {
+    g.fillStyle = 'rgba(0,12,28,.24)'
+    g.beginPath(); g.ellipse(e.x + e.r * .55, e.y + e.r * .75, e.r * .95, e.r * .5, 0, 0, Math.PI * 2); g.fill()
+  }
 
   const mark = () => {
     if (e.shield > 0) {
@@ -11888,7 +11905,6 @@ function drawEnemy(e) {
     }
   }
 
-  const art = e.ufo ? (bimg(BOSS_IMG, 'mid7') || enemyArt('tank')) : enemyArt(e.kind)
   if (art) {
     const sz = e.r * (big ? 3.1 : 2.9)
     g.save(); g.translate(e.x, e.y)
@@ -11983,6 +11999,7 @@ function drawBoss(bs) {
 
     const sz = bs.r * (long ? 2.4 : bs.form === 'carrier' ? 5.6 : 3.2)
     const sh2 = long ? sz * 2.3 : sz
+    drawShadow(bart, 0, 0, sz, sh2, .34, 0, 1.15)
     if (bs.flash > 0) g.globalAlpha = .6
     g.drawImage(bart, -sz / 2, -sh2 / 2, sz, sh2)
     if (bs.flash > 0) {
@@ -12571,6 +12588,7 @@ function drawGround(u) {
   if (art) {
 
     const sz = u.art || u.r * 2.8
+    drawShadow(art, 0, 0, sz, sz, .4, 0, .22)
     if (u.flash > 0) g.globalAlpha = .6
     g.drawImage(art, -sz / 2, -sz / 2, sz, sz)
     if (u.flash > 0) {
@@ -12594,6 +12612,173 @@ function drawGround(u) {
   else if (u.kind === 'laser') { g.beginPath(); g.arc(0, -u.r * .4, 5, 0, Math.PI * 2); g.fill() }
   else { g.beginPath(); g.ellipse(0, -u.r * .5, 9, 4, -0.5, 0, Math.PI * 2); g.fill() }
   g.restore()
+}
+
+const SHADOW_CACHE = new Map()
+function shadowOf(im) {
+  let c = SHADOW_CACHE.get(im)
+  if (c) return c
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height
+  if (!w || !h) return null
+  const sc = Math.min(1, 96 / Math.max(w, h))
+  const pw = Math.ceil(w * sc), ph = Math.ceil(h * sc), pad = 3
+  c = document.createElement('canvas'); c.width = pw + pad * 2; c.height = ph + pad * 2
+  const x = c.getContext('2d')
+  x.globalAlpha = .45
+  for (const [ox, oy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) {
+    x.drawImage(im, pad + ox, pad + oy, pw, ph)
+  }
+  x.globalAlpha = 1
+  x.globalCompositeOperation = 'source-in'
+  x.fillStyle = '#000814'
+  x.fillRect(0, 0, c.width, c.height)
+  c._pad = pad
+  SHADOW_CACHE.set(im, c)
+  return c
+}
+
+const SHADOW_DX = 0.30, SHADOW_DY = 0.40
+function drawShadowOn(c, im, x, y, w, h, alpha, rot, lift) {
+  const sh = shadowOf(im)
+  if (!sh) return
+  const k = lift == null ? 1 : lift
+  const padK = sh._pad * 2
+  const pw = w * (sh.width / (sh.width - padK)), ph = h * (sh.height / (sh.height - padK))
+  c.save()
+  c.translate(x + w * SHADOW_DX * k, y + h * SHADOW_DY * k)
+  if (rot) c.rotate(rot)
+  c.globalAlpha = (alpha == null ? .32 : alpha) / (0.65 + k * 0.35)
+  c.drawImage(sh, -pw / 2, -ph / 2, pw, ph)
+  c.restore()
+}
+function drawShadow(im, x, y, w, h, alpha, rot, lift) { drawShadowOn(g, im, x, y, w, h, alpha, rot, lift) }
+
+const FOG_TONE = {
+  sea: '190,215,238', sand: '228,206,172', ash: '150,140,162', snow: '236,242,252',
+  glacier: '220,236,250', salt: '236,232,224', oil: '160,150,150', ruin: '200,196,186',
+  swamp: '186,206,176', canyon: '224,200,168', core: '170,160,190', steel: '176,184,196',
+  final: '190,170,190', sky: '214,226,244',
+}
+function fogTone(theme) { return FOG_TONE[theme] || '200,212,225' }
+
+const FOG_TEX = new Map()
+function fogTex(tone) {
+  let c = FOG_TEX.get(tone)
+  if (c) return c
+  const S = 256
+  c = document.createElement('canvas'); c.width = S; c.height = S
+  const x = c.getContext('2d')
+  let seed = 9173
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+
+  for (let i = 0; i < 26; i++) {
+    const r = 22 + rnd() * 70, px = rnd() * S, py = rnd() * S
+    const a = 0.07 + rnd() * 0.15
+    for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) {
+      x.save(); x.translate(ox, oy)
+      const gr = x.createRadialGradient(px, py, 0, px, py, r)
+      gr.addColorStop(0, 'rgba(255,255,255,' + a.toFixed(3) + ')')
+      gr.addColorStop(.6, 'rgba(255,255,255,' + (a * .45).toFixed(3) + ')')
+      gr.addColorStop(1, 'rgba(255,255,255,0)')
+      x.fillStyle = gr
+      x.beginPath(); x.arc(px, py, r, 0, 6.283); x.fill()
+      x.restore()
+    }
+  }
+  x.globalCompositeOperation = 'source-in'
+  x.fillStyle = 'rgba(' + tone + ',1)'
+  x.fillRect(0, 0, S, S)
+  FOG_TEX.set(tone, c)
+  return c
+}
+
+function paintBattleFog(theme, now) {
+  const tex = fogTex(fogTone(theme))
+  const layers = [
+    { T: W * 1.5, vy: TERRAIN_SPEED * 0.85, dx: 0.05, a: .52, ph: 0 },
+    { T: W * 0.85, vy: TERRAIN_SPEED * 1.4, dx: -0.09, a: .32, ph: 2.1 },
+  ]
+  g.save()
+  for (const L of layers) {
+    const off = (now * L.vy) % L.T
+    const xoff = ((now * L.vy * L.dx + Math.sin(now * 0.11 + L.ph) * 18) % L.T + L.T) % L.T
+    g.globalAlpha = L.a
+    for (let y = off - L.T; y < H; y += L.T) {
+      for (let x = xoff - L.T; x < W; x += L.T) g.drawImage(tex, x, y, L.T, L.T)
+    }
+  }
+  g.restore()
+}
+
+function tileRelief(c, w, h, k) {
+  if (!(k > 0)) return
+  const id = c.getImageData(0, 0, w, h), d = id.data
+  const L = new Uint8Array(w * h)
+  for (let i = 0, j = 0; i < L.length; i++, j += 4) L[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8
+  const o = 2, ow = o * w + o
+  for (let y = o; y < h - o; y++) {
+    for (let x = o; x < w - o; x++) {
+      const i = y * w + x
+      const dl = (L[i + ow] - L[i - ow]) * k
+      if (dl > -2 && dl < 2) continue
+      const j = i * 4
+      d[j] += dl; d[j + 1] += dl; d[j + 2] += dl
+    }
+  }
+  c.putImageData(id, 0, 0)
+}
+
+function smokeTrail(b, dt, dark) {
+  b.smT = (b.smT || 0) + dt
+  if (b.smT < 0.022 || state.parts.length > 520) return
+  b.smT = 0
+  state.parts.push({
+    x: b.x - b.vx * 0.012 + (Math.random() - .5) * 2, y: b.y - b.vy * 0.012 + (Math.random() - .5) * 2,
+    vx: (Math.random() - .5) * 12, vy: (Math.random() - .5) * 12 + (dark ? 24 : 10),
+    age: 0, life: dark ? 0.9 : 0.55, color: dark ? '#1a1a1e' : '#e8eef2',
+    puff: dark ? 3.6 : 3.0, a: dark ? .55 : .42,
+  })
+}
+
+function spawnWreck(e) {
+  const art = e.ufo ? (bimg(BOSS_IMG, 'mid7') || enemyArt('tank')) : enemyArt(e.kind)
+  if (!art || !state.wrecks) return
+  const big = e.kind === 'mid'
+  state.wrecks.push({
+    x: e.x, y: e.y, vx: (e.vx || 0) * .4 + (Math.random() - .5) * 90, vy: 80 + Math.random() * 70,
+    rot: Math.random() * 6.28, spin: (Math.random() < .5 ? -1 : 1) * (2.2 + Math.random() * 2.6),
+    art, sz: e.r * (big ? 3.1 : 2.9), age: 0, life: big ? 1.5 : 1.0, smT: 0,
+  })
+}
+function tickWrecks(s, dt) {
+  if (!s.wrecks || !s.wrecks.length) return
+  for (const w of s.wrecks) {
+    w.age += dt; w.x += w.vx * dt; w.y += w.vy * dt; w.rot += w.spin * dt
+    w.vy += 110 * dt
+    w.smT += dt
+    if (w.smT > 0.04 && s.parts.length < 600) {
+      w.smT = 0
+      const jx = (Math.random() - .5) * w.sz * .3, jy = (Math.random() - .5) * w.sz * .3
+      s.parts.push({ x: w.x + jx, y: w.y + jy, vx: (Math.random() - .5) * 18, vy: -6 + Math.random() * 16,
+                     age: 0, life: 1.1, color: '#15161a', puff: 3 + w.sz * .06, a: .6 })
+      if (Math.random() < .55) s.parts.push({ x: w.x + jx, y: w.y + jy, vx: (Math.random() - .5) * 40, vy: (Math.random() - .5) * 40,
+                                             age: 0, life: .38, color: '#ff9a3c', puff: 1.8, a: .95 })
+    }
+    if (w.age >= w.life) { w.dead = true; boom(w.x, w.y, 10, '#ff9a4c') }
+  }
+  keepIf(s.wrecks, (w) => !w.dead)
+}
+function drawWrecks(s) {
+  if (!s.wrecks) return
+  for (const w of s.wrecks) {
+    const k = w.age / w.life, d = w.sz * (1 - k * .35)
+    drawShadow(w.art, w.x, w.y, d, d, .3, w.rot, 1 - k * .8)
+    g.save(); g.translate(w.x, w.y); g.rotate(w.rot)
+    g.globalAlpha = 1 - k * .3
+    g.drawImage(w.art, -d / 2, -d / 2, d, d)
+    g.restore()
+  }
+  g.globalAlpha = 1
 }
 
 const BATTLE_LOOK = {
@@ -12639,6 +12824,8 @@ function battleTile(key, im) {
   c.filter = 'brightness(' + look.brightness + ') saturate(' + look.saturation + ')'
   c.drawImage(im, 0, 0, cv.width, cv.height)
   c.filter = 'none'
+
+  tileRelief(c, cv.width, cv.height, look.relief != null ? look.relief : (key.startsWith('sea') ? .18 : .5))
   if (look.shade) {
     c.fillStyle = 'rgba(7,12,19,' + look.shade + ')'
     c.fillRect(0, 0, cv.width, cv.height)
@@ -12708,10 +12895,12 @@ function paintBattleScenery(s) {
     const cx = sl.x + sl.w / 2, cy = sl.y + sl.h / 2
     if (cy < -130 || cy > H + 130) continue
     const sz = Math.max(sl.w, sl.h) * 1.65
-    const alpha = OBJ_ALPHA[sl.obj] != null ? OBJ_ALPHA[sl.obj] : .44
-    g.save(); g.translate(cx, cy); g.rotate(sl.seed * .43)
 
-    g.globalAlpha = Math.min(.62, alpha * 1.25)
+    const sunk = OBJ_ALPHA[sl.obj] != null
+    const alpha = sunk ? Math.min(.62, OBJ_ALPHA[sl.obj] * 1.25) : .96
+    if (!sunk) drawShadow(im, cx, cy, sz, sz, .36, sl.seed * .43, .3)
+    g.save(); g.translate(cx, cy); g.rotate(sl.seed * .43)
+    g.globalAlpha = alpha
     g.drawImage(im, -sz / 2, -sz / 2, sz, sz)
     g.restore()
   }
@@ -12723,8 +12912,14 @@ function battleAir(theme) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H
   const c = cv.getContext('2d')
   const tone = theme === 'sand' ? '16,13,14' : theme === 'ash' ? '12,8,13' : '3,10,20'
+
+  const haze = c.createLinearGradient(0, 0, 0, H * .48)
+  haze.addColorStop(0, 'rgba(' + fogTone(theme) + ',.30)')
+  haze.addColorStop(.55, 'rgba(' + fogTone(theme) + ',.10)')
+  haze.addColorStop(1, 'rgba(' + fogTone(theme) + ',0)')
+  c.fillStyle = haze; c.fillRect(0, 0, W, H * .48)
   const depth = c.createLinearGradient(0, 0, 0, H)
-  depth.addColorStop(0, 'rgba(' + tone + ',.28)')
+  depth.addColorStop(0, 'rgba(' + tone + ',.16)')
   depth.addColorStop(.42, 'rgba(' + tone + ',.02)')
   depth.addColorStop(1, 'rgba(' + tone + ',.10)')
   c.fillStyle = depth; c.fillRect(0, 0, W, H)
@@ -12756,6 +12951,16 @@ function paintBattleBackground(s, now) {
     g.drawImage(tile.canvas, 0, y, W, height)
   }
   paintBattleScenery(s)
+
+  for (const sh of s.shadows) {
+    if (sh.y + sh.ry < 0 || sh.y - sh.ry > H) continue
+    g.save()
+    g.globalAlpha = sh.a
+    g.fillStyle = '#000814'
+    g.beginPath(); g.ellipse(sh.x, sh.y, sh.rx, sh.ry, sh.rot, 0, Math.PI * 2); g.fill()
+    g.restore()
+  }
+  paintBattleFog(theme, now)
   paintBattleClouds(theme, now)
   g.drawImage(battleAir(theme), 0, 0)
   g.restore()
@@ -12983,6 +13188,7 @@ function draw() {
   for (const e of s.enemies) if (e.lance && e.beamPh > 0) drawEnemyBeam(e)
   for (const e of s.enemies) if (e.hbeam && e.beamPh > 0) drawEnemyHBeam(e)
   for (const e of s.enemies) drawEnemy(e)
+  drawWrecks(s)
   if (s.boss) drawBoss(s.boss)
 
   for (const a of s.arcs) {
@@ -13441,7 +13647,14 @@ function draw() {
   drawElfx()
 
   for (const p of s.parts) {
-    g.globalAlpha = 1 - p.age / p.life; g.fillStyle = p.color
+    const k = p.age / p.life
+    if (p.puff) {
+
+      g.globalAlpha = (1 - k) * p.a; g.fillStyle = p.color
+      g.beginPath(); g.arc(p.x, p.y, p.puff * (1 + k * 1.6), 0, 6.283); g.fill()
+      continue
+    }
+    g.globalAlpha = 1 - k; g.fillStyle = p.color
     g.fillRect(p.x - 1.5, p.y - 1.5, 3, 3)
   }
   g.globalAlpha = 1
