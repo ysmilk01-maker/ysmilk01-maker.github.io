@@ -3051,7 +3051,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 20:49'
+const BUILD_AT = '09-16 06:40'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8055,6 +8055,7 @@ const CHAPTERS = [
     id: 1, name: '해협', sub: '적 보급로가 지나는 바다', theme: 'sea',
 
     bossHp: 2250, hpMul: 0.73, spMul: 1.14, fireMul: 3.1,
+    spawnMul: 0.92,
     pool: [
       [5, (r) => line(2 + ((r() * 4) | 0), 'small')],
       [3, (r) => diagonal('small', r() < .5 ? 1 : -1)],
@@ -8513,6 +8514,8 @@ function buildWaves(ch, sub) {
 
   const early = ch.id === 1 ? 0.59 : 1
 
+  const spawnMul = ch.spawnMul || 1
+
   const flavorIdx = Math.floor(r() * ch.pool.length)
   const pool = ch.pool.map(([w, f], i) => [i === flavorIdx ? w * 2.2 : w, f])
 
@@ -8533,13 +8536,13 @@ function buildWaves(ch, sub) {
       }
 
       const gm = (ph.gap < 1 ? ph.gap + (1 - ph.gap) * (1 - ramp) : ph.gap) * solo * 0.667
-      t += (base * gm + r() * 1.1 * gm) * early
+      t += (base * gm + r() * 1.1 * gm) * early / spawnMul
     }
     acc = end
     if (t >= len) break
   }
 
-  const cap = Math.round(len * 0.82 / early)
+  const cap = Math.round(len * 0.82 / early * spawnMul)
   if (out.length > cap) {
     const keep = []
     const step = out.length / cap
