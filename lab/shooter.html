@@ -1964,7 +1964,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad.v3 .hg-pilot-label em{font-style:normal;font-size:10px;color:#9ab6c5;display:block}
 #scSquad.v3 .hg-actions{gap:5px;align-items:center;flex:none}#scSquad.v3 .hg-icon{width:36px;height:36px;border-radius:9px;flex:none}
 /* 파일럿 카드가 우편함 단추 밑으로 파고들었다 (2026-09-15 폰 스샷). 단추 셋 폭을 뺀 만큼만 차지하고 넘치는 글은 자른다 */
-#scSquad.v3 .hg-pilot{flex:1 1 0;max-width:calc(100% - 3*36px - 2*5px - 8px);overflow:hidden;left:auto;bottom:auto}   /* 옛 규칙의 left:4% 가 position:relative(배지용) 에 살아나 14px 밀렸다 */
+#scSquad.v3 .hg-pilot{flex:0 1 auto;width:calc(100% - 3*36px - 2*5px - 8px - 16px);max-width:calc(100% - 3*36px - 2*5px - 8px - 16px);margin-right:16px;overflow:hidden;left:auto;bottom:auto;transform:none}   /* 더 줄임 +16px (2026-09-15 대표 「아직 겹침」) */   /* 옛 규칙의 left:4% 가 position:relative(배지용) 에 살아나 14px 밀렸다 */
 #scSquad.v3 .hg-pilot-label small,#scSquad.v3 .hg-pilot-label em{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hg-body3{display:grid;grid-template-columns:60px minmax(0,1fr) 60px;gap:6px;padding:8px 8px 0;align-items:stretch}
 .hg-col{display:flex;flex-direction:column;gap:7px}
@@ -3051,7 +3051,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 20:40'
+const BUILD_AT = '09-15 20:45'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
