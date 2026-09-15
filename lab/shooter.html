@@ -3058,7 +3058,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 07:14'
+const BUILD_AT = '09-16 07:26'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6475,7 +6475,15 @@ function hardOpen() { return starOf(prog.chapter || 0, curSub()) > 0 }
 function anyHardOpen() { return CHAPTERS.some((c, ci) => { for (let k = 1; k <= SUBS; k++) if (starOf(ci, k) > 0) return true; return false }) }
 
 function jumpToModeStage(k) {
-  if (k === 'normal') return null
+  if (k === 'normal') {
+
+    const okN = (ci, sub) => subOpen(ci, sub) && starOf(ci, sub) === 0
+    if (okN(prog.chapter || 0, curSub())) return null
+    for (let ci = 0; ci < CHAPTERS.length; ci++) for (let sub = 1; sub <= SUBS; sub++) {
+      if (okN(ci, sub)) { prog.chapter = ci; prog.sub = sub; save(); return [ci, sub] }
+    }
+    return null
+  }
   const ok = (ci, sub) => starOf(ci, sub) > 0 && !(prog[k] || {})[stageKey(ci, sub)]
   if (ok(prog.chapter || 0, curSub())) return null
   for (let ci = 0; ci < CHAPTERS.length; ci++) for (let sub = 1; sub <= SUBS; sub++) {
