@@ -2116,6 +2116,12 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .card.cp.tight .pimg{height:28px;margin-top:20px}.card.cp.tight .stars{display:none}.card.cp.tight .cmp b{font-size:12px}.card.cp.tight .nm{font-size:10.5px}
 #tabs .hg-home:not(.on){background:transparent;border-color:transparent;box-shadow:none;top:0;width:66px;height:62px}
 #tabs .hg-home:not(.on)>img{width:44px;height:44px}
+/* 강화·스탯을 올릴 수 있는 개체는 오른쪽 위 느낌표 (2026-09-15 대표 지정) */
+.upbang,#scSquad.v3 .hg-main.grow::after,#scSquad.v3 .hg-pilot.grow::after,.slotTabs.v3 button.can::after{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#ffcf4a;color:#1a1200;font-weight:900;font-size:13px;line-height:20px;text-align:center;border:2px solid #0b1118;z-index:6;box-shadow:0 0 8px rgba(255,207,74,.7);pointer-events:none}
+#scSquad.v3 .hg-main.grow::after,#scSquad.v3 .hg-pilot.grow::after,.slotTabs.v3 button.can::after{content:"!"}
+#scSquad.v3 .hg-pilot{position:relative}#scSquad.v3 .hg-main.grow::after{top:2px;right:2px}
+.pcard{position:relative}.card.cp{position:relative}.slotTabs.v3 button{position:relative}
+.slotTabs.v3 button.can::after{top:-4px;right:-4px}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2982,7 +2988,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 12:40'
+const BUILD_AT = '09-15 12:42'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5865,7 +5871,7 @@ function renderPlanes() {
     const open = slotOpen(i)
     const p = open ? planeById(prog.squad[i]) : null
     const pic = open ? (p ? `<img src="${hangarPlaneImage(p)}" alt="">` : '<span class="plus" aria-hidden="true">＋</span>') : '<span class="plus" aria-hidden="true">🔒</span>'
-    return `<button data-slot="${i}" class="${i === activeSlot ? 'on' : ''}${open ? '' : ' lock'}${open && !p ? ' need' : ''}">` +
+    return `<button data-slot="${i}" class="${i === activeSlot ? 'on' : ''}${open ? '' : ' lock'}${open && !p ? ' need' : ''}${p && canUpg(p) && upgOf(p.id) < UPG_MAX ? ' can' : ''}">` +
       pic + `<i>${m.role}</i><small>${open ? (p ? p.name : '비었음') : (m.legend ? '전설' : 'Lv.' + m.lv)}</small></button>`
   }).join('')
   stEl.querySelectorAll('[data-slot]').forEach((b) => {
@@ -5988,6 +5994,7 @@ function renderPlanes() {
       `<span class="tag t-${p.tier}">${TIERS[p.tier]}</span>` +
       (usedIn[p.id] ? `<span class="inuse${usedIn[p.id].includes('메인') ? ' main' : ''}">${usedIn[p.id].join(' · ')} 적용중</span>`
                     : ok ? '<span class="inuse idle">미적용</span>' : '') +
+      (ok && canUpg(p) && lv < UPG_MAX ? '<span class="upbang" aria-label="강화 가능">!</span>' : '') +
       `<img class="pimg" src="${hangarPlaneImage(p)}" alt="">` +
       `<div class="stars" aria-label="${tierN}성">${'★'.repeat(tierN)}<span>${'★'.repeat(4 - tierN)}</span></div>` +
       `<div class="nm">${p.name}</div>` +
@@ -6917,6 +6924,7 @@ function renderPilot() {
         ? (pilotOpen(pl) ? stLine(pl.id) : '파일럿 Lv.' + pilotNeedLv(pl) + ' 에 합류')
         : '조각 ' + shardG(pl.grade) + '/' + GRADE_NEED[pl.grade]) + '</div>' +
       '</div>' +
+      (canAny ? '<span class="upbang" aria-label="스탯 올리기 가능">!</span>' : '') +
       (on ? '<span class="rt">사용 중</span>'
           : lvLock ? '<span class="rt lk">Lv.' + pilotNeedLv(pl) + '</span>'
           : owned ? '<span class="rt idle">미사용</span>' : '<span class="rt lk">잠김</span>') +
