@@ -3058,7 +3058,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 08:36'
+const BUILD_AT = '09-16 08:40'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8171,8 +8171,8 @@ const CHAPTERS = [
   {
     id: 2, name: '사막 회랑', sub: '대공포가 늘어선 붉은 협곡', theme: 'sand',
 
-    bossHp: 2923, hpMul: 0.85, spMul: 1.18, fireMul: 2.84,
-    spawnMul: 0.95,
+    bossHp: 2745, hpMul: 0.82, spMul: 1.17, fireMul: 2.9,
+    spawnMul: 0.94,
     pool: [
       [4, (r) => ground(['turret', 'flak', 'radar', 'laser'][(r() * 4) | 0], 60 + r() * (W - 120))],
       [3, (r) => line(2 + ((r() * 3) | 0), 'gunner')],
@@ -8202,8 +8202,8 @@ const CHAPTERS = [
   {
     id: 3, name: '극야 전선', sub: '해가 뜨지 않는 마지막 방어선', theme: 'snow',
 
-    bossHp: 3797, hpMul: 0.98, spMul: 1.23, fireMul: 2.59,
-    spawnMul: 0.98,
+    bossHp: 3349, hpMul: 0.92, spMul: 1.2, fireMul: 2.71,
+    spawnMul: 0.96,
     pool: [
       [4, (r) => dive(3 + ((r() * 3) | 0))],
       [3, (r) => line(1 + ((r() * 3) | 0), 'tank')],
@@ -8229,7 +8229,8 @@ const CHAPTERS = [
   {
     id: 4, name: '불의 고리', sub: '적 본토를 두른 활화산대', theme: 'ash',
 
-    bossHp: 4932, hpMul: 1.14, spMul: 1.27, fireMul: 2.37,
+    bossHp: 4086, hpMul: 1.03, spMul: 1.23, fireMul: 2.53,
+    spawnMul: 0.98,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8253,7 +8254,7 @@ const CHAPTERS = [
   },
   {
     id: 5, name: '재의 평원', sub: '분화가 끝나고 재만 남은 땅', theme: 'ash2',
-    bossHp: 6406, hpMul: 1.32, spMul: 1.31, fireMul: 2.17,
+    bossHp: 4985, hpMul: 1.15, spMul: 1.26, fireMul: 2.37,
 
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8282,7 +8283,7 @@ const CHAPTERS = [
   },
   {
     id: 6, name: '늪지대', sub: '안개가 걷히지 않는 검은 물', theme: 'swamp',
-    bossHp: 8322, hpMul: 1.53, spMul: 1.36, fireMul: 1.98,
+    bossHp: 6081, hpMul: 1.29, spMul: 1.29, fireMul: 2.22,
 
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8311,7 +8312,7 @@ const CHAPTERS = [
   },
   {
     id: 7, name: '공중 요새', sub: '구름 위에 떠 있는 인공 구조물', theme: 'sky',
-    bossHp: 10810, hpMul: 1.78, spMul: 1.4, fireMul: 1.82,
+    bossHp: 7419, hpMul: 1.44, spMul: 1.32, fireMul: 2.07,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8339,7 +8340,7 @@ const CHAPTERS = [
   },
   {
     id: 8, name: '협곡', sub: '벼랑 사이로 난 좁은 길', theme: 'canyon',
-    bossHp: 14043, hpMul: 2.06, spMul: 1.45, fireMul: 1.66,
+    bossHp: 9051, hpMul: 1.61, spMul: 1.35, fireMul: 1.94,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8368,7 +8369,7 @@ const CHAPTERS = [
   },
   {
     id: 9, name: '공업지대', sub: '매연이 하늘을 덮은 공장 지대', theme: 'steel',
-    bossHp: 18241, hpMul: 2.39, spMul: 1.49, fireMul: 1.52,
+    bossHp: 11042, hpMul: 1.81, spMul: 1.38, fireMul: 1.81,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8397,7 +8398,7 @@ const CHAPTERS = [
   },
   {
     id: 10, name: '적 본거지', sub: '모든 것이 시작된 곳', theme: 'core',
-    bossHp: 23695, hpMul: 2.78, spMul: 1.53, fireMul: 1.39,
+    bossHp: 13472, hpMul: 2.02, spMul: 1.41, fireMul: 1.69,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8426,7 +8427,7 @@ const CHAPTERS = [
   },
   {
     id: 11, name: '빙벽', sub: '수백 미터 얼음 절벽 사이', theme: 'glacier',
-    bossHp: 30780, hpMul: 3.22, spMul: 1.58, fireMul: 1.27,
+    bossHp: 16435, hpMul: 2.27, spMul: 1.44, fireMul: 1.58,
 
     pool: [
       [2, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8455,7 +8456,7 @@ const CHAPTERS = [
   },
   {
     id: 12, name: '폐허 도시', sub: '불타고 남은 옛 수도', theme: 'ruin',
-    bossHp: 39984, hpMul: 3.74, spMul: 1.62, fireMul: 1.16,
+    bossHp: 20051, hpMul: 2.54, spMul: 1.47, fireMul: 1.48,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8484,7 +8485,7 @@ const CHAPTERS = [
   },
   {
     id: 13, name: '대염호', sub: '소금이 하얗게 굳은 호수', theme: 'salt',
-    bossHp: 51939, hpMul: 4.33, spMul: 1.66, fireMul: 1.06,
+    bossHp: 24462, hpMul: 2.84, spMul: 1.5, fireMul: 1.38,
 
     pool: [
       [2, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8513,7 +8514,7 @@ const CHAPTERS = [
   },
   {
     id: 14, name: '화염 유전', sub: '불기둥이 솟는 유전지대', theme: 'oil',
-    bossHp: 67469, hpMul: 5.03, spMul: 1.71, fireMul: 0.97,
+    bossHp: 29844, hpMul: 3.19, spMul: 1.53, fireMul: 1.29,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8542,7 +8543,7 @@ const CHAPTERS = [
   },
   {
     id: 15, name: '최후 결전장', sub: '더 갈 곳이 없다', theme: 'final',
-    bossHp: 87642, hpMul: 5.83, spMul: 1.75, fireMul: 0.89,
+    bossHp: 36410, hpMul: 3.57, spMul: 1.56, fireMul: 1.21,
 
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8602,7 +8603,7 @@ function buildWaves(ch, sub) {
 
   const solo = slots <= 1 ? 2.0 : slots === 2 ? 1.54 : 1.25
 
-  const DENS_OFF = [2.5, 4, 5.5, 7, 8.5, 10, 11.3, 12.5, 13.5, 14.3, 15, 15.4, 15.7, 15.85, 15.9]
+  const DENS_OFF = [2.5, 3.5, 4.5, 5.6, 6.7, 7.8, 8.9, 10, 11, 12, 12.9, 13.7, 14.4, 15, 15.5]
 
   const dens = sub * 0.583 + (DENS_OFF[ch.id - 1] ?? 15.3)
 
