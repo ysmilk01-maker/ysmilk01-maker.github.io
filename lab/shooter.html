@@ -2982,7 +2982,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 08:25'
+const BUILD_AT = '09-15 12:31'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5379,14 +5379,30 @@ function guideNext() {
   const g = guideFlags()
   const tour = document.getElementById('tour')
   if (tour && !tour.hidden) return false
+  const point = (sel, title, text, active) => {
+    if (!document.querySelector(sel)) return false
+    GUIDE.active = active || null
+    guideNav = true
+    tourRun([[sel, title, text]], null)
+    return true
+  }
+
+  const gift = mailList().find((m) => m.items && m.items.plane && !m.claimed)
+  if (gift && g.mailAt !== gift.id) {
+    g.mailAt = gift.id; save()
+    return point('#hgMail', '새 기체가 도착했습니다', '「' + gift.title + '」 - 우편함을 열어 「받기」를 누르세요.', 'mail')
+  }
+
+  for (const i of [0, 2, 3]) {
+    if (!slotOpen(i) || prog.squad[i] || g['slot' + i]) continue
+    if (!sparePlanes(i).length) continue
+    return point('#hgWing' + i, SLOT_META[i].role + ' 자리가 열렸습니다',
+      '여기를 눌러 기체를 넣으세요. 여기 들어간 기체는 메인과 함께 쏩니다(화력 ' + Math.round(slotMul(i) * 100) + '% 몫). 비워 두면 아무것도 안 쏩니다.', 'slot')
+  }
+
   if (prog.ticket >= GACHA.plane.cost && (g.ticketAt || 0) < prog.ticket) {
     g.ticketAt = prog.ticket; save()
-    const sel = '#tabs button[data-go="gacha"]'
-    if (!document.querySelector(sel)) return false
-    GUIDE.active = null
-    guideNav = true
-    tourRun([[sel, '뽑기권이 있습니다', '뽑기권 ' + prog.ticket + '장. 뽑기에서 새 기체를 엽니다.']], null)
-    return true
+    return point('#tabs button[data-go="gacha"]', '뽑기권이 있습니다', '뽑기권 ' + prog.ticket + '장. 뽑기에서 새 기체를 엽니다.', null)
   }
   return false
 }
