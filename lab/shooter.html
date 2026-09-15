@@ -2157,6 +2157,10 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 @media(prefers-reduced-motion:reduce){#gotPop .gpic::before,#gotPop .gpic img,#gotPop .gpic .pf{animation:none}}
 /* ── 2 카드 느낌표 배지: 카드가 overflow:hidden 이라 밖으로 내민 배지가 잘렸다 (2026-09-15 폰 스샷) ── */
 .card.cp .upbang{top:5px;right:5px}
+/* 뽑기 결과 「확인」 (2026-09-16) */
+#gfx{position:fixed}
+#gfx #gfxOk{position:absolute;left:50%;bottom:max(28px,env(safe-area-inset-bottom));transform:translateX(-50%);min-width:180px;min-height:46px;font-size:16px;font-weight:800;border-radius:12px;background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f}
+#gfx #gfxOk[hidden]{display:none}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2423,6 +2427,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div class="panel" id="gfx" hidden>
   <canvas id="gfxC"></canvas>
   <div class="skip">탭하면 건너뜁니다</div>
+  <button id="gfxOk" hidden>확인</button>
 </div>
 
 <!--
@@ -3051,7 +3056,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 06:47'
+const BUILD_AT = '09-16 06:59'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3779,9 +3784,20 @@ function gfxPlay(list, done) {
     panel.onclick = null
     done()
   }
-  panel.onclick = () => { GFX.skip = true }
 
-  GFX.fuse = setTimeout(end, (T4 + 1.2) * 1000)
+  const okBtn = document.getElementById('gfxOk')
+  const skipEl = panel.querySelector('.skip')
+  let held = false
+  if (okBtn) { okBtn.hidden = true; okBtn.onclick = (e) => { e.stopPropagation(); end() } }
+  if (skipEl) skipEl.hidden = false
+  const hold = () => {
+    held = true
+    if (skipEl) skipEl.hidden = true
+    if (okBtn) { okBtn.hidden = false; okBtn.focus({ preventScroll: true }) }
+  }
+  panel.onclick = () => { if (!held) GFX.skip = true }
+
+  GFX.fuse = setTimeout(end, 120 * 1000)
 
   const bits = []
   for (let i = 0; i < 34; i++) {
@@ -3795,8 +3811,8 @@ function gfxPlay(list, done) {
   let popped = 0
 
   const step = (now) => {
-    const t = (now - t0) / 1000
-    if (GFX.skip || t > T4) { end(); return }
+    let t = (now - t0) / 1000
+    if (GFX.skip || t > T4) { if (held) return; hold(); t = T4 - 0.001; GFX.skip = false }
     c.clearRect(0, 0, W, H)
 
     const cx = W / 2, cy = H * 0.58
@@ -3980,7 +3996,7 @@ function gfxPlay(list, done) {
       rang = 2
     }
 
-    GFX.raf = requestAnimationFrame(step)
+    if (!held) GFX.raf = requestAnimationFrame(step)
   }
   GFX.raf = requestAnimationFrame(step)
 }
@@ -9619,7 +9635,7 @@ function killBoss(bs) {
   s.score += bs.mid ? 1800 : 4000
   s.boss = null
 
-  if (s.zone) { setTimeout(() => { if (s.running) nextZone() }, 900); return }
+  if (s.zone) { s.zoneDone = true; setTimeout(() => { if (s.running) { s.zoneDone = false; nextZone() } }, 900); return }
   s.cleared = true
   setTimeout(() => { if (state === s && s.running) end(true) }, 900)
 }
@@ -9999,8 +10015,11 @@ function reviveByAd() {
 
   if (!state) return
   if (state.adUsed.revive >= reviveLimit()) return
-  showAd('이어하기', () => {
-    state.adUsed.revive++
+  showAd('이어하기', () => { state.adUsed.revive++; reviveNow() })
+}
+
+function reviveNow() {
+  {
     const pl = state.player
     state.lives = LIVES
     pl.hp = pl.maxHp
@@ -10013,7 +10032,14 @@ function reviveByAd() {
     scOver.hidden = true
     last = performance.now()
     banner('이어서 갑니다')
-  })
+    const s = state
+    if (s.cleared && !s.boss) {
+      banner('보스 격파')
+      setTimeout(() => { if (state === s && s.running) end(true) }, 700)
+    } else if (s.zone && !s.boss && s.zoneDone) {
+      setTimeout(() => { if (state === s && s.running) nextZone() }, 700)
+    }
+  }
 }
 
 function ultKind() {
