@@ -3051,7 +3051,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 06:40'
+const BUILD_AT = '09-16 06:47'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9573,6 +9573,30 @@ function spawnBoss(mid) {
   music('boss')
 }
 
+function bossSmoke(bs, dt) {
+  const s = state
+  bs.smT = (bs.smT || 0) + dt
+  if (bs.smT < 0.05 || s.parts.length > 620) return
+  bs.smT = 0
+  for (const p of bs.parts) {
+    if (p.alive || Math.random() > 0.5) continue
+    s.parts.push({ x: bs.x + p.dx + (Math.random() - .5) * p.r, y: bs.y + p.dy + (Math.random() - .5) * p.r,
+                   vx: (Math.random() - .5) * 14, vy: 18 + Math.random() * 22, age: 0, life: 1.0,
+                   color: '#2a2a30', puff: 3 + p.r * .08, a: .42 })
+  }
+  if (!bs.core.open) return
+  for (let i = 0; i < 2; i++) {
+    s.parts.push({ x: bs.x + (Math.random() - .5) * bs.r * .9, y: bs.y + (Math.random() - .5) * bs.r * .6,
+                   vx: (Math.random() - .5) * 20, vy: 24 + Math.random() * 30, age: 0, life: 1.3,
+                   color: '#16161a', puff: 4 + bs.r * .07, a: .58 })
+  }
+  if (Math.random() < .7) {
+    s.parts.push({ x: bs.x + (Math.random() - .5) * bs.r * .6, y: bs.y + (Math.random() - .5) * bs.r * .5,
+                   vx: (Math.random() - .5) * 60, vy: (Math.random() - .5) * 60 + 20, age: 0, life: .45,
+                   color: '#ff9a3c', puff: 2, a: .95 })
+  }
+}
+
 function openCore(bs) {
   bs.core.open = true
   bs.phase = 2
@@ -9585,6 +9609,11 @@ function openCore(bs) {
 function killBoss(bs) {
   const s = state
   boom(bs.x, bs.y, bs.mid ? 46 : 70, '#ffd27a')
+
+  for (let i = 1; i <= (bs.mid ? 3 : 5); i++) {
+    const ox = (Math.random() - .5) * bs.r * 1.6, oy = (Math.random() - .5) * bs.r * 1.2
+    setTimeout(() => { if (state === s && s.running) boom(bs.x + ox, bs.y + oy, 22, '#ffb45c', true) }, i * 150)
+  }
   hitStop(bs.mid ? 0.08 : 0.12)
   haptic('down')
   s.score += bs.mid ? 1800 : 4000
@@ -9763,7 +9792,7 @@ function missileBurst(b) {
     e.dead = true
     s.score += e.score
     s.kills++
-    boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
+    dieSfx(e); boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c', true)
 
   }
 
@@ -9865,9 +9894,28 @@ function chainFrom(from, b) {
   }
 }
 
-function boom(x, y, n, color) {
+const DIE_SND = {
+  small:  { k: 'pop', sz: .4 },
+  swarm:  { k: 'pop', sz: .25, hi: 1 },
+  dive:   { k: 'pop', sz: .5, whistle: 1 },
+  gunner: { k: 'pop', sz: .55, tick: 1 },
+  weaver: { k: 'pop', sz: .5, tick: 1, hi: 1 },
+  split:  { k: 'pop', sz: .5, dbl: 1 },
+  mid:    { k: 'mid', sz: .8 },
+  lancer: { k: 'mid', sz: .8, ring: 1 },
+  beamer: { k: 'mid', sz: .75, ring: 1, hi: 1 },
+  miner:  { k: 'mid', sz: .9, rattle: 1 },
+  bomber: { k: 'mid', sz: 1.0, rumble: 1 },
+  shield: { k: 'mid', sz: .85, clank: 1 },
+  guard:  { k: 'mid', sz: .85, clank: 1 },
+  tank:   { k: 'heavy', sz: 1.0, clank: 1, rumble: 1 },
+  ufo:    { k: 'heavy', sz: 1.1, ring: 1, rumble: 1 },
+}
+function dieSfx(e) { sfx('die', e.kind) }
+function boom(x, y, n, color, quiet) {
 
-  if (n >= 60) sfx('bboss')
+  if (quiet) {   }
+  else if (n >= 60) sfx('bboss')
   else if (n >= 36) sfx('bmid')
   else if (n >= 18) sfx('boom', n / 40)
   else if (n >= 6) sfx('pop', n / 18)
@@ -10108,7 +10156,7 @@ function updateUlt(dt) {
     for (const t of times) if (s.t >= t) given++
     if (given > (s.ultGiven || 0)) {
       s.ultGiven = given
-      if (given - (s.ultUsed || 0) > 0) { sfx('ready'); ultTip() }
+      if (given - (s.ultUsed || 0) > 0) { sfx('ready'); voice('ult'); ultTip() }
     }
     let frac = 0
     if (given < times.length) {
@@ -10295,7 +10343,7 @@ function updateUlt(dt) {
           e.hp -= sh.dmg; e.flash = .12; sh.hit.push(e)
           if (e.hp <= 0 && !e.dead) {
             e.dead = true; s.score += e.score; s.kills++; if (e.kind === 'mid') spawnWreck(e)
-            boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#c9a8ff')
+            dieSfx(e); boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#c9a8ff', true)
           }
         }
       }
@@ -10547,8 +10595,7 @@ function update(dt) {
         e.hp -= d
         if (e.hp <= 0) {
           e.dead = true; s.score += e.score; s.kills++; if (e.kind === 'mid') spawnWreck(e)
-          boom(e.x, e.y, e.kind === 'mid' ? 22 : 12,
-               e.burn ? ELS.fire.color : ELS.psn.color)
+          dieSfx(e); boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, e.burn ? ELS.fire.color : ELS.psn.color, true)
           continue
         }
       }
@@ -10817,6 +10864,7 @@ function update(dt) {
 
         let nAlive = 0; for (const p of bs.parts) if (p.alive) nAlive++
         bs.phase = bs.core.open ? 3 : nAlive < bs.parts.length ? 2 : 1
+        bossSmoke(bs, dt)
 
         const pat = BOSS_PAT[bs.pat || bs.form] || BOSS_PAT.air
         if (bs.phase === 2) {
@@ -11164,7 +11212,7 @@ function collide() {
         else b.dead = true
         if (e.hp <= 0) {
           e.dead = true; s.score += e.score; s.kills++; if (e.kind === 'mid') spawnWreck(e)
-          boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c')
+          dieSfx(e); boom(e.x, e.y, e.kind === 'mid' ? 22 : 12, '#ffb45c', true)
 
         }
       }
@@ -14310,7 +14358,7 @@ requestAnimationFrame(frame)
 const AUDIO_BASE = location.protocol === 'file:' ? 'https://ysmilk01-maker.github.io/lab/audio/' : 'audio/'
 const TRACKS = { hangar: 'hangar.m4a', battle: 'battle.m4a', boss: 'boss.m4a' }
 
-const VOICES = { up: 'voice_up.m4a?v=3' }
+const VOICES = { up: 'voice_up.m4a?v=3', ult: 'voice_ult.m4a' }
 const MUS_VOL = 0.42
 const AU_KEY = 'shooter-audio-v1'
 
@@ -14514,8 +14562,8 @@ function auTone(type, hz0, hz1, dur, peak, t0) {
   o.start(t); o.stop(t + dur + 0.03)
 }
 
-function auHiss(f0, f1, dur, peak, type) {
-  const c = AU.ctx, t = c.currentTime
+function auHiss(f0, f1, dur, peak, type, t0) {
+  const c = AU.ctx, t = t0 == null ? c.currentTime : t0
   const s = c.createBufferSource(); s.buffer = auNoise(c)
   const f = c.createBiquadFilter()
   f.type = type || 'lowpass'
@@ -14635,14 +14683,48 @@ function sfx(kind, arg) {
       break
     }
 
+    case 'die': {
+      const D = DIE_SND[arg] || DIE_SND.small
+      const c = AU.ctx, t0 = c.currentTime, sz = D.sz
+      if (D.k === 'pop') {
+        if (!auGate('pop', 0.03)) return
+        const hi = D.hi ? 1.3 : 1
+        auHiss(9000 * hi, 4200, 0.035, 0.18 + sz * 0.10, 'highpass')
+        auHiss(3200 * hi, 600, 0.14 + sz * 0.06, 0.15 + sz * 0.10, 'bandpass')
+        auTone('sine', 210 * hi, 62, 0.16 + sz * 0.06, 0.18 + sz * 0.10, t0 + 0.005)
+        if (D.whistle) auTone('sine', 1400, 260, 0.28, 0.05, t0 + 0.02)
+        if (D.tick) auTone('square', 1500, 700, 0.05, 0.045, t0 + 0.03)
+        if (D.dbl) { auHiss(3000, 500, 0.12, 0.14, 'bandpass', t0 + 0.08); auTone('sine', 260, 70, 0.14, 0.14, t0 + 0.08) }
+        break
+      }
+      const heavy = D.k === 'heavy'
+      if (!auGate(heavy ? 'dieH' : 'dieM', 0.06)) return
+
+      auHiss(11000, 3500, 0.05, 0.26 + sz * 0.14, 'highpass')
+      auHiss(1700 + sz * 900, 160, 0.34 + sz * 0.36, 0.24 + sz * 0.24, 'bandpass')
+      auHiss(620, 90, 0.55 + sz * 0.6, 0.13 + sz * 0.14, 'lowpass')
+      auTone('sine', 170 - sz * 40, 42, 0.22 + sz * 0.12, 0.24 + sz * 0.14, t0 + 0.004)
+      auTone('sine', 96 - sz * 26, 26, 0.5 + sz * 0.4, 0.22 + sz * 0.3, t0 + 0.016)
+      if (heavy) auTone('sine', 52, 20, 0.9, 0.24, t0 + 0.1)
+      if (D.ring) auTone('triangle', 620, 190, 0.42, 0.06, t0 + 0.06)
+      if (D.clank) { auTone('square', 220, 70, 0.18, 0.10, t0 + 0.03); auHiss(3400, 1200, 0.09, 0.10, 'bandpass', t0 + 0.05) }
+      if (D.rattle) { auHiss(2600, 900, 0.05, 0.09, 'bandpass', t0 + 0.13); auHiss(2200, 800, 0.05, 0.08, 'bandpass', t0 + 0.21); auHiss(1900, 700, 0.06, 0.07, 'bandpass', t0 + 0.28) }
+      if (D.rumble) auHiss(260, 50, 1.1, 0.15, 'lowpass', t0 + 0.15)
+      break
+    }
     case 'bmid': {
       if (!auGate('bmid', 0.12)) return
       const c = AU.ctx, t0 = c.currentTime
-      auHiss(9000, 2600, 0.06, 0.30, 'highpass')
-      auHiss(1400, 160, 0.52, 0.30, 'bandpass')
-      auHiss(520, 90, 0.80, 0.18, 'lowpass')
-      auTone('sine', 150, 36, 0.30, 0.30, t0 + 0.004)
-      auTone('sine', 92, 24, 0.62, 0.32, t0 + 0.14)
+
+      auHiss(9000, 2600, 0.06, 0.34, 'highpass')
+      auHiss(1400, 160, 0.60, 0.34, 'bandpass')
+      auHiss(520, 90, 1.00, 0.20, 'lowpass')
+      auTone('sine', 150, 36, 0.34, 0.32, t0 + 0.004)
+      auTone('sine', 92, 24, 0.70, 0.34, t0 + 0.14)
+      auTone('sine', 48, 18, 1.30, 0.22, t0 + 0.30)
+      auHiss(1600, 200, 0.30, 0.22, 'bandpass', t0 + 0.28); auTone('sine', 130, 34, 0.26, 0.22, t0 + 0.28)
+      auHiss(1200, 160, 0.36, 0.20, 'bandpass', t0 + 0.55); auTone('sine', 110, 30, 0.30, 0.20, t0 + 0.55)
+      auHiss(300, 50, 1.4, 0.14, 'lowpass', t0 + 0.4)
 
       auTone('triangle', 430, 170, 0.34, 0.07, t0 + 0.10)
       break
@@ -14651,12 +14733,20 @@ function sfx(kind, arg) {
     case 'bboss': {
       if (!auGate('bboss', 0.3)) return
       const c = AU.ctx, t0 = c.currentTime
-      auHiss(9000, 2000, 0.08, 0.34, 'highpass')
-      auHiss(1100, 120, 0.78, 0.34, 'bandpass')
-      auHiss(420, 60, 1.50, 0.22, 'lowpass')
-      auTone('sine', 132, 30, 0.42, 0.34, t0 + 0.004)
-      auTone('sine', 80, 20, 0.90, 0.36, t0 + 0.18)
-      auTone('sine', 58, 18, 1.10, 0.26, t0 + 0.44)
+
+      auHiss(9000, 2000, 0.08, 0.36, 'highpass')
+      auHiss(1100, 120, 0.90, 0.36, 'bandpass')
+      auHiss(420, 60, 1.80, 0.24, 'lowpass')
+      auTone('sine', 132, 30, 0.46, 0.36, t0 + 0.004)
+      auTone('sine', 80, 20, 1.00, 0.38, t0 + 0.18)
+      auTone('sine', 58, 18, 1.30, 0.28, t0 + 0.44)
+      auTone('sine', 44, 16, 2.00, 0.24, t0 + 0.7)
+      for (let i = 0; i < 3; i++) {
+        const tt = t0 + 0.30 + i * 0.32, k = 1 - i * 0.2
+        auHiss(1500 - i * 200, 180, 0.34, 0.24 * k, 'bandpass', tt)
+        auTone('sine', 140 - i * 15, 32, 0.30, 0.24 * k, tt)
+      }
+      auHiss(280, 40, 2.4, 0.16, 'lowpass', t0 + 0.6)
 
       auTone('sawtooth', 190, 40, 0.55, 0.10, t0 + 0.02)
       break
