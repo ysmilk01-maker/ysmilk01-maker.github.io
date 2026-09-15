@@ -3005,7 +3005,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 17:52'
+const BUILD_AT = '09-15 18:34'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -12206,6 +12206,89 @@ const EBUL = {
             long: true, nose: 'down' },
 }
 
+const FL_W = 48, FL_H = 112, FL_HY = 30
+const FLAME_CACHE = {}
+function flameSprite(inner, outer, alt) {
+  const key = inner + '|' + outer + '|' + (alt ? 1 : 0)
+  let c = FLAME_CACHE[key]
+  if (c) return c
+  c = document.createElement('canvas'); c.width = FL_W; c.height = FL_H
+  const x = c.getContext('2d')
+  const cx = FL_W / 2, hy = FL_HY, R = FL_W * 0.27
+  const sway = alt ? 5 : -5
+
+  let gr = x.createRadialGradient(cx, hy, 1, cx, hy, FL_W * 0.5)
+  gr.addColorStop(0, 'rgba(' + outer + ',.75)')
+  gr.addColorStop(.45, 'rgba(' + outer + ',.32)')
+  gr.addColorStop(1, 'rgba(' + outer + ',0)')
+  x.fillStyle = gr
+  x.fillRect(0, 0, FL_W, FL_H)
+
+  gr = x.createLinearGradient(0, hy, 0, FL_H)
+  gr.addColorStop(0, 'rgba(' + outer + ',.5)')
+  gr.addColorStop(.5, 'rgba(' + outer + ',.16)')
+  gr.addColorStop(1, 'rgba(' + outer + ',0)')
+  x.fillStyle = gr
+  x.beginPath()
+  x.moveTo(cx - R * 1.35, hy)
+  x.quadraticCurveTo(cx - R * 1.1 + sway, hy + FL_H * .42, cx + sway * .6, FL_H - 2)
+  x.quadraticCurveTo(cx + R * 1.1 + sway, hy + FL_H * .42, cx + R * 1.35, hy)
+  x.arc(cx, hy, R * 1.35, 0, Math.PI, true)
+  x.closePath(); x.fill()
+
+  gr = x.createLinearGradient(0, hy - R, 0, FL_H * .86)
+  gr.addColorStop(0, 'rgba(' + inner + ',1)')
+  gr.addColorStop(.3, 'rgba(' + inner + ',.95)')
+  gr.addColorStop(.62, 'rgba(' + outer + ',.6)')
+  gr.addColorStop(1, 'rgba(' + outer + ',0)')
+  x.fillStyle = gr
+  x.beginPath()
+  x.moveTo(cx - R, hy)
+  x.quadraticCurveTo(cx - R * .85 + sway * .6, hy + FL_H * .36, cx + sway * .4, FL_H * .86)
+  x.quadraticCurveTo(cx + R * .85 + sway * .6, hy + FL_H * .36, cx + R, hy)
+  x.arc(cx, hy, R, 0, Math.PI, true)
+  x.closePath(); x.fill()
+
+  gr = x.createRadialGradient(cx, hy - R * .1, 0, cx, hy - R * .1, R * .78)
+  gr.addColorStop(0, 'rgba(255,255,255,1)')
+  gr.addColorStop(.55, 'rgba(255,255,255,.85)')
+  gr.addColorStop(1, 'rgba(255,255,255,0)')
+  x.fillStyle = gr
+  x.beginPath(); x.ellipse(cx, hy + R * .05, R * .78, R * .95, 0, 0, Math.PI * 2); x.fill()
+  FLAME_CACHE[key] = c
+  return c
+}
+
+function drawFlame(x, y, vx, vy, w, inner, outer, tick, alpha) {
+  const c = flameSprite(inner, outer, tick & 1)
+  const h = w * (FL_H / FL_W)
+  const oy = h * (FL_HY / FL_H)
+  g.save(); g.translate(x, y)
+
+  if (vx || vy) g.rotate(Math.atan2(vy, vx) + Math.PI / 2)
+  g.globalCompositeOperation = 'lighter'
+  g.globalAlpha = (alpha == null ? 1 : alpha) * .38
+  g.drawImage(c, -w * .42, -oy * .84 + w * .5, w * .84, h * .84)
+  g.globalAlpha = alpha == null ? 1 : alpha
+  g.drawImage(c, -w / 2, -oy, w, h)
+  g.restore()
+}
+
+const FLAME_P = {
+  rapid: ['190,255,200', '40,220,110'], spread: ['255,235,170', '255,170,50'],
+  laser: ['210,245,255', '60,190,255'], homing: ['255,215,240', '255,110,190'],
+  pierce: ['235,220,255', '160,110,255'], wave: ['200,250,255', '40,200,240'],
+  orb: ['235,220,255', '170,120,255'], missile: ['255,230,190', '255,140,60'],
+  beam: ['220,240,255', '110,190,255'], boomer: ['255,250,200', '240,200,60'],
+  chain: ['210,255,240', '60,230,190'],
+}
+
+const FLAME_E = {
+  small: ['255,215,130', '255,100,30'], mid: ['255,190,200', '255,60,110'],
+  fan: ['210,255,220', '40,220,120'], heavy: ['255,200,170', '255,50,40'],
+  boss: ['235,215,255', '170,90,255'],
+}
+
 const BULLET_KEY = {
   normal: 'rapid', rapid: 'rapid', spread: 'spread', laser: 'laser',
   homing: 'homing', pierce: 'pierce', wave: 'wave', orb: 'orb',
@@ -12357,6 +12440,9 @@ function drawBullet(b) {
     const tall = bi._h > bi._w * 1.3
     const w = r * (tall ? 2.3 : 3.0)
     const h = w * (bi._h / bi._w)
+
+    const fp = FLAME_P[BULLET_KEY[b.kind]] || FLAME_P.rapid
+    drawFlame(b.x, b.y, b.vx, b.vy, r * (tall ? 2.6 : 3.2), fp[0], fp[1], (state.t * 30) | 0, .85)
     g.save(); g.translate(b.x, b.y)
     if (b.vx || b.vy) g.rotate(Math.atan2(b.vy, b.vx) + Math.PI / 2)
     g.drawImage(bi, -w / 2, -h / 2, w, h)
@@ -13065,19 +13151,19 @@ function draw() {
       }
       const C = EBUL[b.sh] || EBUL.small
       const ei = bimg(EBUL_IMG, b.sh) || bimg(EBUL_IMG, 'small')
-      if (ei) {
-        const w = b.r * (b.sh === 'bomb' ? 1.5 : C.long ? 2.4 : 3.6)
+      if (!C.long) {
+
+        const fe = FLAME_E[b.sh] || FLAME_E.small
+        drawFlame(b.x, b.y, b.vx, b.vy, b.r * 3.4, fe[0], fe[1], ((s.t * 24) | 0) + ((b.x * 7) | 0))
+      } else if (ei) {
+        const w = b.r * (b.sh === 'bomb' ? 1.5 : 2.4)
         const h = w * (ei._h / ei._w)
 
-        if (C.long) {
-          g.save(); g.translate(b.x, b.y)
-          g.rotate(Math.atan2(b.vy, b.vx) + (C.nose === 'down' ? -Math.PI / 2 : Math.PI / 2))
-          g.drawImage(ei, -w / 2, -h / 2, w, h)
-          g.restore()
-        } else {
-          g.drawImage(ei, b.x - w / 2, b.y - h / 2, w, h)
-        }
-      } else if (C.long) {
+        g.save(); g.translate(b.x, b.y)
+        g.rotate(Math.atan2(b.vy, b.vx) + (C.nose === 'down' ? -Math.PI / 2 : Math.PI / 2))
+        g.drawImage(ei, -w / 2, -h / 2, w, h)
+        g.restore()
+      } else {
 
         const an = Math.atan2(b.vy, b.vx)
         g.save(); g.translate(b.x, b.y); g.rotate(an)
@@ -13086,13 +13172,6 @@ function draw() {
         g.fillStyle = C.core
         g.fillRect(-b.r * 1.6, -b.r * .45, b.r * 3, b.r * .9)
         g.restore()
-      } else {
-        g.fillStyle = C.glow
-        g.beginPath(); g.arc(b.x, b.y, b.r * 1.7, 0, Math.PI * 2); g.fill()
-        g.fillStyle = C.body
-        g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill()
-        g.fillStyle = C.core
-        g.beginPath(); g.arc(b.x - b.r * .25, b.y - b.r * .25, b.r * .42, 0, Math.PI * 2); g.fill()
       }
 
       if (b.hpMax && b.hp < b.hpMax) {
