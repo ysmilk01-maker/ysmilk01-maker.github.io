@@ -3058,7 +3058,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 07:28'
+const BUILD_AT = '09-16 07:50'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3169,7 +3169,7 @@ const PITY = { pilot: { at: 60, tier: 'high' } }
 const PILOT_CHANCE = 0.3
 
 function pilotLeft() {
-  return GRADE_KEYS.some((t) => GRADE_NEED[t] > 0 && !hasGrade(t))
+  return GRADE_KEYS.some((t) => GRADE_NEED[t] > 0 && gradeLeft(t).length > 0)
 }
 
 function rollKind() {
@@ -3188,11 +3188,6 @@ function mergeShards(from) {
   prog.shardG[from] = shardG(from) - MERGE_N
   prog.shardG[to] = shardG(to) + 1
 
-  if (GRADE_NEED[to] > 0 && !hasGrade(to) && prog.shardG[to] >= GRADE_NEED[to]) {
-    prog.pilotOwned[to] = true
-    prog.shardG[to] -= GRADE_NEED[to]
-    markNewPilots(PILOTS.filter((p) => p.grade === to && pilotOpen(p)).map((p) => p.id))
-  }
   save()
   return true
 }
@@ -3531,7 +3526,8 @@ function pilotNeedLv(pl) {
 function pilotBought(pl) { return !!((prog.pilotBought || {})[pl.id]) }
 function pilotOpen(pl) {
   if (pilotBought(pl)) return true
-  return hasGrade(pl.grade) && prog.pilot.lv >= pilotNeedLv(pl)
+
+  return pl.grade === 'normal' && prog.pilot.lv >= pilotNeedLv(pl)
 }
 
 function markNewPilots(ids) {
@@ -4166,14 +4162,13 @@ function pull(kind) {
   missBump('pull')
 
   if (kind === 'pilot' && prog.pull.pilot % HARD_PITY === 0) {
-    const W = [['mid', 70], ['high', 24], ['legend', 6]].filter(([t]) => !hasGrade(t))
+    const W = [['mid', 70], ['high', 24], ['legend', 6]].filter(([t]) => gradeLeft(t).length > 0)
     if (W.length) {
       let r = Math.random() * W.reduce((a, [, w]) => a + w, 0), tier = W[W.length - 1][0]
       for (const [t, w] of W) { if ((r -= w) < 0) { tier = t; break } }
-      prog.pilotOwned[tier] = true
-      markNewPilots(PILOTS.filter((p) => p.grade === tier && pilotOpen(p)).map((p) => p.id))
+      const pl = grantRandomPilot(tier)
       save()
-      return { kind, tier, n: 1, name: GRADES[tier].name + ' 파일럿', got: true, jack: true, hard: true }
+      return { kind, tier, n: 1, name: pl.name + ' 합류', pilot: pl, got: true, jack: true, hard: true }
     }
   }
   if (kind === 'plane' && prog.pull.plane % HARD_PITY === 0) {
@@ -4192,28 +4187,22 @@ function pull(kind) {
   const jack = Math.random() * 100 < g.jackpot
 
   if (kind === 'pilot') {
-    const fresh = GRADE_NEED[tier] > 0 && !hasGrade(tier)
+    const fresh = GRADE_NEED[tier] > 0 && gradeLeft(tier).length > 0
     if (jack && fresh) {
-      prog.pilotOwned[tier] = true
-      markNewPilots(PILOTS.filter((p) => p.grade === tier && pilotOpen(p)).map((p) => p.id))
+      const pl = grantRandomPilot(tier)
       save()
-      return { kind, tier, n: 1, name: GRADES[tier].name + ' 파일럿', got: true, jack: true }
+      return { kind, tier, n: 1, name: pl.name + ' 합류', pilot: pl, got: true, jack: true }
     }
-
     let big = false
     if (jack) { n = JACK_SHARD; big = true }
-
     let any = false
-    if (hasGrade(tier) && gradeLv(tier) >= GRADE_UP_MAX) { prog.shardAny = shardAny() + n; any = true }
+
+    if (!fresh && gradeLv(tier) >= GRADE_UP_MAX) { prog.shardAny = shardAny() + n; any = true }
     else prog.shardG[tier] = shardG(tier) + n
-    const got = fresh && prog.shardG[tier] >= GRADE_NEED[tier]
-    if (got) {
-      prog.pilotOwned[tier] = true
-      prog.shardG[tier] -= GRADE_NEED[tier]
-      markNewPilots(PILOTS.filter((p) => p.grade === tier && pilotOpen(p)).map((p) => p.id))
-    }
+
     save()
-    return { kind, tier, n, big, any, name: any ? '공용 파일럿 조각' : GRADES[tier].name + ' 파일럿 조각', got }
+    return { kind, tier, n, big, any, name: any ? '공용 파일럿 조각' : GRADES[tier].name + ' 파일럿 조각',
+             got: false, ready: canRecruit(tier) }
   }
 
   const pool = PLANES.filter((p) => p.tier === tier)
@@ -4267,8 +4256,7 @@ function anyUpg() { return PLANES.some(canUpg) }
 
 function anyPilotUp() {
   if (ST_KEYS.some(canStat)) return true
-  return GRADE_KEYS.some((k) => GRADE_NEED[k] > 0 && !hasGrade(k) &&
-                                shardG(k) >= GRADE_NEED[k])
+  return anyRecruit()
 }
 
 const PLANE_SCORE = {
@@ -4584,7 +4572,7 @@ function renderShop() {
     for (const p of shopPilots()) {
       const G = GRADES[p.grade]
       if (last !== p.grade) { lab(G.name + ' 파일럿 · 한 명 ' + won(PILOT_PRICE[p.grade])); last = p.grade }
-      const have = hasGrade(p.grade) || pilotBought(p)
+      const have = pilotBought(p)
       const face = pilotFace(p)
       const pic = face ? '<div class="pf" style="--face:var(--gc-' + face + ')"></div>' : '<div class="pf"></div>'
       card('pilot:' + p.id, 'tier-' + p.grade, pic, p.name, tag(G.tag, G.name), p.desc, have ? '보유' : won(PILOT_PRICE[p.grade]), have)
@@ -4643,7 +4631,7 @@ function openShopItem(id) {
     const p = PILOT_BY[id.slice(6)]
     if (!p) return
     const G = GRADES[p.grade]
-    const have = hasGrade(p.grade) || pilotBought(p)
+    const have = pilotBought(p)
     const face = pilotFace(p)
     html = '<h3>' + p.name + ' <span class="gtag ' + G.tag + '">' + G.name + '</span></h3>' +
       '<div class="sub2">' + G.name + ' 파일럿' + ' · 화력·체력 ×' + G.base.toFixed(2) + '</div>' +
@@ -4720,6 +4708,7 @@ const GRADES = {
 const GRADE_KEYS = ['normal', 'mid', 'high', 'legend']
 
 const GRADE_NEED = { normal: 0, mid: 40, high: 80, legend: 150 }
+try { migratePilotOwned() } catch (e) { console.warn('pilot migrate', e) }
 
 const PILOT_MAX = 30
 const ST_MAX = 10
@@ -4772,7 +4761,48 @@ function doGradeUp(k) {
   save()
   return true
 }
-function hasGrade(k) { return k === 'normal' || !!prog.pilotOwned[k] }
+
+function hasGrade(k) {
+  if (k === 'normal') return true
+  return PILOTS.some((p) => p.grade === k && pilotBought(p))
+}
+
+function gradeLeft(k) { return PILOTS.filter((p) => p.grade === k && !pilotBought(p)) }
+
+function canRecruit(k) {
+  return k !== 'normal' && GRADE_NEED[k] > 0 && gradeLeft(k).length > 0 && shardG(k) >= GRADE_NEED[k]
+}
+function anyRecruit() { return GRADE_KEYS.some(canRecruit) }
+
+function grantRandomPilot(k) {
+  const left = gradeLeft(k)
+  if (!left.length) return null
+  const pl = left[Math.floor(Math.random() * left.length)]
+  prog.pilotBought = prog.pilotBought || {}
+  prog.pilotBought[pl.id] = true
+  markNewPilots([pl.id])
+  return pl
+}
+
+function recruitPilot(k) {
+  if (!canRecruit(k)) return null
+  prog.shardG[k] = shardG(k) - GRADE_NEED[k]
+  const pl = grantRandomPilot(k)
+  save()
+  return pl
+}
+
+function migratePilotOwned() {
+  const po = prog.pilotOwned || {}
+  let changed = false
+  for (const k of GRADE_KEYS) {
+    if (k === 'normal' || !po[k]) continue
+    prog.pilotBought = prog.pilotBought || {}
+    for (const p of PILOTS) if (p.grade === k && !prog.pilotBought[p.id]) { prog.pilotBought[p.id] = true; changed = true }
+    delete po[k]; changed = true
+  }
+  if (changed) save()
+}
 
 function stOf(id) {
   const pt = prog.pilot
@@ -6392,14 +6422,14 @@ document.getElementById('gPull').onclick = () => {
   if (!res) return
   gaTab = 'pull'
 
-  gfxPlay([res], () => { renderGacha(res); renderWallet(); renderTabs(); showGotPop() })
+  gfxPlay([res], () => { renderGacha(res); renderWallet(); renderTabs(); if (!showGotPop() && anyRecruit()) hgToast('파일럿 합류 가능 · 파일럿 화면에서 확인') })
 }
 
 document.getElementById('gPull10').onclick = () => {
   const list = pull10(gKind)
   if (!list) return
   gaTab = 'pull'
-  gfxPlay(list, () => { renderGacha(list); renderWallet(); renderTabs(); showGotPop() })
+  gfxPlay(list, () => { renderGacha(list); renderWallet(); renderTabs(); if (!showGotPop() && anyRecruit()) hgToast('파일럿 합류 가능 · 파일럿 화면에서 확인') })
 }
 function paintShop() {
   const body = document.getElementById('gBody')
@@ -6716,7 +6746,7 @@ function openPilot(pl, list) {
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
 
   const G = GRADES[pl.grade]
-  const have = (hasGrade(pl.grade)) && pilotOpen(pl)
+  const have = pilotOpen(pl)
   const on = pilotNow().id === pl.id
   const face = pilotFace(pl)
   const st = stOf(pl.id)
@@ -6769,8 +6799,13 @@ function openPilot(pl, list) {
         (max ? ' · 다 올렸습니다. 이 등급 조각은 공용 조각이 됩니다' : ' · 단계마다 화력·체력 +2%, 셋이 같이') + '</div>'
     })() +
     '<div class="pstats">' + statHtml + '</div>' +
-    (have ? '' : '<div class="pnote">아직 잠겨 있습니다. ' + G.name + ' 조각 ' +
-      shardG(pl.grade) + '/' + GRADE_NEED[pl.grade] + '개.</div>') +
+    (have ? '' : pl.grade === 'normal'
+      ? '<div class="pnote">파일럿 Lv.' + pilotNeedLv(pl) + ' 에 합류합니다.</div>'
+      : canRecruit(pl.grade)
+        ? '<div class="pnote">' + G.name + ' 조각이 ' + GRADE_NEED[pl.grade] + '개 찼습니다. 확인하면 ' + G.name +
+          ' 파일럿 중 아직 안 온 ' + gradeLeft(pl.grade).length + '명 가운데 <b>한 명이 무작위로</b> 합류합니다.</div>'
+        : '<div class="pnote">아직 잠겨 있습니다. ' + G.name + ' 조각 ' +
+          shardG(pl.grade) + '/' + GRADE_NEED[pl.grade] + '개 · 차면 무작위 한 명이 합류합니다.</div>') +
     (list && list.length > 1
       ? '<div class="pnav"><button class="ghost" id="dPrev">◀</button>' +
         '<span>' + (list.indexOf(pl) + 1) + ' / ' + list.length + '</span>' +
@@ -6778,7 +6813,8 @@ function openPilot(pl, list) {
       : '') +
     '<div class="bar">' +
       (on ? '<button class="wide" disabled>사용 중</button>'
-          : have ? '<button class="wide" id="pPick">이 파일럿 쓰기</button>' : '') +
+          : have ? '<button class="wide" id="pPick">이 파일럿 쓰기</button>'
+          : canRecruit(pl.grade) ? '<button class="wide" id="pRecruit">조각 ' + GRADE_NEED[pl.grade] + '개로 합류 확인</button>' : '') +
       (back ? '<button class="ghost" id="pReset">되돌리기</button>' : '') +
       '<button class="ghost thin" id="dClose">닫기</button>' +
     '</div>'
@@ -6835,6 +6871,19 @@ function openPilot(pl, list) {
     }, { title: '스탯 되돌리기', ok: '되돌립니다' })
   }
 
+  const rc = document.getElementById('pRecruit')
+  if (rc) rc.onclick = () => {
+
+    const k = pl.grade
+    ask(GRADES[k].name + ' 조각 ' + GRADE_NEED[k] + '개를 써서 한 명을 부릅니다. 누가 올지는 무작위입니다.', () => {
+      const got = recruitPilot(k)
+      if (!got) return
+      sfx('got'); haptic('ult')
+      close()
+      renderPilot()
+      if (!showGotPop()) hgToast(got.name + ' 합류')
+    }, { title: '파일럿 합류', ok: '부르기' })
+  }
   const pk = document.getElementById('pPick')
   if (pk) pk.onclick = () => {
 
@@ -7014,12 +7063,14 @@ function nextGradeLine() {
   const soon = PILOTS.filter((p) => hasGrade(p.grade) && !pilotOpen(p))
     .sort((a, b) => pilotNeedLv(a) - pilotNeedLv(b))[0]
   if (soon) out.push('파일럿 Lv.' + pilotNeedLv(soon) + ' 에 한 명 더 합류합니다.')
-  const left = GRADE_KEYS.filter((k) => GRADE_NEED[k] > 0 && !hasGrade(k))
+  const left = GRADE_KEYS.filter((k) => GRADE_NEED[k] > 0 && gradeLeft(k).length > 0)
   if (left.length) {
     left.sort((a, b) => (shardG(b) / GRADE_NEED[b]) - (shardG(a) / GRADE_NEED[a]))
     const k = left[0]
-    out.push('다음 등급 · ' + GRADES[k].name + ' 조각 ' +
-      shardG(k) + '/' + GRADE_NEED[k] + ' — 뽑기에서 모읍니다.')
+    out.push(canRecruit(k)
+      ? GRADES[k].name + ' 파일럿 합류 가능 · 조각 ' + shardG(k) + '/' + GRADE_NEED[k] + ' — 잠긴 카드를 눌러 확인하세요.'
+      : '다음 합류 · ' + GRADES[k].name + ' 조각 ' + shardG(k) + '/' + GRADE_NEED[k] +
+        ' (' + gradeLeft(k).length + '명 남음) — 뽑기에서 모읍니다.')
   }
   return out.join('<br>') || '파일럿은 다 모으셨습니다.'
 }
@@ -7070,7 +7121,7 @@ function renderPilot() {
 
   const early = false
   const list = PILOTS.filter((pl) => {
-    const own = hasGrade(pl.grade) || pilotBought(pl)
+    const own = pilotBought(pl) || pl.grade === 'normal'
     return pilotOwn === 'all' || (pilotOwn === 'own' ? own : !own)
   })
 
@@ -7081,13 +7132,13 @@ function renderPilot() {
   }
   const cardArr = list.map((pl) => {
     const G = GRADES[pl.grade]
-    const owned = hasGrade(pl.grade) || pilotBought(pl)
+    const owned = pilotBought(pl) || pl.grade === 'normal'
     const on = pilotNow().id === pl.id
     const face = pilotFace(pl)
     const pic = face
       ? '<div class="pf" style="--face:var(--gc-' + face + ')"></div>'
       : '<div class="pf none"><div class="rk ' + pl.grade + '"></div></div>'
-    const ready = !owned && GRADE_NEED[pl.grade] > 0 && shardG(pl.grade) >= GRADE_NEED[pl.grade]
+    const ready = !owned && canRecruit(pl.grade)
 
     const canAny = owned && on && ST_KEYS.some((k) => canStat(k, pl.id))
 
@@ -7100,12 +7151,14 @@ function renderPilot() {
       '<div class="de">' + pl.desc + '</div>' +
       '<div class="stx">' + (owned
         ? (pilotOpen(pl) ? stLine(pl.id) : '파일럿 Lv.' + pilotNeedLv(pl) + ' 에 합류')
+        : ready ? '합류 가능 · 눌러서 확인 (무작위 1명)'
         : '조각 ' + shardG(pl.grade) + '/' + GRADE_NEED[pl.grade]) + '</div>' +
       '</div>' +
-      (canAny ? '<span class="upbang" aria-label="스탯 올리기 가능">!</span>' : '') +
+      (canAny || ready ? '<span class="upbang" aria-label="' + (ready ? '합류 가능' : '스탯 올리기 가능') + '">!</span>' : '') +
       (on ? '<span class="rt">사용 중</span>'
           : lvLock ? '<span class="rt lk">Lv.' + pilotNeedLv(pl) + '</span>'
-          : owned ? '<span class="rt idle">미사용</span>' : '<span class="rt lk">잠김</span>') +
+          : owned ? '<span class="rt idle">미사용</span>'
+          : ready ? '<span class="rt">합류 가능</span>' : '<span class="rt lk">잠김</span>') +
       '</div>'
   })
 
