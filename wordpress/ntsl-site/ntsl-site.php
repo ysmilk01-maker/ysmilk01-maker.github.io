@@ -2,7 +2,7 @@
 /**
  * Plugin Name: 나인투식스랩 사이트
  * Description: 깃 저장소(dev/ninetosix-site)의 정적 홈페이지를 워드프레스에서 그대로 서빙하고, 블로그와 일반 페이지에도 같은 네비게이션·푸터·색을 씌웁니다. 카페24 매니지드 워드프레스는 FTP·파일매니저가 없어 테마 파일을 올릴 수 없으므로 플러그인 방식을 씁니다.
- * Version: 1.3.13
+ * Version: 1.3.14
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * License: GPL-2.0-or-later
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 define( 'NTSL_SITE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'NTSL_SITE_URL', plugin_dir_url( __FILE__ ) );
-define( 'NTSL_SITE_VER', '1.3.13' );
+define( 'NTSL_SITE_VER', '1.3.14' );
 
 // 2026-09-13 서비스 종료: 이전 버전의 지분공시 예약 작업이 있으면 해제한다.
 add_action( 'admin_init', function () {
@@ -46,6 +46,77 @@ gtag('config', 'G-622TW2X538', {
   allow_google_signals: false,
   allow_ad_personalization_signals: false
 });
+</script>
+<script id="ntsl-analytics-events">
+(function () {
+  'use strict';
+
+  function labelOf(link) {
+    return (link.getAttribute('aria-label') || link.textContent || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+  }
+
+  document.addEventListener('click', function (event) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    var link = event.target.closest('a[href]');
+    if (!link || typeof window.gtag !== 'function') {
+      return;
+    }
+
+    var raw = link.getAttribute('href') || '';
+    if (!raw || raw.charAt(0) === '#' || raw.indexOf('mailto:') === 0 || raw.indexOf('tel:') === 0) {
+      return;
+    }
+
+    // 앱 실행·스토어 이동은 향상된 측정만으로 빠질 수 있어 별도 이벤트로 남긴다.
+    if (link.matches('.platform-link') || raw.indexOf('intoss://') === 0) {
+      var destination = 'other';
+      if (raw.indexOf('intoss://') === 0) {
+        destination = 'toss';
+      } else {
+        try {
+          destination = new URL(link.href, window.location.href).hostname.replace(/^www\./, '');
+        } catch (_error) {
+          destination = 'other';
+        }
+      }
+      window.gtag('event', 'app_open_click', {
+        app_destination: destination,
+        link_text: labelOf(link)
+      });
+      return;
+    }
+
+    // 글 본문 안에서 다른 글·페이지로 이동하는 흐름만 기록한다.
+    if (!link.closest('.entry-content, .post-content, article')) {
+      return;
+    }
+
+    var target;
+    try {
+      target = new URL(link.href, window.location.href);
+    } catch (_error) {
+      return;
+    }
+    if (target.origin !== window.location.origin || target.pathname === window.location.pathname) {
+      return;
+    }
+    if (/\.(?:avif|gif|jpe?g|png|svg|webp|zip)$/i.test(target.pathname)) {
+      return;
+    }
+
+    window.gtag('event', 'related_content_click', {
+      source_path: window.location.pathname,
+      destination_path: target.pathname,
+      link_text: labelOf(link)
+    });
+  });
+})();
 </script>
     <?php
 }, 1 );
