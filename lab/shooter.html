@@ -3005,7 +3005,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 17:48'
+const BUILD_AT = '09-15 17:52'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7822,6 +7822,7 @@ const WAVES = [
   { at: 26.0, f: () => line(2, 'gunner') },
   { at: 27.0, f: () => { ground('radar', W - 84); ground('turret', W / 2) } },
   { at: 29.0, f: () => dive(3) },
+  { at: 24.0, f: () => snake('small', 7, Math.random() < .5 ? 1 : -1) },
   { at: 30.0, f: () => flank('small', 2, Math.random() < .5 ? 1 : -1) },
   { at: 32.0, f: () => spawnBoss() },
 ]
@@ -7939,6 +7940,7 @@ const CHAPTERS = [
       [1, (r) => dive(2 + ((r() * 2) | 0))],
       [1, (r) => side('small', 3, r() < .5 ? 1 : -1)],
       [1, (r) => flank('small', 2, r() < .5 ? 1 : -1)],
+      [1, (r) => snake('small', 7 + ((r() * 3) | 0), r() < .5 ? 1 : -1)],
 
       [1, (r) => line(1 + ((r() * 2) | 0), 'split')],
     ],
@@ -7969,6 +7971,7 @@ const CHAPTERS = [
 
       [1, (r) => rocketVolley(1)],
       [1, (r) => flank('gunner', 2, r() < .5 ? 1 : -1)],
+      [1, (r) => snake('small', 8 + ((r() * 3) | 0), r() < .5 ? 1 : -1)],
       [1, (r) => line(1, 'tank')],
     ],
   },
@@ -8909,6 +8912,29 @@ function flank(kind, n, dir) {
 
       e.vx = d * 172
       e.vy = -124 * SPD_K
+      state.enemies.push(e)
+    }
+  })
+}
+
+const SNAKE_WARN = 0.9
+function snake(kind, n, dir) {
+  const cnt = Math.max(3, Math.min(10, n | 0))
+  const d = dir > 0 ? 1 : -1
+  const p0 = [d > 0 ? -40 : W + 40, H * 0.78]
+  const p1 = [d > 0 ? W * 0.62 : W * 0.38, H * 0.58]
+  const p2 = [d > 0 ? W + 50 : -50, H * 0.08]
+  edgeWarn(d > 0 ? 'l' : 'r', p0[1] - 30, SNAKE_WARN, 200)
+  sfx('alarm')
+  banner('꼬리 편대')
+  afterWarn(SNAKE_WARN, () => {
+    for (let i = 0; i < cnt; i++) {
+      const e = mkEnemy(kind, p0[0], p0[1], 0)
+      e.mode = 'snake'
+      e.path = [p0, p1, p2]
+      e.pdur = 2.6
+      e.pt = -i * 0.085
+      e.cd = 1.2 + i * 0.25
       state.enemies.push(e)
     }
   })
@@ -10453,13 +10479,22 @@ function update(dt) {
 
       e.x += e.vx * dt
       e.y += e.vy * dt
+    } else if (e.mode === 'snake') {
+
+      e.pt += dt / e.pdur
+      if (e.pt >= 0) {
+        const t = Math.min(1, e.pt), u = 1 - t, P = e.path
+        e.x = u * u * P[0][0] + 2 * u * t * P[1][0] + t * t * P[2][0]
+        e.y = u * u * P[0][1] + 2 * u * t * P[1][1] + t * t * P[2][1]
+      }
+      if (e.pt > 1.02) { e.dead = true; e.reaped = true }
     } else {
       e.y += e.sp * dt
       const wobble = e.sway ? Math.sin(e.t * 1.1) * e.sway : Math.sin(e.t * 1.6) * 34
       e.x += (e.drift ? e.drift * 46 : wobble) * dt
     }
 
-    if (e.mode !== 'side' && e.mode !== 'flank') {
+    if (e.mode !== 'side' && e.mode !== 'flank' && e.mode !== 'snake') {
       e.x = Math.max(18, Math.min(W - 18, e.x))
     }
 
@@ -10569,6 +10604,7 @@ function update(dt) {
   keepIf(s.enemies, (e) =>
 
     (e.mode === 'flank' && e.y > -80) ||
+    (e.mode === 'snake' && e.pt <= 1.02) ||
     (e.y < H + 60 && e.x > -90 && e.x < W + 90))
 
   const bs = s.boss
