@@ -2122,6 +2122,20 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad.v3 .hg-pilot{position:relative}#scSquad.v3 .hg-main.grow::after{top:2px;right:2px}
 .pcard{position:relative}.card.cp{position:relative}.slotTabs.v3 button{position:relative}
 .slotTabs.v3 button.can::after{top:-4px;right:-4px}
+/* ── 가이드 v3 (2026-09-15): 파일럿 초상 + 말풍선 띠. 참고 스샷 꼴 ── */
+#tourHole{box-shadow:0 0 0 9999px rgba(5,8,13,.42),0 0 0 2px var(--gold,#ffd98a) inset}
+#tourBox.v3{left:0;right:0;background:transparent;border:0;border-radius:0;padding:0;box-shadow:none;display:flex;align-items:center;gap:0;cursor:pointer}
+#tourBox.v3 .tport{flex:none;width:104px;height:104px;margin-left:8px;margin-right:-30px;border-radius:50%;overflow:hidden;border:3px solid #e9c86a;box-shadow:0 0 0 3px #0b1118,0 8px 22px rgba(0,0,0,.7);background:#0a1218;z-index:2;position:relative}
+#tourBox.v3 .tport img{width:100%;height:100%;object-fit:cover;object-position:center top}
+#tourBox.v3 .tband{flex:1;min-width:0;background:linear-gradient(90deg,rgba(6,10,18,.92),rgba(6,10,18,.84));border-top:1px solid #e9c86a99;border-bottom:1px solid #e9c86a99;padding:11px 14px 10px 42px;min-height:84px;display:flex;flex-direction:column;justify-content:center}
+#tourBox.v3 .tstep{font-size:10px;color:#9fb0c6}
+#tourBox.v3 .ttitle{font-size:14px;margin-top:0;color:#ffd98a;font-weight:800}
+#tourBox.v3 .ttext{font-size:13px;line-height:1.55;color:#eef3f8;margin-top:3px}
+#tourBox.v3 .tbtns{margin-top:6px;justify-content:flex-end;gap:10px}
+#tourBox.v3 .tbtns button{flex:none;padding:0;background:transparent;border:0;color:#ffd98a;font-size:11.5px;font-weight:800;box-shadow:none}
+#tourBox.v3 .tbtns button::after{content:" ▸"}
+#tourBox.v3 .tbtns button.ghost{flex:none;background:transparent;border:0;color:#8fa5b0;font-weight:600}#tourBox.v3 .tbtns button.ghost::after{content:""}
+#tourBox.v3 .tbtns button:only-child{margin-left:auto}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2287,13 +2301,16 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div id="tour" hidden>
   <div id="tourHole"></div>
   <div id="tourHand" aria-hidden="true">👉</div>
-  <div id="tourBox">
-    <div class="tstep" id="tourStep"></div>
-    <div class="ttitle" id="tourTitle"></div>
-    <div class="ttext" id="tourText"></div>
-    <div class="tbtns">
-      <button id="tourSkip" class="ghost">넘기기</button>
-      <button id="tourNext">다음</button>
+  <div id="tourBox" class="v3">
+    <div class="tport" aria-hidden="true"><img id="tourFace" alt=""></div>
+    <div class="tband">
+      <div class="tstep" id="tourStep"></div>
+      <div class="ttitle" id="tourTitle"></div>
+      <div class="ttext" id="tourText"></div>
+      <div class="tbtns">
+        <button id="tourSkip" class="ghost">넘기기</button>
+        <button id="tourNext">다음</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2988,7 +3005,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 12:43'
+const BUILD_AT = '09-15 17:48'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5563,6 +5580,9 @@ function tourPaint() {
     tourSteps.length > 1 ? (tourAt + 1) + ' / ' + tourSteps.length : ''
   document.getElementById('tourTitle').textContent = step[1]
   document.getElementById('tourText').textContent = step[2]
+
+  const face = document.getElementById('tourFace')
+  if (face) { const pl = pilotNow(); face.src = hangarFile('pilots', pl.id) || (GC[pilotFace(pl)] || {}).src || '' }
   document.getElementById('tourNext').textContent =
     tourAt === tourSteps.length - 1 ? ((tourSteps === TOUR_FIRST || tourSteps === TOUR_FULL) ? '시작하기' : '알겠습니다') : '다음'
 }
@@ -14545,6 +14565,7 @@ document.querySelectorAll('.hg-drow details').forEach((d) => {
   })
 })
 document.getElementById('tourNext').onclick = () => { tourAt++; tourPaint() }
+document.getElementById('tour').addEventListener('click', (e) => { if (e.target.closest('button')) return; tourAt++; tourPaint() })
 document.getElementById('tourSkip').onclick = () => tourEnd()
 { const gb = document.getElementById('hgGuide'); if (gb) gb.onclick = () => tourStart(true) }
 
