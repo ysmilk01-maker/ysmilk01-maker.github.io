@@ -2136,6 +2136,24 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #tourBox.v3 .tbtns button::after{content:" ▸"}
 #tourBox.v3 .tbtns button.ghost{flex:none;background:transparent;border:0;color:#8fa5b0;font-weight:600}#tourBox.v3 .tbtns button.ghost::after{content:""}
 #tourBox.v3 .tbtns button:only-child{margin-left:auto}
+/* ── 획득 팝업 (2026-09-15) ── */
+#gotPop{z-index:62}
+#gotPop .gotbox{width:min(340px,92vw);padding:16px 16px 14px;text-align:center;position:relative}
+#gotPop .gk{font-size:11.5px;letter-spacing:.14em;color:var(--gold);font-weight:800}
+#gotPop .gn{position:absolute;right:14px;top:12px;font-size:11px;color:var(--muted)}
+#gotPop .gpic{position:relative;height:176px;margin:10px 0 8px;border-radius:14px;overflow:hidden;background:radial-gradient(ellipse at 50% 55%,rgba(var(--gt),.42),transparent 64%),#0b121a;border:1px solid rgba(var(--gt),.5)}
+#gotPop .gpic::before{content:"";position:absolute;left:50%;top:50%;width:200%;aspect-ratio:1;transform:translate(-50%,-50%);background:repeating-conic-gradient(rgba(var(--gt),.13) 0 8deg,transparent 8deg 24deg);animation:gotSpin 16s linear infinite;pointer-events:none}
+#gotPop .gpic img{position:absolute;left:50%;top:50%;width:66%;height:128px;object-fit:contain;transform:translate(-50%,-50%);filter:drop-shadow(0 14px 10px #000a);animation:gotIn .55s cubic-bezier(.2,1.5,.4,1)}
+#gotPop .gpic .pf{position:absolute;left:50%;top:50%;width:130px;height:152px;transform:translate(-50%,-50%);border-radius:14px;background:var(--face) top center/cover no-repeat,#0d1119;border:1px solid var(--line);animation:gotIn .55s cubic-bezier(.2,1.5,.4,1)}
+#gotPop .gname{font-size:20px;font-weight:900;margin-top:4px;line-height:1.2}
+#gotPop .gname .tag{margin-left:7px;vertical-align:middle;font-size:10px}
+#gotPop .gsub{font-size:12px;line-height:1.5;color:#c9d6de;margin-top:5px;min-height:36px}#gotPop .gsub b{color:#eaf6f2}
+#gotPop .gbar{display:flex;gap:8px;margin-top:12px}#gotPop .gbar button{flex:1;margin:0;min-height:42px;padding:8px 6px;font-size:13.5px;white-space:nowrap}
+@keyframes gotIn{from{transform:translate(-50%,-50%) scale(.35);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+@keyframes gotSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#gotPop .gpic::before,#gotPop .gpic img,#gotPop .gpic .pf{animation:none}}
+/* ── 2 카드 느낌표 배지: 카드가 overflow:hidden 이라 밖으로 내민 배지가 잘렸다 (2026-09-15 폰 스샷) ── */
+.card.cp .upbang{top:5px;right:5px}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2344,6 +2362,16 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
     <button id="unlockOk">보러 가기</button>
     <button id="unlockClose" class="ghost">닫기</button>
   </div>
+</div>
+
+<!--
+  획득 팝업 (2026-09-15 대표 지정).
+  기체·파일럿이 생기는 자리(뽑기·우편·조각 합성·레벨 합류)마다 큐에 넣어 두고
+  한 장씩 보여 준다. 「상세 보기」가 상세 시트를 바로 연다. showUnlockPop 은
+  UI v3 에서 부르는 데가 없어져 아무 것도 안 뜨고 있었다.
+-->
+<div class="panel" id="gotPop" hidden>
+  <div class="gbox gotbox"></div>
 </div>
 
 <div class="panel" id="daily" hidden>
@@ -3005,7 +3033,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 19:43'
+const BUILD_AT = '09-15 19:59'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3485,6 +3513,73 @@ function markNewPilots(ids) {
   if (!ids || !ids.length) return
   const cur = Array.isArray(prog.newPilot) ? prog.newPilot : []
   prog.newPilot = cur.concat(ids.filter((i) => !cur.includes(i)))
+  for (const id of ids) queueGot('pilot', id)
+}
+
+function queueGot(kind, id) {
+  const q = Array.isArray(prog.newGot) ? prog.newGot : (prog.newGot = [])
+  if (q.some((x) => x.k === kind && x.id === id)) return
+  q.push({ k: kind, id })
+}
+function showGotPop(force) {
+  const q = Array.isArray(prog.newGot) ? prog.newGot : []
+  if (!q.length) return false
+  const tour = document.getElementById('tour')
+  if (!force && (anyOverlay() || (tour && !tour.hidden))) return false
+  const el = document.getElementById('gotPop')
+  if (!el || !el.hidden) return false
+  const total = q.length
+  const box = el.querySelector('.gotbox')
+  const close = () => { el.hidden = true; el.onclick = null; modalOff() }
+  const paint = () => {
+    const it = q[0]
+    const isP = it.k === 'plane'
+    const p = isP ? planeById(it.id) : PILOT_BY[it.id]
+    if (!p) { q.shift(); save(); if (q.length) return paint(); close(); return }
+    const tier = isP ? p.tier : p.grade
+    const tone = gTone(tier)
+    const tag = isP ? 't-' + p.tier : GRADES[p.grade].tag
+    const tname = isP ? TIERS[p.tier] : GRADES[p.grade].name
+    const face = !isP && pilotFace(p)
+    const empty = isP ? [0, 2, 3].find((i) => slotOpen(i) && !prog.squad[i]) : undefined
+    box.style.setProperty('--gt', tone.rgb)
+    box.innerHTML =
+      '<div class="gk">' + (isP ? '새 기체 획득' : '새 파일럿 합류') + '</div>' +
+      (total > 1 ? '<div class="gn">' + (total - q.length + 1) + ' / ' + total + '</div>' : '') +
+      '<div class="gpic">' + (isP
+        ? '<img src="' + hangarPlaneImage(p) + '" alt="">'
+        : '<div class="pf' + (face ? '' : ' none') + '"' + (face ? ' style="--face:var(--gc-' + face + ')"' : '') + '></div>') +
+      '</div>' +
+      '<div class="gname">' + p.name + '<span class="tag ' + tag + '">' + tname + '</span></div>' +
+      '<div class="gsub">' + (isP
+        ? '<b>' + WEAPONS[p.weapon].name + '</b> · ' + WEAPONS[p.weapon].desc
+        : (p.desc || '') + (pilotOpen(p) ? '' : ' · 파일럿 Lv.' + pilotNeedLv(p) + ' 에 합류')) + '</div>' +
+      '<div class="gbar">' +
+      '<button class="ghost" id="gotDetail">상세 보기</button>' +
+      (empty !== undefined ? '<button id="gotSlot">' + SLOT_META[empty].role + ' 자리에 넣기</button>' : '') +
+      '<button id="gotOk">' + (q.length > 1 ? '다음' : '확인') + '</button>' +
+      '</div>'
+    document.getElementById('gotOk').onclick = () => { q.shift(); save(); if (q.length) paint(); else close() }
+    document.getElementById('gotDetail').onclick = () => {
+      if (isP) openDetail(p, PLANES.filter(unlocked))
+      else openPilot(p, PILOTS.filter(pilotOpen))
+    }
+    const gs = document.getElementById('gotSlot')
+    if (gs) gs.onclick = () => {
+      q.shift(); save(); close()
+
+      if (MODAL.el && MODAL.close) MODAL.close()
+      guideNav = true
+      hangarChoose('planes', empty, 'hgMain')
+    }
+    const h = box.querySelector('#gotOk'); if (h) h.focus({ preventScroll: true })
+    sfx('got')
+  }
+  el.hidden = false
+  modalOn(el, close)
+  el.onclick = (e) => { if (e.target === el) close() }
+  paint()
+  return true
 }
 
 function pilotNow() {
@@ -4049,7 +4144,7 @@ function pull(kind) {
     const locked = PLANES.filter((p) => !unlocked(p))
     if (locked.length) {
       const pick = locked[Math.floor(Math.random() * locked.length)]
-      prog.owned.push(pick.id)
+      prog.owned.push(pick.id); queueGot('plane', pick.id)
       save()
       return { kind, tier: pick.tier, n: 1, name: pick.name, plane: pick,
                got: true, jack: true, hard: true }
@@ -4100,7 +4195,7 @@ function pull(kind) {
   const fresh = !unlocked(pick)
 
   if (jack && fresh) {
-    prog.owned.push(pick.id)
+    prog.owned.push(pick.id); queueGot('plane', pick.id)
     save()
     return { kind, tier, n: 1, name: pick.name, plane: pick, got: true, jack: true }
   }
@@ -4110,7 +4205,7 @@ function pull(kind) {
   n = Math.round(n * perk('shard'))
   prog.shardP[pick.id] = shardOf(pick.id) + n
   const got = fresh && prog.shardP[pick.id] >= shardNeed(pick)
-  if (got) { prog.owned.push(pick.id); prog.shardP[pick.id] -= shardNeed(pick) }
+  if (got) { prog.owned.push(pick.id); prog.shardP[pick.id] -= shardNeed(pick); queueGot('plane', pick.id) }
   save()
   return { kind, tier, n, big, name: pick.name + ' 조각', plane: pick, got }
 }
@@ -4276,8 +4371,8 @@ function grantItems(items) {
     else if (k === 'parts') prog.parts += v
     else if (k === 'energy') prog.energy.n = energy() + v
     else if (k === 'xp') addXpRaw(v)
-    else if (k === 'plane') { if (!prog.owned.includes(v)) prog.owned.push(v) }
-    else if (k === 'pilot') { prog.pilotBought = prog.pilotBought || {}; prog.pilotBought[v] = true }
+    else if (k === 'plane') { if (!prog.owned.includes(v)) { prog.owned.push(v); queueGot('plane', v) } }
+    else if (k === 'pilot') { prog.pilotBought = prog.pilotBought || {}; prog.pilotBought[v] = true; queueGot('pilot', v) }
   }
   save()
   renderWallet()
@@ -4339,6 +4434,7 @@ function openMail(tab) {
       sfx('got')
       openMail()
 
+      if (m.items && (m.items.plane || m.items.pilot) && showGotPop(true)) return
       const empty = m.items && m.items.plane ? [0, 2, 3].find((i) => slotOpen(i) && !prog.squad[i]) : undefined
       if (empty !== undefined) {
         askOpen(itemText(m.items) + '을(를) 받았습니다.\n' + SLOT_META[empty].role + ' 자리가 비어 있습니다. 거기 넣으면 메인과 함께 쏩니다(화력 ' +
@@ -5288,6 +5384,7 @@ function go(name) {
 
   lastGoAt = performance.now()
   fxIn(shown)
+  if (name === 'squad') setTimeout(() => showGotPop(), 260)
   if (previous !== name) {
     if (name === 'squad') hangarFocus()
     else { const h = shown && shown.querySelector('h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }
@@ -6249,14 +6346,14 @@ document.getElementById('gPull').onclick = () => {
   if (!res) return
   gaTab = 'pull'
 
-  gfxPlay([res], () => { renderGacha(res); renderWallet(); renderTabs(); newPilotPopup() })
+  gfxPlay([res], () => { renderGacha(res); renderWallet(); renderTabs(); showGotPop() })
 }
 
 document.getElementById('gPull10').onclick = () => {
   const list = pull10(gKind)
   if (!list) return
   gaTab = 'pull'
-  gfxPlay(list, () => { renderGacha(list); renderWallet(); renderTabs(); newPilotPopup() })
+  gfxPlay(list, () => { renderGacha(list); renderWallet(); renderTabs(); showGotPop() })
 }
 function paintShop() {
   const body = document.getElementById('gBody')
@@ -7015,7 +7112,7 @@ function renderPilot() {
       '<button data-merge="' + f + '"' + (shardG(f) < MERGE_N ? ' disabled' : '') + '>' +
       GRADES[f].name + ' ' + shardG(f) + ' → ' + GRADES[t].name + '</button>').join('') + '</div>'
   pHead.querySelectorAll('[data-merge]').forEach((b) => {
-    b.onclick = () => { if (mergeShards(b.dataset.merge)) { sfx('ready'); renderPilot() } }
+    b.onclick = () => { if (mergeShards(b.dataset.merge)) { sfx('ready'); renderPilot(); showGotPop() } }
   })
   pHead.querySelectorAll('[data-po]').forEach((b) => {
     b.onclick = () => { pilotOwn = b.dataset.po; pBody._page = 0; renderPilot() }
@@ -9875,7 +9972,7 @@ function fireUlt() {
       break
     case 'boomer': {
 
-      s.ultT = WINGMEN.hold + 1.0
+      s.ultT = WINGMEN.hold + 1.5 + 1.0
       const gap = W / (WINGMEN.n + 1)
       s.escorts = Array.from({ length: WINGMEN.n }, (_, i) => ({
         x: gap * (i + 1), y: H + 40 + i * 26,
@@ -11171,6 +11268,7 @@ function collide() {
       banner(MODS[it.mod].name + ' ' + s.mods[it.mod] + ' · 메인')
     } else {
       levelUp()
+      voice('up')
     }
   }
   keepIf(s.items, (it) => !it.dead)
@@ -14179,6 +14277,8 @@ requestAnimationFrame(frame)
 
 const AUDIO_BASE = location.protocol === 'file:' ? 'https://ysmilk01-maker.github.io/lab/audio/' : 'audio/'
 const TRACKS = { hangar: 'hangar.m4a', battle: 'battle.m4a', boss: 'boss.m4a' }
+
+const VOICES = { up: 'voice_up.m4a' }
 const MUS_VOL = 0.42
 const AU_KEY = 'shooter-audio-v1'
 
@@ -14264,6 +14364,39 @@ function auLoad(name) {
   return AU.loading[name]
 }
 
+function voice(name) {
+  if (!AU.on.sfx) return
+  const c = auInit()
+  if (!c || c.state !== 'running' || !VOICES[name]) return
+  if (!auGate('voice:' + name, 0.7)) return
+  const key = 'voice:' + name
+  const play = (buf) => {
+    if (!buf) return
+    const src = c.createBufferSource(); src.buffer = buf
+    const g = c.createGain(); g.gain.value = 1.6
+    src.connect(g); g.connect(AU.sfxBus)
+    src.start()
+  }
+  if (AU.buf[key]) { play(AU.buf[key]); return }
+  if (AU.loading[key]) return
+  AU.loading[key] = fetch(AUDIO_BASE + VOICES[name])
+    .then((r) => r.arrayBuffer())
+    .then((a) => c.decodeAudioData(a))
+    .then((b) => { AU.buf[key] = b; play(b); return b })
+    .catch(() => { delete AU.loading[key]; return null })
+}
+
+function voiceWarm() {
+  const c = auInit()
+  if (!c) return
+  for (const name in VOICES) {
+    const key = 'voice:' + name
+    if (AU.buf[key] || AU.loading[key]) continue
+    AU.loading[key] = fetch(AUDIO_BASE + VOICES[name])
+      .then((r) => r.arrayBuffer()).then((a) => c.decodeAudioData(a))
+      .then((b) => (AU.buf[key] = b)).catch(() => { delete AU.loading[key]; return null })
+  }
+}
 function auStop(fade) {
   const c = AU.ctx
   if (!c || !AU.now) return
@@ -14856,6 +14989,7 @@ function doLaunch(zoneMode) {
 
   if (zoneRun || !hardOpen()) runMode = 'normal'
 
+  voiceWarm()
   if (energy() > 0) { energySpend(); start(); return true }
   if (adDayLeft() <= 0) {
     say('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.', '출격권')
