@@ -5400,8 +5400,8 @@ function guideNext() {
       '여기를 눌러 기체를 넣으세요. 여기 들어간 기체는 메인과 함께 쏩니다(화력 ' + Math.round(slotMul(i) * 100) + '% 몫). 비워 두면 아무것도 안 쏩니다.', 'slot')
   }
 
-  if (prog.ticket >= GACHA.plane.cost && (g.ticketAt || 0) < prog.ticket) {
-    g.ticketAt = prog.ticket; save()
+  if (prog.ticket >= GACHA.plane.cost && !g.ticketOnce) {
+    g.ticketOnce = true; g.ticketAt = prog.ticket; save()
     return point('#tabs button[data-go="gacha"]', '뽑기권이 있습니다', '뽑기권 ' + prog.ticket + '장. 뽑기에서 새 기체를 엽니다.', null)
   }
   return false
