@@ -2982,7 +2982,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 12:34'
+const BUILD_AT = '09-15 12:40'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7642,12 +7642,12 @@ function shoot(u, i, dt) {
     }
     case 'orb': {
 
-      const n = 2 + tier + M.extra
+      const n = 5 + tier + M.extra
+      const per = (2 + tier) / (5 + tier)
       for (let k = 0; k < n; k++)
-
         add({ kind: 'orb', owner: i, a: (k / n) * Math.PI * 2, rad: 40 + tier * 8,
-              x: pos.x, y: pos.y, r: 6, dmg: dmg * 7.0, pierce: 99, life: 3.0,
-              gather: 0.85, go: false })
+              x: pos.x, y: pos.y, r: 6, dmg: dmg * 7.0 * per, pierce: 99, life: 3.0,
+              gather: 0.85 / 1.5, go: false })
       break
     }
     case 'mine':
