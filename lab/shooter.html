@@ -2982,7 +2982,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-15 12:31'
+const BUILD_AT = '09-15 12:34'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -13789,7 +13789,7 @@ document.addEventListener('visibilitychange', () => { document.hidden ? appHidde
 addEventListener('pagehide', appHidden)
 addEventListener('pageshow', appShown)
 
-const GAME_SPEED = 1.15
+const GAME_SPEED = 1.15 * 1.1
 function frame(now) {
   requestAnimationFrame(frame)
   if (!state || !state.running) return
