@@ -2161,8 +2161,11 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .pcard .upbang{top:auto;bottom:6px;right:6px}
 /* 뽑기 결과 「확인」 (2026-09-16) */
 #gfx{position:fixed}
-#gfx #gfxOk{position:absolute;left:50%;bottom:max(28px,env(safe-area-inset-bottom));transform:translateX(-50%);min-width:180px;min-height:46px;font-size:16px;font-weight:800;border-radius:12px;background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f}
-#gfx #gfxOk[hidden]{display:none}
+#gfx #gfxBtns{position:absolute;left:50%;bottom:max(28px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:10px;width:min(92vw,360px)}
+#gfx #gfxBtns[hidden]{display:none}
+#gfx #gfxBtns button{flex:1;margin:0;min-height:46px;font-size:15px;font-weight:800;border-radius:12px;white-space:nowrap}
+#gfx #gfxOk{background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f}
+#gfx #gfxAgain[hidden]{display:none}
 /* 클리어 팝업 기체 (2026-09-16) */
 #over #overPlane{display:block;width:min(64%,250px);height:150px;object-fit:contain;margin:0 auto 4px;filter:drop-shadow(0 14px 10px #000a);animation:overIn .55s cubic-bezier(.2,1.5,.4,1)}
 #over #overPlane[hidden]{display:none}
@@ -2434,7 +2437,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div class="panel" id="gfx" hidden>
   <canvas id="gfxC"></canvas>
   <div class="skip">탭하면 건너뜁니다</div>
-  <button id="gfxOk" hidden>확인</button>
+  <div id="gfxBtns" hidden><button id="gfxAgain" class="ghost">계속 뽑기</button><button id="gfxOk">확인</button></div>
 </div>
 
 <!--
@@ -3064,7 +3067,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 11:36'
+const BUILD_AT = '09-16 12:05'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3790,14 +3793,27 @@ function gfxPlay(list, done) {
   }
 
   const okBtn = document.getElementById('gfxOk')
+  const btns = document.getElementById('gfxBtns')
+  const againBtn = document.getElementById('gfxAgain')
   const skipEl = panel.querySelector('.skip')
   let held = false
-  if (okBtn) { okBtn.hidden = true; okBtn.onclick = (e) => { e.stopPropagation(); end() } }
+  if (btns) btns.hidden = true
+  if (okBtn) okBtn.onclick = (e) => { e.stopPropagation(); end() }
+
+  if (againBtn) againBtn.onclick = (e) => {
+    e.stopPropagation()
+    const fn = GFX.again
+    end()
+    const gp = document.getElementById('gotPop')
+    if (fn && (!gp || gp.hidden)) fn()
+  }
   if (skipEl) skipEl.hidden = false
   const hold = () => {
     held = true
     if (skipEl) skipEl.hidden = true
-    if (okBtn) { okBtn.hidden = false; okBtn.focus({ preventScroll: true }) }
+    if (againBtn) againBtn.hidden = !(GFX.again && prog.ticket >= (GFX.againCost || 1))
+    if (btns) btns.hidden = false
+    if (okBtn) okBtn.focus({ preventScroll: true })
   }
   panel.onclick = () => { if (!held) GFX.skip = true }
 
@@ -6432,6 +6448,8 @@ document.getElementById('gPull').onclick = () => {
   const res = pull(gKind)
   if (!res) return
   gaTab = 'pull'
+  GFX.again = () => document.getElementById('gPull').click()
+  GFX.againCost = GACHA[gKind === 'mix' ? 'plane' : gKind].cost
 
   gfxPlay([res], () => { renderGacha(res); renderWallet(); renderTabs(); if (!showGotPop() && anyRecruit()) hgToast('파일럿 합류 가능 · 파일럿 화면에서 확인') })
 }
@@ -6440,6 +6458,8 @@ document.getElementById('gPull10').onclick = () => {
   const list = pull10(gKind)
   if (!list) return
   gaTab = 'pull'
+  GFX.again = () => document.getElementById('gPull10').click()
+  GFX.againCost = GACHA[gKind === 'mix' ? 'plane' : gKind].cost * 10
   gfxPlay(list, () => { renderGacha(list); renderWallet(); renderTabs(); if (!showGotPop() && anyRecruit()) hgToast('파일럿 합류 가능 · 파일럿 화면에서 확인') })
 }
 function paintShop() {
