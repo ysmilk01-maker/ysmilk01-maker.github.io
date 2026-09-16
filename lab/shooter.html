@@ -2621,16 +2621,16 @@ const TIER_ORDER = ['common', 'rare', 'high', 'legend']
 
 const ULT = {
   rapid:  { name: '난사', desc: '5초간 발사 속도 2.1배 · 한 발 12배' },
-  spread: { name: '전면 소사', desc: '화면 폭을 훑는 광선이 3초간 지나갑니다. 보스는 계속 맞습니다' },
-  laser:  { name: '관통 광선', desc: '굵은 광선이 3초간 위를 뚫습니다' },
-  homing: { name: '분신 전개', desc: '분신 셋이 10초간 따라오며 두 배 속도로 쏩니다' },
+  spread: { name: '전면 소사', desc: '화면 폭을 훑는 광선이 5초간 지나갑니다. 보스는 계속 맞습니다' },
+  laser:  { name: '관통 광선', desc: '굵은 광선이 5초간 위를 뚫습니다' },
+  homing: { name: '분신 전개', desc: '분신 둘이 10초간 따라오며 두 배 속도로 쏩니다' },
   pierce: { name: '창격', desc: '분신 셋이 관통창을 뿌리며 올라갑니다. 전부 꿰뚫고, 보스에 닿으면 크게 한 방' },
   wave:   { name: 'EMP 펄스', desc: '화면의 적탄을 전부 지우고 적을 마비시킵니다. 보스에도 한 번' },
   orb:    { name: '반사 방벽', desc: '막은 만큼 모았다가 펄스로 되돌려 줍니다' },
   mine:   { name: '융단 폭격', desc: '화면 전체에 폭탄 20발. 보스가 있으면 절반은 보스 위로' },
   beam:   { name: '기지 화력 지원', desc: '조준한 뒤 기지에서 미사일 100발이 줄지어 올라옵니다' },
   boomer: { name: '편대 일제 사격', desc: '아군 다섯이 한 줄로 들어와 퍼붓습니다' },
-  chain:  { name: '뇌우', desc: '화면의 적을 번개가 차례로 물고 갑니다. 보스에는 벼락 한 방' },
+  chain:  { name: '뇌우', desc: '번개가 화면의 적을 차례로 물고 갑니다. 세 번 칩니다' },
 }
 
 const ULT_TONE = {
@@ -2642,17 +2642,23 @@ const ULT_TONE = {
 function ultTone(k) { return ULT_TONE[k] || '159,232,255' }
 
 const ORB_ULT = { hold: 3.6, rad: 72, r: 26, dps: 170,
-                  gain: 34, base: 1450, cap: 2600 }
+                  gain: 34, base: 1450, cap: 2600,
+                  pulse: 2 }
 
 const ULT_TUNE = {
   rapidT: 5.0,
   rapidDmg: 7.56,
-  spreadT: 3.0,
-  beamBoss: { laser: 286, spread: 290 },
-  dashBoss: 880,
-  shockBoss: 830,
+  spreadT: 5.0,
+  laserT: 5.0,
+  beamDmgUp: 3,
+  beamBoss: { laser: 858, spread: 870 },
+  dashBoss: 7040,
+  shockBoss: 3320,
+  shockDmgUp: 4,
   bombBoss: 1.65,
   chainBoss: 305,
+  stormN: 3,
+  stormGap: 0.30,
 }
 
 const BOSS_MUL = {
@@ -2701,7 +2707,7 @@ function enemyMul(b) {
   return row[TIER_ORDER.indexOf(p.tier)] || 1
 }
 
-const LANCE = { n: 12, gap: 0.11, dmg: 60, vy: -980, bossAt: 0.35, gapX: 46, sp: 560 }
+const LANCE = { n: 12, gap: 0.11, dmg: 480, vy: -980, bossAt: 0.35, gapX: 46, sp: 560 }
 const ULT_DMG = 0.9
 function planeUltMul() {
   const u = state && state.squad && state.squad[MAIN_SLOT]
@@ -2717,17 +2723,16 @@ function collectionMul() {
   return 1 + n * COLL_PER_PLANE + u * COLL_PER_UPG
 }
 
-const STRIKE = { scan: 0.6, n: 100, gap: 0.022, dmg: 7.5 }
+const STRIKE = { scan: 0.6, n: 100, gap: 0.022, dmg: 60 }
 
 const CLONES = [
   { lag: 8,  dx: -46, mul: 0.81 },
   { lag: 8,  dx: 46,  mul: 0.81 },
-  { lag: 18, dx: 0,   mul: 0.81 },
 ]
 
 const CLONE_TIME = 10.0
 
-const WINGMEN = { n: 5, hold: 3.0, inY: 0.60, cd: 0.20, dmg: 6 }
+const WINGMEN = { n: 5, hold: 3.0, inY: 0.60, cd: 0.20, dmg: 18 }
 const ULT_MAX = 100
 
 const ULT_AT = [15, 40]
@@ -3108,7 +3113,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 15:21'
+const BUILD_AT = '09-16 15:26'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -10346,6 +10351,16 @@ function ultKind() {
   return u && u.plane ? u.plane.weapon : null
 }
 
+function stormStrike(s, pl) {
+  const save = CHAIN.range
+  CHAIN.range = 9999
+  chainFrom({ x: pl.x, y: pl.y - 20, dead: true },
+            { dmg: 115 * ultPow() * ULT_DMG, jumps: 16, falloff: 0.95 })
+  CHAIN.range = save
+
+  if (s.boss && !s.boss.entering) { bossArea(s.boss, ULT_TUNE.chainBoss * ultPow() * planeUltMul()); s.boss.flash = .2 }
+  s.shake = Math.max(s.shake, 9)
+}
 function fireUlt() {
   const s = state
   if (!s || !s.running || s.ult < ULT_MAX) return
@@ -10367,7 +10382,7 @@ function fireUlt() {
   const pl = s.player
   switch (k) {
     case 'rapid':  s.ultT = ULT_TUNE.rapidT * ultPow(); break
-    case 'laser':  s.ultT = 3 * ultPow(); break
+    case 'laser':  s.ultT = ULT_TUNE.laserT * ultPow(); break
     case 'spread': s.ultT = ULT_TUNE.spreadT * ultPow(); break
     case 'orb':
       s.ultT = ORB_ULT.hold
@@ -10412,13 +10427,8 @@ function fireUlt() {
     }
     case 'chain': {
 
-      const save = CHAIN.range
-      CHAIN.range = 9999
-      chainFrom({ x: pl.x, y: pl.y - 20, dead: true },
-                { dmg: 115 * ultPow() * ULT_DMG, jumps: 16, falloff: 0.95 })
-      CHAIN.range = save
-
-      if (s.boss && !s.boss.entering) { bossArea(s.boss, ULT_TUNE.chainBoss * ultPow() * planeUltMul()); s.boss.flash = .2 }
+      stormStrike(s, pl)
+      s.storm = { left: ULT_TUNE.stormN - 1, cd: ULT_TUNE.stormGap }
       break
     }
     case 'homing': {
@@ -10513,6 +10523,15 @@ function updateUlt(dt) {
   const s = state
   const pl = s.player
 
+  if (s.storm && s.storm.left > 0) {
+    s.storm.cd -= dt
+    if (s.storm.cd <= 0) {
+      s.storm.cd += ULT_TUNE.stormGap
+      s.storm.left--
+      stormStrike(s, pl)
+    }
+  }
+
   {
     const times = ultTimes()
     let given = 0
@@ -10540,7 +10559,7 @@ function updateUlt(dt) {
       const cx = k === 'spread' ? W / 2 + Math.sin(s.t * 3.2) * (W / 2 - 50) : pl.x
       s.sweeps = [{ x: cx, half }]
 
-      const dps = (k === 'laser' ? 150 : 120) * ULT_DMG
+      const dps = (k === 'laser' ? 150 : 120) * ULT_DMG * ULT_TUNE.beamDmgUp
       for (const e of s.enemies) {
         if (Math.abs(e.x - cx) < half + e.r && e.y < pl.y) { e.hp -= dps * dt; e.flash = .08 }
       }
@@ -10672,7 +10691,7 @@ function updateUlt(dt) {
     if (s.ultT <= 0) {
 
       if (s.ultKind === 'orb') {
-        const dmg = Math.min(ORB_ULT.cap, ORB_ULT.base + (s.orbCharge || 0)) * planeUltMul()
+        const dmg = Math.min(ORB_ULT.cap, ORB_ULT.base + (s.orbCharge || 0)) * ORB_ULT.pulse * planeUltMul()
         s.shards.push({ x: pl.x, y: pl.y, r: 10, kind: 'pulse', dmg })
         s.shake = Math.max(s.shake, 16)
         s.flareT = Math.min(0.46, s.flareT + 0.2)
@@ -10750,7 +10769,7 @@ function updateUlt(dt) {
       for (const e of s.enemies) {
         if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r && !e.shocked) {
 
-          e.shocked = true; e.hp -= 78 * ultPow() * ULT_DMG; e.flash = .1
+          e.shocked = true; e.hp -= 78 * ultPow() * ULT_DMG * ULT_TUNE.shockDmgUp; e.flash = .1
         }
       }
 
@@ -10763,7 +10782,7 @@ function updateUlt(dt) {
     } else {
       sh.r += (sh.kind === 'shell' ? 420 : 330) * dt
 
-      const dmg = (sh.kind === 'shell' ? 90 : 44) * ultPow() * ULT_DMG * (sh.mul || 1)
+      const dmg = (sh.kind === 'shell' ? 90 : 352) * ultPow() * ULT_DMG * (sh.mul || 1)
       for (const e of s.enemies) {
         if (!e.hitBy || e.hitBy !== sh) {
           if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r) { e.hp -= dmg; e.flash = .1; e.hitBy = sh }
