@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 17:57'
+const BUILD_AT = '09-16 18:22'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6820,7 +6820,7 @@ function renderStage() {
     const open = subOpen(mapCh, sub)
     const st = starOf(mapCh, sub)
     const isBoss = BOSS_AT.includes(sub)
-    const isMid = !isBoss
+    const isMid = MID_AT.includes(sub)
     const pick = mapCh === (prog.chapter || 0) && sub === curSub()
     const stars = [0, 1, 2].map((i) =>
       `<i class="${i < st ? '' : 'off'}"></i>`).join('')
@@ -6843,7 +6843,7 @@ function renderStage() {
     const sub = k + 1
     const open = subOpen(mapCh, sub)
     const st = starOf(mapCh, sub)
-    const isBoss = sub === SUBS, isMid = BOSS_AT.includes(sub) && !isBoss
+    const isBoss = sub === SUBS, isMid = (BOSS_AT.includes(sub) && !isBoss) || MID_AT.includes(sub)
     const pick = mapCh === (prog.chapter || 0) && sub === curSub()
     const [x, y] = POS[k] || [50, 50]
     const stars = [0, 1, 2].map((i) => `<i class="${i < st ? '' : 'off'}"></i>`).join('')
@@ -8389,7 +8389,10 @@ function bossPool(theme) {
   return BOSS_POOL[WATER_THEME[theme] ? 'water' : 'land']
 }
 
-function isMidStage(sub) { return !BOSS_AT.includes(sub) }
+const MID_AT = [3, 9]
+function isMidStage(sub) { return MID_AT.includes(sub) }
+
+function hasBossStage(sub) { return BOSS_AT.includes(sub) || MID_AT.includes(sub) }
 
 function seeded(n) {
   let x = (n * 1103515245 + 12345) >>> 0
@@ -8903,7 +8906,7 @@ function buildWaves(ch, sub) {
   }
 
   if (bossRun >= 0) return [{ at: 1.0, f: () => spawnBoss(false) }]
-  out.push({ at: len + 1.2, f: () => spawnBoss(isMidStage(sub)) })
+  if (hasBossStage(sub)) out.push({ at: len + 1.2, f: () => spawnBoss(isMidStage(sub)) })
   return out
 }
 
@@ -9526,7 +9529,7 @@ const LIVES = 1
 
 const PLAYER_HP = 77
 
-const DMG_TAKEN = 0.7
+const DMG_TAKEN = 0.6
 const DMG = {
   bullet: 20,
   flak: 26,
