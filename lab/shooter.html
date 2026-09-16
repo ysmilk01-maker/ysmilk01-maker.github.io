@@ -2166,6 +2166,20 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #gfx #gfxBtns button{flex:1;margin:0;min-height:46px;font-size:15px;font-weight:800;border-radius:12px;white-space:nowrap}
 #gfx #gfxOk{background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f}
 #gfx #gfxAgain[hidden]{display:none}
+/* ── 편대 전투력 (2026-09-16) ── */
+.hg-pw{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
+.hg-pw small{font-size:10px;color:#b4c9d2}.hg-pw b{font-size:20px;font-weight:900;color:var(--gold);line-height:1}
+.hg-pw button{width:20px;height:20px;padding:0;border-radius:50%;font-size:12px;font-weight:900;line-height:1;background:#101e27cc;border:1px solid #4d626b;color:#cfe0e6;box-shadow:none;margin:0}
+.pwtotal{text-align:center;margin:4px 0 10px}.pwtotal small{display:block;font-size:11px;color:var(--muted)}.pwtotal b{font-size:30px;font-weight:900;color:var(--gold)}
+.pwrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #2e3f49}.pwrow span{font-size:12.5px}.pwrow span small{display:block;font-size:10px;color:var(--muted);margin-top:1px}.pwrow b{font-size:14px;white-space:nowrap}
+#pwPop{z-index:64;background:rgba(4,5,9,.55)}
+#pwPop .pwbox{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:16px 28px;text-align:center;box-shadow:0 0 40px #edc87944;animation:gotIn .35s cubic-bezier(.2,1.4,.4,1);transform:none}
+#pwPop .pwbox small{display:block;font-size:11px;color:var(--muted);letter-spacing:.1em}
+#pwPop .pwbox b{display:block;font-size:40px;font-weight:900;color:var(--gold);line-height:1.1;font-variant-numeric:tabular-nums}
+#pwPop .pwbox b.done{animation:pwBump .3s ease-out}
+#pwPop .pwbox span{display:block;font-size:14px;font-weight:800;color:#7dffd4;margin-top:4px}
+@keyframes pwBump{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){#pwPop .pwbox,#pwPop .pwbox b.done{animation:none}}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2203,7 +2217,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
       <div class="hg-form">
         <div class="hg-plane-name"><strong id="hgPlaneName"></strong><span id="hgPlaneMeta"></span></div>
         <button class="hg-main" id="hgMain" aria-label="메인 기체 선택"><img id="hgPlaneImage" alt=""><span class="hg-change" id="hgPlaneChange">기체 변경 ›</span></button>
-        <div class="hg-wings"><div class="hg-wing-title">윙맨 · 후방 지원</div><div id="slots" class="hg-wing-row"></div><p id="squadSub"></p></div>
+        <div class="hg-wings"><div class="hg-pw" id="hgPw"><small>편대 전투력</small><b id="hgPwVal">0</b><button id="hgPwInfo" aria-label="전투력 세부">?</button></div><div class="hg-wing-title">윙맨 · 후방 지원</div><div id="slots" class="hg-wing-row"></div><p id="squadSub"></p></div>
       </div>
       <div class="hg-col">
         <button class="hg-ico" id="hgGoMiss"><span class="ie" aria-hidden="true">📋</span><span>임무</span><b class="mdot" id="hgMissDot" hidden></b></button>
@@ -2384,6 +2398,10 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 -->
 <div class="panel" id="gotPop" hidden>
   <div class="gbox gotbox"></div>
+</div>
+
+<div class="panel" id="pwPop" hidden>
+  <div class="pwbox"><small>편대 전투력</small><b id="pwNum">0</b><span id="pwDelta"></span></div>
 </div>
 
 <div class="panel" id="daily" hidden>
@@ -3061,7 +3079,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 12:36'
+const BUILD_AT = '09-16 13:00'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4305,6 +4323,71 @@ function planeScore(p) {
   if (!p) return 0
   return Math.round(planeDps(p))
 }
+
+function squadParts() {
+  return SLOT_META.map((m, i) => {
+    const open = slotOpen(i)
+    const q = open ? planeById(prog.squad[i]) : null
+    return { i, role: m.role, open, plane: q, mul: slotMul(i), v: q ? Math.round(planeScore(q) * slotMul(i)) : 0 }
+  })
+}
+function pilotPowMul() { return pilotPow() / pilotRate() }
+function squadPower() {
+  const base = squadParts().reduce((a, x) => a + x.v, 0)
+  return Math.round(base * collectionMul() * pilotPowMul())
+}
+
+function openPowerSheet() {
+  const parts = squadParts()
+  const base = parts.reduce((a, x) => a + x.v, 0)
+  const coll = collectionMul(), pm = pilotPowMul(), pl = pilotNow()
+  const row = (k, v, sub) => '<div class="pwrow"><span>' + k + (sub ? '<small>' + sub + '</small>' : '') + '</span><b>' + v + '</b></div>'
+  const html =
+    '<div class="pwtotal"><small>편대 전투력</small><b>' + squadPower().toLocaleString('ko-KR') + '</b></div>' +
+    '<div class="lab">기체 (전투력 × 자리 몫)</div>' +
+    parts.map((x) => row(x.role, x.open ? x.v.toLocaleString('ko-KR') : '잠김',
+      x.open ? (x.plane ? x.plane.name + ' ' + planeScore(x.plane).toLocaleString('ko-KR') + ' × ' + Math.round(x.mul * 100) + '%' : '비어 있음') : '')).join('') +
+    row('기체 합계', base.toLocaleString('ko-KR')) +
+    '<div class="lab">곱하는 것</div>' +
+    row('컬렉션 보너스', '×' + coll.toFixed(3), '보유 기체 1대 +' + (COLL_PER_PLANE * 100).toFixed(1) + '% · 강화 1단계 +' + (COLL_PER_UPG * 100).toFixed(1) + '%') +
+    row('파일럿 ' + pl.name, '×' + pm.toFixed(3), GRADES[pl.grade].name + ' ×' + gradeMul(pl.grade).toFixed(2) + ' · 화력 스탯 +' + (pilotSt().pow * 2.5) + '% · 연사 -' + (pilotSt().rate * 1.5) + '%' + (perk('pow') !== 1 || perk('rate') !== 1 ? ' · 특성' : '')) +
+    '<div class="empty">기체 강화·추가, 파일럿 변경·스탯·등급 강화, 기체 수집이 전투력을 올립니다.</div>'
+  openHgSheet('전투력 세부', html)
+}
+
+const PWPOP = { raf: 0, timer: 0 }
+function powerPop(before, after) {
+  const el = document.getElementById('pwPop'), num = document.getElementById('pwNum'), dl = document.getElementById('pwDelta')
+  if (!el || !num) return
+  cancelAnimationFrame(PWPOP.raf); clearTimeout(PWPOP.timer)
+  el.hidden = false
+  num.textContent = before.toLocaleString('ko-KR')
+  dl.textContent = '+' + (after - before).toLocaleString('ko-KR')
+  const t0 = performance.now(), T = 750
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / T), e = 1 - Math.pow(1 - k, 3)
+    num.textContent = Math.round(before + (after - before) * e).toLocaleString('ko-KR')
+    if (k < 1) PWPOP.raf = requestAnimationFrame(step)
+    else { num.classList.add('done'); PWPOP.timer = setTimeout(close, 1400) }
+  }
+  const close = () => { cancelAnimationFrame(PWPOP.raf); clearTimeout(PWPOP.timer); el.hidden = true; num.classList.remove('done') }
+  el.onclick = close
+  num.classList.remove('done')
+  sfx('got')
+  PWPOP.raf = requestAnimationFrame(step)
+  prog.pwSeen = after
+}
+function pwAfter(before) {
+  const a = squadPower()
+  if (a > before) powerPop(before, a)
+  prog.pwSeen = a
+}
+function pwCheckOnSquad() {
+  const a = squadPower()
+  if (prog.pwSeen == null) { prog.pwSeen = a; return }
+  const gp = document.getElementById('gotPop')
+  if (a > prog.pwSeen && (!gp || gp.hidden) && !anyOverlay()) powerPop(prog.pwSeen, a)
+}
 function upgPower(id) { return 1 + upgOf(id) * 0.12 }
 function upgRate(id) { return 1 - upgOf(id) * 0.04 }
 function save() {
@@ -5481,7 +5564,7 @@ function go(name) {
 
   lastGoAt = performance.now()
   fxIn(shown)
-  if (name === 'squad') setTimeout(() => showGotPop(), 260)
+  if (name === 'squad') setTimeout(() => { showGotPop(); pwCheckOnSquad() }, 260)
   if (previous !== name) {
     if (name === 'squad') hangarFocus()
     else { const h = shown && shown.querySelector('h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }
@@ -5828,6 +5911,8 @@ function renderSquad() {
   rb.onclick = () => { if (rushModeOpen()) openRushSheet(); else say('파일럿 Lv.' + RUSH_LV + ' 에 열립니다.', '보스 도전') }
   $('hgPlaneName').textContent = main ? main.name : '기체 선택'
   $('hgPlaneMeta').textContent = main ? WEAPONS[main.weapon].name + ' · 강화 ' + upgOf(main.id) + '/' + UPG_MAX : '메인 자리가 비어 있습니다'
+  const pv = $('hgPwVal'); if (pv) pv.textContent = squadPower().toLocaleString('ko-KR')
+  const pi = $('hgPwInfo'); if (pi) pi.onclick = (e) => { e.stopPropagation(); openPowerSheet() }
   $('hgPlaneImage').src = (main && hangarFile('showcase', main.id)) || hangarPlaneImage(main)
   $('hgMain').setAttribute('aria-label', (main ? main.name + ', ' : '') + '메인 기체 선택 및 강화')
   $('hgMain').onclick = () => hangarChoose('planes', MAIN_SLOT, 'hgMain')
@@ -6106,11 +6191,12 @@ function renderPlanes() {
     const cur = planeById(prog.squad[activeSlot])
 
     const parts = SLOT_META.map((m, i) => { const q = slotOpen(i) ? planeById(prog.squad[i]) : null; return { role: m.role, open: slotOpen(i), v: q ? Math.round(planeScore(q) * slotMul(i)) : 0 } })
-    const total = parts.reduce((a, x) => a + x.v, 0)
+    const total = squadPower()
     const shortRole = (r) => r.replace(' 윙맨', '')
-    const breakdown = parts.map((x) => `<span class="${x.open ? '' : 'off'}">${shortRole(x.role)} ${x.open ? x.v.toLocaleString('ko-KR') : '-'}</span>`).join('')
+    const breakdown = parts.map((x) => `<span class="${x.open ? '' : 'off'}">${shortRole(x.role)} ${x.open ? x.v.toLocaleString('ko-KR') : '-'}</span>`).join('') +
+      `<span>파일럿 ×${pilotPowMul().toFixed(2)}</span>`
     const collPct = Math.round((collectionMul() - 1) * 1000) / 10
-    const powBox = `<div class="pd-pow"><span class="k">편대 파워 합계</span><b>${total.toLocaleString('ko-KR')}</b>` +
+    const powBox = `<div class="pd-pow"><span class="k">편대 전투력</span><b>${total.toLocaleString('ko-KR')}</b>` +
       `<div class="pd-bd">${breakdown}</div>` +
       `<button class="pd-coll" id="pdColl">컬렉션 +${collPct}% ›</button></div>`
     dg.innerHTML = (cur
@@ -6864,6 +6950,7 @@ function openPilot(pl, list) {
       const k = b.dataset.st
       if (!hasGrade(pl.grade) || !canStat(k, pl.id)) return
       const cur = stOf(pl.id)
+      const pwBefore = squadPower()
       prog.pilot.xp -= statCost(cur[k], pl.grade)
       cur[k]++
       save(); sfx('ready'); haptic('ult')
@@ -6874,15 +6961,17 @@ function openPilot(pl, list) {
       const sh = panel.querySelector('.dsheet')
       const keep = sh ? sh.scrollTop : 0
       upgPlay(img || null, STATS[k].name, cur[k], gTone(pl.grade).main,
-              () => { KEEP_SHEET = keep; renderPilot(); openPilot(pl, list) })
+              () => { KEEP_SHEET = keep; renderPilot(); openPilot(pl, list); pwAfter(pwBefore) })
     }
   })
 
   const gu = document.getElementById('pGradeUp')
   if (gu) gu.onclick = () => {
+    const pwBefore = squadPower()
     if (!doGradeUp(pl.grade)) return
     sfx('ready'); haptic('ult')
     renderPilot(); openPilot(pl, list)
+    pwAfter(pwBefore)
   }
   const rs = document.getElementById('pReset')
   if (rs) rs.onclick = () => {
@@ -6916,6 +7005,7 @@ function openPilot(pl, list) {
     const back = prev.id === pl.id ? 0 : stSpent(prev.id)
 
     const doSwap = () => {
+      const pwBefore = squadPower()
       if (back > 0) {
         const old = stOf(prev.id)
         ST_KEYS.forEach((k) => { old[k] = 0 })
@@ -6928,6 +7018,7 @@ function openPilot(pl, list) {
 
       SWAP_NOTE = back > 0 ? { prev: prev.name, back } : null
       openPilot(pl, PILOTS.filter(pilotOpen))
+      pwAfter(pwBefore)
     }
     if (back > 0) {
       ask('파일럿을 바꾸면 이전에 사용하시던 ' + prev.name + '의 스탯을 초기화합니다.\n' +
@@ -7339,6 +7430,7 @@ function demoShots(p, t) {
 function upgradePlane(p, after) {
   const lv = upgOf(p.id), cost = upgCost(p, lv)
   if (lv >= UPG_MAX || prog.parts < cost || shardOf(p.id) < shardUpg(p, lv)) return false
+  const pwBefore = squadPower()
   prog.parts -= cost
   prog.shardP[p.id] = shardOf(p.id) - shardUpg(p, lv)
   prog.upg[p.id] = lv + 1
@@ -7347,7 +7439,7 @@ function upgradePlane(p, after) {
   save()
   sfx('ready')
   haptic('ult')
-  upgPlay(shipArt(p.id), p.name, lv + 1, gTone(p.tier).main, after)
+  upgPlay(shipArt(p.id), p.name, lv + 1, gTone(p.tier).main, () => { if (after) after(); pwAfter(pwBefore) })
   return true
 }
 function openDetail(p, list) {
@@ -7465,10 +7557,12 @@ function pickPlaneTo(p, done) {
     return
   }
   const apply = () => {
+    const pwBefore = squadPower()
     if (dup >= 0 && dup !== activeSlot) prog.squad[dup] = prog.squad[activeSlot]
     prog.squad[activeSlot] = p.id
     guideDone('slot' + activeSlot)
     save(); if (done) done(); renderPlanes()
+    pwAfter(pwBefore)
     hgToast(SLOT_META[activeSlot].role + ' → 「' + p.name + '」 적용')
   }
 
