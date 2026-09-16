@@ -3114,7 +3114,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 15:58'
+const BUILD_AT = '09-16 16:00'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8980,6 +8980,8 @@ const RUSH_HP_MUL = 3
 
 const BOSS_HP_UP = 1.25 * 1.15 * 1.2 * 1.5 * 1.3
 
+const BOSS_ONLY_UP = 1.2
+
 const BASE_DMG_UP = 3
 const ENEMY_HP_DOWN = 0.9
 const FIRE_SLOW = 1 / 0.85
@@ -9766,7 +9768,7 @@ function spawnBoss(mid) {
 
     ? Math.round((CHAPTERS[rushCh(state.rush, state.rushD) - 1] || CHAPTERS[0]).bossHp
                  * 0.55 * RUSH_HP_MUL * ENEMY_HP_DOWN)
-    : Math.round(state.stage.bossHp * (mid ? mm : 0.55) * BOSS_HP_UP * ENEMY_HP_DOWN * modeHp())
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_UP * ENEMY_HP_DOWN * modeHp())
 
   const bsub = (state.stage && state.stage.sub) || 1
 
