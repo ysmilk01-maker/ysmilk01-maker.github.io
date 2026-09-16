@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 17:16'
+const BUILD_AT = '09-16 17:20'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8116,7 +8116,7 @@ function shoot(u, i, dt) {
       const n = 3 + tier * 2
       for (let k = 0; k < n; k++) {
         const a = -Math.PI / 2 + (k - (n - 1) / 2) * 0.17
-        add({ vx: Math.cos(a) * 430, vy: Math.sin(a) * 430, r: 2.6, dmg: dmg * 1.22 })
+        add({ vx: Math.cos(a) * 430, vy: Math.sin(a) * 430, r: 2.6, dmg: dmg * 1.83 })
       }
       break
     }
@@ -8133,13 +8133,13 @@ function shoot(u, i, dt) {
       break
     }
     case 'pierce':
-      add({ vx: 0, vy: -700, r: 4.5, pierce: 2 + tier * 2, kind: 'pierce', dmg: dmg * 4.1 })
+      add({ vx: 0, vy: -700, r: 4.5, pierce: 2 + tier * 2, kind: 'pierce', dmg: dmg * 4.305 })
       break
     case 'wave': {
       const n = 1 + tier
       for (let k = 0; k < n; k++)
         add({ vx: 0, vy: -420, kind: 'wave', amp: 70 + tier * 25, ph: k * Math.PI,
-              x0: pos.x, r: 4, dmg: dmg * 3.5 })
+              x0: pos.x, r: 4, dmg: dmg * 5.25 })
       break
     }
     case 'orb': {
@@ -8159,7 +8159,7 @@ function shoot(u, i, dt) {
         const n = 1 + tier
         for (let k = 0; k < n; k++) {
           add({ x: pos.x + (k - (n - 1) / 2) * 15, vx: 0,
-                vy: -215, kind: 'mine', r: 5, dmg: dmg * 9.6 })
+                vy: -215, kind: 'mine', r: 5, dmg: dmg * 8.64 })
         }
       }
       break
@@ -8167,7 +8167,7 @@ function shoot(u, i, dt) {
       add({ vx: 0, vy: -300, kind: 'beam', r: 11 + tier * 3, pierce: 4 + tier * 2, dmg: dmg * 12.0 })
       break
     case 'chain':
-      add({ vx: 0, vy: -560, r: 4.5, kind: 'chain', dmg: dmg * 0.9, jumps: 3 })
+      add({ vx: 0, vy: -560, r: 4.5, kind: 'chain', dmg: dmg * 1.8, jumps: 3 })
       break
     case 'boomer': {
       const n = 1 + tier
