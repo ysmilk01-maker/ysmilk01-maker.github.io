@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 16:56'
+const BUILD_AT = '09-16 16:59'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4893,10 +4893,22 @@ function stMax(k) { return k === 'all' ? ALL_MAX : ST_MAX }
 
 function grade() { return GRADES[prog.pilot.grade] || GRADES.normal }
 
-const GRADE_UP_MAX = 5
-const GRADE_UP_PER = 0.02
-const GRADE_UP_COST = [10, 20, 30, 50, 80]
+const GRADE_UP_MAX = 10
+const GRADE_UP_PER = 0.01
+const GRADE_UP_COST = [8, 8, 15, 15, 23, 23, 38, 38, 60, 60]
 function gradeLv(k) { return (prog.gradeUp && prog.gradeUp[k]) || 0 }
+
+function migrateGradeUp() {
+  if (prog.gradeUpX2) return
+  prog.gradeUpX2 = 1
+  if (prog.gradeUp) {
+    for (const k in prog.gradeUp) {
+      prog.gradeUp[k] = Math.min(GRADE_UP_MAX, (prog.gradeUp[k] || 0) * 2)
+    }
+  }
+  save()
+}
+try { migrateGradeUp() } catch (e) { console.warn('gradeUp migrate', e) }
 
 function gradeMul(k) { return (GRADES[k] || GRADES.normal).base * (1 + GRADE_UP_PER * gradeLv(k)) }
 function gradeUpCost(k) { const lv = gradeLv(k); return lv >= GRADE_UP_MAX ? 0 : GRADE_UP_COST[lv] }
@@ -7029,7 +7041,7 @@ function openPilot(pl, list) {
         '<button id="pGradeUp" ' + (canGradeUp(k) ? '' : 'disabled') + '>' +
         (max ? '최대' : '조각 ' + cost) + '</button></div>' +
         '<div class="pgnote">' + G.name + ' 조각 ' + shardG(k) + (shardAny() ? ' · 공용 ' + shardAny() : '') +
-        (max ? ' · 다 올렸습니다. 이 등급 조각은 공용 조각이 됩니다' : ' · 단계마다 화력·체력 +2%, 셋이 같이') + '</div>'
+        (max ? ' · 다 올렸습니다. 이 등급 조각은 공용 조각이 됩니다' : ' · 단계마다 화력·체력 +' + Math.round(GRADE_UP_PER * 100) + '%, 셋이 같이') + '</div>'
     })() +
     '<div class="pstats">' + statHtml + '</div>' +
     (have ? '' : pl.grade === 'normal'
