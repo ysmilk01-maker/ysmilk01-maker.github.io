@@ -2880,15 +2880,15 @@ function traitText(p) {
 const MOD_NO = {
   rapid:  [],
   spread: [],
-  laser:  [],
-  homing: [],
-  pierce: [],
+  laser:  ['pierce'],
+  homing: ['seek'],
+  pierce: ['pierce'],
   wave:   [],
-  orb:    [],
+  orb:    ['pierce'],
   mine:   [],
-  beam:   [],
+  beam:   ['pierce'],
   chain:  [],
-  boomer: [],
+  boomer: ['pierce'],
 }
 function rollMod(mods) {
   const u = state && state.squad && state.squad[MAIN_SLOT]
@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 16:59'
+const BUILD_AT = '09-16 17:02'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
