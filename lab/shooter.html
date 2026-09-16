@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 17:02'
+const BUILD_AT = '09-16 17:05'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8996,17 +8996,36 @@ let bossRun = -1
 let startingRush = false
 
 const BOSS_RUSH = [
-
-  { key: 'tank',    name: '강습 전차',   sub: '화력을 앞세운 지상 요새',
+  { key: 'r1',      name: '해협 봉쇄함',   sub: '보급로를 틀어막는다',
+    ch: 1,  mul: 10, xp: 2000,  form: 'air',     art: 'boss1' },
+  { key: 'tank',    name: '강습 전차',     sub: '화력을 앞세운 지상 요새',
     ch: 2,  mul: 10, xp: 4000,  form: 'tank',    art: 'tank' },
-  { key: 'carrier', name: '기동 항모',   sub: '함재기를 끝없이 내보낸다',
+  { key: 'r3',      name: '극야 요새',     sub: '해가 없는 곳에 박혀 있다',
+    ch: 3,  mul: 9,  xp: 6000,  form: 'ship',    art: 'boss3' },
+  { key: 'carrier', name: '기동 항모',     sub: '함재기를 끝없이 내보낸다',
     ch: 4,  mul: 9,  xp: 8000,  form: 'carrier', art: 'carrier' },
-  { key: 'fort',    name: '적 본부',     sub: '사방이 포문이다',
+  { key: 'r5',      name: '잿빛 포대',     sub: '재 속에서 포문만 나온다',
+    ch: 5,  mul: 8,  xp: 11000, form: 'air',     art: 'boss5' },
+  { key: 'fort',    name: '적 본부',       sub: '사방이 포문이다',
     ch: 6,  mul: 8,  xp: 14000, form: 'fort',    art: 'fort' },
-  { key: 'flak',    name: '대공포 진지', sub: '하늘을 통째로 덮는다',
+  { key: 'r7',      name: '부유 기지',     sub: '구름 위에 떠 있다',
+    ch: 7,  mul: 8,  xp: 18000, form: 'ship',    art: 'boss7' },
+  { key: 'flak',    name: '대공포 진지',   sub: '하늘을 통째로 덮는다',
     ch: 8,  mul: 7,  xp: 22000, form: 'flak',    art: 'fort' },
-  { key: 'void',    name: '성층권 전함', sub: '가장 크고 가장 단단하다',
+  { key: 'r9',      name: '제철 모함',     sub: '매연을 뿜으며 밀고 온다',
+    ch: 9,  mul: 7,  xp: 27000, form: 'carrier', art: 'boss9' },
+  { key: 'void',    name: '성층권 전함',   sub: '가장 크고 가장 단단하다',
     ch: 10, mul: 6,  xp: 32000, form: 'void',    art: 'ship' },
+  { key: 'r11',     name: '빙벽 파쇄기',   sub: '얼음을 깨며 들어온다',
+    ch: 11, mul: 6,  xp: 38000, form: 'tank',    art: 'boss11' },
+  { key: 'r12',     name: '폐도 수호탑',   sub: '무너진 도시에 남은 마지막 탑',
+    ch: 12, mul: 6,  xp: 45000, form: 'fort',    art: 'boss12' },
+  { key: 'r13',     name: '염호 순양함',   sub: '소금 위를 미끄러진다',
+    ch: 13, mul: 5,  xp: 53000, form: 'air',     art: 'boss13' },
+  { key: 'r14',     name: '화염 시추탑',   sub: '불기둥을 등지고 선다',
+    ch: 14, mul: 5,  xp: 62000, form: 'ship',    art: 'boss14' },
+  { key: 'r15',     name: '최후의 기함',   sub: '더 갈 곳이 없다',
+    ch: 15, mul: 4,  xp: 72000, form: 'carrier', art: 'boss15' },
 ]
 
 const RUSH_HP_MUL = 6
@@ -9030,17 +9049,19 @@ function finalRushBoss(stage) {
   const key = keys[ch % keys.length]
   return BOSS_RUSH.find((d) => d.key === key) || BOSS_RUSH[0]
 }
+
 const RUSH_DIFF = [
-  { key: 'easy',  name: '쉬움',     off: 0, xp: 1.0, tk: 1 },
-  { key: 'norm',  name: '보통',     off: 1, xp: 1.7, tk: 1 },
-  { key: 'hard',  name: '어려움',   off: 2, xp: 2.8, tk: 2 },
-  { key: 'crazy', name: '크레이지', off: 3, xp: 4.5, tk: 2 },
-  { key: 'hell',  name: '극악무도', off: 4, xp: 7.0, tk: 3 },
+  { key: 'easy',  name: '쉬움',     dm: 1.00, xp: 1.0, tk: 1 },
+  { key: 'norm',  name: '보통',     dm: 1.22, xp: 1.7, tk: 1 },
+  { key: 'hard',  name: '어려움',   dm: 1.48, xp: 2.8, tk: 2 },
+  { key: 'crazy', name: '크레이지', dm: 1.80, xp: 4.5, tk: 2 },
+  { key: 'hell',  name: '극악무도', dm: 2.19, xp: 7.0, tk: 3 },
 ]
 
+function rushDm(d) { return (RUSH_DIFF[d] || RUSH_DIFF[0]).dm }
+
 function rushCh(i, d) {
-  const off = (RUSH_DIFF[d] || RUSH_DIFF[0]).off
-  return Math.max(1, Math.min(CHAPTERS.length, i + 1 + off))
+  return Math.max(1, Math.min(CHAPTERS.length, (BOSS_RUSH[i] && BOSS_RUSH[i].ch) || i + 1))
 }
 
 function rushDiff() {
@@ -9129,7 +9150,7 @@ function openRushSheet() {
       const best = rushBest(i)
       const cleared = best >= dd
       const ci = rushCh(i, dd)
-      const hp = Math.round((CHAPTERS[ci - 1] || CHAPTERS[0]).bossHp * RUSH_HP_MUL)
+      const hp = Math.round((CHAPTERS[ci - 1] || CHAPTERS[0]).bossHp * RUSH_HP_MUL * rushDm(dd))
       return '<button class="rushrow' + (open ? '' : ' lock') + (cleared ? ' done' : '') + '"' +
         ' data-rush="' + i + '"' + (open ? '' : ' disabled') + '>' +
         '<span class="rn">' + d.name + '</span>' +
@@ -9801,7 +9822,7 @@ function spawnBoss(mid) {
   const base = rush
 
     ? Math.round((CHAPTERS[rushCh(state.rush, state.rushD) - 1] || CHAPTERS[0]).bossHp
-                 * 0.55 * RUSH_HP_MUL * ENEMY_HP_DOWN)
+                 * 0.55 * RUSH_HP_MUL * ENEMY_HP_DOWN * rushDm(state.rushD))
     : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_UP * ENEMY_HP_DOWN * modeHp())
 
   const bsub = (state.stage && state.stage.sub) || 1
@@ -15321,7 +15342,11 @@ function end(win) {
 
   pendingChapter = opened
 
-  const hasNext = !zone && win && (nextSub <= SUBS || !!CHAPTERS[nextCh])
+  pendingRush = (!zone && win && state.rush >= 0 && BOSS_RUSH[state.rush + 1])
+    ? state.rush + 1 : null
+
+  const hasNext = !zone && win &&
+    (pendingRush != null || (state.rush < 0 && (nextSub <= SUBS || !!CHAPTERS[nextCh])))
 
   let shardGot = 0
   let shardName = ''
@@ -15621,6 +15646,8 @@ document.getElementById('launch').onclick = () => {
 document.getElementById('launch2').onclick = () => doLaunch(false)
 
 let pendingChapter = null
+
+let pendingRush = null
 function showChapter(ci) {
   const ch = CHAPTERS[ci]
   if (!ch) return false
@@ -15652,6 +15679,15 @@ document.getElementById('again').onclick = () => {
 
 document.getElementById('retry').onclick = () => { doLaunch(false) }
 document.getElementById('nextGo').onclick = () => {
+
+  if (pendingRush != null) {
+    const i = pendingRush
+    pendingRush = null
+    scOver.hidden = true
+    if (startBossRush(i)) return
+    scOver.hidden = false
+    return
+  }
   if (pendingChapter != null) {
     scOver.hidden = true
     if (showChapter(pendingChapter)) { pendingChapter = null; return }
