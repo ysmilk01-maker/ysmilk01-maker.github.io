@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 18:29'
+const BUILD_AT = '09-16 18:41'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5870,7 +5870,7 @@ const TOUR_FULL = [
 
 const TOUR_FIRST = [
 
-  ['#launch', '출격', '여기를 누르면 바로 나갑니다. 이동은 드래그, 공격은 자동입니다. 판에서 떨어지는 강화 아이템은 꼭 드세요 - 클리어를 가릅니다.'],
+  ['#launch', '출격', '여기를 누르면 바로 나갑니다. 이동은 드래그, 공격은 자동입니다. 판에서 떨어지는 강화 아이템은 꼭 주우세요. 클리어를 가릅니다.'],
 ]
 let tourAt = 0
 
@@ -6025,7 +6025,7 @@ function renderSquad() {
   const pv = $('hgPwVal'); if (pv) pv.textContent = squadPower().toLocaleString('ko-KR')
   const pi = $('hgPwInfo'); if (pi) pi.onclick = (e) => { e.stopPropagation(); openPowerSheet() }
   $('hgPlaneImage').src = (main && hangarFile('showcase', main.id)) || hangarPlaneImage(main)
-  $('hgMain').setAttribute('aria-label', (main ? main.name + ', ' : '') + '메인 기체 선택 및 강화')
+  $('hgMain').setAttribute('aria-label', (main ? main.name + ', ' : '') + '메인 기체 고르기와 강화')
   $('hgMain').onclick = () => hangarChoose('planes', MAIN_SLOT, 'hgMain')
   $('hgPlaneChange').textContent = anyUpg() ? '기체 변경 · 강화 가능 ›' : '기체 변경 ›'
   $('hgPilotImage').src = hangarFile('pilots', pl.id) || (GC[pilotFace(pl)] || {}).src || ''
@@ -7025,10 +7025,10 @@ function openPilot(pl, list) {
       ' · 화력·체력 ×' + gradeMul(pl.grade).toFixed(2) + '</div>' +
     '<div class="de">' + pl.desc + '</div></div></div>' +
     (SWAP_NOTE ? '<div class="pnote">' + SWAP_NOTE.prev + '의 스탯을 초기화하고 경험치 ' +
-      SWAP_NOTE.back.toLocaleString('ko-KR') + ' 을 돌려받았습니다. 이제 ' + pl.name + '에게 부으세요.</div>' : '') +
+      SWAP_NOTE.back.toLocaleString('ko-KR') + ' 을 돌려받았습니다. 이제 ' + pl.name + '에게 쓰세요.</div>' : '') +
     '<div class="pxp">' +
       '<span>쓸 수 있는 경험치 <b>' + pilotXp().toLocaleString('ko-KR') + '</b></span>' +
-      '<span>부은 것 <b>' + back.toLocaleString('ko-KR') + '</b></span>' +
+      '<span>사용 경험치 <b>' + back.toLocaleString('ko-KR') + '</b></span>' +
     '</div>' +
 
     (() => {
@@ -7059,7 +7059,7 @@ function openPilot(pl, list) {
     '<div class="bar">' +
       (on ? '<button class="wide" disabled>사용 중</button>'
           : have ? '<button class="wide" id="pPick">이 파일럿 쓰기</button>'
-          : canRecruit(pl.grade) ? '<button class="wide" id="pRecruit">조각 ' + GRADE_NEED[pl.grade] + '개로 합류 확인</button>' : '') +
+          : canRecruit(pl.grade) ? '<button class="wide" id="pRecruit">조각 ' + GRADE_NEED[pl.grade] + '개로 영입하기</button>' : '') +
       (back ? '<button class="ghost" id="pReset">되돌리기</button>' : '') +
       '<button class="ghost thin" id="dClose">닫기</button>' +
     '</div>'
@@ -7155,8 +7155,8 @@ function openPilot(pl, list) {
       pwAfter(pwBefore)
     }
     if (back > 0) {
-      ask('파일럿을 바꾸면 이전에 사용하시던 ' + prev.name + '의 스탯을 초기화합니다.\n' +
-          '부어 둔 경험치 ' + back.toLocaleString('ko-KR') + ' 은 전부 돌려받습니다.',
+      ask('파일럿을 바꾸면 지금 쓰던 ' + prev.name + '의 스탯이 초기화됩니다.\n' +
+          '사용한 경험치 ' + back.toLocaleString('ko-KR') + ' 은 전부 돌려받습니다.',
           doSwap, { title: '파일럿 바꾸기', ok: '바꿉니다' })
     } else doSwap()
   }
@@ -7270,9 +7270,9 @@ function newPilotPopup() {
     '</div>' +
     '<div class="note2">' +
     (back
-      ? '지금 태운 ' + cur.name + '에게 부은 경험치 ' + back.toLocaleString('ko-KR') +
-        ' 을 부어 두셨습니다. 「스탯 되돌리기」로 한 번에 돌려받아 새 파일럿에 다시 부을 수 있습니다. 되돌리기는 몇 번이든 됩니다.'
-      : '스탯은 파일럿마다 따로 쌓입니다. 경험치 주머니는 하나라, 누구에게 붓는지가 선택입니다.') +
+      ? '지금 쓰는 ' + cur.name + '에게 경험치 ' + back.toLocaleString('ko-KR') +
+        ' 을 사용하셨습니다. 「스탯 되돌리기」로 한 번에 돌려받아 새 파일럿에게 다시 쓸 수 있습니다. 되돌리기는 몇 번이든 됩니다.'
+      : '스탯은 파일럿마다 따로 쌓입니다. 경험치는 하나로 모이니 누구에게 쓸지가 선택입니다.') +
     '</div>' +
     '<div class="bar">' +
     '<button id="npGo">파일럿 보러 가기</button>' +
@@ -7293,14 +7293,14 @@ function newPilotPopup() {
     if (back) {
       openPilot(cur, PILOTS.filter(pilotOpen))
       setTimeout(() => tourRun([
-        ['#pReset', '부은 경험치 되돌리기',
-         cur.name + '에게 부은 경험치 ' + back.toLocaleString('ko-KR') +
+        ['#pReset', '사용 경험치 되돌리기',
+         cur.name + '에게 사용한 경험치 ' + back.toLocaleString('ko-KR') +
          ' 을 그대로 돌려받습니다. 그 경험치로 새 파일럿을 키우면 됩니다.'],
       ], null), 50)
     } else {
       setTimeout(() => tourRun([
         ['#pilotNowCard', '파일럿 바꾸기',
-         '카드를 누르면 스탯을 찍고 태울 사람을 고릅니다. 부은 경험치는 「스탯 되돌리기」로 언제든 돌려받습니다.'],
+         '카드를 누르면 스탯을 올리고 사용할 파일럿을 고릅니다. 사용한 경험치는 「스탯 되돌리기」로 언제든 돌려받습니다.'],
       ], null), 50)
     }
   }
@@ -7340,8 +7340,8 @@ function swapNotice(prev, now, back) {
     row('지금 쓸 수 있는 경험치', pilotXp().toLocaleString('ko-KR'), true) +
     '</div>' +
     '<div class="note2">스탯은 파일럿마다 따로 쌓입니다. ' +
-    '이전에 쓰던 ' + prev.name + '의 스탯을 초기화하고 부어 둔 경험치를 ' +
-    '전부 돌려드렸습니다. 새로 태운 ' + now.name + '의 스탯을 올려 주세요.</div>' +
+    '전에 쓰던 ' + prev.name + '의 스탯을 초기화하고 사용한 경험치를 ' +
+    '전부 돌려드렸습니다. 새로 고른 ' + now.name + '의 스탯을 올려 주세요.</div>' +
     '<div class="bar">' +
     '<button id="swGo">' + now.name + ' 스탯 올리기</button>' +
     '<button class="ghost" id="swLater">나중에</button>' +
@@ -8868,7 +8868,7 @@ function buildWaves(ch, sub) {
 
   const early = ch.id === 1 ? 0.59 : 1
 
-  const spawnMul = (ch.spawnMul || 1) * (ch.id >= 2 ? MOB_MORE : 1)
+  const spawnMul = (ch.spawnMul || 1) * (ch.id >= 2 ? MOB_MORE : 1) * SPAWN_ALL
 
   const flavorIdx = Math.floor(r() * ch.pool.length)
   const pool = ch.pool.map(([w, f], i) => [i === flavorIdx ? w * 2.2 : w, f])
@@ -9045,6 +9045,8 @@ const HP_ALL_UP = 1.3
 const BOSS_HP_ADD = 1.1
 const MOB_HP_ADD = 1.2
 const MOB_MORE = 1.5
+
+const SPAWN_ALL = 1.1
 const FIRE_SLOW = 1 / 0.85
 const ENEMY_HP_UP = 1.15
 
@@ -14729,7 +14731,7 @@ function draw() {
     g.fillText(tk ? '꼭 주우세요' : '놓치면 화력이 안 오릅니다', W / 2, ty - 30)
     g.fillStyle = '#ffffff'
     g.font = 'bold 24px system-ui'
-    g.fillText(tk ? '가챠권입니다' : '강화 아이템 · 꼭 드세요', W / 2, ty)
+    g.fillText(tk ? '가챠권입니다' : '강화 아이템 · 꼭 주우세요', W / 2, ty)
     g.fillStyle = tk ? 'rgba(232,238,247,.95)' : tone
     g.font = 'bold 15px system-ui'
     g.fillText(tk ? '뽑기에서 새 기체와 파일럿이 나옵니다'
@@ -15536,7 +15538,7 @@ function end(win) {
   const modsGot = state.modsGot || 0
   const itemNote = (!win && !zone && state.modDrops > modsGot)
     ? '<div class="rlv slotnew">강화 아이템 ' + modsGot + ' / ' + state.modDrops + ' 획득<br>' +
-      '<span class="t2">강화 아이템이 클리어를 가릅니다. 다음 판에는 꼭 드세요</span></div>'
+      '<span class="t2">강화 아이템이 클리어를 가릅니다. 다음 판에는 꼭 주우세요</span></div>'
     : ''
   if (!win && !zone && state.modDrops > 0 && !modsGot && (prog.tipItemN || 0) < 3) {
     prog.tipItem2 = false
