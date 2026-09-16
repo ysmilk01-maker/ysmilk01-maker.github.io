@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 18:48'
+const BUILD_AT = '09-16 18:50'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9525,7 +9525,7 @@ function mkEnemy(kind, x, y, drift) {
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
 
-           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * MOB_HP_ADD * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
+           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * MOB_HP_ADD * modeHp() * (b.ufo ? UFO_HP_UP : 1) * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
 
            sp: Math.round(b.sp * SG.spMul * SPD_K),
            dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
@@ -10115,6 +10115,8 @@ function supplyGap() {
 const SUPPLY_FIRST = 1.2
 
 const UFO_HP_MUL2 = 2 / 1.2
+
+const UFO_HP_UP = 1.5
 const SUPPLY_GAP = [3.5, 5.5]
 
 function dropSupply() {
