@@ -2166,11 +2166,6 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #gfx #gfxBtns button{flex:1;margin:0;min-height:46px;font-size:15px;font-weight:800;border-radius:12px;white-space:nowrap}
 #gfx #gfxOk{background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f}
 #gfx #gfxAgain[hidden]{display:none}
-/* 클리어 팝업 기체 (2026-09-16) */
-#over #overPlane{display:block;width:min(64%,250px);height:150px;object-fit:contain;margin:0 auto 4px;filter:drop-shadow(0 14px 10px #000a);animation:overIn .55s cubic-bezier(.2,1.5,.4,1)}
-#over #overPlane[hidden]{display:none}
-@keyframes overIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
-@media(prefers-reduced-motion:reduce){#over #overPlane{animation:none}}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2487,7 +2482,6 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 
 <div class="panel" id="over" hidden>
   <div>
-    <img id="overPlane" alt="" hidden>
     <h2 id="overTitle">격추됨</h2>
     <div class="rwrap" id="overBody"></div>
     <button id="revive" hidden>광고 보고 이어하기</button>
@@ -3067,7 +3061,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 12:05'
+const BUILD_AT = '09-16 12:31'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -15132,21 +15126,10 @@ function end(win) {
     m.lv > lvBefore && m.lv <= prog.pilot.lv)
   const mustFit = freshPlanes.length + freshSlots.length > 0
 
-  const clearPop = !!win && !zone && state.rush < 0
-  const overPlane = document.getElementById('overPlane')
-  if (overPlane) {
-    const mainU = state.squad && state.squad[MAIN_SLOT]
-    const src = mainU && mainU.plane ? hangarPlaneImage(mainU.plane) : ''
-    overPlane.hidden = !(clearPop && src)
-    if (src) overPlane.src = src
-  }
   document.getElementById('nextGo').hidden = !hasNext || mustFit
   document.getElementById('retry').hidden = !(!win && !zone) || mustFit
   const goHangar = document.getElementById('again')
-  if (clearPop) {
-    goHangar.textContent = '확인 · 격납고로'
-    goHangar.classList.toggle('ghost', hasNext && !mustFit)
-  } else if (mustFit) {
+  if (mustFit) {
     goHangar.textContent = freshPlanes.length && freshSlots.length
       ? '새 기체와 자리 적용하기'
       : freshSlots.length ? '새 자리에 기체 넣기' : '새 기체 적용하기'
