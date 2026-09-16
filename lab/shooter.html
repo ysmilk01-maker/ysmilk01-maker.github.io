@@ -2173,7 +2173,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .pwtotal{text-align:center;margin:4px 0 10px}.pwtotal small{display:block;font-size:11px;color:var(--muted)}.pwtotal b{font-size:30px;font-weight:900;color:var(--gold)}
 .pwrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #2e3f49}.pwrow span{font-size:12.5px}.pwrow span small{display:block;font-size:10px;color:var(--muted);margin-top:1px}.pwrow b{font-size:14px;white-space:nowrap}
 #pwPop{z-index:64;background:rgba(4,5,9,.55)}
-#pwPop .pwbox{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:16px 28px;text-align:center;box-shadow:0 0 40px #edc87944;animation:gotIn .35s cubic-bezier(.2,1.4,.4,1);transform:none}
+#pwPop .pwbox{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:16px 28px;text-align:center;box-shadow:0 0 40px #edc87944;animation:pwIn .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pwIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 #pwPop .pwbox small{display:block;font-size:11px;color:var(--muted);letter-spacing:.1em}
 #pwPop .pwbox b{display:block;font-size:40px;font-weight:900;color:var(--gold);line-height:1.1;font-variant-numeric:tabular-nums}
 #pwPop .pwbox b.done{animation:pwBump .3s ease-out}
@@ -3079,7 +3080,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 13:00'
+const BUILD_AT = '09-16 13:01'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
