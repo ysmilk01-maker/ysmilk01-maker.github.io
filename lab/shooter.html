@@ -3119,7 +3119,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 18:57'
+const BUILD_AT = '09-16 19:04'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5133,7 +5133,7 @@ function openNamePop(done) {
   const first = !prog.pilot.name
   document.getElementById('nameTitle').textContent = first ? '파일럿명을 정해 주세요' : '파일럿명 바꾸기'
   document.getElementById('nameSub').textContent = first
-    ? '앞자리에 앉는 사람이 당신입니다. 뒷자리 보조 파일럿은 뽑기로 태웁니다.'
+    ? '앞자리에 앉는 사람이 당신입니다. 뒷자리 보조 파일럿은 뽑기로 얻습니다.'
     : '언제든 바꿀 수 있습니다.'
   inp.value = prog.pilot.name || ''
   inp.placeholder = randomPilotName()
@@ -13156,7 +13156,9 @@ const FLAME_P = {
   laser: ['210,245,255', '60,190,255'], homing: ['255,215,240', '255,110,190'],
   pierce: ['235,220,255', '160,110,255'], wave: ['200,250,255', '40,200,240'],
   orb: ['235,220,255', '170,120,255'], missile: ['255,230,190', '255,140,60'],
-  beam: ['220,240,255', '110,190,255'], boomer: ['255,250,200', '240,200,60'],
+  beam: ['220,240,255', '110,190,255'],
+
+  boomer: ['225,255,255', '0,205,255'],
   chain: ['210,255,240', '60,230,190'],
 }
 
@@ -13331,6 +13333,26 @@ function drawBullet(b) {
       g.globalAlpha = 1
     }
     g.restore()
+
+    if (b.kind === 'boomer') {
+      g.save()
+      g.globalCompositeOperation = 'lighter'
+      for (let i = 1; i <= 3; i++) {
+        g.globalAlpha = .3 / i
+        g.fillStyle = 'rgb(' + fp[1] + ')'
+        g.beginPath()
+        g.arc(b.x - b.vx * .018 * i, b.y - b.vy * .018 * i, r * (1.6 - i * .24), 0, Math.PI * 2)
+        g.fill()
+      }
+      g.globalAlpha = .95
+      g.strokeStyle = 'rgb(' + fp[0] + ')'
+      g.lineWidth = 2
+      const sp = (b.age || 0) * 14
+      for (const off of [0, Math.PI]) {
+        g.beginPath(); g.arc(b.x, b.y, r * 2.1, sp + off, sp + off + 2.3); g.stroke()
+      }
+      g.restore()
+    }
     if (b.el && ELS[b.el]) elFront(b)
     return
   }
