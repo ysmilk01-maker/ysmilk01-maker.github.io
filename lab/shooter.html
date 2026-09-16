@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 17:12'
+const BUILD_AT = '09-16 17:16'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9059,7 +9059,7 @@ const RUSH_DIFF = [
 ]
 
 const RUSH_START = 5
-const RUSH_STEP = 1.1
+const RUSH_STEP = 1.07
 
 function rushBase() {
   const ch = CHAPTERS[0]
@@ -9155,7 +9155,7 @@ function openRushSheet() {
     '<div class="rdiff">' + RUSH_DIFF.map((x, i) =>
       '<button class="' + (i === dd ? 'on' : '') + '" data-rd="' + i + '">' +
       x.name + '</button>').join('') + '</div>' +
-    '<div class="rdnote">1단계 보스의 ' + RUSH_START + '배에서 한 칸마다 +10% · ' +
+    '<div class="rdnote">1단계 보스의 ' + RUSH_START + '배에서 한 칸마다 +' + Math.round((RUSH_STEP - 1) * 100) + '% · ' +
       '경험치 x' + D.xp.toFixed(1) + ' · 가챠권 x' + D.tk + '</div>' +
     '<div class="rushlist">' + BOSS_RUSH.map((d, i) => {
       const open = bossRushOpen(i)
@@ -10198,8 +10198,11 @@ function missileBurst(b) {
 
   }
 
-  if (s.boss && (s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < (MISSILE_R + 14) ** 2) {
-    bossArea(s.boss, b.dmg * bossMul(b))
+  if (s.boss) {
+    const rr2 = ((s.boss.reach || s.boss.r) + MISSILE_R) ** 2
+    if ((s.boss.x - b.x) ** 2 + (s.boss.y - b.y) ** 2 < rr2) {
+      bossArea(s.boss, b.dmg * bossMul(b))
+    }
   }
 }
 
