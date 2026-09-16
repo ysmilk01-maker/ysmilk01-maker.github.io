@@ -3058,7 +3058,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 08:40'
+const BUILD_AT = '09-16 09:08'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8699,7 +8699,7 @@ function curStage() {
     theme: THEME_ART[ch.theme] || ch.theme,
     waves: buildWaves(ch, sub),
 
-    bossHp: Math.round(ch.bossHp * (0.78 + sub * 0.0967) * subUp(sub)),
+    bossHp: Math.round(ch.bossHp * (0.78 + sub * 0.0967)),
     hpMul: ch.hpMul * k, spMul: ch.spMul * (1 + (sub - 1) * 0.0207),
 
     fireMul: (ch.fireMul || 1) * (1 - (sub - 1) * 0.0104),
