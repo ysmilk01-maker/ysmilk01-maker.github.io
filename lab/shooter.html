@@ -2890,10 +2890,14 @@ const MOD_NO = {
   chain:  [],
   boomer: ['pierce'],
 }
+
+const MOD_DROP_MAX = { seek: 1 }
 function rollMod(mods) {
   const u = state && state.squad && state.squad[MAIN_SLOT]
   const no = (u && u.plane && MOD_NO[u.plane.weapon]) || []
-  const pool = MOD_KEYS.filter((k) => (mods[k] || 0) < MOD_MAX && !no.includes(k))
+  const got = (state && state.modRoll) || {}
+  const pool = MOD_KEYS.filter((k) => (mods[k] || 0) < MOD_MAX && !no.includes(k) &&
+    !(MOD_DROP_MAX[k] != null && (got[k] || 0) >= MOD_DROP_MAX[k]))
   if (!pool.length) return null
   return pool[(Math.random() * pool.length) | 0]
 }
@@ -3115,7 +3119,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 18:51'
+const BUILD_AT = '09-16 18:57'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9797,6 +9801,198 @@ const BOSS_PAT = {
       }
     },
   },
+
+  mid: {
+    cd1: 0.72, cd2: 0.52,
+    p1(bs, pl) {
+
+      bs.side = !bs.side
+      const x = bs.x + (bs.side ? -30 : 30), y = bs.y + 12
+      const a = Math.atan2(pl.y - y, pl.x - x)
+      const n = bcnt(bs, 3)
+
+      for (let k = 0; k < n; k++) {
+        const sp = 186 + k * 30
+        bshot(x, y, Math.cos(a) * sp, Math.sin(a) * sp, 4)
+      }
+    },
+    p2(bs, pl) {
+
+      for (const sx of [-30, 30]) {
+        const x = bs.x + sx, y = bs.y + 12
+        const a = Math.atan2(pl.y - y, pl.x - x)
+        const n = bcnt(bs, 3)
+        for (let k = 0; k < n; k++) {
+          const d = (k - (n - 1) / 2) * .17
+          bshot(x, y, Math.cos(a + d) * 225, Math.sin(a + d) * 225, 4)
+        }
+      }
+    },
+  },
+
+  midRing: {
+    cd1: 0.90, cd2: 0.62,
+    p1(bs) {
+      bs.spin = (bs.spin || 0) + 0.42
+      for (let i = 0; i < 3; i++) {
+        const a = bs.spin + (i / 3) * Math.PI * 2
+        const n = bcnt(bs, 3)
+        for (let k = 0; k < n; k++) {
+          const sp = 120 + k * 34
+          bshot(bs.x, bs.y, Math.cos(a) * sp, Math.sin(a) * sp, 4)
+        }
+      }
+    },
+    p2(bs) {
+
+      bs.spin = (bs.spin || 0) + 0.50
+      for (const [dir, base] of [[1, 168], [-1, 122]]) {
+        for (let i = 0; i < 3; i++) {
+          const a = bs.spin * dir * 1.25 + (i / 3) * Math.PI * 2
+          const n = bcnt(bs, 2)
+          for (let k = 0; k < n; k++) {
+            const sp = base + k * 30
+            bshot(bs.x, bs.y, Math.cos(a) * sp, Math.sin(a) * sp, 4)
+          }
+        }
+      }
+    },
+  },
+
+  midTwin: {
+    cd1: 1.00, cd2: 0.72,
+    p1(bs) {
+      for (const sx of [-42, 42]) {
+        const x = bs.x + sx, y = bs.y + 8
+        const n = bcnt(bs, 4)
+        for (let k = 0; k < n; k++) {
+
+          const a = Math.PI / 2 + (sx > 0 ? -1 : 1) * (0.18 + k * 0.12)
+          bshot(x, y, Math.cos(a) * 165, Math.sin(a) * 165, 4)
+        }
+      }
+    },
+    p2(bs, pl) {
+
+      BOSS_PAT.midTwin.p1(bs, pl)
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      const n = bcnt(bs, 3)
+      for (let k = 0; k < n; k++) {
+        const sp = 200 + k * 28
+        bshot(bs.x, bs.y + 16, Math.cos(a) * sp, Math.sin(a) * sp, 4)
+      }
+    },
+  },
+
+  midWall: {
+
+    cd1: 1.35, cd2: 0.95,
+    p1(bs) {
+      const cols = bs.mid ? 7 : 9
+      const gap = Math.floor(Math.random() * cols)
+      for (let i = 0; i < cols; i++) {
+        if (i === gap) continue
+        const x = 24 + (i + .5) * ((W - 48) / cols)
+        bshot(x, bs.y + 26, 0, 132, 4.5)
+      }
+    },
+    p2(bs) {
+
+      const cols = bs.mid ? 7 : 9
+      const g1 = Math.floor(Math.random() * cols)
+      let g2 = Math.floor(Math.random() * cols)
+      if (g2 === g1) g2 = (g2 + 3) % cols
+      for (const [g, sp] of [[g1, 152], [g2, 104]]) {
+        for (let i = 0; i < cols; i++) {
+          if (i === g) continue
+          const x = 24 + (i + .5) * ((W - 48) / cols)
+          bshot(x, bs.y + 26, 0, sp, 4.5)
+        }
+      }
+    },
+  },
+
+  midCarrier: {
+    cd1: 1.50, cd2: 1.10,
+    p1(bs) {
+      const n = bcnt(bs, 3)
+      for (let k = 0; k < n; k++) {
+        const dx = (k - (n - 1) / 2) * 30
+        state.ebullets.push(mkEB({ x: bs.x + dx, y: bs.y + 20, vx: dx * 1.4, vy: 120, r: 5,
+                                   kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile }))
+      }
+    },
+    p2(bs, pl) {
+      BOSS_PAT.midCarrier.p1(bs, pl)
+
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      for (const d of [-.26, 0, .26]) {
+        bshot(bs.x, bs.y + 18, Math.cos(a + d) * 190, Math.sin(a + d) * 190, 3.6)
+      }
+    },
+  },
+
+  flak: {
+    cd1: 0.95, cd2: 0.62,
+    p1(bs) {
+      bs.spin = (bs.spin || 0) + 0.22
+      for (const [px, py] of [[0, -72], [0, 72], [-72, 0], [72, 0]]) {
+        const a = Math.atan2(py, px) + bs.spin
+        for (let k = 0; k < 2; k++) {
+          const sp = 130 + k * 40
+          bshot(bs.x + px, bs.y + py, Math.cos(a) * sp, Math.sin(a) * sp, 4.5,
+                { dmg: DMG.flak, sh: 'heavy' })
+        }
+      }
+    },
+    p2(bs, pl) {
+
+      for (const p of bs.parts) {
+        if (!p.alive) continue
+        const x = bs.x + p.dx, y = bs.y + p.dy
+        const a = Math.atan2(pl.y - y, pl.x - x)
+        bshot(x, y, Math.cos(a) * 200, Math.sin(a) * 200, 4.5, { dmg: DMG.flak, sh: 'heavy' })
+      }
+    },
+    p3(bs) {
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + bs.t * .5
+        bshot(bs.x, bs.y, Math.cos(a) * 118, Math.sin(a) * 118, 4)
+      }
+    },
+  },
+
+  void: {
+    cd1: 0.80, cd2: 0.55,
+    p1(bs, pl) {
+
+      bs.wave = ((bs.wave || 0) + 1) % 5
+      const x = bs.x + (bs.wave - 2) * 34, y = bs.y + 18
+      const a = Math.atan2(pl.y - y, pl.x - x)
+      const n = bcnt(bs, 3)
+      for (let k = 0; k < n; k++) {
+        const d = (k - (n - 1) / 2) * .12
+        bshot(x, y, Math.cos(a + d) * 205, Math.sin(a + d) * 205, 4)
+      }
+    },
+    p2(bs, pl) {
+
+      const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
+      const n = bcnt(bs, 9)
+      for (let k = 0; k < n; k++) {
+        const d = (k - (n - 1) / 2) * .16
+        bshot(bs.x, bs.y + 20, Math.cos(a + d) * 150, Math.sin(a + d) * 150, 4.5,
+              { dmg: DMG.flak, sh: 'heavy' })
+      }
+    },
+    p3(bs) {
+      for (const dx of [-70, 0, 70]) {
+        state.ebullets.push(mkEB({ x: bs.x + dx, y: bs.y + 20, vx: 0, vy: 130, r: 5,
+                                   kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile }))
+      }
+    },
+  },
+
 }
 
 BOSS_PAT.air2 = {
@@ -9830,12 +10026,6 @@ BOSS_PAT.air2 = {
     }
   },
 }
-
-BOSS_PAT.mid = BOSS_PAT.air
-BOSS_PAT.midRing = BOSS_PAT.fort
-BOSS_PAT.midTwin = BOSS_PAT.ship
-BOSS_PAT.midWall = BOSS_PAT.tank
-BOSS_PAT.midCarrier = BOSS_PAT.carrier
 
 function spawnBoss(mid) {
 
@@ -10146,7 +10336,7 @@ function dropItem(x, y, richer) {
 
   const wantMod = s.modDrops < s.modCap && Math.random() < (richer ? .55 : .35)
   const key = wantMod ? rollMod(s.mods) : null
-  if (key) s.modDrops++
+  if (key) { s.modDrops++; s.modRoll = s.modRoll || {}; s.modRoll[key] = (s.modRoll[key] || 0) + 1 }
   s.items.push({ x, y, t: 0, r: 11, mod: key })
 
   if (key && !prog.tipItem2 && !s.tipWait) s.tipWait = s.items[s.items.length - 1]
