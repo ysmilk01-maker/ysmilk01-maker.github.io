@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 17:05'
+const BUILD_AT = '09-16 17:12'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9051,14 +9051,26 @@ function finalRushBoss(stage) {
 }
 
 const RUSH_DIFF = [
-  { key: 'easy',  name: '쉬움',     dm: 1.00, xp: 1.0, tk: 1 },
-  { key: 'norm',  name: '보통',     dm: 1.22, xp: 1.7, tk: 1 },
-  { key: 'hard',  name: '어려움',   dm: 1.48, xp: 2.8, tk: 2 },
-  { key: 'crazy', name: '크레이지', dm: 1.80, xp: 4.5, tk: 2 },
-  { key: 'hell',  name: '극악무도', dm: 2.19, xp: 7.0, tk: 3 },
+  { key: 'easy',  name: '쉬움',     xp: 1.0, tk: 1 },
+  { key: 'norm',  name: '보통',     xp: 1.7, tk: 1 },
+  { key: 'hard',  name: '어려움',   xp: 2.8, tk: 2 },
+  { key: 'crazy', name: '크레이지', xp: 4.5, tk: 2 },
+  { key: 'hell',  name: '극악무도', xp: 7.0, tk: 3 },
 ]
 
-function rushDm(d) { return (RUSH_DIFF[d] || RUSH_DIFF[0]).dm }
+const RUSH_START = 5
+const RUSH_STEP = 1.1
+
+function rushBase() {
+  const ch = CHAPTERS[0]
+  const sb = Math.round(ch.bossHp * (0.78 + SUBS * 0.0967))
+  return sb * 0.55 * BOSS_HP_UP * BOSS_ONLY_UP * ENEMY_HP_DOWN
+}
+
+function rushHp(i, d) {
+  const step = (d | 0) * BOSS_RUSH.length + (i | 0)
+  return Math.round(rushBase() * RUSH_START * Math.pow(RUSH_STEP, step))
+}
 
 function rushCh(i, d) {
   return Math.max(1, Math.min(CHAPTERS.length, (BOSS_RUSH[i] && BOSS_RUSH[i].ch) || i + 1))
@@ -9094,7 +9106,7 @@ function rushOpenPopup() {
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
   body.className = 'dsheet'
   const d0 = BOSS_RUSH[0]
-  const hp = Math.round((CHAPTERS[rushCh(0, 0) - 1] || CHAPTERS[0]).bossHp * RUSH_HP_MUL)
+  const hp = rushHp(0, 0)
   body.innerHTML =
     '<h3>보스 도전이 열렸습니다</h3>' +
     '<div class="sub2">파일럿 Lv.' + RUSH_LV + ' 달성</div>' +
@@ -9143,19 +9155,19 @@ function openRushSheet() {
     '<div class="rdiff">' + RUSH_DIFF.map((x, i) =>
       '<button class="' + (i === dd ? 'on' : '') + '" data-rd="' + i + '">' +
       x.name + '</button>').join('') + '</div>' +
-    '<div class="rdnote">기준 전선 보스의 ' + RUSH_HP_MUL + '배 · ' +
+    '<div class="rdnote">1단계 보스의 ' + RUSH_START + '배에서 한 칸마다 +10% · ' +
       '경험치 x' + D.xp.toFixed(1) + ' · 가챠권 x' + D.tk + '</div>' +
     '<div class="rushlist">' + BOSS_RUSH.map((d, i) => {
       const open = bossRushOpen(i)
       const best = rushBest(i)
       const cleared = best >= dd
       const ci = rushCh(i, dd)
-      const hp = Math.round((CHAPTERS[ci - 1] || CHAPTERS[0]).bossHp * RUSH_HP_MUL * rushDm(dd))
+      const hp = rushHp(i, dd)
       return '<button class="rushrow' + (open ? '' : ' lock') + (cleared ? ' done' : '') + '"' +
         ' data-rush="' + i + '"' + (open ? '' : ' disabled') + '>' +
         '<span class="rn">' + d.name + '</span>' +
         '<span class="rs">' + (open
-          ? ci + '전선 보스 기준 · 체력 ' + hp.toLocaleString('ko-KR') +
+          ? ci + '단계 보스 · 체력 ' + hp.toLocaleString('ko-KR') +
             (best >= 0 ? ' · 최고 ' + RUSH_DIFF[best].name : '')
           : (i ? eul(BOSS_RUSH[i - 1].name) + ' 먼저 깨야 합니다' : '')) + '</span>' +
         '<span class="rr">' + (cleared ? '격파함'
@@ -9821,8 +9833,7 @@ function spawnBoss(mid) {
   const rush = state.rush >= 0 ? BOSS_RUSH[state.rush] : null
   const base = rush
 
-    ? Math.round((CHAPTERS[rushCh(state.rush, state.rushD) - 1] || CHAPTERS[0]).bossHp
-                 * 0.55 * RUSH_HP_MUL * ENEMY_HP_DOWN * rushDm(state.rushD))
+    ? rushHp(state.rush, state.rushD)
     : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_UP * ENEMY_HP_DOWN * modeHp())
 
   const bsub = (state.stage && state.stage.sub) || 1
