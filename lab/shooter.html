@@ -2780,7 +2780,7 @@ const MOD_MAX = 3
 const MODS = {
   pierce: { ko: '관', name: '관통',   color: '#ffe08a', desc: '적을 하나 더 뚫습니다' },
   split:  { ko: '분', name: '분열',   color: '#ff9ecb', desc: '맞히면 파편이 갈라집니다' },
-  extra:  { ko: '증', name: '증편',   color: '#9fe8ff', desc: '한 발 더 나갑니다' },
+  extra:  { ko: '산', name: '산개',   color: '#9fe8ff', desc: '탄이 갈라집니다. 총 위력은 같고 넓게 맞습니다' },
   seek:   { ko: '유', name: '유도',   color: '#c9a8ff', desc: '탄이 적을 약하게 쫓습니다' },
   rate:   { ko: '속', name: '속사',   color: '#7dffd4', desc: '사격 간격이 줄어듭니다' },
   big:    { ko: '대', name: '대구경', color: '#ffc44d', desc: '탄이 커지고 세집니다' },
@@ -2873,15 +2873,15 @@ function traitText(p) {
 const MOD_NO = {
   rapid:  ['bounce'],
   spread: [],
-  laser:  ['extra', 'seek', 'bounce'],
+  laser:  ['seek', 'bounce'],
   homing: ['seek'],
-  pierce: ['extra', 'bounce'],
-  wave:   ['extra', 'seek', 'bounce'],
+  pierce: ['bounce'],
+  wave:   ['seek', 'bounce'],
   orb:    ['pierce', 'seek', 'bounce', 'speed'],
   mine:   ['pierce', 'split', 'seek'],
-  beam:   ['extra', 'seek', 'bounce'],
-  chain:  ['extra', 'seek', 'bounce'],
-  boomer: ['pierce', 'extra', 'seek'],
+  beam:   ['seek', 'bounce'],
+  chain:  ['seek', 'bounce'],
+  boomer: ['pierce', 'seek'],
 }
 function rollMod(mods) {
   const u = state && state.squad && state.squad[MAIN_SLOT]
@@ -3108,7 +3108,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 13:20'
+const BUILD_AT = '09-16 14:40'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7972,10 +7972,10 @@ function slotPos(i) {
 
 const LV = [null,
   { mult: 1.00, extra: 0 },
-  { mult: 1.15, extra: 0 },
-  { mult: 1.30, extra: 1 },
-  { mult: 1.45, extra: 1 },
-  { mult: 1.65, extra: 2 },
+  { mult: 1.25, extra: 0 },
+  { mult: 1.55, extra: 0 },
+  { mult: 1.90, extra: 0 },
+  { mult: 2.30, extra: 0 },
 ]
 
 const PLAYER_CD = 2.0
@@ -8031,7 +8031,7 @@ function shoot(u, i, dt) {
   state.muzzles.push({ x: pos.x, y: pos.y - 12, age: 0,
                        k: ['mz1', 'mz2', 'mz3'][tierStep(p.tier)] })
 
-  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD * SQUAD_DMG * collectionMul()
+  const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD * SQUAD_DMG * collectionMul() * BASE_DMG_UP
     * (u.wult > 0 ? WING_ULT_DMG : 1)
     * (state.ultKind === 'rapid' && state.ultT > 0 ? ULT_TUNE.rapidDmg : 1)
   const tier = tierStep(p.tier)
@@ -8039,7 +8039,9 @@ function shoot(u, i, dt) {
 
   const elAdd = p.el === 'lite' ? (1 + ELS.lite.add) : 1
 
+  const __S = 1 + M.extra
   const add = (o) => {
+   for (let __q = 0; __q < __S; __q++) {
 
     const b = { x: pos.x, y: pos.y - 10, vx: undefined, vy: undefined, r: 3, dmg, pierce: 0, life: 3, age: 0,
                 kind: 'normal', el: null, turn: 0, bounce: 0, split: 0, hitList: null, dead: false,
@@ -8060,17 +8062,19 @@ function shoot(u, i, dt) {
     if (M.seek && (b.kind === 'normal' || b.kind === 'pierce')) {
       b.kind = 'homing'; b.turn = 1.1 * M.seek
     }
+    if (__S > 1) { b.dmg /= __S; b.x += (__q - (__S - 1) / 2) * 8 }
     B.push(b)
+   }
   }
 
   switch (p.weapon) {
     case 'rapid': {
-      const n = 1 + tier + lv.extra + M.extra
+      const n = 1 + tier
       for (let k = 0; k < n; k++) add({ x: pos.x + (k - (n - 1) / 2) * 7, vx: 0, vy: -620 })
       break
     }
     case 'spread': {
-      const n = 3 + tier * 2 + lv.extra + M.extra
+      const n = 3 + tier * 2
       for (let k = 0; k < n; k++) {
         const a = -Math.PI / 2 + (k - (n - 1) / 2) * 0.17
         add({ vx: Math.cos(a) * 430, vy: Math.sin(a) * 430, r: 2.6, dmg: dmg * 1.22 })
@@ -8079,10 +8083,10 @@ function shoot(u, i, dt) {
     }
     case 'laser':
 
-      add({ vx: 0, vy: -1100, r: 1.8, pierce: 2 + tier, kind: 'laser', dmg: dmg * 0.684 })
+      add({ vx: 0, vy: -1100, r: 1.8, pierce: 2 + tier, kind: 'laser', dmg: dmg * 0.85 })
       break
     case 'homing': {
-      const n = 1 + tier + M.extra
+      const n = 1 + tier
       for (let k = 0; k < n; k++)
         add({ vx: (k - (n - 1) / 2) * 90, vy: -300, kind: 'homing',
 
@@ -8101,8 +8105,8 @@ function shoot(u, i, dt) {
     }
     case 'orb': {
 
-      const n = 5 + tier + M.extra
-      const per = (2 + tier) / (5 + tier)
+      const n = 5 + tier
+      const per = 1
       for (let k = 0; k < n; k++)
         add({ kind: 'orb', owner: i, a: (k / n) * Math.PI * 2, rad: 40 + tier * 8,
               x: pos.x, y: pos.y, r: 6, dmg: dmg * 7.0 * per, pierce: 99, life: 3.0,
@@ -8113,10 +8117,10 @@ function shoot(u, i, dt) {
 
       {
 
-        const n = 1 + tier + M.extra
+        const n = 1 + tier
         for (let k = 0; k < n; k++) {
-          add({ x: pos.x + (k - (n - 1) / 2) * 15, vx: (k - (n - 1) / 2) * 34,
-                vy: -215, kind: 'mine', r: 7, dmg: dmg * 9.6 })
+          add({ x: pos.x + (k - (n - 1) / 2) * 15, vx: 0,
+                vy: -215, kind: 'mine', r: 5, dmg: dmg * 9.6 })
         }
       }
       break
@@ -8970,6 +8974,9 @@ const RUSH_HP_MUL = 3
 
 const BOSS_HP_UP = 1.25 * 1.15 * 1.2
 
+const BASE_DMG_UP = 3
+const ENEMY_HP_DOWN = 0.9
+const FIRE_SLOW = 1 / 0.85
 const ENEMY_HP_UP = 1.15
 
 const ENEMY_HP_UP2 = 1.2
@@ -9433,7 +9440,7 @@ function mkEnemy(kind, x, y, drift) {
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
 
-           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
+           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
 
            sp: Math.round(b.sp * SG.spMul * SPD_K),
            dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
@@ -9503,7 +9510,7 @@ function mkGround(kind, x, y) {
 
     art: sea ? Math.round(b.r * 7) : 0,
 
-    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * ENEMY_HP_UP2 * modeHp()),
+    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * modeHp()),
   }
 }
 
@@ -9752,8 +9759,8 @@ function spawnBoss(mid) {
   const base = rush
 
     ? Math.round((CHAPTERS[rushCh(state.rush, state.rushD) - 1] || CHAPTERS[0]).bossHp
-                 * 0.55 * RUSH_HP_MUL)
-    : Math.round(state.stage.bossHp * (mid ? mm : 0.55) * BOSS_HP_UP * modeHp())
+                 * 0.55 * RUSH_HP_MUL * ENEMY_HP_DOWN)
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55) * BOSS_HP_UP * ENEMY_HP_DOWN * modeHp())
 
   const bsub = (state.stage && state.stage.sub) || 1
 
@@ -10138,7 +10145,7 @@ function fireScale() {
 
   const small = slots <= 1 ? 1.55 : slots === 2 ? 1.48 : 1.42
 
-  const chf = (s.stage && s.stage.fireMul) || 1
+  const chf = (((s.stage && s.stage.fireMul) || 1)) * FIRE_SLOW
 
   return (1.9 - 0.9 * warm) * small * chf * 1.234
 }
@@ -11229,7 +11236,7 @@ function update(dt) {
         const slow = engine && engine.alive ? 1.35 : 1
         const haste = 1 - alive * 0.06
 
-        const chf = (s.stage && s.stage.fireMul) || 1
+        const chf = (((s.stage && s.stage.fireMul) || 1)) * FIRE_SLOW
 
         let nAlive = 0; for (const p of bs.parts) if (p.alive) nAlive++
         bs.phase = bs.core.open ? 3 : nAlive < bs.parts.length ? 2 : 1
