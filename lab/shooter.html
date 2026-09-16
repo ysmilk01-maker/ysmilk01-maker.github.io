@@ -3108,7 +3108,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 13:12'
+const BUILD_AT = '09-16 13:20'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3658,6 +3658,11 @@ function pilotNow() {
          PILOTS.find((p) => p.grade === prog.pilot.grade) || PILOTS[0]
 }
 
+function perkPowText(pl) {
+  const k = pl.perk || {}
+  const m = (k.pow || 1) / (k.rate || 1)
+  return m === 1 ? '-' : '×' + m.toFixed(3)
+}
 function perk(k) {
   const v = pilotNow().perk[k]
   return v == null ? PERK0[k] : v
@@ -4379,7 +4384,11 @@ function openPowerSheet() {
     row('기체 합계', base.toLocaleString('ko-KR')) +
     '<div class="lab">곱하는 것</div>' +
     row('컬렉션 보너스', '×' + coll.toFixed(3), '보유 기체 1대 +' + (COLL_PER_PLANE * 100).toFixed(1) + '% · 강화 1단계 +' + (COLL_PER_UPG * 100).toFixed(1) + '%') +
-    row('파일럿 ' + pl.name, '×' + pm.toFixed(3), GRADES[pl.grade].name + ' ×' + gradeMul(pl.grade).toFixed(2) + ' · 화력 스탯 +' + (pilotSt().pow * 2.5) + '% · 연사 -' + (pilotSt().rate * 1.5) + '%' + (perk('pow') !== 1 || perk('rate') !== 1 ? ' · 특성' : '')) +
+    row('보조 파일럿 ' + pl.name, '×' + pm.toFixed(3),
+      GRADES[pl.grade].name + ' ×' + gradeMul(pl.grade).toFixed(2) +
+      ' · 화력 스탯 +' + (pilotSt().pow * 2.5) + '% · 연사 -' + (pilotSt().rate * 1.5) + '%') +
+
+    row('특성', perkPowText(pl), pl.desc || '치우침이 없습니다') +
     '<div class="empty">기체 강화·추가, 파일럿 변경·스탯·등급 강화, 기체 수집이 전투력을 올립니다.</div>'
   openHgSheet('전투력 세부', html)
 }
