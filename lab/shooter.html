@@ -1233,6 +1233,22 @@
   .rdnote { margin-top: 7px; font-size: 11px; color: var(--dim); text-align: center; }
   /* 보스 도전 목록 */
   .rushlist { display: grid; gap: 8px; margin-top: 8px; }
+  /*
+   * 목록만 구르고 나가는 단추는 바닥에 붙는다 (2026-09-16 대표 지적
+   * 「빠져나올 방법이 없음」).
+   *
+   * 도전이 다섯에서 열다섯이 되면서 목록이 화면을 넘겼다. #detail .dsheet
+   * 가 overflow: hidden 이라 넘친 부분이 잘렸고, 하필 그 잘린 자리에
+   * 「닫기」가 있었다. 시트를 세로 flex 로 세우고 목록에 min-height: 0 을
+   * 줘야 목록이 줄면서 구른다 - 안 주면 flex 항목이 안 줄어 그대로 넘친다.
+   */
+  .dsheet.rushsheet { display: flex; flex-direction: column; }
+  .dsheet.rushsheet .rushlist {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding-right: 3px;
+  }
+  .dsheet.rushsheet .bar { flex: none; margin-top: 10px; }
   .rushrow {
     display: grid; gap: 2px; text-align: left; width: 100%;
     padding: 11px 13px; border-radius: 9px; cursor: pointer;
@@ -3119,7 +3135,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 19:04'
+const BUILD_AT = '09-16 19:14'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9161,7 +9177,7 @@ function openRushSheet() {
   const body = document.getElementById('detailBody')
   if (!panel || !body) return
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
-  body.className = 'dsheet'
+  body.className = 'dsheet rushsheet'
   const dd = rushDiff()
   const D = RUSH_DIFF[dd]
   body.innerHTML =
@@ -9190,12 +9206,16 @@ function openRushSheet() {
             (RUSH_TICKET_FIRST * D.tk) + '장') + '</span>' +
         '</button>'
     }).join('') + '</div>' +
-    '<div class="bar"><button class="ghost" id="dClose">닫기</button></div>'
+    '<div class="bar"><button class="ghost" id="dClose">닫기</button>' +
+    '<button id="rsHome">격납고로</button></div>'
   const close = () => { panel.hidden = true; panel.onclick = null; modalOff() }
   panel.hidden = false
   modalOn(panel, close)
   panel.onclick = (e) => { if (e.target === panel) close() }
   document.getElementById('dClose').onclick = close
+
+  const rsHome = document.getElementById('rsHome')
+  if (rsHome) rsHome.onclick = () => { close(); go('squad') }
   body.querySelectorAll('[data-rd]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation()
