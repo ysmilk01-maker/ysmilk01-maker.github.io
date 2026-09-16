@@ -332,7 +332,8 @@
     padding: 7px 9px; background: rgba(255,255,255,.035);
     border: 1px solid var(--line); border-radius: 9px;
   }
-  .pilotsheet .pst .n { font-size: 12.5px; font-weight: 800; width: 30px; flex: none; }
+  .pilotsheet .pst .n { font-size: 12.5px; font-weight: 800; width: 42px; flex: none; }   /* 30 -> 42: 「올스탯」 이 안 잘리게 (2026-09-16) */
+  .pilotsheet .pst .pp .alv { font-size: 11.5px; font-weight: 700; opacity: .8; white-space: nowrap; }
   .pilotsheet .pst .v {
     font-size: 11px; color: var(--gold, #ffd98a); width: 50px; flex: none;
     font-variant-numeric: tabular-nums;
@@ -2790,7 +2791,7 @@ const MODS = {
   seek:   { ko: '유', name: '유도',   color: '#c9a8ff', desc: '탄이 적을 약하게 쫓습니다' },
   rate:   { ko: '속', name: '속사',   color: '#7dffd4', desc: '사격 간격이 줄어듭니다' },
   big:    { ko: '대', name: '대구경', color: '#ffc44d', desc: '탄이 커지고 세집니다' },
-  bounce: { ko: '반', name: '반사',   color: '#8fd8ff', desc: '옆 벽에 튕깁니다' },
+
   speed:  { ko: '가', name: '가속',   color: '#a8ffb0', desc: '탄이 빨라집니다' },
 }
 const MOD_KEYS = Object.keys(MODS)
@@ -2877,17 +2878,17 @@ function traitText(p) {
 }
 
 const MOD_NO = {
-  rapid:  ['bounce'],
+  rapid:  [],
   spread: [],
-  laser:  ['seek', 'bounce'],
-  homing: ['seek'],
-  pierce: ['bounce'],
-  wave:   ['seek', 'bounce'],
-  orb:    ['pierce', 'seek', 'bounce', 'speed'],
-  mine:   ['pierce', 'split', 'seek'],
-  beam:   ['seek', 'bounce'],
-  chain:  ['seek', 'bounce'],
-  boomer: ['pierce', 'seek'],
+  laser:  [],
+  homing: [],
+  pierce: [],
+  wave:   [],
+  orb:    [],
+  mine:   [],
+  beam:   [],
+  chain:  [],
+  boomer: [],
 }
 function rollMod(mods) {
   const u = state && state.squad && state.squad[MAIN_SLOT]
@@ -2920,7 +2921,7 @@ const PLANES = []
 
   const LEGEND_TRAIT = {
     rapid:  { extra: 1, speed: 1 },
-    spread: { extra: 1, bounce: 1 },
+    spread: { extra: 2 },
     laser:  { pierce: 2 },
     homing: { split: 1, big: 1 },
     pierce: { big: 2, pierce: 1 },
@@ -2928,7 +2929,7 @@ const PLANES = []
     orb:    { extra: 1, big: 1 },
     mine:   { extra: 1, split: 1 },
     beam:   { big: 1, speed: 2 },
-    boomer: { bounce: 1, big: 1 },
+    boomer: { big: 2 },
   }
   const TIER_LIST = ['common', 'rare', 'high', 'legend']
   const UNLOCK = {
@@ -3114,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 16:00'
+const BUILD_AT = '09-16 16:56'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4855,7 +4856,7 @@ const GRADES = {
 }
 const GRADE_KEYS = ['normal', 'mid', 'high', 'legend']
 
-const GRADE_NEED = { normal: 0, mid: 40, high: 80, legend: 150 }
+const GRADE_NEED = { normal: 0, mid: 60, high: 120, legend: 225 }
 try { migratePilotOwned() } catch (e) { console.warn('pilot migrate', e) }
 
 const PILOT_MAX = 30
@@ -4866,8 +4867,13 @@ const STATS = {
   rng:  { name: '탄폭', per: 2.0, unit: '%', desc: '탄이 굵어져 잘 맞습니다' },
 
   hp:   { name: '내구', per: 4,   unit: '',  desc: '최대 체력이 늘어납니다' },
+
+  all:  { name: '올스탯', per: 1, unit: '', desc: '네 스탯이 모두 최대일 때 열립니다. 한 칸에 네 가지가 같이 오릅니다' },
 }
 const ST_KEYS = Object.keys(STATS)
+
+const ST_BASE_KEYS = ST_KEYS.filter((k) => k !== 'all')
+const ALL_MAX = 99
 
 function xpNeed(lv) {
 
@@ -4879,7 +4885,11 @@ function xpNeed(lv) {
 function xpFromScore(score) { return Math.round(score * 0.03) }
 
 const STAT_COST_MUL = { normal: 1, mid: 1.4, high: 1.9, legend: 2.6 }
-function statCost(n, grade) { return Math.round((900 + 700 * n) * (STAT_COST_MUL[grade || 'normal'] || 1)) }
+
+function statCost(n, grade) { return Math.round((9000 + 7000 * n) * (STAT_COST_MUL[grade || 'normal'] || 1)) }
+
+function stCostIdx(k, v) { return k === 'all' ? ST_MAX + v : v }
+function stMax(k) { return k === 'all' ? ALL_MAX : ST_MAX }
 
 function grade() { return GRADES[prog.pilot.grade] || GRADES.normal }
 
@@ -4969,7 +4979,7 @@ function pilotSt() { return stOf(pilotNow().id) }
 function stSpent(id) {
   const st = stOf(id)
   let back = 0
-  ST_KEYS.forEach((k) => { for (let i = 0; i < (st[k] || 0); i++) back += statCost(i, (PILOT_BY[id] || {}).grade) })
+  ST_KEYS.forEach((k) => { for (let i = 0; i < (st[k] || 0); i++) back += statCost(stCostIdx(k, i), (PILOT_BY[id] || {}).grade) })
   return back
 }
 function pilotSpent() { const st = pilotSt(); return ST_KEYS.reduce((a, k) => a + (st[k] || 0), 0) }
@@ -4977,8 +4987,12 @@ function pilotSpent() { const st = pilotSt(); return ST_KEYS.reduce((a, k) => a 
 function pilotXp() { return Math.max(0, prog.pilot.xp || 0) }
 
 function canStat(k, id) {
-  const v = stOf(id || pilotNow().id)[k] || 0
-  return v < ST_MAX && pilotXp() >= statCost(v, (PILOT_BY[id] || {}).grade)
+  const pid = id || pilotNow().id
+  const st = stOf(pid)
+  const v = st[k] || 0
+
+  if (k === 'all' && !ST_BASE_KEYS.every((b) => (st[b] || 0) >= ST_MAX)) return false
+  return v < stMax(k) && pilotXp() >= statCost(stCostIdx(k, v), (PILOT_BY[pid] || {}).grade)
 }
 function pilotRank() {
   const lv = prog.pilot.lv
@@ -4992,11 +5006,13 @@ function boughtLegend() { return prog.owned.includes(LEGEND_PILOT.id) || hasGrad
 
 function isLegend() { return PLANES.some((p) => p.tier === 'legend' && unlocked(p)) }
 
-function pilotPow()  { return gradeMul(prog.pilot.grade) * (1 + pilotSt().pow * 0.025) * perk('pow') }
-function pilotRate() { return (1 - pilotSt().rate * 0.015) * perk('rate') }
-function pilotRng()  { return (1 + pilotSt().rng * 0.02) * perk('rng') }
+function stv(k) { const s = pilotSt(); return (s[k] || 0) + (s.all || 0) }
+function pilotPow()  { return gradeMul(prog.pilot.grade) * (1 + stv('pow') * 0.025) * perk('pow') }
+
+function pilotRate() { return Math.max(0.25, 1 - stv('rate') * 0.015) * perk('rate') }
+function pilotRng()  { return (1 + stv('rng') * 0.02) * perk('rng') }
 function pilotHp()   {
-  return Math.round(PLAYER_HP * (gradeMul(prog.pilot.grade) - 1)) + pilotSt().hp * 6 + perk('hp')
+  return Math.round(PLAYER_HP * (gradeMul(prog.pilot.grade) - 1)) + stv('hp') * 6 + perk('hp')
 }
 
 function addXpRaw(n) {
@@ -5180,7 +5196,7 @@ function slotMul(i) {
   return m.legend ? REAR_MUL : m.mul
 }
 let activeSlot = 1
-const NO_MODS = { pierce: 0, split: 0, extra: 0, seek: 0, rate: 0, big: 0, bounce: 0, speed: 0 }
+const NO_MODS = { pierce: 0, split: 0, extra: 0, seek: 0, rate: 0, big: 0, speed: 0 }
 const elSlots = document.getElementById('slots')
 const elPlanes = document.getElementById('planes')
 
@@ -5810,7 +5826,7 @@ function showStatGuide() {
     const S = STATS[k]
     return '<div class="rlv stat">' +
       '<span class="nu" aria-hidden="true">+' + S.per + S.unit + '</span>' +
-      '<span><span class="t1">' + S.name + ' ' + (st[k] || 0) + '/' + ST_MAX + '</span><br>' +
+      '<span><span class="t1">' + S.name + ' ' + (st[k] || 0) + '/' + stMax(k) + '</span><br>' +
       '<span class="t2">' + S.desc + '</span></span></div>'
   }).join('') +
     '<div class="rlv stat"><span class="nu" aria-hidden="true">※</span>' +
@@ -6968,18 +6984,23 @@ function openPilot(pl, list) {
   const statHtml = ST_KEYS.map((k) => {
     const S = STATS[k], v = st[k] || 0
     const eff = !v ? '-'
+      : k === 'all' ? '네 스탯 +' + v
       : k === 'hp' ? '+' + (v * S.per)
       : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
-    const pips = Array.from({ length: ST_MAX },
-      (_, i) => '<i class="' + (i < v ? 'on' : '') + '"></i>').join('')
-    const cost = v < ST_MAX ? statCost(v, pl.grade) : 0
+    const mx = stMax(k)
+    const locked = k === 'all' && !ST_BASE_KEYS.every((b) => (st[b] || 0) >= ST_MAX)
+    const pips = k === 'all'
+      ? '<span class="alv">' + (locked ? '네 스탯 최대에 열림' : 'Lv.' + v) + '</span>'
+      : Array.from({ length: ST_MAX },
+          (_, i) => '<i class="' + (i < v ? 'on' : '') + '"></i>').join('')
+    const cost = v < mx ? statCost(stCostIdx(k, v), pl.grade) : 0
     const can = have && canStat(k, pl.id)
     return '<div class="pst" title="' + S.desc + '">' +
       '<span class="n">' + S.name + '</span>' +
       '<span class="v">' + eff + '</span>' +
       '<span class="pp">' + pips + '</span>' +
       '<button data-st="' + k + '" ' + (can ? '' : 'disabled') + '>' +
-      (v >= ST_MAX ? '최대' : cost.toLocaleString('ko-KR')) + '</button></div>'
+      (v >= mx ? '최대' : locked ? '잠김' : cost.toLocaleString('ko-KR')) + '</button></div>'
   }).join('')
 
   body.className = 'dsheet pilotsheet'
@@ -7052,7 +7073,7 @@ function openPilot(pl, list) {
       if (!hasGrade(pl.grade) || !canStat(k, pl.id)) return
       const cur = stOf(pl.id)
       const pwBefore = squadPower()
-      prog.pilot.xp -= statCost(cur[k], pl.grade)
+      prog.pilot.xp -= statCost(stCostIdx(k, cur[k]), pl.grade)
       cur[k]++
       save(); sfx('ready'); haptic('ult')
       missBump('stat')
@@ -7399,6 +7420,7 @@ function renderPilot() {
     const v = nowSt[k] || 0
     const S = STATS[k]
     const eff = !v ? '-'
+      : k === 'all' ? '네 스탯 +' + v
       : k === 'hp' ? '+' + (v * S.per)
       : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
     return '<div class="c' + (v ? ' on' : '') + '">' +
@@ -7475,7 +7497,7 @@ function renderPilot() {
     el.onclick = () => openPilot(PILOT_BY[el.dataset.who], list)
   })
 
-  document.getElementById('pilotNowCard').onclick = () => openPilot(nowP, list)
+  document.getElementById('pilotNowCard').onclick = () => openPilot(pilotNow(), list)
 
   document.getElementById('pilotGacha').onclick = () => openGacha()
 
@@ -8062,7 +8084,6 @@ function shoot(u, i, dt) {
     b.r *= (1 + M.big * 0.18) * pilotRng()
 
     if (M.speed && b.vx != null) { b.vx *= 1 + M.speed * 0.25; b.vy *= 1 + M.speed * 0.25 }
-    if (M.bounce) b.bounce = M.bounce
     if (M.split) b.split = M.split
 
     if (M.seek && (b.kind === 'normal' || b.kind === 'pierce')) {
@@ -8976,9 +8997,9 @@ const BOSS_RUSH = [
     ch: 10, mul: 6,  xp: 32000, form: 'void',    art: 'ship' },
 ]
 
-const RUSH_HP_MUL = 3
+const RUSH_HP_MUL = 6
 
-const BOSS_HP_UP = 1.25 * 1.15 * 1.2 * 1.5 * 1.3
+const BOSS_HP_UP = 1.25 * 1.15 * 1.2 * 1.5 * 1.3 * 2
 
 const BOSS_ONLY_UP = 1.2
 
@@ -9414,7 +9435,7 @@ function mkEnemy(kind, x, y, drift) {
 
     small:  { hp: 4,  r: 13, sp: 78, score: 90,  fire: 2.4, art: 30 },
 
-    mid:    { hp: 48, r: 20, sp: 52, score: 220, fire: 1.5, art: 46 },
+    mid:    { hp: 72, r: 20, sp: 52, score: 220, fire: 1.5, art: 46 },
 
     dive:   { hp: 5,  r: 15, sp: 40, score: 180, fire: 99,  art: 34, aim: .9, dashSp: 430 },
 
@@ -9458,6 +9479,7 @@ const LIVES = 1
 
 const PLAYER_HP = 77
 
+const DMG_TAKEN = 0.7
 const DMG = {
   bullet: 20,
   flak: 26,
@@ -10823,7 +10845,7 @@ function hitPlayer(dmg) {
 
   pl.inv = HIT_INV + perk('inv')
 
-  pl.hp -= (dmg || DMG.bullet) * modeDmg()
+  pl.hp -= (dmg || DMG.bullet) * modeDmg() * DMG_TAKEN
   boom(pl.x, pl.y, dmg >= 20 ? 22 : 10, '#7fd6ff')
 
   const k = Math.min(1, (dmg || 8) / 26)
@@ -10979,10 +11001,6 @@ function update(dt) {
     }
     if (b.kind !== 'orb' || b.go) { b.x += b.vx * dt; b.y += b.vy * dt }
 
-    if (b.bounce > 0) {
-      if (b.x < 6 && b.vx < 0) { b.vx = -b.vx; b.bounce-- }
-      else if (b.x > W - 6 && b.vx > 0) { b.vx = -b.vx; b.bounce-- }
-    }
     if (b.age > b.life) b.dead = true
   }
   keepIf(s.bullets, (b) => !b.dead && b.y > -60 && b.y < H + 80 && b.x > -60 && b.x < W + 60)
@@ -12372,12 +12390,6 @@ function drawShipOn(g, x, y, opt) {
     g.beginPath(); g.moveTo(0, -2); g.lineTo(0, -nose * .55 - M.seek * 3); g.stroke()
     g.fillStyle = '#c9a8ff'
     g.beginPath(); g.arc(0, -nose * .55 - M.seek * 3, 1.8, 0, Math.PI * 2); g.fill()
-  }
-
-  if (M.bounce) {
-    g.strokeStyle = 'rgba(143,216,255,' + (.28 + M.bounce * .14) + ')'
-    g.lineWidth = 1.6
-    g.beginPath(); g.arc(0, 0, span + 6, 0, Math.PI * 2); g.stroke()
   }
 
   g.restore()
