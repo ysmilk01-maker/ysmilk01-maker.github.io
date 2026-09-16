@@ -694,6 +694,18 @@
     text-align: center; padding: 24px;
   }
   .panel[hidden] { display: none !important; }
+  /*
+   * 보스 도전 시트는 아래 탭을 덮지 않는다 (2026-09-16 대표 지정
+   * 「격납고 메인화면 아래쪽 탭은 그냥 살려」).
+   *
+   * .panel 이 탭까지 덮는 것은 원래 의도였다 - 대부분의 시트는 짧아서
+   * 덮여도 「닫기」가 보인다. 그런데 도전 목록은 화면을 꽉 채워서,
+   * 덮개가 탭까지 먹으면 나갈 길이 시트 안에만 남는다.
+   *
+   * 이 시트일 때만 탭을 덮개 위로 올리고 그만큼 아래를 비운다.
+   */
+  body.keeptabs .panel { padding-bottom: 88px; }
+  body.keeptabs .tabs { z-index: 30; }
 
   /*
    * 결과 창 단추 (2026-09-13).
@@ -2764,7 +2776,18 @@ function legendMain() {
   return !!(u && u.plane && u.plane.tier === 'legend')
 }
 
+const RUSH_ULT_GAP = 22
+let RUSH_ULT_AT = null
+function rushUltTimes() {
+  if (!RUSH_ULT_AT) {
+    RUSH_ULT_AT = []
+
+    for (let i = 1; i <= 400; i++) RUSH_ULT_AT.push(RUSH_ULT_GAP * i)
+  }
+  return RUSH_ULT_AT
+}
 function ultTimes() {
+  if (state && state.rush >= 0) return rushUltTimes()
   const n = (perk('ultN') || 0) >= 1
   const l = legendMain()
 
@@ -3135,7 +3158,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 19:14'
+const BUILD_AT = '09-16 19:24'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9208,9 +9231,20 @@ function openRushSheet() {
     }).join('') + '</div>' +
     '<div class="bar"><button class="ghost" id="dClose">닫기</button>' +
     '<button id="rsHome">격납고로</button></div>'
-  const close = () => { panel.hidden = true; panel.onclick = null; modalOff() }
+
+  document.body.classList.add('keeptabs')
+  const onTab = () => close()
+  const close = () => {
+    document.body.classList.remove('keeptabs')
+    elTabs.removeEventListener('click', onTab, true)
+    panel.hidden = true; panel.onclick = null; modalOff()
+  }
+
+  elTabs.addEventListener('click', onTab, true)
   panel.hidden = false
   modalOn(panel, close)
+
+  elTabs.inert = false
   panel.onclick = (e) => { if (e.target === panel) close() }
   document.getElementById('dClose').onclick = close
 
@@ -12174,6 +12208,34 @@ const GROUND_SKIN = {
   core: 'core', final: 'core',
 }
 
+const GROUND_TINT = {
+  sand:   ['168,116,58', 0.46],
+  canyon: ['156,86,50', 0.46],
+}
+
+const SCENERY_TINT = {
+  sand:   ['150,102,52', 0.34, 0.86],
+  canyon: ['140,76,44', 0.34, 0.86],
+}
+const TINT_CACHE = new Map()
+
+function tintOf(im, key, rgb, a) {
+  const ck = key + '|' + rgb + '|' + a
+  let c = TINT_CACHE.get(ck)
+  if (c !== undefined) return c
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height
+  if (!w || !h) return null
+  c = document.createElement('canvas'); c.width = w; c.height = h
+  const x = c.getContext('2d')
+  x.drawImage(im, 0, 0)
+
+  x.globalCompositeOperation = 'source-atop'
+  x.fillStyle = 'rgba(' + rgb + ',' + a + ')'
+  x.fillRect(0, 0, w, h)
+  TINT_CACHE.set(ck, c)
+  return c
+}
+
 function groundArt(kind) {
 
   const th0 = (state && state.stage && state.stage.theme) || 'sea'
@@ -12188,7 +12250,11 @@ function groundArt(kind) {
     if (sk && sk.complete && sk.naturalWidth) return sk
   }
   const im = GROUND_IMG[kind]
-  return im && im.complete && im.naturalWidth ? im : null
+  if (!(im && im.complete && im.naturalWidth)) return null
+
+  const tn = GROUND_TINT[th0]
+  if (tn) return tintOf(im, kind + '_' + th0, tn[0], tn[1]) || im
+  return im
 }
 
 const ENEMY_B64 = {
@@ -13799,11 +13865,14 @@ function paintBattleScenery(s) {
     const sz = Math.max(sl.w, sl.h) * 1.65
 
     const sunk = OBJ_ALPHA[sl.obj] != null
-    const alpha = sunk ? Math.min(.62, OBJ_ALPHA[sl.obj] * 1.25) : .96
-    if (!sunk) drawShadow(im, cx, cy, sz, sz, .36, sl.seed * .43, .3)
+
+    const st = SCENERY_TINT[(s.stage && s.stage.theme) || 'sea']
+    const art = st ? (tintOf(im, sl.obj + '_sc', st[0], st[1]) || im) : im
+    const alpha = sunk ? Math.min(.62, OBJ_ALPHA[sl.obj] * 1.25) : (st ? st[2] : .96)
+    if (!sunk) drawShadow(art, cx, cy, sz, sz, .36, sl.seed * .43, .3)
     g.save(); g.translate(cx, cy); g.rotate(sl.seed * .43)
     g.globalAlpha = alpha
-    g.drawImage(im, -sz / 2, -sz / 2, sz, sz)
+    g.drawImage(art, -sz / 2, -sz / 2, sz, sz)
     g.restore()
   }
 }
@@ -14615,7 +14684,7 @@ function draw() {
     ULT_BTN.x = W - 52
     ULT_BTN.y = H - 56
 
-    const cap = Math.round(ultCap() / ULT_MAX)
+    const cap = Math.min(4, Math.round(ultCap() / ULT_MAX))
     const stock = Math.min(cap, Math.floor(s.ult / ULT_MAX))
     const ready = stock > 0
     const r = stock >= cap ? 1 : (s.ult % ULT_MAX) / ULT_MAX
