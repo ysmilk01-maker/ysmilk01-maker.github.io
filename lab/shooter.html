@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 17:24'
+const BUILD_AT = '09-16 17:57'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9036,6 +9036,8 @@ const BOSS_ONLY_UP = 1.2
 
 const BASE_DMG_UP = 3
 const ENEMY_HP_DOWN = 0.9
+
+const HP_ALL_UP = 1.3
 const FIRE_SLOW = 1 / 0.85
 const ENEMY_HP_UP = 1.15
 
@@ -9064,7 +9066,7 @@ const RUSH_STEP = 1.07
 function rushBase() {
   const ch = CHAPTERS[0]
   const sb = Math.round(ch.bossHp * (0.78 + SUBS * 0.0967))
-  return sb * 0.55 * BOSS_HP_UP * BOSS_ONLY_UP * ENEMY_HP_DOWN
+  return sb * 0.55 * BOSS_HP_UP * BOSS_ONLY_UP * ENEMY_HP_DOWN * HP_ALL_UP
 }
 
 function rushHp(i, d) {
@@ -9514,7 +9516,7 @@ function mkEnemy(kind, x, y, drift) {
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
 
-           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
+           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
 
            sp: Math.round(b.sp * SG.spMul * SPD_K),
            dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
@@ -9585,7 +9587,7 @@ function mkGround(kind, x, y) {
 
     art: sea ? Math.round(b.r * 7) : 0,
 
-    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * modeHp()),
+    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * modeHp()),
   }
 }
 
@@ -9834,7 +9836,7 @@ function spawnBoss(mid) {
   const base = rush
 
     ? rushHp(state.rush, state.rushD)
-    : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_UP * ENEMY_HP_DOWN * modeHp())
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_UP * ENEMY_HP_DOWN * HP_ALL_UP * modeHp())
 
   const bsub = (state.stage && state.stage.sub) || 1
 
