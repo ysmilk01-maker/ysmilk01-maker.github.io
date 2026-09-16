@@ -2650,13 +2650,14 @@ const ULT_TUNE = {
   rapidDmg: 7.56,
   spreadT: 5.0,
   laserT: 5.0,
-  beamDmgUp: 3,
-  beamBoss: { laser: 858, spread: 870 },
+  beamDmgUp: 4.5,
+  beamBoss: { laser: 1287, spread: 1305 },
   dashBoss: 7040,
-  shockBoss: 3320,
-  shockDmgUp: 4,
+  shockBoss: 4980,
+  shockDmgUp: 6,
   bombBoss: 1.65,
-  chainBoss: 305,
+  chainBoss: 915,
+  stormDmg: 345,
   stormN: 3,
   stormGap: 0.30,
 }
@@ -2732,7 +2733,7 @@ const CLONES = [
 
 const CLONE_TIME = 10.0
 
-const WINGMEN = { n: 5, hold: 3.0, inY: 0.60, cd: 0.20, dmg: 18 }
+const WINGMEN = { n: 5, hold: 3.0, inY: 0.60, cd: 0.20, dmg: 27 }
 const ULT_MAX = 100
 
 const ULT_AT = [15, 40]
@@ -3113,7 +3114,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 15:26'
+const BUILD_AT = '09-16 15:43'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -10355,7 +10356,7 @@ function stormStrike(s, pl) {
   const save = CHAIN.range
   CHAIN.range = 9999
   chainFrom({ x: pl.x, y: pl.y - 20, dead: true },
-            { dmg: 115 * ultPow() * ULT_DMG, jumps: 16, falloff: 0.95 })
+            { dmg: ULT_TUNE.stormDmg * ultPow() * ULT_DMG, jumps: 16, falloff: 0.95 })
   CHAIN.range = save
 
   if (s.boss && !s.boss.entering) { bossArea(s.boss, ULT_TUNE.chainBoss * ultPow() * planeUltMul()); s.boss.flash = .2 }
