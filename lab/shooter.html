@@ -3061,7 +3061,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 12:31'
+const BUILD_AT = '09-16 12:36'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -15126,7 +15126,7 @@ function end(win) {
     m.lv > lvBefore && m.lv <= prog.pilot.lv)
   const mustFit = freshPlanes.length + freshSlots.length > 0
 
-  document.getElementById('nextGo').hidden = !hasNext || mustFit
+  document.getElementById('nextGo').hidden = !hasNext
   document.getElementById('retry').hidden = !(!win && !zone) || mustFit
   const goHangar = document.getElementById('again')
   if (mustFit) {
