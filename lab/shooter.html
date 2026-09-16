@@ -2656,8 +2656,8 @@ const ULT_TUNE = {
   shockBoss: 4980,
   shockDmgUp: 6,
   bombBoss: 1.65,
-  chainBoss: 915,
-  stormDmg: 345,
+  chainBoss: 732,
+  stormDmg: 276,
   stormN: 3,
   stormGap: 0.30,
 }
@@ -3114,7 +3114,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 15:50'
+const BUILD_AT = '09-16 15:54'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8023,7 +8023,6 @@ function shoot(u, i, dt) {
 
   let rate = baseRate(p.weapon) * p.rate * upgRate(p.id) * pilotRate()
     / (0.85 + lv.mult * 0.15) * (1 - M.rate * 0.18)
-  if (u.wult > 0) rate *= 0.45
 
   if (state.ultKind === 'rapid' && state.ultT > 0) rate /= 2.1
 
@@ -8038,7 +8037,6 @@ function shoot(u, i, dt) {
                        k: ['mz1', 'mz2', 'mz3'][tierStep(p.tier)] })
 
   const dmg = p.power * upgPower(p.id) * u.mul * lv.mult * pilotPow() * PLAYER_CD * SQUAD_DMG * collectionMul() * BASE_DMG_UP
-    * (u.wult > 0 ? WING_ULT_DMG : 1)
     * (state.ultKind === 'rapid' && state.ultT > 0 ? ULT_TUNE.rapidDmg : 1)
   const tier = tierStep(p.tier)
   const B = state.bullets
@@ -8054,7 +8052,7 @@ function shoot(u, i, dt) {
                 amp: 0, ph: 0, x0: 0, owner: 0, a: 0, rad: 0, gather: 0, go: false, back: false, home: null,
                 jumps: 0, t0: 0, ult: false, owner: i }
     Object.assign(b, o)
-    if (u.at || u.wult > 0 || (state.ultKind === 'rapid' && state.ultT > 0)) b.ult = true
+    if (u.at || (state.ultKind === 'rapid' && state.ultT > 0)) b.ult = true
 
     if (p.el) { b.el = p.el; b.dmg *= elAdd }
     b.pierce += M.pierce
@@ -9795,7 +9793,7 @@ function spawnBoss(mid) {
     mid: !!mid,
     pat,
     x: W / 2, y: -120, r: (rush || fin) ? 100 : mid ? 34 : 46, t: 0, cd: 1.2, entering: true,
-    phase: 1, flash: 0, summonCd: mid ? 9 : 7, dashPh: 0, dashX: 0,
+    phase: 1, flash: 0, summonCd: mid ? 9 : 7, dashPh: 0, dashX: 0, swingT: 0, xOff: 0,
     lancePh: 0, lanceX: 0, lanceCd: 4,
     form,
 
@@ -10483,42 +10481,6 @@ function fireUlt() {
       s.volley = { left: STRIKE.n, cd: STRIKE.scan, i: 0 }
       break
   }
-  wingUlts(s)
-}
-
-const WING_ULT = 0.2
-const WING_ULT_DMG = 1.5
-function wingUlts(s) {
-  for (let i = 0; i < s.squad.length; i++) {
-    if (i === MAIN_SLOT) continue
-    const u = s.squad[i]
-    if (!u || !u.plane) continue
-    const k = u.plane.weapon, pos = slotPos(i)
-    const P = ultPow() * WING_ULT
-    switch (k) {
-      case 'homing':
-        for (let j = 0; j < 4; j++) {
-          s.bullets.push({ x: pos.x, y: pos.y, vx: (j - 1.5) * 60, vy: -260, r: 5, dmg: 76 * P,
-                           kind: 'homing', turn: PLAYER_HOMING_TURN * 2, life: 3, age: 0,
-                           owner: i, pierce: 0, bounce: 0, ult: true })
-        }
-        break
-      case 'chain':
-        chainFrom({ x: pos.x, y: pos.y - 20, dead: true }, { dmg: 115 * P * ULT_DMG, jumps: 6, falloff: 0.95 })
-        break
-      case 'wave':
-        s.shards.push({ x: pos.x, y: pos.y, r: 10, kind: 'wshock', dmg: 78 * P * ULT_DMG })
-        break
-      case 'mine':
-        for (let j = 0; j < 4; j++) {
-          s.shards.push({ x: pos.x + (Math.random() - .5) * 160, y: 80 + Math.random() * H * 0.5,
-                          r: 0, kind: 'bomb', delay: j * 0.3 + Math.random() * 0.2, mul: WING_ULT })
-        }
-        break
-      default:
-        u.wult = 3.0
-    }
-  }
 }
 
 function updateUlt(dt) {
@@ -10750,22 +10712,7 @@ function updateUlt(dt) {
         bossArea(s.boss, sh.dmg)
       }
       if (sh.r > H * 1.1) sh.done = true
-    } else if (sh.kind === 'wshock') {
-
-      sh.r += 520 * dt
-      for (const b of s.ebullets) if ((b.x - sh.x) ** 2 + (b.y - sh.y) ** 2 < sh.r * sh.r) b.dead = true
-      sh.hit = sh.hit || []
-      for (const e of s.enemies) {
-        if (e.dead || sh.hit.includes(e)) continue
-        if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 < sh.r * sh.r) { e.hp -= sh.dmg; e.flash = .1; sh.hit.push(e) }
-      }
-      if (s.boss && !s.boss.entering && !sh.bossHit &&
-          (s.boss.x - sh.x) ** 2 + (s.boss.y - sh.y) ** 2 < sh.r * sh.r) {
-        sh.bossHit = true
-        bossArea(s.boss, ULT_TUNE.shockBoss * ultPow() * planeUltMul() * WING_ULT)
-      }
-      if (sh.r > 150) sh.done = true
-    } else if (sh.kind === 'shock') {
+        } else if (sh.kind === 'shock') {
       sh.r += 620 * dt
       for (const b of s.ebullets) if ((b.x - sh.x) ** 2 + (b.y - sh.y) ** 2 < sh.r * sh.r) b.dead = true
       for (const e of s.enemies) {
@@ -10889,7 +10836,7 @@ function update(dt) {
     if (s.trail.length > 40) s.trail.shift()
   }
 
-  s.squad.forEach((u, i) => { if (u && u.wult > 0) u.wult -= dt; shoot(u, i, dt) })
+  s.squad.forEach((u, i) => shoot(u, i, dt))
 
   bossDot(s.boss, dt)
 
@@ -11212,6 +11159,9 @@ function update(dt) {
       if (special && bs.phase === 2 && bs.dashPh <= 0 && bs.lancePh <= 0 && Math.random() < dt * 0.4) {
         bs.dashPh = 2.2; bs.dashX = pl.x
       }
+
+      const swing = Math.max(0, W / 2 - Math.max(70, bs.r + 24))
+      const swingX = () => W / 2 + Math.sin(bs.swingT * .7) * swing
       if (bs.dashPh > 0) {
         bs.dashPh -= dt
         if (bs.dashPh > 1.5) {
@@ -11223,10 +11173,13 @@ function update(dt) {
           bs.y += (130 - bs.y) * Math.min(1, dt * 3)
         }
         if (near(bs, pl, bs.r + PLAYER_R)) hitPlayer(DMG.bossDash)
-      } else {
 
-        const swing = Math.max(0, W / 2 - Math.max(70, bs.r + 24))
-        bs.x = W / 2 + Math.sin(bs.t * .7) * swing
+        if (bs.dashPh <= 0) bs.xOff = bs.x - swingX()
+      } else {
+        bs.swingT += dt
+        bs.xOff *= Math.max(0, 1 - dt * 2.2)
+        bs.x = swingX() + bs.xOff
+        if (Math.abs(bs.y - 130) > 0.5) bs.y += (130 - bs.y) * Math.min(1, dt * 3)
       }
 
       if (special && bs.phase === 2 && bs.dashPh <= 0 && !bs.mid) {
