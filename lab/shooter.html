@@ -3114,7 +3114,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 15:44'
+const BUILD_AT = '09-16 15:50'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -10359,7 +10359,8 @@ function stormStrike(s, pl) {
             { dmg: ULT_TUNE.stormDmg * ultPow() * ULT_DMG, jumps: 16, falloff: 0.95 })
   CHAIN.range = save
 
-  if (s.boss && !s.boss.entering) { bossArea(s.boss, ULT_TUNE.chainBoss * ultPow() * planeUltMul()); s.boss.flash = .2 }
+  const bs = s.boss
+  if (bs && !bs.entering) { bossArea(bs, ULT_TUNE.chainBoss * ultPow() * planeUltMul()); bs.flash = .2 }
   s.shake = Math.max(s.shake, 9)
 }
 function fireUlt() {
