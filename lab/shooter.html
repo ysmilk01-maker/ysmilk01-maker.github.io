@@ -3064,7 +3064,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 11:27'
+const BUILD_AT = '09-16 11:36'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -15120,12 +15120,12 @@ function end(win) {
     overPlane.hidden = !(clearPop && src)
     if (src) overPlane.src = src
   }
-  document.getElementById('nextGo').hidden = clearPop || !hasNext || mustFit
+  document.getElementById('nextGo').hidden = !hasNext || mustFit
   document.getElementById('retry').hidden = !(!win && !zone) || mustFit
   const goHangar = document.getElementById('again')
   if (clearPop) {
-    goHangar.textContent = '확인'
-    goHangar.classList.remove('ghost')
+    goHangar.textContent = '확인 · 격납고로'
+    goHangar.classList.toggle('ghost', hasNext && !mustFit)
   } else if (mustFit) {
     goHangar.textContent = freshPlanes.length && freshSlots.length
       ? '새 기체와 자리 적용하기'
