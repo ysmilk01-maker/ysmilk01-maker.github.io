@@ -1964,7 +1964,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad.v3 .hg-pilot-label em{font-style:normal;font-size:10px;color:#9ab6c5;display:block}
 #scSquad.v3 .hg-actions{gap:5px;align-items:center;flex:none}#scSquad.v3 .hg-icon{width:36px;height:36px;border-radius:9px;flex:none}
 /* 파일럿 카드가 우편함 단추 밑으로 파고들었다 (2026-09-15 폰 스샷). 단추 셋 폭을 뺀 만큼만 차지하고 넘치는 글은 자른다 */
-#scSquad.v3 .hg-pilot{flex:0 1 auto;width:calc(100% - 3*36px - 2*5px - 8px - 16px);max-width:calc(100% - 3*36px - 2*5px - 8px - 16px);margin-right:16px;overflow:hidden;left:auto;bottom:auto;transform:none}   /* 더 줄임 +16px (2026-09-15 대표 「아직 겹침」) */   /* 옛 규칙의 left:4% 가 position:relative(배지용) 에 살아나 14px 밀렸다 */
+#scSquad.v3 .hg-who{width:calc(100% - 3*36px - 2*5px - 8px - 10px);max-width:calc(100% - 3*36px - 2*5px - 8px - 10px);margin-right:10px}
+#scSquad.v3 .hg-pilot{flex:1 1 0;min-width:0;width:auto;max-width:none;overflow:hidden;left:auto;bottom:auto;transform:none}   /* 더 줄임 +16px (2026-09-15 대표 「아직 겹침」) */   /* 옛 규칙의 left:4% 가 position:relative(배지용) 에 살아나 14px 밀렸다 */
 #scSquad.v3 .hg-pilot-label small,#scSquad.v3 .hg-pilot-label em{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hg-body3{display:grid;grid-template-columns:60px minmax(0,1fr) 60px;gap:6px;padding:8px 8px 0;align-items:stretch}
 .hg-col{display:flex;flex-direction:column;gap:7px}
@@ -2181,6 +2182,18 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #pwPop .pwbox span{display:block;font-size:14px;font-weight:800;color:#7dffd4;margin-top:4px}
 @keyframes pwBump{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){#pwPop .pwbox,#pwPop .pwbox b.done{animation:none}}
+/* ── 파일럿명 창 · 앞자리/뒷자리 (2026-09-16) ── */
+#namePop .nmbox{text-align:left}
+#namePop .nm{width:100%;margin-top:12px;min-height:46px;font-size:17px;font-weight:800;text-align:center;letter-spacing:.02em}
+#namePop .arow{margin-top:14px}#namePop .arow button{min-width:0;flex:1}
+.hg-who{display:flex;gap:6px;flex:0 1 auto;min-width:0}
+#scSquad.v3 .hg-cmd{height:60px;flex:1 1 0;min-width:0;display:flex;align-items:center;gap:6px;background:#0f1b22cc;border:1px solid #4d626b77;border-radius:12px;padding:3px 8px 3px 5px;text-align:left;box-shadow:none;margin:0;overflow:hidden}
+#scSquad.v3 .hg-cmd .cmk{width:34px;height:52px;flex:none;border-radius:9px;background:linear-gradient(#1b3a45,#0a1218);border:1px solid #3f545d;display:flex;align-items:center;justify-content:center}
+#scSquad.v3 .hg-cmd .cmk::after{content:"✈";font-size:17px;line-height:1;color:#cfe0e6;transform:rotate(-45deg)}
+#scSquad.v3 .hg-cmd .hg-pilot-label{position:static;padding:0;text-shadow:none;min-width:0;flex:1}
+#scSquad.v3 .hg-cmd small{display:block;font-size:9.5px;color:#bdd0d7;margin-bottom:1px}
+#scSquad.v3 .hg-cmd strong{display:block;font-size:15px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#scSquad.v3 .hg-cmd em{font-style:normal;font-size:9.5px;color:#9ab6c5;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-height:700px){.hg-form{min-height:300px}#scSquad.v3 .hg-main{top:26px;height:50%}#scSquad.v3 .hg-wing{height:74px}#scSquad.v3 .hg-wing img{height:38px}}
 </style>
 
@@ -2201,7 +2214,10 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <h1 class="hg-sr">편대</h1>
   <div class="hg-res" id="resBar"></div>
   <header class="hg-top">
-    <button class="hg-pilot" id="hgPilot" aria-label="파일럿 선택"><img id="hgPilotImage" alt=""><span class="hg-pilot-label"><small id="hgPilotMeta"></small><strong id="hgPilotName"></strong><em id="hgPilotChange">변경 ›</em></span></button>
+    <div class="hg-who">
+    <button class="hg-cmd" id="hgCmd" aria-label="파일럿명 바꾸기"><span class="cmk" aria-hidden="true"></span><span class="hg-pilot-label"><small id="hgCmdMeta"></small><strong id="hgCmdName"></strong><em id="hgCmdSub">›</em></span></button>
+    <button class="hg-pilot" id="hgPilot" aria-label="보조 파일럿 선택"><img id="hgPilotImage" alt=""><span class="hg-pilot-label"><small id="hgPilotMeta"></small><strong id="hgPilotName"></strong><em id="hgPilotChange">변경 ›</em></span></button>
+    </div>
     <div class="hg-actions">
     <button id="hgMail" class="hg-icon" aria-label="우편함" title="우편함"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></svg><span class="badge" id="hgMailBadge" hidden></span></button>
     <button id="hgRank" class="hg-icon" aria-label="랭킹" title="랭킹"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Z M8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 13v6m-4 2h8"/></svg></button>
@@ -2399,6 +2415,18 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 -->
 <div class="panel" id="gotPop" hidden>
   <div class="gbox gotbox"></div>
+</div>
+
+<div class="panel" id="namePop" hidden>
+  <div class="gbox abox nmbox">
+    <h3 id="nameTitle">파일럿명을 정해 주세요</h3>
+    <p id="nameSub"></p>
+    <input class="nm" id="nameInput" maxlength="12" autocomplete="off">
+    <div class="arow">
+      <button id="nameRnd" class="ghost">🎲 무작위</button>
+      <button id="nameOk">확인</button>
+    </div>
+  </div>
 </div>
 
 <div class="panel" id="pwPop" hidden>
@@ -3080,7 +3108,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 13:01'
+const BUILD_AT = '09-16 13:12'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3101,7 +3129,7 @@ function load() {
     gradeUp: {},
     shardAny: 0,
     pull: { plane: 0, pilot: 0 },
-    stats: { runs: 0, kills: 0, best: 0, clears: 0, zoneBest: 0 },
+    stats: { runs: 0, kills: 0, best: 0, clears: 0, zoneBest: 0, pwBest: 0 },
     scores: [],
     chapter: 0,
     sub: 1,
@@ -3587,7 +3615,7 @@ function showGotPop(force) {
     const empty = isP ? [0, 2, 3].find((i) => slotOpen(i) && !prog.squad[i]) : undefined
     box.style.setProperty('--gt', tone.rgb)
     box.innerHTML =
-      '<div class="gk">' + (isP ? '새 기체 획득' : '새 파일럿 합류') + '</div>' +
+      '<div class="gk">' + (isP ? '새 기체 획득' : '새 보조 파일럿 합류') + '</div>' +
       (total > 1 ? '<div class="gn">' + (total - q.length + 1) + ' / ' + total + '</div>' : '') +
       '<div class="gpic">' + (isP
         ? '<img src="' + hangarPlaneImage(p) + '" alt="">'
@@ -5043,6 +5071,45 @@ delete prog.__migPilot
 
 function pilotName() { return prog.pilot.name || '무명' }
 
+const NAME_A = ['은', '창', '백', '흑', '적', '청', '새', '한', '먼', '늦', '첫', '북', '남', '동', '서']
+const NAME_B = ['하늘', '바람', '번개', '서리', '노을', '구름', '파도', '유성', '천둥', '여명', '그림자', '날개', '불꽃', '해무', '별']
+function randomPilotName() {
+  const a = NAME_A[(Math.random() * NAME_A.length) | 0]
+  const b = NAME_B[(Math.random() * NAME_B.length) | 0]
+  return a + b
+}
+
+function openNamePop(done) {
+  const el = document.getElementById('namePop')
+  const inp = document.getElementById('nameInput')
+  if (!el || !inp) { if (done) done(); return }
+  const first = !prog.pilot.name
+  document.getElementById('nameTitle').textContent = first ? '파일럿명을 정해 주세요' : '파일럿명 바꾸기'
+  document.getElementById('nameSub').textContent = first
+    ? '앞자리에 앉는 사람이 당신입니다. 뒷자리 보조 파일럿은 뽑기로 태웁니다.'
+    : '언제든 바꿀 수 있습니다.'
+  inp.value = prog.pilot.name || ''
+  inp.placeholder = randomPilotName()
+  const close = () => { el.hidden = true; el.onclick = null; modalOff(); if (done) done() }
+  const apply = () => {
+    const v = (inp.value || '').trim().slice(0, 12)
+    prog.pilot.name = v || inp.placeholder
+    save(); sfx('pick')
+    close()
+    if (curScreen === 'squad') renderSquad()
+  }
+  el.hidden = false
+  modalOn(el, first ? apply : close)
+  document.getElementById('nameRnd').onclick = (e) => {
+    e.stopPropagation()
+    inp.value = randomPilotName()
+    sfx('pick')
+  }
+  document.getElementById('nameOk').onclick = apply
+  inp.onkeydown = (e) => { if (e.key === 'Enter') apply() }
+  setTimeout(() => { try { inp.focus() } catch {} }, 60)
+}
+
 if (!prog.squad) prog.squad = [null, 'rapid-common', null, null]
 while (prog.squad.length < 4) prog.squad.push(null)
 
@@ -5920,12 +5987,17 @@ function renderSquad() {
   $('hgPlaneChange').textContent = anyUpg() ? '기체 변경 · 강화 가능 ›' : '기체 변경 ›'
   $('hgPilotImage').src = hangarFile('pilots', pl.id) || (GC[pilotFace(pl)] || {}).src || ''
   $('hgPilotName').textContent = pl.name
-  $('hgPilotMeta').textContent = GRADES[pl.grade].name + ' 파일럿 · Lv.' + pt.lv
+  $('hgPilotMeta').textContent = '보조'
 
-  $('hgPilotChange').textContent = anyPilotUp() ? '성장 가능 ›' : '변경 ›'
+  const cn = $('hgCmdName'); if (cn) cn.textContent = pilotName()
+  const cm = $('hgCmdMeta'); if (cm) cm.textContent = '파일럿'
+  const ce = $('hgCmdSub'); if (ce) ce.textContent = pilotRank() + ' Lv.' + pt.lv
+  const cb = $('hgCmd'); if (cb) cb.onclick = (e) => { e.stopPropagation(); openNamePop() }
+
+  $('hgPilotChange').textContent = (anyPilotUp() ? '성장 가능' : GRADES[pl.grade].name) + ' ›'
   $('hgPilot').classList.toggle('grow', anyPilotUp())
   $('hgMain').classList.toggle('grow', anyUpg())
-  $('hgPilot').setAttribute('aria-label', pl.name + ', 파일럿 선택 및 성장')
+  $('hgPilot').setAttribute('aria-label', pl.name + ', 보조 파일럿 선택 및 성장')
 
   $('hgPilot').onclick = () => {
     hangarChoose('pilot', null, 'hgPilot')
@@ -6119,7 +6191,7 @@ function renderSet() {
     row('music', '배경음악', '켜면 곡 파일 1.1MB 를 한 번 받습니다') +
     row('sfx', '효과음', '발사·격추·피격 소리') +
     row('vib', '진동', '맞았을 때만 울립니다') +
-    '<div class="lab">호출부호</div>' +
+    '<div class="lab">파일럿명</div>' +
     '<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="' +
       (prog.pilot.name || '').replace(/"/g, '&quot;') + '">' +
 
@@ -6816,7 +6888,20 @@ function renderRank() {
                              : farthest((ci, sub) => !!(prog[k] || {})[stageKey(ci, sub)])
     return row(nm, r.txt + (r.cnt ? ' · ' + r.cnt + '판' : ''), k === 'normal')
   }).join('')
+
+  const pwNow = squadPower()
+  if (pwNow > (st.pwBest || 0)) { st.pwBest = pwNow; save() }
+  const pwParts = squadParts().filter((x) => x.open && x.plane)
+    .sort((a, b) => b.v - a.v)
+    .map((x) => row(x.role + ' · ' + x.plane.name, x.v.toLocaleString('ko-KR'))).join('')
   const items = [
+    { h: 30, html: '<div class="lab" style="margin-top:0">전투력</div>' },
+    { h: 108, html: '<div class="sum" style="margin-top:0">' +
+      row('지금 편대 전투력', pwNow.toLocaleString('ko-KR'), true) +
+      row('최고 기록', (st.pwBest || 0).toLocaleString('ko-KR')) +
+      row('파일럿', pilotName() + ' · ' + pilotRank() + ' Lv.' + prog.pilot.lv) + '</div>' },
+    { h: 36 * Math.max(1, pwParts ? squadParts().filter((x) => x.open && x.plane).length : 1) + 12,
+      html: '<div class="sum" style="margin-top:0">' + (pwParts || row('기체', '없음')) + '</div>' },
     { h: 30, html: '<div class="lab" style="margin-top:0">모드별 진행</div>' },
     { h: 36 * MODES.length + 12, html: '<div class="sum" style="margin-top:0">' + modeRows + '</div>' },
     { h: 186, html: '<div class="sum" style="margin-top:0">' +
@@ -7130,7 +7215,7 @@ function newPilotPopup() {
   cancelAnimationFrame(DETAIL.raf); DETAIL.raf = 0
 
   body.innerHTML =
-    '<h3>새 파일럿</h3>' +
+    '<h3>새 보조 파일럿</h3>' +
     '<div class="sub2">' + gnames + ' 파일럿이 합류했습니다</div>' +
     '<div class="lab">들어온 사람</div><div class="sum">' +
     mine.map((p) => row(p.name, p.desc, true)).join('') +
@@ -15538,10 +15623,15 @@ function titleStart() {
   titleInert(false)
   music('hangar')
   warmBattle()
-  const daily = claimDaily()
-  if (daily) showDaily(daily)
 
-  else setTimeout(() => { if (!prog.tourDone2) tourStart(false) }, 0)
+  const go1 = () => {
+    const daily = claimDaily()
+    if (daily) showDaily(daily)
+
+    else setTimeout(() => { if (!prog.tourDone2) tourStart(false) }, 0)
+  }
+  if (!prog.pilot.name) openNamePop(go1)
+  else go1()
 }
 titleShow()
 document.getElementById('tGo').onclick = titleStart
