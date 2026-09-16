@@ -3115,7 +3115,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 18:22'
+const BUILD_AT = '09-16 18:29'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4895,7 +4895,7 @@ function grade() { return GRADES[prog.pilot.grade] || GRADES.normal }
 
 const GRADE_UP_MAX = 10
 const GRADE_UP_PER = 0.01
-const GRADE_UP_COST = [8, 8, 15, 15, 23, 23, 38, 38, 60, 60]
+const GRADE_UP_COST = [24, 24, 45, 45, 69, 69, 114, 114, 180, 180]
 function gradeLv(k) { return (prog.gradeUp && prog.gradeUp[k]) || 0 }
 
 function migrateGradeUp() {
@@ -8868,7 +8868,7 @@ function buildWaves(ch, sub) {
 
   const early = ch.id === 1 ? 0.59 : 1
 
-  const spawnMul = ch.spawnMul || 1
+  const spawnMul = (ch.spawnMul || 1) * (ch.id >= 2 ? MOB_MORE : 1)
 
   const flavorIdx = Math.floor(r() * ch.pool.length)
   const pool = ch.pool.map(([w, f], i) => [i === flavorIdx ? w * 2.2 : w, f])
@@ -9041,6 +9041,10 @@ const BASE_DMG_UP = 3
 const ENEMY_HP_DOWN = 0.9
 
 const HP_ALL_UP = 1.3
+
+const BOSS_HP_ADD = 1.1
+const MOB_HP_ADD = 1.2
+const MOB_MORE = 1.5
 const FIRE_SLOW = 1 / 0.85
 const ENEMY_HP_UP = 1.15
 
@@ -9069,7 +9073,7 @@ const RUSH_STEP = 1.07
 function rushBase() {
   const ch = CHAPTERS[0]
   const sb = Math.round(ch.bossHp * (0.78 + SUBS * 0.0967))
-  return sb * 0.55 * BOSS_HP_UP * BOSS_ONLY_UP * ENEMY_HP_DOWN * HP_ALL_UP
+  return sb * 0.55 * BOSS_HP_UP * BOSS_ONLY_UP * ENEMY_HP_DOWN * HP_ALL_UP * BOSS_HP_ADD
 }
 
 function rushHp(i, d) {
@@ -9519,7 +9523,7 @@ function mkEnemy(kind, x, y, drift) {
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
 
-           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
+           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * MOB_HP_ADD * modeHp() * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
 
            sp: Math.round(b.sp * SG.spMul * SPD_K),
            dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
@@ -9590,7 +9594,7 @@ function mkGround(kind, x, y) {
 
     art: sea ? Math.round(b.r * 7) : 0,
 
-    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * modeHp()),
+    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * MOB_HP_ADD * modeHp()),
   }
 }
 
@@ -9839,7 +9843,7 @@ function spawnBoss(mid) {
   const base = rush
 
     ? rushHp(state.rush, state.rushD)
-    : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_UP * ENEMY_HP_DOWN * HP_ALL_UP * modeHp())
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_UP * ENEMY_HP_DOWN * HP_ALL_UP * BOSS_HP_ADD * modeHp())
 
   const bsub = (state.stage && state.stage.sub) || 1
 
