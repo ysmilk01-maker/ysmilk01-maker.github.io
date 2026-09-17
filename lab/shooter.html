@@ -1300,6 +1300,28 @@
     background: var(--ok); color: #04120a; font-weight: 800;
   }
   .mrow button[disabled] { background: #1a2536; color: #5b6a80; }
+  /* 누를 수 있는 줄 (2026-09-17). 갈 곳이 있는 임무에만 붙는다 */
+  .mrow[data-mgo] { cursor: pointer; }
+  .mrow[data-mgo]:active { background: #1b2740; }
+  .mrow[data-mgo]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /*
+   * 갈 곳 표시. **이것이 먼저 줄어든다.**
+   *
+   * 「크레이지 클리어 1판」처럼 긴 줄에서는 넣을 자리가 모자라, 아무 데도
+   * 안 줄이면 보상 글자(「가챠권 1」)가 두 줄로 밀린다. 임무 이름과 보상은
+   * 읽어야 하는 것이고 갈 곳은 화살표만 남아도 뜻이 통하므로 여기를 깎는다.
+   */
+  .mrow .mgo { margin-left: 6px; font-size: 10.5px; color: var(--accent);
+    white-space: nowrap; overflow: hidden; text-overflow: clip; flex: 0 1 auto; min-width: 10px; }
+  .mrow .rw { white-space: nowrap; flex: none; }
+  /* 임무에서 건너온 자리를 한 번 짚어 준다 (2026-09-17) */
+  .pointat { animation: pointAt 1.7s ease-out 1; border-radius: 12px; }
+  @keyframes pointAt {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(125,214,255,0) }
+    15%, 55% { box-shadow: 0 0 0 3px rgba(125,214,255,.75) }
+    35%      { box-shadow: 0 0 0 3px rgba(125,214,255,.25) }
+  }
+  @media (prefers-reduced-motion: reduce) { .pointat { animation: none } }
   .setrow {
     display: flex; align-items: center; gap: 10px; background: var(--panel);
     border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px;
@@ -3115,16 +3137,16 @@ function claimDaily() {
 
 const MISSIONS = [
 
-  { id: 'kill',  say: (n) => `적기 ${n}대 격추`,          ns: [100], give: ['ticket', 1] },
-  { id: 'clear', say: (n) => `단계 ${n}개 클리어`,         ns: [3],   give: ['ticket', 1] },
-  { id: 'hard',  say: (n) => `하드코어 도전 ${n}판`,       ns: [1],   give: ['ticket', 1] },
-  { id: 'crazy', say: (n) => `크레이지 클리어 ${n}판`,     ns: [1],   give: ['ticket', 1] },
-  { id: 'extreme', say: (n) => `익스트림 클리어 ${n}판`,   ns: [1],   give: ['ticket', 1] },
-  { id: 'upg',   say: (n) => `기체 강화 ${n}번`,           ns: [1],   give: ['ticket', 1] },
-  { id: 'stat',  say: (n) => `파일럿 스탯 ${n}번 올리기`,   ns: [1],   give: ['ticket', 1] },
-  { id: 'rush',  say: (n) => `보스 도전 ${n}번 격파`,       ns: [1],   give: ['ticket', 1] },
-  { id: 'pull',  say: (n) => `뽑기 ${n}번`,                 ns: [1],   give: ['ticket', 1] },
-  { id: 'ad',    say: (n) => `광고 ${n}번 보기`,             ns: [1],   give: ['ticket', 1] },
+  { id: 'kill',  say: (n) => `적기 ${n}대 격추`,          ns: [100], give: ['ticket', 1], go: 'stage' },
+  { id: 'clear', say: (n) => `단계 ${n}개 클리어`,         ns: [3],   give: ['ticket', 1], go: 'stage' },
+  { id: 'hard',  say: (n) => `하드코어 도전 ${n}판`,       ns: [1],   give: ['ticket', 1], go: 'mode' },
+  { id: 'crazy', say: (n) => `크레이지 클리어 ${n}판`,     ns: [1],   give: ['ticket', 1], go: 'mode' },
+  { id: 'extreme', say: (n) => `익스트림 클리어 ${n}판`,   ns: [1],   give: ['ticket', 1], go: 'mode' },
+  { id: 'upg',   say: (n) => `기체 강화 ${n}번`,           ns: [1],   give: ['ticket', 1], go: 'planes' },
+  { id: 'stat',  say: (n) => `파일럿 스탯 ${n}번 올리기`,   ns: [1],   give: ['ticket', 1], go: 'pilot' },
+  { id: 'rush',  say: (n) => `보스 도전 ${n}번 격파`,       ns: [1],   give: ['ticket', 1], go: 'rush' },
+  { id: 'pull',  say: (n) => `뽑기 ${n}번`,                 ns: [1],   give: ['ticket', 1], go: 'gacha' },
+  { id: 'ad',    say: (n) => `광고 ${n}번 보기`,             ns: [1],   give: ['ticket', 1], go: 'shop' },
 
   { id: 'all',   say: (n) => `오늘 임무 전부 완료 (${n}개)`,  ns: [10],  give: ['ticket', 3] },
 ]
@@ -3221,7 +3243,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 19:26'
+const BUILD_AT = '09-17 19:32'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6261,7 +6283,7 @@ function openCollectionSheet() {
     '<p class="note2">기체 한 대마다 +0.5%, 강화 한 단계마다 +0.1%. 편대에 없는 기체도 셉니다.</p>' +
     '<div class="hp collhp">' + grid + '</div>')
 }
-function openMissionSheet() { openHgSheet('오늘의 임무', '<div class="miss" id="missBody"></div>', () => renderMissions()) }
+function openMissionSheet() { openHgSheet('오늘의 임무', '<div class="miss" id="missBody"></div>', (close) => renderMissions(close)) }
 function openInfoSheet() {
   const g = (id) => document.getElementById(id)
   openHgSheet('편대 정보', '<div class="sum">' + g('squadSum').innerHTML + '</div>' +
@@ -6295,7 +6317,30 @@ function paintEnergy() {
 }
 setInterval(() => { if (curScreen === 'squad' && !elTabs.hidden) paintEnergy() }, 1000)
 
-function renderMissions() {
+const MISS_GO_NAME = { stage: '전선', planes: '기체', pilot: '파일럿', gacha: '뽑기',
+                       shop: '상점', rush: '보스 도전', mode: '모드 고르기' }
+
+function missGoTo(key, close) {
+  if (!key || !MISS_GO_NAME[key]) return false
+  if (close) close()
+
+  if (key === 'rush' || key === 'mode') {
+    go('squad')
+    setTimeout(() => {
+      if (key === 'rush') { openRushSheet(); return }
+
+      const m = document.getElementById('squadModes')
+      if (!m) return
+      m.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      m.classList.remove('pointat'); void m.offsetWidth; m.classList.add('pointat')
+      setTimeout(() => m.classList.remove('pointat'), 1700)
+    }, 300)
+    return true
+  }
+  go(key)
+  return true
+}
+function renderMissions(close) {
   const el = document.getElementById('missBody')
   if (!el) return
   const m = missions()
@@ -6304,8 +6349,11 @@ function renderMissions() {
     const [kind, n] = d.give
     const done = missDone(q)
     const pct = Math.min(100, (q.p / q.n) * 100)
-    return `<div class="mrow${done ? ' done' : ''}">` +
+    const dest = MISS_GO_NAME[d.go] || ''
+    return `<div class="mrow${done ? ' done' : ''}"` +
+      (dest ? ` data-mgo="${d.go}" role="button" tabindex="0" aria-label="${d.say(q.n)}, ${dest} 화면으로"` : '') + `>` +
       `<div class="top"><span class="nm">${d.say(q.n)}</span>` +
+      (dest ? `<span class="mgo" aria-hidden="true">${dest} ›</span>` : '') +
       `<span class="k" style="color:var(--dim);font-size:11px">` +
       `${Math.min(q.p, q.n).toLocaleString('ko-KR')}/${q.n.toLocaleString('ko-KR')}</span>` +
       `<span class="rw">${REWARD_NAME[kind]} ${n}</span></div>` +
@@ -6319,12 +6367,22 @@ function renderMissions() {
 
   el.querySelectorAll('.bar2 i').forEach((i) => fxBar(i, +i.dataset.pct))
   el.querySelectorAll('[data-miss]').forEach((b) => {
-    b.onclick = () => {
+    b.onclick = (e) => {
+
+      e.stopPropagation()
       const got = takeMission(+b.dataset.miss)
       if (!got) return
       sfx('ready')
       banner && null
       render()
+    }
+  })
+
+  el.querySelectorAll('[data-mgo]').forEach((row) => {
+    const fire = () => { sfx('pick'); missGoTo(row.dataset.mgo, close) }
+    row.onclick = fire
+    row.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire() }
     }
   })
 }
