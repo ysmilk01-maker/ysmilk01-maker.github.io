@@ -3158,7 +3158,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-16 19:24'
+const BUILD_AT = '09-17 12:57'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6677,6 +6677,11 @@ function paintRates() {
     `<div class="rate"><span>완성품이 이미 가진 것이면</span><span class="v">조각 ${JACK_SHARD}개</span></div>` +
     `<div class="rate"><span>기체 ${HARD_PITY}장째</span>` +
     `<span class="v">기체 하나 확정 (등급 랜덤)</span></div>` +
+
+    (pilotPct
+      ? `<div class="rate"><span>파일럿 ${HARD_PITY}장째</span>` +
+        `<span class="v">파일럿 한 명 확정 (중급 70% · 상급 24% · 레전드 6%)</span></div>`
+      : '') +
     `<div class="empty">등급별 확률은 그 갈래가 걸렸을 때의 값입니다.<br>` +
     `가챠권은 별 ${STAR_TICKET}개마다 한 장입니다. 별은 판을 깨면 ` +
     `${STAR_CLEAR}개가 차고, 실패하면 차지 않습니다.</div>`)
