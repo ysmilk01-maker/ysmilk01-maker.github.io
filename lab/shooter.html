@@ -3266,7 +3266,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 08:20'
+const BUILD_AT = '09-18 08:38'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4695,6 +4695,11 @@ const ITEM_NAME = { ticket: ['가챠권', '장'], parts: ['부품', ''], energy:
 function itemText(items) {
   return Object.entries(items || {}).map(([k, v]) => {
     if (k === 'plane') { const p = planeById(v); return (p ? p.name : '기체') + ' 기체' }
+
+    if (k === 'shard') {
+      const p = planeById(v && v.id)
+      return (p ? p.name : '기체') + ' 조각 ' + Number((v && v.n) || 0).toLocaleString('ko-KR') + '개'
+    }
     if (k === 'pilot') { const p = PILOT_BY[v]; return (p ? p.name : '파일럿') + ' 파일럿' }
     const nm = ITEM_NAME[k]
     return nm ? nm[0] + ' ' + Number(v).toLocaleString('ko-KR') + nm[1] : k
@@ -4706,6 +4711,7 @@ function grantItems(items) {
     else if (k === 'parts') prog.parts += v
     else if (k === 'energy') prog.energy.n = energy() + v
     else if (k === 'xp') addXpRaw(v)
+    else if (k === 'shard') { if (v && v.id) prog.shardP[v.id] = shardOf(v.id) + (v.n || 0) }
     else if (k === 'plane') { if (!prog.owned.includes(v)) { prog.owned.push(v); queueGot('plane', v) } }
     else if (k === 'pilot') { prog.pilotBought = prog.pilotBought || {}; prog.pilotBought[v] = true; queueGot('pilot', v) }
   }
@@ -4805,7 +4811,7 @@ function openMail(tab) {
   })
 }
 
-const PASS = { price: 9900, name: '출격 패스', tickets: 10, energy: 10, enMax: 15 }
+const PASS = { price: 9900, name: '출격 패스', tickets: 10, energy: 10, shard: 30, enMax: 15 }
 function passActive() { return !!(prog.pass && prog.pass.until && prog.pass.until > Date.now()) }
 
 function passRange() {
@@ -4827,6 +4833,24 @@ function passDaily() {
             body: '출격 패스 혜택으로 매일 가챠권 ' + PASS.tickets +
                   '장과 출격권 ' + PASS.energy + '장을 보냅니다.',
             items: { ticket: PASS.tickets, energy: PASS.energy } })
+
+  const box = shardBoxPick()
+  if (box) {
+    mailAdd({ title: '출격 패스 · 조각 상자 (' + box.name + ')',
+              body: box.name + ' 조각 ' + PASS.shard + '개를 보냅니다. ' +
+                    (unlocked(box) ? '강화에 씁니다.' : '모으면 이 기체가 열립니다.'),
+              items: { shard: { id: box.id, n: PASS.shard } } })
+  }
+}
+
+function shardBoxPick() {
+  const locked = PLANES.filter((p) => !unlocked(p))
+  const pool = locked.length ? locked : PLANES
+  if (!pool.length) return null
+  const k = dayKey()
+  let h = 0
+  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) & 0x7fffffff
+  return pool[h % pool.length]
 }
 
 function passGrantPlane() {
@@ -4844,6 +4868,7 @@ function passGrantPlane() {
 const PASS_BEN = [
   ['기체', '첫 결제 레전드 1기', '레전드 기체 랜덤 1기 · 처음 한 번'],
   ['출격', '매일 출격권 ' + PASS.energy + '장', '우편함으로 매일 도착합니다'],
+  ['조각', '매일 조각 상자 ' + PASS.shard + '개', '그날 정해진 기체의 조각 ' + PASS.shard + '개'],
   ['가챠', '매일 가챠권 ' + PASS.tickets + '장', '우편함으로 매일 도착합니다'],
   ['한도', '출격권 한도 ' + PASS.enMax + '장', '자연 충전 상한 ' + PASS.enMax + '장 (기본 ' + EN_MAX + '장)'],
   ['광고', '광고 없음', '광고 자리마다 보상만 바로 받습니다'],
@@ -4853,7 +4878,7 @@ function passCard() {
   return '<div class="passcard' + (on ? ' on' : '') + '" data-buy="pass" role="button" tabindex="0">' +
     '<div class="pc-head"><span class="pc-name">' + PASS.name + '</span>' +
     '<span class="pc-price">월 ' + PASS.price.toLocaleString('ko-KR') + '원</span></div>' +
-    '<div class="pc-sub">' + (on ? '이용 중 · ' + passRange() + ' · ' + passDaysLeft() + '일 남음' : '한 달 동안 다섯 가지 혜택') + '</div>' +
+    '<div class="pc-sub">' + (on ? '이용 중 · ' + passRange() + ' · ' + passDaysLeft() + '일 남음' : '한 달 동안 여섯 가지 혜택') + '</div>' +
     PASS_BEN.map(([i, b, t]) => '<div class="pc-ben"><i>' + i + '</i><b>' + b + '</b><span>' + t + '</span></div>').join('') +
     '<button id="passBuy">' + (on ? '이용 중' : '구독하기 · 월 ' + PASS.price.toLocaleString('ko-KR') + '원') + '</button>' +
     '<div class="pc-note">언제든 해지할 수 있습니다. 결제는 곧 열립니다.</div>' +
@@ -4954,7 +4979,8 @@ function openShopItem(id) {
       (on ? r2('이용 기간', passRange() + ' <span style="color:var(--dim);font-weight:500">(' + passDaysLeft() + '일 남음)</span>') : '') +
       PASS_BEN.map(([i, b, t]) => r2(b, t)).join('') + '</div>' +
       '<div class="note2">결제일마다 자동으로 갱신되고 언제든 해지할 수 있습니다. 해지해도 남은 기간은 그대로 씁니다. ' +
-      '매일 가챠권·출격권과 첫 결제 선물은 우편함으로 옵니다. 레전드 기체는 처음 한 번만 드립니다.</div>' +
+      '매일 가챠권·출격권·조각 상자와 첫 결제 선물은 우편함으로 옵니다. 레전드 기체는 처음 한 번만 드립니다. ' +
+      '조각 상자의 기체는 날마다 바뀌고, 아직 안 연 기체가 먼저 나옵니다.</div>' +
       '<div class="price"><small>월</small>' + won(PASS.price) + '</div>'
     okLabel = on ? '이용 중' : '구독하기'
     onOk = on ? null : () => soon(PASS.name, '월 ' + won(PASS.price))
