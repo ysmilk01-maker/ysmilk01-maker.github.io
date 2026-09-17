@@ -1316,6 +1316,34 @@
     border-radius: 50%; background: #cfe0f5; transition: left .15s;
   }
   .setrow .sw.on::after { left: 23px; }
+  /*
+   * 속도 손잡이 (2026-09-17 대표 지정).
+   *
+   * 켜고 끄는 줄과 달리 세로로 쌓는다 - 가로로 밀어야 하는 것이라
+   * 옆에 붙이면 손가락이 갈 자리가 없다. 숫자는 손잡이 위에 크게
+   * 둔다. 밀면서 값을 봐야 하는데 줄 왼쪽에 작게 있으면 손에 가린다.
+   */
+  .setrow.col { display: block; }
+  .setrow.col .top { display: flex; align-items: baseline; gap: 10px; }
+  .setrow.col .val { margin-left: auto; font-size: 17px; font-weight: 800; color: var(--accent); }
+  .setrow.col input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; margin-top: 11px;
+    height: 26px; background: none; cursor: pointer;
+  }
+  .setrow.col input[type=range]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px; background: #1a2536;
+  }
+  .setrow.col input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: #1a2536; }
+  /* 손가락으로 잡는 것이라 크게. 24px 아래로는 제 자리에 못 세운다 */
+  .setrow.col input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; margin-top: -9px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); border: 2px solid #0b1118;
+  }
+  .setrow.col input[type=range]::-moz-range-thumb {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid #0b1118; background: var(--accent);
+  }
+  .setrow.col .ends { display: flex; justify-content: space-between; font-size: 10px; color: var(--dim); }
 
   /* ── UI 그림을 얹는다 ────────────────────────────────────────── */
 
@@ -3193,7 +3221,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 18:59'
+const BUILD_AT = '09-17 19:04'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6312,6 +6340,13 @@ function renderSet() {
     row('music', '배경음악', '켜면 곡 파일 1.1MB 를 한 번 받습니다') +
     row('sfx', '효과음', '발사·격추·피격 소리') +
     row('vib', '진동', '맞았을 때만 울립니다') +
+
+    '<div class="setrow col"><div class="top"><div>' +
+      '<div class="nm">게임 속도</div>' +
+      '<div class="de">적·탄·내 기체가 같이 빨라집니다. 100 이 기본입니다</div>' +
+    '</div><div class="val" id="spVal">' + AU.on.speed + '</div></div>' +
+    '<input type="range" id="spRange" min="' + SPEED_MIN + '" max="' + SPEED_MAX + '" step="5" value="' + AU.on.speed + '">' +
+    '<div class="ends"><span>' + SPEED_MIN + ' 느리게</span><span>' + SPEED_MAX + ' 빠르게</span></div></div>' +
     '<div class="lab">파일럿명</div>' +
     '<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="' +
       (prog.pilot.name || '').replace(/"/g, '&quot;') + '">' +
@@ -6319,6 +6354,12 @@ function renderSet() {
     '<div class="lab">그 밖에</div>' +
     '<div class="bar"><button class="ghost small" id="devUnlock">개발용 전체 해금</button></div>'
 
+  const sp = document.getElementById('spRange')
+  if (sp) {
+    const lab = document.getElementById('spVal')
+    sp.oninput = () => { AU.on.speed = speedClamp(sp.value); if (lab) lab.textContent = AU.on.speed }
+    sp.onchange = () => { AU.on.speed = speedClamp(sp.value); if (lab) lab.textContent = AU.on.speed; auSave(); haptic('soft') }
+  }
   const nm = document.getElementById('pilotNm')
   if (nm) nm.oninput = () => { prog.pilot.name = nm.value.trim().slice(0, 12); save() }
   const du = document.getElementById('devUnlock')
@@ -9449,8 +9490,13 @@ function breakShield(e) {
   sfx('hit', 1)
 }
 
+const UFO_CHANCE = 0.15
+
 function spawnUfo() {
   const s = state
+  if (s.ufoRolled) return
+  s.ufoRolled = true
+  if (Math.random() >= UFO_CHANCE) return
   if (s.enemies.some((e) => e.ufo)) return
   const dir = Math.random() < .5 ? 1 : -1
   const y = 120 + Math.random() * 130
@@ -15190,6 +15236,14 @@ addEventListener('pagehide', appHidden)
 addEventListener('pageshow', appShown)
 
 const GAME_SPEED = 1.15 * 1.1
+
+const SPEED_MIN = 70, SPEED_MAX = 150
+function speedClamp(v) {
+  v = Math.round((+v || 100) / 5) * 5
+  return Math.max(SPEED_MIN, Math.min(SPEED_MAX, v))
+}
+
+function speedMul() { return (AU.on.speed || 100) / 100 }
 function frame(now) {
   requestAnimationFrame(frame)
   if (!state || !state.running) return
@@ -15207,7 +15261,7 @@ function frame(now) {
     return
   }
   try {
-    update(dt * GAME_SPEED); draw()
+    update(dt * GAME_SPEED * speedMul()); draw()
     frameErrs = 0
   } catch (err) {
     if (frameErrs++ === 0) console.error('frame', err)
@@ -15232,12 +15286,14 @@ const AU = {
   ctx: null, master: null, mus: null, sfxBus: null, noise: null,
   buf: {}, loading: {}, now: null, want: null, last: {},
 
-  on: { music: true, sfx: true, vib: true },
+  on: { music: true, sfx: true, vib: true, speed: 100 },
 }
 try {
   const raw = localStorage.getItem(AU_KEY)
   if (raw) Object.assign(AU.on, JSON.parse(raw))
 } catch {   }
+
+AU.on.speed = speedClamp(AU.on.speed)
 
 function auSave() { try { localStorage.setItem(AU_KEY, JSON.stringify(AU.on)) } catch {} }
 
