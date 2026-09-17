@@ -1260,7 +1260,14 @@
     -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     padding-right: 3px;
   }
-  .dsheet.rushsheet .bar { flex: none; margin-top: 10px; }
+  /*
+   * 아래 단추를 뺀 뒤로(2026-09-17) 목록이 바닥까지 쓴다.
+   *
+   * 시트 바닥이 탭 바 아래로 15px 내려와 있어서, 끝까지 굴리면 마지막
+   * 줄(「최후의 기함」)의 아랫단이 탭에 가렸다. 여백은 **구르는 칸 안쪽**에
+   * 둬야 한다 - 바깥에 두면 칸이 그만큼 짧아질 뿐 끝 자리는 그대로다.
+   */
+  .dsheet.rushsheet .rushlist { padding-bottom: 26px; }
   .rushrow {
     display: grid; gap: 2px; text-align: left; width: 100%;
     padding: 11px 13px; border-radius: 9px; cursor: pointer;
@@ -3186,7 +3193,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 18:25'
+const BUILD_AT = '09-17 18:42'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9273,9 +9280,7 @@ function openRushSheet() {
           : '경험치 ' + Math.round(d.xp * D.xp).toLocaleString('ko-KR') + ' · 가챠권 ' +
             (RUSH_TICKET_FIRST * D.tk) + '장') + '</span>' +
         '</button>'
-    }).join('') + '</div>' +
-    '<div class="bar"><button class="ghost" id="dClose">닫기</button>' +
-    '<button id="rsHome">격납고로</button></div>'
+    }).join('') + '</div>'
 
   document.body.classList.add('keeptabs')
   const onTab = () => close()
@@ -9291,10 +9296,6 @@ function openRushSheet() {
 
   elTabs.inert = false
   panel.onclick = (e) => { if (e.target === panel) close() }
-  document.getElementById('dClose').onclick = close
-
-  const rsHome = document.getElementById('rsHome')
-  if (rsHome) rsHome.onclick = () => { close(); go('squad') }
   body.querySelectorAll('[data-rd]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation()
