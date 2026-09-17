@@ -2891,7 +2891,9 @@ const SHIELD_MAX = 55
 const SHIELD_TIME = 6.5
 
 const ULT_POWER = 0.8
-function ultPow() { return ULT_POWER * (perk('ultPow') || 1) }
+
+const LEGEND_ULT = 1.6
+function ultPow() { return ULT_POWER * (perk('ultPow') || 1) * (legendMain() ? LEGEND_ULT : 1) }
 
 const ULT_GAIN = 2.0
 
@@ -3243,7 +3245,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 21:30'
+const BUILD_AT = '09-17 21:52'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8280,11 +8282,13 @@ function shoot(u, i, dt) {
     const b = { x: pos.x, y: pos.y - 10, vx: undefined, vy: undefined, r: 3, dmg, pierce: 0, life: 3, age: 0,
                 kind: 'normal', el: null, turn: 0, bounce: 0, split: 0, hitList: null, dead: false,
                 amp: 0, ph: 0, x0: 0, owner: 0, a: 0, rad: 0, gather: 0, go: false, back: false, home: null,
-                jumps: 0, t0: 0, ult: false, owner: i }
+                jumps: 0, t0: 0, ult: false, leg: 0, owner: i }
     Object.assign(b, o)
     if (u.at || u.wult > 0 || (state.ultKind === 'rapid' && state.ultT > 0)) b.ult = true
 
     if (p.el) { b.el = p.el; b.dmg *= elAdd }
+
+    if (p.tier === 'legend') b.leg = 1
     b.pierce += M.pierce
     b.dmg *= 1 + M.big * 0.25
     b.r *= (1 + M.big * 0.18) * pilotRng()
@@ -12062,6 +12066,97 @@ function updateGround(u, dt) {
   }
 }
 
+function legHurt(e, dmg, col) {
+  if (!e || e.dead) return
+  e.hp -= dmg
+  e.flash = .12
+  if (e.hp <= 0) {
+    e.dead = true
+    state.score += e.score
+    state.kills++
+    boom(e.x, e.y, 12, col || '#ffd9a0', true)
+  }
+}
+
+function legBlast(x, y, r, dmg, col) {
+  const s = state
+  s.blasts.push({ x, y, r, age: 0, life: .34 })
+  const rr = r * r
+  for (const e of s.enemies) {
+    if (e.dead) continue
+    if ((e.x - x) ** 2 + (e.y - y) ** 2 < rr) legHurt(e, dmg, col)
+  }
+
+  if (s.boss && (s.boss.x - x) ** 2 + (s.boss.y - y) ** 2 < (r + (s.boss.reach || s.boss.r)) ** 2) {
+    bossArea(s.boss, dmg)
+  }
+}
+
+function legSpread(e, b, r, mul) {
+  const rr = r * r
+  for (const o of state.enemies) {
+    if (o.dead || o === e) continue
+    if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 < rr) {
+      applyEl(o, { el: b.el, dmg: b.dmg * mul, x: o.x, y: o.y })
+      o.flash = .08
+    }
+  }
+}
+const LEGEND_SIG = {
+
+  rapid(e, b) {
+    const top = e.y - 170
+    state.arcs.push({ x1: e.x, y1: e.y, x2: e.x, y2: top, age: 0, life: .16, seed: Math.random() * 100 })
+    for (const o of state.enemies) {
+      if (o.dead || o === e) continue
+      if (Math.abs(o.x - e.x) < 18 + o.r && o.y < e.y && o.y > top) legHurt(o, b.dmg * 0.35, '#cfe8ff')
+    }
+  },
+
+  spread(e, b) {
+
+    if (state.bullets.length > 110) return
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + Math.random()
+      state.bullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 250, vy: Math.sin(a) * 250,
+        r: Math.max(2, b.r * .55), dmg: b.dmg * .45, pierce: 0, life: .3, age: 0,
+
+        kind: 'normal', el: 'ice', leg: 2, owner: b.owner, ult: b.ult })
+    }
+  },
+
+  laser(e, b) { chainFrom(e, { dmg: b.dmg * .45, jumps: 1, falloff: 1 }) },
+
+  homing(e, b) { legSpread(e, b, 78, .8) },
+
+  pierce(e, b) { legBlast(e.x, e.y, 74, b.dmg * .5, '#ffb066') },
+
+  wave(e, b) { legSpread(e, b, 92, .7) },
+
+  orb(e, b) { chainFrom(e, { dmg: b.dmg * .35, jumps: 2, falloff: .9 }) },
+
+  mine(e, b) {
+    const x = e.x, y = e.y
+    afterWarn(.22, () => legBlast(x, y, 86, b.dmg * .55, '#ff9a5c'))
+  },
+
+  beam(e, b) {
+    legBlast(e.x, e.y, 96, b.dmg * .45, '#ffd08a')
+    legSpread(e, b, 96, .6)
+  },
+
+  boomer(e, b) { splitBullet(b); splitBullet(b) },
+
+}
+
+function legendSig(e, b) {
+  const u = state.squad && state.squad[b.owner]
+  const p = u && u.plane
+  if (!p || p.tier !== 'legend') return
+  const f = LEGEND_SIG[p.weapon]
+  if (f) f(e, b)
+}
+
 function splitBullet(b) {
   for (const dir of [-1, 1]) {
     state.bullets.push({
@@ -12110,6 +12205,8 @@ function collide() {
                         k: b.dmg >= 26 ? 'sp3' : b.dmg >= 12 ? 'sp2' : 'sp1' })
         if (b.kind === 'chain') chainFrom(e, em === 1 ? b : { dmg: b.dmg * em, jumps: b.jumps, falloff: b.falloff })
         applyEl(e, em === 1 ? b : { el: b.el, dmg: b.dmg * em, x: b.x, y: b.y })
+
+        if (b.leg === 1 && !b.ult) legendSig(e, b)
         if (b.split > 0) splitBullet(b)
         if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || new Set()).add(e) }
         else b.dead = true
@@ -13642,8 +13739,49 @@ function elFront(b) {
   g.restore()
 }
 
+function legAura(b) {
+
+  if (state.bullets.length > 60) return
+  const E = ELS[b.el]
+  const col = (E && E.color) || '#ffe9a8'
+  const t = state.t * 3 + (b.x + b.y) * 0.02
+  const r = (b.r || 4) * 2.2
+  g.save()
+  g.translate(b.x, b.y)
+
+  const sp = Math.hypot(b.vx || 0, b.vy || 0)
+  if (sp > 1) {
+    const k = Math.min(1, sp / 700)
+    const gr = g.createLinearGradient(0, 0, -(b.vx || 0) / sp * r * 4 * k, -(b.vy || 0) / sp * r * 4 * k)
+    gr.addColorStop(0, col); gr.addColorStop(1, 'transparent')
+    g.globalAlpha = .5; g.strokeStyle = gr; g.lineWidth = r * .9; g.lineCap = 'round'
+    g.beginPath(); g.moveTo(0, 0)
+    g.lineTo(-(b.vx || 0) / sp * r * 4 * k, -(b.vy || 0) / sp * r * 4 * k)
+    g.stroke()
+  }
+
+  g.globalCompositeOperation = 'lighter'
+  g.rotate(t)
+  g.globalAlpha = .55; g.strokeStyle = col; g.lineWidth = 1.6
+  g.beginPath()
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2
+    const x = Math.cos(a) * r, y = Math.sin(a) * r
+    i ? g.lineTo(x, y) : g.moveTo(x, y)
+  }
+  g.closePath(); g.stroke()
+
+  g.rotate(-t)
+  g.globalAlpha = .38 + Math.sin(t * 2) * .12
+  g.fillStyle = '#fff'
+  g.beginPath(); g.arc(0, 0, r * .42, 0, Math.PI * 2); g.fill()
+  g.restore()
+  g.globalAlpha = 1
+  g.globalCompositeOperation = 'source-over'
+}
 function drawBullet(b) {
   if (b.el && ELS[b.el]) elBack(b)
+  if (b.leg) legAura(b)
 
   const bi = bimg(BULLET_IMG, BULLET_KEY[b.kind] || 'rapid')
   if (bi) {
