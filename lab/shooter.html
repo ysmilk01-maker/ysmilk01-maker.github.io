@@ -3252,7 +3252,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 07:58'
+const BUILD_AT = '09-18 08:04'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5035,12 +5035,16 @@ const STATS = {
 
   hp:   { name: '내구', per: 4,   unit: '',  desc: '최대 체력이 늘어납니다' },
 
+  luck: { name: '행운', per: 0.5, unit: '%', desc: '맞아도 피해를 흘릴 확률입니다. 파일럿 등급이 밑값을 정합니다' },
+
   all:  { name: '올스탯', per: 1, unit: '', desc: '네 스탯이 모두 최대일 때 열립니다. 한 칸에 네 가지가 같이 오릅니다' },
 }
 const ST_KEYS = Object.keys(STATS)
 
 const ST_BASE_KEYS = ST_KEYS.filter((k) => k !== 'all')
 const ALL_MAX = 99
+
+const LUCK_BASE = { normal: 10, mid: 13, high: 16, legend: 20 }
 
 function xpNeed(lv) {
 
@@ -5053,7 +5057,7 @@ function xpFromScore(score) { return Math.round(score * 0.03) }
 
 const STAT_COST_MUL = { normal: 1, mid: 1.4, high: 1.9, legend: 2.6 }
 
-const STAT_COST_DOWN = 0.7
+const STAT_COST_DOWN = 0.7 * 0.7
 function statCost(n, grade) {
   return Math.round((9000 + 7000 * n) * (STAT_COST_MUL[grade || 'normal'] || 1) * STAT_COST_DOWN)
 }
@@ -5189,6 +5193,11 @@ function boughtLegend() { return prog.owned.includes(LEGEND_PILOT.id) || hasGrad
 function isLegend() { return PLANES.some((p) => p.tier === 'legend' && unlocked(p)) }
 
 function stv(k) { const s = pilotSt(); return (s[k] || 0) + (s.all || 0) }
+
+function luckPct() {
+  const base = LUCK_BASE[prog.pilot.grade] || LUCK_BASE.normal
+  return Math.min(95, base + stv('luck') * STATS.luck.per)
+}
 function pilotPow()  { return gradeMul(prog.pilot.grade) * (1 + stv('pow') * 0.025) * perk('pow') }
 
 function pilotRate() { return Math.max(0.25, 1 - stv('rate') * 0.015) * perk('rate') }
@@ -7239,7 +7248,10 @@ function openPilot(pl, list) {
 
   const statHtml = ST_KEYS.map((k) => {
     const S = STATS[k], v = st[k] || 0
-    const eff = !v ? '-'
+
+    const eff = k === 'luck'
+      ? ((LUCK_BASE[pl.grade] || LUCK_BASE.normal) + (v + (st.all || 0)) * S.per).toFixed(1) + '%'
+      : !v ? '-'
       : k === 'all' ? '네 스탯 +' + v
       : k === 'hp' ? '+' + (v * S.per)
       : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
@@ -7705,7 +7717,10 @@ function renderPilot() {
   const nowStat = ST_KEYS.map((k) => {
     const v = nowSt[k] || 0
     const S = STATS[k]
-    const eff = !v ? '-'
+
+    const eff = k === 'luck'
+      ? ((LUCK_BASE[nowP.grade] || LUCK_BASE.normal) + (v + (nowSt.all || 0)) * S.per).toFixed(1) + '%'
+      : !v ? '-'
       : k === 'all' ? '네 스탯 +' + v
       : k === 'hp' ? '+' + (v * S.per)
       : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
@@ -10672,6 +10687,19 @@ function bossArea(bs, dmg) {
 
 function banner(t) { state.banner = t; state.bannerT = 1.6 }
 
+function drawLuck() {
+  const s = state
+  if (!(s.luckT > 0)) return
+  const k = s.luckT / 0.5
+  const pl = s.player
+  g.save()
+  g.globalCompositeOperation = 'lighter'
+  g.strokeStyle = 'rgba(130,230,255,' + (k * .85).toFixed(3) + ')'
+  g.lineWidth = 2.4
+  g.beginPath(); g.arc(pl.x, pl.y, 16 + (1 - k) * 30, 0, Math.PI * 2); g.stroke()
+  g.restore()
+}
+
 const TICKET_STAGE_P = 0.30
 
 const ITEM_CAP = 6
@@ -11484,6 +11512,12 @@ const HIT_INV = 0.55
 function hitPlayer(dmg) {
   const pl = state.player
   if (pl.inv > 0) return
+
+  if (Math.random() * 100 < luckPct()) {
+    state.luckT = 0.5
+    sfx('pick')
+    return
+  }
   state.hitCount++
 
   pl.inv = HIT_INV + perk('inv')
