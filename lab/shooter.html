@@ -3221,7 +3221,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 19:07'
+const BUILD_AT = '09-17 19:20'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8562,7 +8562,7 @@ const CHAPTERS = [
   {
     id: 2, name: '사막 회랑', sub: '대공포가 늘어선 붉은 협곡', theme: 'sand',
 
-    bossHp: 2745, hpMul: 0.82, spMul: 1.17, fireMul: 2.9,
+    bossHp: 2700, hpMul: 0.876, spMul: 1.17, fireMul: 2.9,
     spawnMul: 0.94,
     pool: [
       [4, (r) => ground(['turret', 'flak', 'radar', 'laser'][(r() * 4) | 0], 60 + r() * (W - 120))],
@@ -8593,7 +8593,7 @@ const CHAPTERS = [
   {
     id: 3, name: '극야 전선', sub: '해가 뜨지 않는 마지막 방어선', theme: 'snow',
 
-    bossHp: 3349, hpMul: 0.92, spMul: 1.2, fireMul: 2.71,
+    bossHp: 3240, hpMul: 1.051, spMul: 1.2, fireMul: 2.71,
     spawnMul: 0.96,
     pool: [
       [4, (r) => dive(3 + ((r() * 3) | 0))],
@@ -8620,7 +8620,7 @@ const CHAPTERS = [
   {
     id: 4, name: '불의 고리', sub: '적 본토를 두른 활화산대', theme: 'ash',
 
-    bossHp: 4086, hpMul: 1.03, spMul: 1.23, fireMul: 2.53,
+    bossHp: 3888, hpMul: 1.261, spMul: 1.23, fireMul: 2.53,
     spawnMul: 0.98,
 
     pool: [
@@ -8645,7 +8645,7 @@ const CHAPTERS = [
   },
   {
     id: 5, name: '재의 평원', sub: '분화가 끝나고 재만 남은 땅', theme: 'ash2',
-    bossHp: 4985, hpMul: 1.15, spMul: 1.26, fireMul: 2.37,
+    bossHp: 4666, hpMul: 1.514, spMul: 1.26, fireMul: 2.37,
 
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8674,7 +8674,7 @@ const CHAPTERS = [
   },
   {
     id: 6, name: '늪지대', sub: '안개가 걷히지 않는 검은 물', theme: 'swamp',
-    bossHp: 6081, hpMul: 1.29, spMul: 1.29, fireMul: 2.22,
+    bossHp: 5599, hpMul: 1.816, spMul: 1.29, fireMul: 2.22,
 
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8703,7 +8703,7 @@ const CHAPTERS = [
   },
   {
     id: 7, name: '공중 요새', sub: '구름 위에 떠 있는 인공 구조물', theme: 'sky',
-    bossHp: 7419, hpMul: 1.44, spMul: 1.32, fireMul: 2.07,
+    bossHp: 6718, hpMul: 2.18, spMul: 1.32, fireMul: 2.07,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8731,7 +8731,7 @@ const CHAPTERS = [
   },
   {
     id: 8, name: '협곡', sub: '벼랑 사이로 난 좁은 길', theme: 'canyon',
-    bossHp: 9051, hpMul: 1.61, spMul: 1.35, fireMul: 1.94,
+    bossHp: 8062, hpMul: 2.616, spMul: 1.35, fireMul: 1.94,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8760,7 +8760,7 @@ const CHAPTERS = [
   },
   {
     id: 9, name: '공업지대', sub: '매연이 하늘을 덮은 공장 지대', theme: 'steel',
-    bossHp: 11042, hpMul: 1.81, spMul: 1.38, fireMul: 1.81,
+    bossHp: 9675, hpMul: 3.139, spMul: 1.38, fireMul: 1.81,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8789,7 +8789,7 @@ const CHAPTERS = [
   },
   {
     id: 10, name: '적 본거지', sub: '모든 것이 시작된 곳', theme: 'core',
-    bossHp: 13472, hpMul: 2.02, spMul: 1.41, fireMul: 1.69,
+    bossHp: 11610, hpMul: 3.767, spMul: 1.41, fireMul: 1.69,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8818,7 +8818,7 @@ const CHAPTERS = [
   },
   {
     id: 11, name: '빙벽', sub: '수백 미터 얼음 절벽 사이', theme: 'glacier',
-    bossHp: 16435, hpMul: 2.27, spMul: 1.44, fireMul: 1.58,
+    bossHp: 13931, hpMul: 4.52, spMul: 1.44, fireMul: 1.58,
 
     pool: [
       [2, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8847,7 +8847,7 @@ const CHAPTERS = [
   },
   {
     id: 12, name: '폐허 도시', sub: '불타고 남은 옛 수도', theme: 'ruin',
-    bossHp: 20051, hpMul: 2.54, spMul: 1.47, fireMul: 1.48,
+    bossHp: 16718, hpMul: 5.424, spMul: 1.47, fireMul: 1.48,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8876,7 +8876,7 @@ const CHAPTERS = [
   },
   {
     id: 13, name: '대염호', sub: '소금이 하얗게 굳은 호수', theme: 'salt',
-    bossHp: 24462, hpMul: 2.84, spMul: 1.5, fireMul: 1.38,
+    bossHp: 20061, hpMul: 6.509, spMul: 1.5, fireMul: 1.38,
 
     pool: [
       [2, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8905,7 +8905,7 @@ const CHAPTERS = [
   },
   {
     id: 14, name: '화염 유전', sub: '불기둥이 솟는 유전지대', theme: 'oil',
-    bossHp: 29844, hpMul: 3.19, spMul: 1.53, fireMul: 1.29,
+    bossHp: 24073, hpMul: 7.811, spMul: 1.53, fireMul: 1.29,
 
     pool: [
       [4, (r) => line(2 + ((r() * 3) | 0), 'tank')],
@@ -8934,7 +8934,7 @@ const CHAPTERS = [
   },
   {
     id: 15, name: '최후 결전장', sub: '더 갈 곳이 없다', theme: 'final',
-    bossHp: 36410, hpMul: 3.57, spMul: 1.56, fireMul: 1.21,
+    bossHp: 28888, hpMul: 9.373, spMul: 1.56, fireMul: 1.21,
 
     pool: [
       [5, (r) => line(2 + ((r() * 3) | 0), 'tank')],
