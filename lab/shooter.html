@@ -3243,7 +3243,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 19:32'
+const BUILD_AT = '09-17 21:29'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7808,7 +7808,7 @@ function openDetail(p, list) {
       (p.trait ? ` · ${traitText(p)}` : '') + `</div>` +
     `<canvas class="demo"></canvas>` +
     `<div class="rows">` +
-      row('등급 배수', `화력 ×${p.power.toFixed(2)} · 간격 ×${p.rate.toFixed(2)}`) +
+      row('등급 배수', `화력 ×${p.power.toFixed(2)} · 간격 ×${p.rate.toFixed(2)} · 체력 ×${(PLANE_HP[p.tier] || 1)}`) +
       row('사격', `${realRate.toFixed(2)}초 · 초당 ${shots.toFixed(1)}발`) +
       row('강화 효과', lv ? `화력 +${Math.round((upgPower(p.id) - 1) * 100)}% · 간격 -${Math.round((1 - upgRate(p.id)) * 100)}%` : '아직 없음') +
       row('조각', ok ? `${shardOf(p.id)}개` : `${shardOf(p.id)} / ${shardNeed(p)}`) +
@@ -7933,8 +7933,8 @@ function newState() {
     t: 0, running: false,
 
     player: { x: W / 2, y: H - 120, lv: 1, inv: 0,
-              hp: runMode === 'hard' && !zoneRun ? 1 : PLAYER_HP + pilotHp(),
-              maxHp: runMode === 'hard' && !zoneRun ? 1 : PLAYER_HP + pilotHp() },
+              hp: runMode === 'hard' && !zoneRun ? 1 : Math.round((PLAYER_HP + pilotHp()) * planeHpMul()),
+              maxHp: runMode === 'hard' && !zoneRun ? 1 : Math.round((PLAYER_HP + pilotHp()) * planeHpMul()) },
     ult: 0, ultT: 0, ultKind: null, escorts: [], shards: [], sweeps: [],
     adUsed: { revive: 0 },
     squad, lives: LIVES, score: 0, kills: 0, ultUsed: 0, hitCount: 0, clearWait: 0,
@@ -9744,6 +9744,13 @@ function mkEnemy(kind, x, y, drift) {
 const LIVES = 1
 
 const PLAYER_HP = 77
+
+const PLANE_HP = { common: 1, rare: 1.5, high: 2, legend: 3 }
+
+function planeHpMul() {
+  const p = planeById(prog.squad[MAIN_SLOT])
+  return (p && PLANE_HP[p.tier]) || 1
+}
 
 const DMG_TAKEN = 0.6
 const DMG = {
