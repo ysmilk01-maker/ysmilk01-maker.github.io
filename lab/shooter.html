@@ -3266,7 +3266,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 08:11'
+const BUILD_AT = '09-18 08:20'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3372,6 +3372,10 @@ const SHOP = [
   { n: 10, won: 1000 },
   { n: 20, won: 1500 },
   { n: 50, won: 3000 },
+]
+
+const SHOP_EN = [
+  { n: 10, won: 990 },
 ]
 
 const PITY = { pilot: { at: 60, tier: 'high' } }
@@ -4801,7 +4805,7 @@ function openMail(tab) {
   })
 }
 
-const PASS = { price: 9900, name: '출격 패스', tickets: 10, enMax: 15 }
+const PASS = { price: 9900, name: '출격 패스', tickets: 10, energy: 10, enMax: 15 }
 function passActive() { return !!(prog.pass && prog.pass.until && prog.pass.until > Date.now()) }
 
 function passRange() {
@@ -4818,31 +4822,38 @@ function passDaily() {
   if (prog.pass.lastDaily === k) return
   prog.pass.lastDaily = k
   save()
-  mailAdd({ title: '출격 패스 · 오늘의 가챠권',
-            body: '출격 패스 혜택으로 매일 가챠권 ' + PASS.tickets + '장을 보냅니다.',
-            items: { ticket: PASS.tickets } })
+
+  mailAdd({ title: '출격 패스 · 오늘의 보급',
+            body: '출격 패스 혜택으로 매일 가챠권 ' + PASS.tickets +
+                  '장과 출격권 ' + PASS.energy + '장을 보냅니다.',
+            items: { ticket: PASS.tickets, energy: PASS.energy } })
 }
 
 function passGrantPlane() {
-  const pool = PLANES.filter((p) => p.tier === 'high' && !unlocked(p))
+  if (prog.pass && prog.pass.first) return
+  prog.pass = prog.pass || {}
+  prog.pass.first = true
+  save()
+  const pool = PLANES.filter((p) => p.tier === 'legend' && !unlocked(p))
   const p = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null
-  mailAdd({ title: '출격 패스 · 이달의 상급 기체',
-            body: p ? p.name + ' 기체를 보냅니다. 편대에 넣어 보세요.'
-                    : '상급 기체를 모두 가지고 계셔서 가챠권 20장으로 대신 보냅니다.',
-            items: p ? { plane: p.id } : { ticket: 20 } })
+  mailAdd({ title: '출격 패스 · 첫 결제 선물',
+            body: p ? '레전드 기체 ' + p.name + ' 을(를) 보냅니다. 편대에 넣어 보세요.'
+                    : '레전드 기체를 모두 가지고 계셔서 가챠권 50장으로 대신 보냅니다.',
+            items: p ? { plane: p.id } : { ticket: 50 } })
 }
 const PASS_BEN = [
-  ['광고', '광고 없음', '광고 자리마다 보상만 바로 받습니다'],
-  ['출격', '출격권 한도 ' + PASS.enMax + '장', '자연 충전 상한 ' + PASS.enMax + '장 (기본 ' + EN_MAX + '장)'],
+  ['기체', '첫 결제 레전드 1기', '레전드 기체 랜덤 1기 · 처음 한 번'],
+  ['출격', '매일 출격권 ' + PASS.energy + '장', '우편함으로 매일 도착합니다'],
   ['가챠', '매일 가챠권 ' + PASS.tickets + '장', '우편함으로 매일 도착합니다'],
-  ['기체', '매월 상급 기체 1기', '결제할 때마다 상급 기체 랜덤 1기'],
+  ['한도', '출격권 한도 ' + PASS.enMax + '장', '자연 충전 상한 ' + PASS.enMax + '장 (기본 ' + EN_MAX + '장)'],
+  ['광고', '광고 없음', '광고 자리마다 보상만 바로 받습니다'],
 ]
 function passCard() {
   const on = passActive()
   return '<div class="passcard' + (on ? ' on' : '') + '" data-buy="pass" role="button" tabindex="0">' +
     '<div class="pc-head"><span class="pc-name">' + PASS.name + '</span>' +
     '<span class="pc-price">월 ' + PASS.price.toLocaleString('ko-KR') + '원</span></div>' +
-    '<div class="pc-sub">' + (on ? '이용 중 · ' + passRange() + ' · ' + passDaysLeft() + '일 남음' : '한 달 동안 네 가지 혜택') + '</div>' +
+    '<div class="pc-sub">' + (on ? '이용 중 · ' + passRange() + ' · ' + passDaysLeft() + '일 남음' : '한 달 동안 다섯 가지 혜택') + '</div>' +
     PASS_BEN.map(([i, b, t]) => '<div class="pc-ben"><i>' + i + '</i><b>' + b + '</b><span>' + t + '</span></div>').join('') +
     '<button id="passBuy">' + (on ? '이용 중' : '구독하기 · 월 ' + PASS.price.toLocaleString('ko-KR') + '원') + '</button>' +
     '<div class="pc-note">언제든 해지할 수 있습니다. 결제는 곧 열립니다.</div>' +
@@ -4852,7 +4863,7 @@ function passCard() {
 let shopTab = 'pass'
 const SHOP_SUB = {
   pass: '월정액 하나로 광고 없이, 더 자주, 더 많이.',
-  ticket: '가챠권은 광고로 하루 ' + AD_TK_DAY + '장까지. 묶음은 곧 열립니다.',
+  ticket: '가챠권은 광고로 하루 ' + AD_TK_DAY + '장까지. 출격권 묶음도 여기 있습니다.',
   pilot: '한 명씩 삽니다. 조각을 모아도 열립니다.',
   plane: '지정 구매 - 확률형이 아닙니다. 조각을 모아도 열립니다.',
 }
@@ -4895,8 +4906,11 @@ function renderShop() {
     lab('광고로 받기')
     card('adTk', '', '<div style="width:10px"></div>', '가챠권 1장', '', '광고를 끝까지 보면 한 장 · 오늘 ' + (AD_TK_DAY - left) + '/' + AD_TK_DAY,
          left > 0 ? '광고 보기' : '내일 다시', left <= 0)
-    lab('묶음')
+    lab('가챠권 묶음')
     SHOP.forEach((it, i) => card('pack:' + i, '', '<div style="width:10px"></div>', '가챠권 ' + it.n + '장', '', '장당 ' + Math.round(it.won / it.n) + '원', won(it.won), false))
+
+    lab('출격권 묶음')
+    SHOP_EN.forEach((it, i) => card('en:' + i, '', '<div style="width:10px"></div>', '출격권 ' + it.n + '장', '', '장당 ' + Math.round(it.won / it.n) + '원 · 한도를 넘겨 쌓입니다', won(it.won), false))
   } else if (shopTab === 'pilot') {
     let last = ''
     for (const p of shopPilots()) {
@@ -4940,7 +4954,7 @@ function openShopItem(id) {
       (on ? r2('이용 기간', passRange() + ' <span style="color:var(--dim);font-weight:500">(' + passDaysLeft() + '일 남음)</span>') : '') +
       PASS_BEN.map(([i, b, t]) => r2(b, t)).join('') + '</div>' +
       '<div class="note2">결제일마다 자동으로 갱신되고 언제든 해지할 수 있습니다. 해지해도 남은 기간은 그대로 씁니다. ' +
-      '매일 가챠권과 이달의 기체는 우편함으로 옵니다.</div>' +
+      '매일 가챠권·출격권과 첫 결제 선물은 우편함으로 옵니다. 레전드 기체는 처음 한 번만 드립니다.</div>' +
       '<div class="price"><small>월</small>' + won(PASS.price) + '</div>'
     okLabel = on ? '이용 중' : '구독하기'
     onOk = on ? null : () => soon(PASS.name, '월 ' + won(PASS.price))
@@ -4951,6 +4965,15 @@ function openShopItem(id) {
       '<div class="note2">중간에 닫으면 받지 못합니다. 하루 ' + AD_TK_DAY + '장까지이고 자정에 다시 셉니다.</div>'
     okLabel = left > 0 ? '광고 보기' : '내일 다시'
     onOk = left > 0 ? () => adTicket() : null
+  } else if (id.startsWith('en:')) {
+    const it = SHOP_EN[+id.slice(3)]
+    html = '<h3>출격권 ' + it.n + '장</h3><div class="sub2">묶음</div>' +
+      '<div class="rows">' + r2('장당', Math.round(it.won / it.n) + '원') +
+      r2('쓰는 곳', '판에 나갈 때 한 장') +
+      r2('지금', energy() + '장 · 자연 충전 상한 ' + enMax() + '장') + '</div>' +
+      '<div class="note2">산 것은 상한을 넘겨 쌓입니다. 자연 충전은 상한까지만 차고, 넘긴 몫은 줄지 않습니다.</div>' +
+      '<div class="price">' + won(it.won) + '</div>'
+    onOk = () => soon('출격권 ' + it.n + '장', won(it.won))
   } else if (id.startsWith('pack:')) {
     const it = SHOP[+id.slice(5)]
     html = '<h3>가챠권 ' + it.n + '장</h3><div class="sub2">묶음</div>' +
