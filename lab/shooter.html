@@ -3245,7 +3245,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 07:16'
+const BUILD_AT = '09-18 07:17'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9065,7 +9065,7 @@ function buildWaves(ch, sub) {
 
   const early = ch.id === 1 ? 0.59 : 1
 
-  const spawnMul = (ch.spawnMul || 1) * (ch.id >= 2 ? MOB_MORE : 1) * SPAWN_ALL
+  const spawnMul = spawnAtG(gStage(ch.id, sub))
 
   const flavorIdx = Math.floor(r() * ch.pool.length)
   const pool = ch.pool.map(([w, f], i) => [i === flavorIdx ? w * 2.2 : w, f])
@@ -9267,11 +9267,18 @@ const CURVE_BOSS_STEP = Math.pow(CURVE_BOSS1 / CURVE_BOSS0, 1 / (G_MAX - 6))
 
 function bossAtG(g) { return Math.round(CURVE_BOSS0 * Math.pow(CURVE_BOSS_STEP, g - 6)) }
 
-const CURVE_SP0 = 1.14, CURVE_SP1 = 1.915
-function spAtG(g) { return CURVE_SP0 + (CURVE_SP1 - CURVE_SP0) * (g - 1) / (G_MAX - 1) }
-const CURVE_FIRE0 = 3.1, CURVE_FIRE1 = 1.0716
-const CURVE_FIRE_STEP = Math.pow(CURVE_FIRE1 / CURVE_FIRE0, 1 / (G_MAX - 1))
+const SP_END = 1.3, FIRE_END = 1.5, SPAWN_END = 1.3
+const CURVE_SP0 = 1.14
+const CURVE_SP_STEP = Math.pow(SP_END, 1 / (G_MAX - 1))
+function spAtG(g) { return CURVE_SP0 * Math.pow(CURVE_SP_STEP, g - 1) }
+
+const CURVE_FIRE0 = 3.1
+const CURVE_FIRE_STEP = Math.pow(1 / FIRE_END, 1 / (G_MAX - 1))
 function fireAtG(g) { return CURVE_FIRE0 * Math.pow(CURVE_FIRE_STEP, g - 1) }
+
+const CURVE_SPAWN0 = 1.0
+const CURVE_SPAWN_STEP = Math.pow(SPAWN_END, 1 / (G_MAX - 1))
+function spawnAtG(g) { return CURVE_SPAWN0 * Math.pow(CURVE_SPAWN_STEP, g - 1) }
 const CRAZY_HP = 2
 
 function finalRushBoss(stage) {
@@ -16405,6 +16412,7 @@ function showChapter(ci) {
 
     r2('적 체력', '×' + hpAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + hpAtG(gStage(ch.id, SUBS)).toFixed(2)) +
     r2('적 속도', '×' + spAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + spAtG(gStage(ch.id, SUBS)).toFixed(2)) +
+    r2('적 출현량', '×' + spawnAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + spawnAtG(gStage(ch.id, SUBS)).toFixed(2)) +
     r2('보스', bossAtG(gStage(ch.id, 6)).toLocaleString('ko-KR') + ' · ' +
                bossAtG(gStage(ch.id, SUBS)).toLocaleString('ko-KR')) +
     r2('단계', SUBS + '개')
