@@ -3221,7 +3221,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 19:20'
+const BUILD_AT = '09-17 19:23'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -12314,6 +12314,78 @@ const GROUND_TINT = {
   ruin:   ['140,126,110', 0.32],
 }
 
+function imStats(im, n) {
+  n = n || 64
+  const c = document.createElement('canvas'); c.width = n; c.height = n
+  const x = c.getContext('2d', { willReadFrequently: true })
+  try { x.drawImage(im, 0, 0, n, n) } catch { return null }
+  let d; try { d = x.getImageData(0, 0, n, n).data } catch { return null }
+  let r = 0, g2 = 0, b = 0, L = 0, E = 0, cnt = 0
+  for (let y = 1; y < n - 1; y++) for (let X = 1; X < n - 1; X++) {
+    const i = (y * n + X) * 4
+    if (d[i + 3] < 16) continue
+    r += d[i]; g2 += d[i + 1]; b += d[i + 2]
+    const l = d[i] * .299 + d[i + 1] * .587 + d[i + 2] * .114
+    L += l; cnt++
+    const j = (y * n + X + 1) * 4, k = ((y + 1) * n + X) * 4
+    E += Math.abs(l - (d[j] * .299 + d[j + 1] * .587 + d[j + 2] * .114)) +
+         Math.abs(l - (d[k] * .299 + d[k + 1] * .587 + d[k + 2] * .114))
+  }
+  if (!cnt) return null
+  return { r: r / cnt, g: g2 / cnt, b: b / cnt, L: L / cnt, E: E / cnt }
+}
+const GROUND_STAT = new Map()
+
+function groundStat(theme) {
+  if (GROUND_STAT.has(theme)) return GROUND_STAT.get(theme)
+  const tile = ic('tile_' + theme)
+  if (!tile) return null
+  const v = imStats(tile)
+  GROUND_STAT.set(theme, v)
+  return v
+}
+const FIT_CACHE = new Map()
+
+function fitToGround(im, key, theme) {
+  const ck = key + '|' + theme
+  let v = FIT_CACHE.get(ck)
+  if (v !== undefined) return v
+  const gs = groundStat(theme), os = imStats(im)
+  if (!gs || !os) return null
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height
+  if (!w || !h) return null
+  const c = document.createElement('canvas'); c.width = w; c.height = h
+  const x = c.getContext('2d')
+
+  const ratio = os.E / Math.max(1, gs.E)
+  const k = ratio > 1.8 ? Math.max(0.55, 1.8 / ratio) : 1
+  if (k < 1) {
+    const t = document.createElement('canvas')
+    t.width = Math.max(1, Math.round(w * k)); t.height = Math.max(1, Math.round(h * k))
+    const tx = t.getContext('2d'); tx.imageSmoothingEnabled = true
+    tx.drawImage(im, 0, 0, t.width, t.height)
+    x.imageSmoothingEnabled = true
+    x.drawImage(t, 0, 0, w, h)
+  } else {
+    x.drawImage(im, 0, 0)
+  }
+
+  x.globalCompositeOperation = 'source-atop'
+  x.fillStyle = 'rgba(' + Math.round(gs.r) + ',' + Math.round(gs.g) + ',' + Math.round(gs.b) + ',0.34)'
+  x.fillRect(0, 0, w, h)
+
+  const now = os.L * 0.66 + 34 * 0.34
+  if (now > gs.L) {
+    const need = Math.max(0.35, Math.min(1, (gs.L + (now - gs.L) * 0.5) / now))
+    x.fillStyle = 'rgba(0,0,0,' + (1 - need).toFixed(3) + ')'
+    x.fillRect(0, 0, w, h)
+  }
+  x.globalCompositeOperation = 'source-over'
+  v = { art: c, alpha: 0.9 }
+  FIT_CACHE.set(ck, v)
+  return v
+}
+
 const SCENERY_TINT = {
   sand:   ['150,102,52', 0.34, 0.86],
   canyon: ['140,76,44', 0.34, 0.86],
@@ -13976,9 +14048,11 @@ function paintBattleScenery(s) {
 
     const sunk = OBJ_ALPHA[sl.obj] != null
 
-    const st = SCENERY_TINT[(s.stage && s.stage.theme) || 'sea']
-    const art = st ? (tintOf(im, sl.obj + '_sc', st[0], st[1]) || im) : im
-    const alpha = sunk ? Math.min(.62, OBJ_ALPHA[sl.obj] * 1.25) : (st ? st[2] : .96)
+    const th = (s.stage && s.stage.theme) || 'sea'
+    const fit = sunk ? null : fitToGround(im, sl.obj, th)
+    const st = SCENERY_TINT[th]
+    const art = fit ? fit.art : (st ? (tintOf(im, sl.obj + '_sc', st[0], st[1]) || im) : im)
+    const alpha = sunk ? Math.min(.62, OBJ_ALPHA[sl.obj] * 1.25) : (fit ? fit.alpha : (st ? st[2] : .96))
     if (!sunk) drawShadow(art, cx, cy, sz, sz, .36, sl.seed * .43, .3)
     g.save(); g.translate(cx, cy); g.rotate(sl.seed * .43)
     g.globalAlpha = alpha
