@@ -1599,12 +1599,25 @@
   .gatab button.on { color: var(--accent); border-color: var(--accent); }
   /* 아래 단추는 화면에 고정한다. 결과를 훑다 보면 뽑기 단추가 위로 밀린다 */
   /* 뽑기 상자. 글만 있으면 아무것도 안 뜬 화면처럼 보인다 */
-  .gcrate { text-align: center; margin: 18px 0 4px; }
+  /*
+   * 상자 자체가 단추다 (2026-09-17 대표 지정). 화면에서 제일 크고 제일
+   * 누르고 싶게 생긴 것이 상자인데, 여태 아래쪽 「뽑기」만 받았다.
+   *
+   * 누르는 표시는 transform 이 아니라 밝기로 준다 - 위아래로 흔들리는
+   * 애니메이션이 이미 transform 을 쥐고 있어서 겹치면 한쪽이 진다.
+   */
+  .gcrate {
+    display: block; width: 100%; text-align: center; margin: 18px 0 4px;
+    background: none; border: 0; padding: 0; cursor: pointer;
+  }
+  .gcrate:disabled { cursor: default; opacity: .5; }
   .gcrate img {
     width: 168px; height: 168px; object-fit: contain;
     filter: drop-shadow(0 10px 22px rgba(0,0,0,.55));
     animation: crateBob 2.6s ease-in-out infinite;
   }
+  .gcrate:not(:disabled):active img { filter: drop-shadow(0 6px 14px rgba(0,0,0,.55)) brightness(1.3); }
+  .gcrate:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 14px; }
   @keyframes crateBob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }
   @media (prefers-reduced-motion: reduce) { .gcrate img { animation: none } }
   #scGacha .gmain {
@@ -1846,14 +1859,29 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad #launch{width:100%;min-height:54px;padding:10px 14px;font-size:21px;font-weight:800;letter-spacing:2px;border:1px solid #e1d4a5;border-radius:12px;background:linear-gradient(#ddc895,#bda66d);color:#18231e;box-shadow:0 4px 0 #64563980;text-shadow:none;background-image:linear-gradient(#ddc895,#bda66d)}
 .hg-hint{font-size:10px;line-height:1.6;text-align:center;color:#9fb9c5;margin-top:9px}
 /* 열렸는데 비어 있는 자리. 눌러야 할 곳이 눈에 띄어야 한다 (2026-09-11) */
-#scSquad .hg-wing.need{border-color:#edc879;background:#2a2517bd;animation:wingNeed 1.6s ease-in-out infinite}
-#scSquad .hg-wing.need span[aria-hidden]{color:#edc879}
+/*
+ * 빈 자리는 **반짝인다** (2026-09-17 대표 지정).
+ *
+ * 전에는 wingNeed 한 벌을 파일럿·메인 칸과 같이 썼다. 그건 바깥으로
+ * 고리가 한 번 퍼졌다 사라지는 것이라, 화면 구석의 작은 칸에서는
+ * 켜져 있는지조차 안 보였다 - 자리가 열린 줄 모르고 지나가는 사람이
+ * 있다는 것이 원래 이 표시를 붙인 이유였는데 그 일이 그대로였다.
+ *
+ * 칸 자체를 밝혔다 어둡게 한다. 테두리·바탕·＋ 가 함께 움직이고
+ * 주기도 1.6초에서 1.15초로 줄여 「빛난다」가 아니라 「반짝인다」로
+ * 읽히게 했다. 파일럿·메인 칸은 wingNeed 그대로다 - 거기는 「올릴 게
+ * 있다」는 조용한 알림이지 눌러야 할 자리가 아니다.
+ */
+#scSquad .hg-wing.need{border-color:#edc879;background:#2a2517bd;animation:wingBlink 1.15s ease-in-out infinite}
+#scSquad .hg-wing.need span[aria-hidden]{color:#edc879;animation:wingPlus 1.15s ease-in-out infinite}
+@keyframes wingBlink{0%,100%{border-color:#edc879;background:#2a2517bd;box-shadow:0 0 0 0 rgba(237,200,121,.5)}50%{border-color:#fff1c8;background:#5c4e22e0;box-shadow:0 0 11px 3px rgba(237,200,121,.55)}}
+@keyframes wingPlus{0%,100%{color:#edc879;text-shadow:none}50%{color:#fff7da;text-shadow:0 0 9px rgba(255,222,145,.9)}}
 @keyframes wingNeed{0%,100%{box-shadow:0 0 0 0 rgba(237,200,121,.45)}50%{box-shadow:0 0 0 5px rgba(237,200,121,0)}}
 #squadSub.need{color:#edc879;font-weight:700}
 /* 파일럿 스탯을 올릴 수 있으면 그 칸이 빛난다 (2026-09-11) */
 #scSquad .hg-pilot.grow,#scSquad .hg-main.grow{border-color:#edc879!important;animation:wingNeed 1.6s ease-in-out infinite}
 #scSquad .hg-pilot.grow .hg-change,#scSquad .hg-main.grow .hg-change{color:#edc879;font-weight:800}
-@media(prefers-reduced-motion:reduce){#scSquad .hg-wing.need{animation:none}}
+@media(prefers-reduced-motion:reduce){#scSquad .hg-wing.need,#scSquad .hg-wing.need span[aria-hidden]{animation:none}}
 #tabs{max-width:480px;margin-inline:auto;height:calc(var(--hg-nav) + env(safe-area-inset-bottom,0px));grid-template-columns:repeat(4,1fr);align-items:center;gap:6px;padding:4px 10px calc(4px + env(safe-area-inset-bottom,0px));background:#09131af5;border-top:1px solid #3a515d88}
 #tabs button{position:relative;justify-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:78px;height:65px;padding:3px 6px;font-size:11px;color:#afc5d0;border-radius:13px}#tabs button>svg{width:28px;height:28px}#tabs button>img{width:65px;height:58px;object-fit:contain}#tabs button>img.nav-art{width:44px;height:44px}#tabs .nav-emo{display:block;font-size:30px;line-height:44px;height:44px}
 #scSquad #hgPlaneImage{width:100%;height:100%;object-fit:contain;padding:7%;box-sizing:border-box}
@@ -3158,7 +3186,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 13:37'
+const BUILD_AT = '09-17 18:25'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3556,6 +3584,8 @@ const GC = lazyImgs(GACHA_B64, 'gacha')
 
   put('--sc-stage', 'ui_stage')
 }
+
+let crateWarm = false
 
 function gc(k) {
   const im = GC[k]
@@ -5913,10 +5943,7 @@ const TOUR_FULL = [
   ['#tabs', '아래 메뉴', '전선·격납고·뽑기로 오갑니다. 할 일이 있으면 노란 점이 켜집니다.'],
 ]
 
-const TOUR_FIRST = [
-
-  ['#launch', '출격', '여기를 누르면 바로 나갑니다. 이동은 드래그, 공격은 자동입니다. 판에서 떨어지는 강화 아이템은 꼭 주우세요. 클리어를 가릅니다.'],
-]
+const TOUR_FIRST = []
 let tourAt = 0
 
 let tourSteps = TOUR_FIRST
@@ -5956,9 +5983,10 @@ function tourRun(steps, key, after) {
   tourShow()
 }
 function tourStart(force) {
-  tourSteps = force ? TOUR_FULL : TOUR_FIRST
+
+  if (!force) return false
+  tourSteps = TOUR_FULL
   tourKey = 'tourDone2'
-  if (!force && prog.tourDone2) return
 
   const tt = document.getElementById('title')
   if (tt && !tt.hidden) return
@@ -6097,8 +6125,6 @@ function renderSquad() {
   }
 
   setTimeout(() => {
-
-    if (!prog.tourDone2) { tourStart(false); return }
 
     if (state && state.running) return
 
@@ -6605,10 +6631,22 @@ function paintGacha(res) {
   if (!res) {
 
     const crate = gc('crateC')
+
+    if (!crate && !crateWarm) {
+      crateWarm = true
+      warmImgs(GC, ['crateC'], () => {
+        if (curScreen === 'gacha' && gaTab === 'pull') renderGacha(null)
+      })
+    }
     hpPlain(body, head +
-      (crate ? `<div class="gcrate"><img src="${crate.src}" alt=""></div>` : '') +
-      `<div class="empty">조각을 모으면 열립니다. 남는 조각은 강화에 씁니다.<br>` +
+      (crate ? `<button type="button" class="gcrate" id="gCrate" aria-label="뽑기"><img src="${crate.src}" alt=""></button>` : '') +
+
+      `<div class="empty">` + (crate ? '상자를 누르면 열립니다.' : '조각을 모으면 열립니다.') +
+      ` 남는 조각은 강화에 씁니다.<br>` +
       `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.</div>`)
+
+    const cb = document.getElementById('gCrate')
+    if (cb) { cb.disabled = btn.disabled; cb.onclick = () => btn.click() }
     return
   }
 
@@ -16108,7 +16146,6 @@ function titleStart() {
     const daily = claimDaily()
     if (daily) showDaily(daily)
 
-    else setTimeout(() => { if (!prog.tourDone2) tourStart(false) }, 0)
   }
   if (!prog.pilot.name) openNamePop(go1)
   else go1()
