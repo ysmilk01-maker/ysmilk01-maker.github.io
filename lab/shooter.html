@@ -3158,7 +3158,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 13:21'
+const BUILD_AT = '09-17 13:23'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -10368,6 +10368,8 @@ const SUPPLY_FIRST = 1.2
 const UFO_HP_MUL2 = 2 / 1.2
 
 const UFO_HP_UP = 1.5
+
+const UFO_TICKET = 2
 const SUPPLY_GAP = [3.5, 5.5]
 
 function dropSupply() {
@@ -12030,9 +12032,9 @@ function collide() {
 
       if (e.hp <= 0) {
 
-        prog.ticket += 1
+        prog.ticket += UFO_TICKET
         save()
-        banner('가챠권 +1')
+        banner('가챠권 +' + UFO_TICKET)
         sfx('got')
         haptic('ult')
         boom(e.x, e.y, 40, '#ffd27a')
