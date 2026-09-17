@@ -3245,7 +3245,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 21:52'
+const BUILD_AT = '09-18 06:59'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7055,7 +7055,7 @@ function renderStage() {
     `<div class="mapwrap"><canvas class="pv" width="520" height="140"></canvas>` +
     `<svg class="mappath" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${path}"/></svg>` +
     `<div class="mapnodes">${mapNodes}</div>` +
-    `<div class="mapinfo"><b>${ch.name}</b><small>${ch.sub}</small><small>적 체력 ×${ch.hpMul} · 보스 ${ch.bossHp.toLocaleString('ko-KR')}</small></div>` +
+    `<div class="mapinfo"><b>${ch.name}</b><small>${ch.sub}</small><small>적 체력 ×${hpAtG(gStage(ch.id, 1)).toFixed(2)} → ×${hpAtG(gStage(ch.id, SUBS)).toFixed(2)}</small></div>` +
     `</div></div>` +
     (rushModeOpen()
       ? `<button class="rushopen" id="rushOpen">` +
@@ -9152,10 +9152,10 @@ function curStage() {
     theme: THEME_ART[ch.theme] || ch.theme,
     waves: buildWaves(ch, sub),
 
-    bossHp: Math.round(ch.bossHp * (0.78 + sub * 0.0967)),
-    hpMul: ch.hpMul * k, spMul: ch.spMul * (1 + (sub - 1) * 0.0207),
+    bossHp: bossAtG(gStage(ch.id, sub)),
+    hpMul: hpAtG(gStage(ch.id, sub)), spMul: spAtG(gStage(ch.id, sub)),
 
-    fireMul: (ch.fireMul || 1) * (1 - (sub - 1) * 0.0104),
+    fireMul: fireAtG(gStage(ch.id, sub)),
 
     ...(bossRun >= 0 ? (() => {
       const rc = CHAPTERS[rushCh(bossRun, rushDiff()) - 1] || CHAPTERS[0]
@@ -9251,6 +9251,28 @@ const FIRE_SLOW = 1 / 0.85
 const ENEMY_HP_UP = 1.15
 
 const ENEMY_HP_UP2 = 1.2
+
+const MOB_HP_MUL = ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * MOB_HP_ADD
+
+const BOSS_HP_MUL = BOSS_HP_UP * BOSS_HP_ADD * ENEMY_HP_DOWN * HP_ALL_UP
+
+function gStage(chId, sub) { return ((chId | 0) - 1) * SUBS + (sub | 0) }
+const G_MAX = 15 * SUBS
+
+const CURVE_HP0 = 0.73, CURVE_HP1 = 33.075
+const CURVE_HP_STEP = Math.pow(CURVE_HP1 / CURVE_HP0, 1 / (G_MAX - 1))
+
+function hpAtG(g) { return CURVE_HP0 * Math.pow(CURVE_HP_STEP, g - 1) }
+const CURVE_BOSS0 = 3060, CURVE_BOSS1 = 56054
+const CURVE_BOSS_STEP = Math.pow(CURVE_BOSS1 / CURVE_BOSS0, 1 / (G_MAX - 6))
+
+function bossAtG(g) { return Math.round(CURVE_BOSS0 * Math.pow(CURVE_BOSS_STEP, g - 6)) }
+
+const CURVE_SP0 = 1.14, CURVE_SP1 = 1.915
+function spAtG(g) { return CURVE_SP0 + (CURVE_SP1 - CURVE_SP0) * (g - 1) / (G_MAX - 1) }
+const CURVE_FIRE0 = 3.1, CURVE_FIRE1 = 1.0716
+const CURVE_FIRE_STEP = Math.pow(CURVE_FIRE1 / CURVE_FIRE0, 1 / (G_MAX - 1))
+function fireAtG(g) { return CURVE_FIRE0 * Math.pow(CURVE_FIRE_STEP, g - 1) }
 const CRAZY_HP = 2
 
 function finalRushBoss(stage) {
@@ -9274,8 +9296,9 @@ const RUSH_STEP = 1.07
 
 function rushBase() {
   const ch = CHAPTERS[0]
-  const sb = Math.round(ch.bossHp * (0.78 + SUBS * 0.0967))
-  return sb * 0.55 * BOSS_HP_UP * BOSS_ONLY_UP * ENEMY_HP_DOWN * HP_ALL_UP * BOSS_HP_ADD * RUSH_HALF
+
+  const sb = 4366
+  return sb * 0.55 * BOSS_ONLY_UP * BOSS_HP_MUL * RUSH_HALF
 }
 
 function rushHp(i, d) {
@@ -9739,7 +9762,7 @@ function mkEnemy(kind, x, y, drift) {
   return { kind, x, y, drift, t: Math.random() * 3, cd: b.fire * (.4 + Math.random()),
            beamPh: 0, holdY: 0, mode: null,
 
-           ...b, hp: Math.round(b.hp * SG.hpMul * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * MOB_HP_ADD * modeHp() * (b.ufo ? UFO_HP_UP : 1) * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
+           ...b, hp: Math.round(b.hp * SG.hpMul * MOB_HP_MUL * modeHp() * (b.ufo ? UFO_HP_UP : 1) * (b.ufo && (SG.id || 1) >= 2 ? UFO_HP_MUL2 : 1)),
 
            sp: Math.round(b.sp * SG.spMul * SPD_K),
            dashSp: b.dashSp ? Math.round(b.dashSp * SPD_K) : b.dashSp }
@@ -9817,7 +9840,7 @@ function mkGround(kind, x, y) {
 
     art: sea ? Math.round(b.r * 7) : 0,
 
-    hp: Math.round((sea ? b.hp * 2 : b.hp) * ENEMY_HP_UP * ENEMY_HP_UP2 * ENEMY_HP_DOWN * HP_ALL_UP * MOB_HP_ADD * modeHp()),
+    hp: Math.round((sea ? b.hp * 2 : b.hp) * MOB_HP_MUL * modeHp()),
   }
 }
 
@@ -10252,7 +10275,7 @@ function spawnBoss(mid) {
   const base = rush
 
     ? rushHp(state.rush, state.rushD)
-    : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_UP * ENEMY_HP_DOWN * HP_ALL_UP * BOSS_HP_ADD * modeHp())
+    : Math.round(state.stage.bossHp * (mid ? mm : 0.55 * BOSS_ONLY_UP) * BOSS_HP_MUL * modeHp())
 
   const bsub = (state.stage && state.stage.sub) || 1
 
@@ -16381,9 +16404,11 @@ function showChapter(ci) {
   document.getElementById('chapSub').textContent = ch.sub
   const r2 = (k, v) => '<div class="r2"><span>' + k + '</span><span>' + v + '</span></div>'
   document.getElementById('chapRows').innerHTML =
-    r2('적 체력', '×' + ch.hpMul) +
-    r2('적 속도', '×' + ch.spMul) +
-    r2('보스', ch.bossHp.toLocaleString('ko-KR')) +
+
+    r2('적 체력', '×' + hpAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + hpAtG(gStage(ch.id, SUBS)).toFixed(2)) +
+    r2('적 속도', '×' + spAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + spAtG(gStage(ch.id, SUBS)).toFixed(2)) +
+    r2('보스', bossAtG(gStage(ch.id, 6)).toLocaleString('ko-KR') + ' · ' +
+               bossAtG(gStage(ch.id, SUBS)).toLocaleString('ko-KR')) +
     r2('단계', SUBS + '개')
   document.getElementById('chapGo').textContent =
     ch.name + ' 1단계가 선택되었습니다.'
