@@ -3158,7 +3158,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 13:23'
+const BUILD_AT = '09-17 13:37'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -12220,11 +12220,30 @@ const GROUND_SKIN = {
 const GROUND_TINT = {
   sand:   ['168,116,58', 0.46],
   canyon: ['156,86,50', 0.46],
+
+  ash2:   ['188,184,178', 0.55],
+  swamp:  ['96,112,74', 0.44],
+
+  ruin:   ['140,126,110', 0.32],
 }
 
 const SCENERY_TINT = {
   sand:   ['150,102,52', 0.34, 0.86],
   canyon: ['140,76,44', 0.34, 0.86],
+
+  salt:   ['214,198,168', 0.34, 0.88],
+  ash2:   ['200,194,182', 0.26, 0.90],
+}
+
+const TILE_TINT = {
+  salt_b: ['228,210,172', 0.50],
+}
+
+function tileArt(key) {
+  const im = ic('tile_' + key)
+  if (!im) return null
+  const t = TILE_TINT[key]
+  return t ? (tintOf(im, 'tile_' + key, t[0], t[1]) || im) : im
 }
 const TINT_CACHE = new Map()
 
@@ -12249,21 +12268,16 @@ function groundArt(kind) {
 
   const th0 = (state && state.stage && state.stage.theme) || 'sea'
 
-  if (WATER_THEME[th0]) {
-    const sh = GROUND_IMG[kind + '_sea']
-    if (sh && sh.complete && sh.naturalWidth) return sh
-  }
+  const ok = (im) => !!(im && im.complete && im.naturalWidth)
+  let im = null
+  if (WATER_THEME[th0] && ok(GROUND_IMG[kind + '_sea'])) im = GROUND_IMG[kind + '_sea']
   const suf = GROUND_SKIN[th0]
-  if (suf) {
-    const sk = GROUND_IMG[kind + '_' + suf]
-    if (sk && sk.complete && sk.naturalWidth) return sk
-  }
-  const im = GROUND_IMG[kind]
-  if (!(im && im.complete && im.naturalWidth)) return null
+  if (!im && suf && ok(GROUND_IMG[kind + '_' + suf])) im = GROUND_IMG[kind + '_' + suf]
+  if (!im && ok(GROUND_IMG[kind])) im = GROUND_IMG[kind]
+  if (!im) return null
 
   const tn = GROUND_TINT[th0]
-  if (tn) return tintOf(im, kind + '_' + th0, tn[0], tn[1]) || im
-  return im
+  return tn ? (tintOf(im, kind + '_' + th0, tn[0], tn[1]) || im) : im
 }
 
 const ENEMY_B64 = {
@@ -13917,7 +13931,7 @@ function paintBattleBackground(s, now) {
   const theme = (s.stage && s.stage.theme) || 'sea'
   let key = theme
   if (curSub() % 2 === 0 && ic('tile_' + theme + '_b')) key += '_b'
-  const im = ic('tile_' + key)
+  const im = tileArt(key)
   if (!im) return false
   const tile = battleTile(key, im)
   const scale = W / tile.canvas.width
@@ -13955,7 +13969,7 @@ function paintLegacyBattleBackground(s, now) {
 
   let tkey = th0
   if (curSub() % 2 === 0 && ic('tile_' + th0 + '_b')) tkey = th0 + '_b'
-  const tile = ic('tile_' + tkey)
+  const tile = tileArt(tkey)
   if (tile) {
 
     const tw = W
