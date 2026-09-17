@@ -1366,6 +1366,11 @@
     width: 24px; height: 24px; border-radius: 50%; border: 2px solid #0b1118; background: var(--accent);
   }
   .setrow.col .ends { display: flex; justify-content: space-between; font-size: 10px; color: var(--dim); }
+  /* 일괄 강화·자동 배분 줄 (2026-09-18) */
+  .bar.plbar { padding: 0 14px 8px; }
+  .bar.plbar button { width: 100%; }
+  .bar.stauto { margin-top: 8px; }
+  .bar.stauto button { width: 100%; font-size: 12px; }
 
   /* ── UI 그림을 얹는다 ────────────────────────────────────────── */
 
@@ -2382,6 +2387,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <!-- 고른 자리의 기체를 크게. 파워와 강화 단계가 같이 (UI v3, 2026-09-14) -->
   <div class="pl-diag" id="planeDiag"></div>
   <div class="filters v3" id="planeFilters"></div>
+  <!-- 올릴 수 있는 것이 있을 때만 뜬다 (2026-09-18) -->
+  <div class="bar plbar" id="upgAllBar" hidden><button id="upgAll"></button></div>
   <div class="hp" id="planes"></div>
 </div>
 
@@ -3245,7 +3252,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 07:28'
+const BUILD_AT = '09-18 07:35'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4316,10 +4323,13 @@ function drawCardInner(c, tone, res, e, w, h) {
   c.fillText(txt, 0, h / 2 - 22)
 }
 
+const TEN_PULLS = 10, TEN_COST = 9
 function pull10(kind) {
 
-  const need = GACHA[kind === 'mix' ? 'plane' : kind].cost * 10
+  const g0 = GACHA[kind === 'mix' ? 'plane' : kind]
+  const need = g0.cost * TEN_COST
   if (prog.ticket < need) return null
+  prog.ticket += g0.cost * (TEN_PULLS - TEN_COST)
   const out = []
   for (let i = 0; i < 10; i++) {
     const r = pull(kind)
@@ -4704,6 +4714,10 @@ function openMail(tab) {
       '<button data-mt="notice" class="' + (mailTab === 'notice' ? 'on' : '') + '">공지' + dot(notes.filter((m) => !m.read).length) + '</button>' +
     '</div>' +
     '<div class="hp" id="mailHost"></div>' +
+
+    (mailTab === 'box' && boxes.some((m) => !m.claimed)
+      ? '<div class="bar"><button id="mailAll">모두 받기 · ' +
+        boxes.filter((m) => !m.claimed).length + '개</button></div>' : '') +
     '<div class="bar"><button class="ghost" id="dClose">닫기</button></div>'
   const rowHtml = (m) =>
     '<div class="mail' + (m.read ? '' : ' new') + '" data-mail="' + m.id + '">' +
@@ -4731,6 +4745,25 @@ function openMail(tab) {
   panel.onclick = (e) => { if (e.target === panel) close() }
   document.getElementById('dClose').onclick = close
   body.querySelectorAll('[data-mt]').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); openMail(b.dataset.mt) } })
+  const mAll = document.getElementById('mailAll')
+  if (mAll) mAll.onclick = (e) => {
+    e.stopPropagation()
+
+    const left = mailList().filter((m) => m.kind !== 'notice' && !m.claimed)
+    if (!left.length) return
+    const all = {}
+    for (const m of left) {
+      m.claimed = true
+      for (const k in (m.items || {})) {
+        if (typeof m.items[k] === 'number') all[k] = (all[k] || 0) + m.items[k]
+        else all[k] = m.items[k]
+      }
+      grantItems(m.items)
+    }
+    save(); sfx('got'); haptic('ult')
+    openMail()
+    say(itemText(all) + '을(를) 받았습니다.', '우편함 · ' + left.length + '개')
+  }
   body.querySelectorAll('[data-claim]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation()
@@ -5020,7 +5053,10 @@ function xpFromScore(score) { return Math.round(score * 0.03) }
 
 const STAT_COST_MUL = { normal: 1, mid: 1.4, high: 1.9, legend: 2.6 }
 
-function statCost(n, grade) { return Math.round((9000 + 7000 * n) * (STAT_COST_MUL[grade || 'normal'] || 1)) }
+const STAT_COST_DOWN = 0.7
+function statCost(n, grade) {
+  return Math.round((9000 + 7000 * n) * (STAT_COST_MUL[grade || 'normal'] || 1) * STAT_COST_DOWN)
+}
 
 function stCostIdx(k, v) { return k === 'all' ? ST_MAX + v : v }
 function stMax(k) { return k === 'all' ? ALL_MAX : ST_MAX }
@@ -6506,6 +6542,17 @@ function renderPlanes() {
     if (pc) pc.onclick = (e) => { e.stopPropagation(); openCollectionSheet() }
     dg.onclick = () => { if (cur) openDetail(cur, PLANES.filter(unlocked)) }
   }
+
+  const uBar = document.getElementById('upgAllBar')
+  const uBtn = document.getElementById('upgAll')
+  if (uBar && uBtn) {
+    const plan = upgAllPlan()
+    uBar.hidden = !plan.n
+    if (plan.n) {
+      uBtn.textContent = '일괄 강화 · ' + plan.n + '단계'
+      uBtn.onclick = () => askUpgAll()
+    }
+  }
   const ef = document.getElementById('planeFilters')
   ef.innerHTML = ''
 
@@ -6728,9 +6775,10 @@ function paintGacha(res) {
   btn.textContent = enough ? '뽑기 · 1장' : '가챠권이 없습니다'
   const b10 = document.getElementById('gPull10')
   if (b10) {
-    const ten = prog.ticket >= g.cost * 10
+    const ten = prog.ticket >= g.cost * TEN_COST
     b10.disabled = !ten
-    b10.textContent = ten ? '10연차 · 10장' : '10연차 (10장 필요)'
+    b10.textContent = ten ? '10연차 · ' + (g.cost * TEN_COST) + '장'
+                          : '10연차 (' + (g.cost * TEN_COST) + '장 필요)'
   }
 
   const head = `<div class="row"><span class="k">다음 가챠권까지</span>` +
@@ -7240,6 +7288,9 @@ function openPilot(pl, list) {
         (max ? ' · 다 올렸습니다. 이 등급 조각은 공용 조각이 됩니다' : ' · 단계마다 화력·체력 +' + Math.round(GRADE_UP_PER * 100) + '%, 셋이 같이') + '</div>'
     })() +
     '<div class="pstats">' + statHtml + '</div>' +
+
+    (have && ST_KEYS.some((k) => canStat(k, pl.id))
+      ? '<div class="bar stauto"><button class="ghost" id="stAuto">자동 배분 · 위에서부터 채우기</button></div>' : '') +
     (have ? '' : pl.grade === 'normal'
       ? '<div class="pnote">파일럿 Lv.' + pilotNeedLv(pl) + ' 에 합류합니다.</div>'
       : canRecruit(pl.grade)
@@ -7273,6 +7324,33 @@ function openPilot(pl, list) {
     const go2 = (d) => openPilot(list[(at + d + list.length) % list.length], list)
     document.getElementById('dPrev').onclick = () => go2(-1)
     document.getElementById('dNext').onclick = () => go2(1)
+  }
+
+  const aBtn = document.getElementById('stAuto')
+  if (aBtn) aBtn.onclick = () => {
+    if (!hasGrade(pl.grade)) return
+    const cur = stOf(pl.id)
+    const before = {}
+    ST_KEYS.forEach((k) => { before[k] = cur[k] || 0 })
+    const pwBefore = squadPower()
+    let n = 0
+    for (const k of ST_KEYS) {
+      while (canStat(k, pl.id)) {
+        prog.pilot.xp -= statCost(stCostIdx(k, cur[k]), pl.grade)
+        cur[k]++
+        n++
+        if (n > 200) break
+      }
+    }
+    if (!n) { say('지금 올릴 수 있는 스탯이 없습니다.\n경험치가 더 필요합니다.', '자동 배분'); return }
+    save(); sfx('ready'); haptic('ult')
+    missBump('stat')
+    guideDone('stat')
+    const got = ST_KEYS.filter((k) => (cur[k] || 0) > before[k])
+      .map((k) => STATS[k].name + ' +' + ((cur[k] || 0) - before[k])).join(' · ')
+    openPilot(pl, list)
+    say(got, '자동 배분 · ' + n + '칸')
+    pwAfter(pwBefore)
   }
 
   body.querySelectorAll('button[data-st]').forEach((b) => {
@@ -7758,6 +7836,72 @@ function demoShots(p, t) {
   return out
 }
 
+function upgAllPlan() {
+  let parts = prog.parts
+  const shard = {}
+  const lv = {}
+  const step = {}
+  for (const p of PLANES) {
+    if (!unlocked(p)) continue
+    shard[p.id] = shardOf(p.id)
+    lv[p.id] = upgOf(p.id)
+  }
+  let usedParts = 0, usedShard = 0, n = 0
+  for (;;) {
+    let best = null, bestCost = Infinity
+    for (const p of PLANES) {
+      if (lv[p.id] == null || lv[p.id] >= UPG_MAX) continue
+      const c = upgCost(p, lv[p.id]), sh = shardUpg(p, lv[p.id])
+      if (parts < c || shard[p.id] < sh) continue
+      if (c < bestCost) { bestCost = c; best = p }
+    }
+    if (!best) break
+    const c = upgCost(best, lv[best.id]), sh = shardUpg(best, lv[best.id])
+    parts -= c; shard[best.id] -= sh
+    usedParts += c; usedShard += sh
+    if (!step[best.id]) step[best.id] = { p: best, from: lv[best.id], to: lv[best.id] + 1 }
+    else step[best.id].to = lv[best.id] + 1
+    lv[best.id]++
+    n++
+    if (n > 400) break
+  }
+  return { list: Object.values(step), n, usedParts, usedShard }
+}
+
+function upgradeQuiet(p) {
+  const lv = upgOf(p.id), cost = upgCost(p, lv)
+  if (lv >= UPG_MAX || prog.parts < cost || shardOf(p.id) < shardUpg(p, lv)) return false
+  prog.parts -= cost
+  prog.shardP[p.id] = shardOf(p.id) - shardUpg(p, lv)
+  prog.upg[p.id] = lv + 1
+  return true
+}
+
+function askUpgAll() {
+  const plan = upgAllPlan()
+  if (!plan.n) {
+    say('지금 올릴 수 있는 기체가 없습니다.\n부품이나 조각이 더 필요합니다.', '일괄 강화')
+    return
+  }
+  const rows = plan.list
+    .map((x) => x.p.name + ' 강화 ' + x.from + ' → ' + x.to)
+    .join('\n')
+  ask(rows + '\n\n모두 ' + plan.n + '단계 · 부품 ' +
+      plan.usedParts.toLocaleString('ko-KR') + ' · 조각 ' + plan.usedShard.toLocaleString('ko-KR'),
+    () => {
+      const pwBefore = squadPower()
+      let done = 0
+      for (const x of plan.list) {
+        for (let i = x.from; i < x.to; i++) { if (upgradeQuiet(x.p)) done++ }
+      }
+      missBump('upg')
+      guideDone('upg')
+      save(); sfx('ready'); haptic('ult')
+      render()
+      say(done + '단계를 올렸습니다.', '일괄 강화')
+      pwAfter(pwBefore)
+    }, { title: '일괄 강화', ok: '강화한다', no: '그만두기' })
+}
 function upgradePlane(p, after) {
   const lv = upgOf(p.id), cost = upgCost(p, lv)
   if (lv >= UPG_MAX || prog.parts < cost || shardOf(p.id) < shardUpg(p, lv)) return false
