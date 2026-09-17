@@ -1371,6 +1371,10 @@
   .bar.plbar button { width: 100%; }
   .bar.stauto { margin-top: 8px; }
   .bar.stauto button { width: 100%; font-size: 12px; }
+  /* 일시정지 화면의 소리 스위치 (2026-09-18) */
+  #pauseUI .psnd { display: flex; gap: 8px; }
+  #pauseUI .psnd button { flex: 1 1 0; min-width: 0; font-size: 12px; }
+  #pauseUI .psnd button.off { color: var(--dim); }
 
   /* ── UI 그림을 얹는다 ────────────────────────────────────────── */
 
@@ -2643,6 +2647,16 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <div class="pbox">
     <div class="pt">일시정지</div>
     <button id="pResume">계속하기</button>
+    <!--
+      소리 끄기 (2026-09-18 대표 지정).
+      설정에도 같은 스위치가 있지만 그건 격납고에서만 닿는다. 소리를
+      끄고 싶어지는 순간은 판이 도는 중이다 - 판을 버리고 나가야
+      끌 수 있으면 없는 것과 같다. 같은 값(AU.on)을 본다.
+    -->
+    <div class="psnd">
+      <button id="pMusic" class="ghost"></button>
+      <button id="pSfx" class="ghost"></button>
+    </div>
     <button id="pQuit" class="ghost">출격 준비로</button>
     <div class="ps">화면 아무 데나 눌러도 2초 뒤에 이어집니다</div>
   </div>
@@ -3252,7 +3266,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 08:04'
+const BUILD_AT = '09-18 08:11'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6558,7 +6572,8 @@ function renderPlanes() {
     const plan = upgAllPlan()
     uBar.hidden = !plan.n
     if (plan.n) {
-      uBtn.textContent = '일괄 강화 · ' + plan.n + '단계'
+
+      uBtn.textContent = '일괄 강화'
       uBtn.onclick = () => askUpgAll()
     }
   }
@@ -8340,7 +8355,20 @@ function pauseUI(on) {
   const el = document.getElementById('pauseUI')
   if (!el) return
   el.hidden = !on
-  if (on) { const b = document.getElementById('pResume'); if (b) b.focus() }
+  if (on) { pauseSndUI(); const b = document.getElementById('pResume'); if (b) b.focus() }
+}
+
+function pauseSndUI() {
+  const m = document.getElementById('pMusic'), f = document.getElementById('pSfx')
+  if (m) m.textContent = AU.on.music ? '배경음악 켜짐' : '배경음악 꺼짐'
+  if (f) f.textContent = AU.on.sfx ? '효과음 켜짐' : '효과음 꺼짐'
+  if (m) m.classList.toggle('off', !AU.on.music)
+  if (f) f.classList.toggle('off', !AU.on.sfx)
+}
+{
+  const m = document.getElementById('pMusic'), f = document.getElementById('pSfx')
+  if (m) m.onclick = () => { setMusic(!AU.on.music); pauseSndUI() }
+  if (f) f.onclick = () => { setSfx(!AU.on.sfx); pauseSndUI() }
 }
 document.getElementById('pResume').onclick = () => {
   if (!state || !state.paused) return
@@ -10235,6 +10263,14 @@ const BOSS_PAT = {
         }
       }
     },
+
+    p3(bs) {
+      for (const sx of [-30, 30]) {
+        for (const [vx, vy] of [[0, 200], [0, -200], [190, 0], [-190, 0]]) {
+          bshot(bs.x + sx, bs.y + 12, vx, vy, 4.5, { dmg: DMG.flak, sh: 'heavy' })
+        }
+      }
+    },
   },
 
   midRing: {
@@ -10264,6 +10300,16 @@ const BOSS_PAT = {
         }
       }
     },
+
+    p3(bs) {
+      bs.spin = (bs.spin || 0) + 0.66
+      for (const [sp, off] of [[196, 0], [126, Math.PI / 6]]) {
+        for (let i = 0; i < 6; i++) {
+          const a = bs.spin + off + (i / 6) * Math.PI * 2
+          bshot(bs.x, bs.y, Math.cos(a) * sp, Math.sin(a) * sp, 4)
+        }
+      }
+    },
   },
 
   midTwin: {
@@ -10287,6 +10333,16 @@ const BOSS_PAT = {
       for (let k = 0; k < n; k++) {
         const sp = 200 + k * 28
         bshot(bs.x, bs.y + 16, Math.cos(a) * sp, Math.sin(a) * sp, 4)
+      }
+    },
+
+    p3(bs) {
+      for (const sx of [-42, 42]) {
+        for (let k = 0; k < 3; k++) {
+          const a = Math.PI / 2 + (sx > 0 ? -1 : 1) * (0.55 + k * 0.07)
+          bshot(bs.x + sx, bs.y + 8, Math.cos(a) * (180 + k * 26), Math.sin(a) * (180 + k * 26),
+                5, { dmg: DMG.flak, sh: 'heavy' })
+        }
       }
     },
   },
@@ -10317,6 +10373,16 @@ const BOSS_PAT = {
         }
       }
     },
+
+    p3(bs) {
+      const cols = bs.mid ? 7 : 9
+      bs.wgap = ((bs.wgap == null ? Math.floor(Math.random() * cols) : bs.wgap) + 1) % cols
+      for (let i = 0; i < cols; i++) {
+        if (i === bs.wgap) continue
+        const x = 24 + (i + .5) * ((W - 48) / cols)
+        bshot(x, bs.y + 26, 0, 124, 5, { dmg: DMG.flak, sh: 'heavy' })
+      }
+    },
   },
 
   midCarrier: {
@@ -10335,6 +10401,13 @@ const BOSS_PAT = {
       const a = Math.atan2(pl.y - bs.y, pl.x - bs.x)
       for (const d of [-.26, 0, .26]) {
         bshot(bs.x, bs.y + 18, Math.cos(a + d) * 190, Math.sin(a + d) * 190, 3.6)
+      }
+    },
+
+    p3(bs) {
+      for (let k = -2; k <= 2; k++) {
+        state.ebullets.push(mkEB({ x: bs.x + k * 26, y: bs.y + 20, vx: k * 58, vy: 104, r: 5,
+                                   kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile }))
       }
     },
   },
@@ -11992,10 +12065,13 @@ function update(dt) {
 
           bs.cd = 1.15 * chf * 1.111
 
-          if (Math.random() < 0.32 && pat.p3) pat.p3(bs, pl)
+          bs.own3 = !bs.own3
+          const ownTurn = !!(pat.p3 && bs.own3)
+          if (ownTurn) pat.p3(bs, pl)
 
           bs.ringT = !bs.ringT
-          if (bs.ringT) {
+          if (ownTurn) {   }
+          else if (bs.ringT) {
 
             for (const [sp, off] of [[160, 0], [112, Math.PI / 18]]) {
               for (let i = 0; i < 18; i++) {
