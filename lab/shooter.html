@@ -3252,7 +3252,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 07:35'
+const BUILD_AT = '09-18 07:48'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -8177,10 +8177,11 @@ function seedGround(s) {
                 : W * 0.02 + Math.random() * (W * 0.26)
   }
 
+  const deco = ((s.stage && s.stage.id) || 1) === 1
   const put = (n, far) => {
     for (let i = 0; i < n; i++) {
 
-      const obj = !far && Math.random() < .32
+      const obj = deco && !far && Math.random() < .32
         ? pool[(Math.random() * pool.length) | 0] : null
       const sc = far ? 0.55 : 1
       s.slabs.push({
@@ -11990,7 +11991,7 @@ function update(dt) {
     if (sl.y > H + 40) {
 
       const pool2 = BG_OBJ[(s.stage && s.stage.theme) || 'sea'] || BG_OBJ.sea
-      sl.obj = !sl.far && Math.random() < .32
+      sl.obj = ((s.stage && s.stage.id) || 1) === 1 && !sl.far && Math.random() < .32
         ? pool2[(Math.random() * pool2.length) | 0] : null
       sl.y = -60 - Math.random() * 80
       const sc = sl.far ? 0.55 : 1
@@ -14336,6 +14337,48 @@ function battleCachePrune(theme) {
   }
 }
 
+function grainRnd(key) {
+  let h = 2166136261
+  for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619) }
+  return () => { h = (Math.imul(h, 48271) & 0x7fffffff); return h / 0x7fffffff }
+}
+
+function tileGrain(c, w, h, key) {
+  const rnd = grainRnd(key)
+  c.save()
+
+  c.globalCompositeOperation = 'overlay'
+  for (let i = 0; i < 7; i++) {
+    const x = rnd() * w, y = rnd() * h
+    const r = (0.35 + rnd() * 0.45) * w
+    const dark = rnd() < 0.5
+    const gr = c.createRadialGradient(x, y, 0, x, y, r)
+    gr.addColorStop(0, dark ? 'rgba(0,0,0,.20)' : 'rgba(255,255,255,.13)')
+    gr.addColorStop(1, 'rgba(128,128,128,0)')
+    c.fillStyle = gr
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill()
+  }
+
+  c.globalCompositeOperation = 'soft-light'
+  c.lineCap = 'round'
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * w, y = rnd() * h
+    const len = (0.06 + rnd() * 0.16) * h
+    const tilt = (rnd() - 0.5) * 0.5
+    c.strokeStyle = rnd() < 0.5 ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.16)'
+    c.lineWidth = 0.8 + rnd() * 1.6
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + tilt * len, y + len); c.stroke()
+  }
+
+  c.globalCompositeOperation = 'overlay'
+  for (let i = 0; i < 260; i++) {
+    const x = rnd() * w, y = rnd() * h
+    const r = 0.6 + rnd() * 1.8
+    c.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.22)'
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill()
+  }
+  c.restore()
+}
 function battleTile(key, im) {
   const old = BATTLE_TILE_CACHE.get(key)
   if (old && old.image === im) return old
@@ -14351,6 +14394,8 @@ function battleTile(key, im) {
   c.filter = 'none'
 
   tileRelief(c, cv.width, cv.height, look.relief != null ? look.relief : (key.startsWith('sea') ? .18 : .5))
+
+  tileGrain(c, cv.width, cv.height, key)
   if (look.shade) {
     c.fillStyle = 'rgba(7,12,19,' + look.shade + ')'
     c.fillRect(0, 0, cv.width, cv.height)
@@ -14365,6 +14410,35 @@ function battleTile(key, im) {
   const tile = { image: im, canvas: cv, overlap }
   BATTLE_TILE_CACHE.set(key, tile)
   return tile
+}
+
+const TILE_DETAIL_CACHE = new Map()
+function tileDetail(theme) {
+  let c = TILE_DETAIL_CACHE.get(theme)
+  if (c !== undefined) return c
+  const S = 360
+  const cv = document.createElement('canvas'); cv.width = S; cv.height = S
+  const x = cv.getContext('2d')
+  const rnd = grainRnd('d:' + theme)
+  const gs = groundStat(theme)
+
+  const col = (!gs || gs.L < 120) ? '255,255,255' : '0,0,0'
+  for (let i = 0; i < 90; i++) {
+    const px = rnd() * S, py = rnd() * S
+    const r = 0.7 + rnd() * 2.2
+    x.fillStyle = 'rgba(' + col + ',' + (0.05 + rnd() * 0.10).toFixed(3) + ')'
+    x.beginPath(); x.arc(px, py, r, 0, Math.PI * 2); x.fill()
+  }
+  for (let i = 0; i < 16; i++) {
+    const px = rnd() * S, py = rnd() * S
+    const len = 8 + rnd() * 26
+    x.strokeStyle = 'rgba(' + col + ',' + (0.04 + rnd() * 0.07).toFixed(3) + ')'
+    x.lineWidth = 0.8 + rnd() * 1.2
+    x.lineCap = 'round'
+    x.beginPath(); x.moveTo(px, py); x.lineTo(px + (rnd() - 0.5) * 10, py + len); x.stroke()
+  }
+  TILE_DETAIL_CACHE.set(theme, cv)
+  return cv
 }
 
 function battleCloud(key, im) {
@@ -14479,6 +14553,15 @@ function paintBattleBackground(s, now) {
   g.fillStyle = '#080e17'; g.fillRect(0, 0, W, H)
   for (let y = off - height - step; y < H; y += step) {
     g.drawImage(tile.canvas, 0, y, W, height)
+  }
+
+  const dt = tileDetail(theme)
+  if (dt) {
+    const dh = dt.height * (W / dt.width)
+    const doff = (now * TERRAIN_SPEED * 1.45) % dh
+    g.globalAlpha = .5
+    for (let y = doff - dh; y < H; y += dh) g.drawImage(dt, 0, y, W, dh)
+    g.globalAlpha = 1
   }
   paintBattleScenery(s)
 
