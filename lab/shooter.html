@@ -3158,7 +3158,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-17 13:15'
+const BUILD_AT = '09-17 13:16'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3236,14 +3236,15 @@ function load() {
   return base
 }
 
-const SHARD_NEED = { common: 30, rare: 60, high: 120, legend: 113 }
+const SHARD_NEED = { common: 30, rare: 60, high: 120, legend: 150 }
 
 const SHARD_UPG = [10, 20, 30, 50, 100, 160, 240]
 const GACHA = {
   plane: {
     name: '기체 뽑기', cost: 1,
-    rates: [['legend', 5], ['high', 12], ['rare', 28], ['common', 55]],
-    amount: { legend: [3, 6], high: [4, 7], rare: [5, 9], common: [8, 14] },
+
+    rates: [['legend', 1], ['high', 7], ['rare', 22], ['common', 70]],
+    amount: { legend: [2, 4], high: [3, 6], rare: [6, 11], common: [10, 18] },
     jackpot: 0.01,
   },
   pilot: {
@@ -4899,7 +4900,7 @@ const GRADES = {
 }
 const GRADE_KEYS = ['normal', 'mid', 'high', 'legend']
 
-const GRADE_NEED = { normal: 0, mid: 60, high: 120, legend: 113 }
+const GRADE_NEED = { normal: 0, mid: 60, high: 120, legend: 150 }
 try { migratePilotOwned() } catch (e) { console.warn('pilot migrate', e) }
 
 const PILOT_MAX = 30
