@@ -3396,7 +3396,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 08:18'
+const BUILD_AT = '09-19 08:28'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7131,10 +7131,17 @@ function paintRates() {
         const n = pullsFor(kind, t)
         return row(nameOf(kind, t), `${lo}~${hi}개` + (n ? ` · 평균 ${n.toLocaleString('ko-KR')}번` : ''))
       }).join('') +
-      lab('하나를 열는 데 드는 조각') +
-      g.rates.map(([t]) => row(nameOf(kind, t), need[t] ? need[t] + '개' : '영입 없음')).join('') +
+      lab('하나를 여는 데 드는 조각') +
+      g.rates.map(([t]) => row(nameOf(kind, t),
+        need[t] ? need[t] + '개'
+                : (kind === 'pilot' ? '조각으로는 안 옵니다' : '-'))).join('') +
       `<div class="empty">「평균 N번」은 그 등급 조각만 모아 하나를 열 때까지의 기댓값입니다.` +
-      (kind === 'pilot' ? '<br>일반 파일럿은 처음부터 있으므로 일반 조각은 <b>등급 강화</b>에만 씁니다.' : '') +
+      (kind === 'pilot'
+        ? `<br><b>일반 파일럿 셋은 조각이 아니라 파일럿 레벨로 옵니다</b>` +
+          ` — ${PILOT_OPEN_LV.map((v) => 'Lv.' + v).join(' · ')}.` +
+          `<br>그래서 일반 조각은 영입이 아니라 <b>등급 강화</b>에 쓰이고,` +
+          ` 일반 강화를 다 올리면 어느 등급에나 쓰는 <b>공용 조각</b>이 됩니다.`
+        : '') +
       `</div>`
   }
 
