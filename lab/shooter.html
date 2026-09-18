@@ -7,7 +7,8 @@
 
   시스템 글꼴로 세운 「오늘도 출격」이 밋밋하다는 지적을 받았다. 포스터
   글씨에 가까운 것이 필요한데, 한글 디스플레이 글꼴 중 이만한 무게를
-  내는 것이 흔치 않다. 굵고 각진 Black Han Sans 하나만 받는다.
+  내는 것이 흔치 않다. 명조 계열 표제 글꼴 Hahmlet 900 하나만 받는다
+  (2026-09-18 까지는 굵고 각진 Black Han Sans 였다).
 
   못 받아도 아래 대체 목록으로 떨어지므로 화면이 비지 않는다. 게임 안쪽
   글자는 건드리지 않는다 - 이 글꼴은 타이틀 제목에만 쓴다.
@@ -15,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@900&display=swap"
       media="print" onload="this.media='all'">
 <link rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
@@ -307,7 +308,7 @@
    * 초상은 44px 로 이름 옆에 붙이고, 설명은 한 줄로 줄이고, 스탯은
    * 한 줄에 이름·효과·칸·단추를 다 넣는다. 단추는 맨 아래 한 줄.
    */
-  .dsheet.pilotsheet { max-height: none; overflow: visible; padding: 14px 14px 12px; }
+  .dsheet.pilotsheet { padding: 14px 14px 12px; }   /* max-height/overflow 는 위 #detail 규칙이 정한다 */
   .pilotsheet .phd { display: flex; align-items: center; gap: 10px; }
   .pilotsheet .phd .pf {
     width: 44px; height: 44px; flex: none; border-radius: 10px;
@@ -543,7 +544,7 @@
   #title .tem { animation-delay: calc(var(--tD, 0s) + .00s); }
   #title .tlogo { animation-delay: calc(var(--tD, 0s) + .12s); }
   #title .tline { animation-delay: calc(var(--tD, 0s) + .26s); }
-  #title button { animation-delay: calc(var(--tD, 0s) + .38s); }
+  #title .tin > button { animation-delay: calc(var(--tD, 0s) + .38s); }   /* 아래 #title button 규칙이 delay 를 제 손으로 적는다 - 여기는 그 뒤에 지지 않게 (2026-09-18) */
   #title .tver { animation-delay: calc(var(--tD, 0s) + .52s); }
   @keyframes tIn { from { opacity: 0; transform: translateY(14px); } }
   @media (prefers-reduced-motion: reduce) {
@@ -600,8 +601,14 @@
   }
   #title .tlogo .t2 {
     margin-top: 6px;
-    font-family: 'Black Han Sans', system-ui, -apple-system, sans-serif;
-    font-size: 74px; font-weight: 400; letter-spacing: .01em;
+    /*
+     * 글꼴을 바꿨다 (2026-09-18 대표 지정 「타이틀 폰트만 더 세련되게」).
+     * Black Han Sans 는 굵은 고딕이라 힘은 있는데 투박했다. Hahmlet 은
+     * 획 대비가 있는 명조 계열 표제 글꼴이라 같은 금속 그라데이션 위에서
+     * 포스터 제목처럼 선다. 글자 「오늘도 출격」은 그대로다.
+     */
+    font-family: 'Hahmlet', 'Noto Serif KR', 'Nanum Myeongjo', serif;
+    font-size: 72px; font-weight: 900; letter-spacing: .02em;
     background: linear-gradient(180deg, #fff8e6 0%, #ffdf9c 34%, #e5a842 62%, #b47613 100%);
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent; color: transparent;
@@ -674,7 +681,7 @@
                            inset 0 1px 0 rgba(255,255,255,.6); }
   }
   @media (prefers-reduced-motion: reduce) {
-    #title button { animation: none; }
+    #title button, #title .tin > button { animation: none; }
   }
   #title .tver { margin-top: 16px; font-size: 10.5px; color: #6b7d92; }
 
@@ -715,6 +722,12 @@
    * 세로로 쌓고 사이를 띄운다. 주 단추가 맨 위, 격납고는 맨 아래.
    */
   #over > div { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  /*
+   * 결과 창이 굴러간다 (2026-09-18 출시 전 점검).
+   * 레벨업이 겹친 클리어에서 「다음 단계 출격」·「격납고로」가 화면 밖으로
+   * 나갔다. 나가는 단추가 안 보이면 판이 끝나도 못 나간다.
+   */
+  #over > div { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
   #over h2 { margin: 0 0 2px; }
   #over > div > button { width: min(340px, 88vw); }
 
@@ -887,7 +900,13 @@
   #scStage .modes { display: none; }
 
   /* 편대 - 굴리지 않는다. 임무·정보는 눌러서 시트로 연다 */
-  .hg-scroll { display: flex; flex-direction: column; overflow: hidden !important; }
+  /*
+   * 편대 화면이 굴러간다 (2026-09-18 출시 전 점검).
+   * hidden !important 였다 - 높이 667 이하 폰에서 윙맨 세 칸이 잘리고
+   * 「빈 자리가 있습니다」 안내가 화면 밖이었다. 편대를 짜는 것이 이
+   * 화면의 유일한 일인데 그 칸이 안 보였다. 가로는 안 넘친다(실측).
+   */
+  .hg-scroll { display: flex; flex-direction: column; overflow-y: auto !important; overflow-x: hidden !important; }
   .hg-hero { flex: 1 1 auto; height: auto !important; min-height: 230px; max-height: 435px; width: 100%; }
   .hg-drow { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 20px; }
   .hg-drow .hg-details { margin: 0; }
@@ -1329,12 +1348,15 @@
   .setrow .nm { font-size: 13px; font-weight: 700; }
   .setrow .de { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
   .setrow .sw {
-    margin-left: auto; width: 46px; height: 26px; border-radius: 13px;
-    background: #1a2536; position: relative; cursor: pointer; flex: none;
+    margin-left: auto; width: 50px; height: 30px; border-radius: 15px; padding: 0; border: 0;
+    background: #1a2536; position: relative; cursor: pointer; flex: none; box-shadow: none;
   }
+  /* 보이는 것은 30, 눌리는 것은 46 (2026-09-18 출시 전 점검) */
+  .setrow .sw::before { content: ''; position: absolute; inset: -8px -6px; }
+  .setrow .sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .setrow .sw.on { background: var(--accent); }
   .setrow .sw::after {
-    content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+    content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px;
     border-radius: 50%; background: #cfe0f5; transition: left .15s;
   }
   .setrow .sw.on::after { left: 23px; }
@@ -1903,7 +1925,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .hg-top{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 20px 0;min-height:56px}
 .hg-brand{font-size:11px;letter-spacing:2px;color:#b6ccd5}.hg-actions{display:flex;gap:6px}
 #scSquad .hg-icon{display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid #4d626b77;border-radius:10px;background:#101e2780;color:#bfd2db;box-shadow:none}
-.hg-icon svg{width:20px;height:20px}.hg-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#526873 transparent;padding-bottom:10px}
+.hg-icon svg{width:22px;height:22px}.hg-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#526873 transparent;padding-bottom:10px}
 .hg-hero{position:relative;height:clamp(365px,48vh,435px);max-width:420px;margin:auto}
 .hg-plane-name{position:absolute;top:8px;left:22px;z-index:2;pointer-events:none}.hg-plane-name strong{font-size:24px;letter-spacing:-.5px;display:block}.hg-plane-name>span{display:block;margin-top:3px;font-size:11px;color:#b9cbd0}
 #scSquad .hg-main{position:absolute;top:39px;left:19%;width:70%;height:62%;background:transparent;border:0;box-shadow:none;padding:0;border-radius:25px}
@@ -1964,7 +1986,12 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   /* ── 상세 시트를 한 화면에 (2026-09-13) ─────────────────────
    * 줄 높이를 줄이고 두 줄씩 합쳐 짧은 폰(667)에서도 스크롤이 없다.
    */
-  #detail .dsheet { max-height: calc(100vh - 36px); overflow: hidden; }
+  /*
+   * 시트는 굴러간다 (2026-09-18 출시 전 점검). hidden 이었을 때 파일럿
+   * 시트의 「이 파일럿 쓰기」·「되돌리기」·「닫기」 줄이 통째로 잘렸다.
+   * 보스 도전 목록은 제 안쪽(.rushlist)이 따로 구르므로 영향 없다.
+   */
+  #detail .dsheet { max-height: calc(100vh - 36px); overflow-y: auto; overscroll-behavior: contain; }
   #detail .dsheet canvas.demo { height: 128px; margin: 8px 0 6px; }
   #detail .dsheet .cap { display: none; }
   #detail .dsheet .rows { gap: 4px; margin-top: 6px; }
@@ -2018,7 +2045,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   .mail.new .mt::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); margin-right: 5px; vertical-align: 1px; }
   .mail .md { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; }
   .mail .mb { font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 3px;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }   /* 두 줄이면 조각 상자 안내가 끊겼다 (2026-09-18) */
   .mail .mi { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--gold); font-weight: 700; }
   .mail .mi button { margin-left: auto; padding: 5px 14px; font-size: 12px; border-radius: 8px; }
   .mail .mi .got { margin-left: auto; color: var(--dim); font-weight: 600; }
@@ -2077,17 +2104,19 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   .pilotsheet .pgnote { font-size: 10.5px; color: var(--dim); margin-top: 4px; }
 
 /* ── 로비 v3 (2026-09-14 대표 지정): 참고 구성 - 자원 바 / 파일럿 줄 / 편대 판 + 양옆 아이콘 / 지도·출격 / 5탭 ── */
-#scSquad.v3 .hg-res{padding:9px 10px;gap:4px}#scSquad.v3 .hg-res>div{flex:1;justify-content:center;background:#0a151cb8;border:1px solid #3f545d77;border-radius:10px;padding:5px 6px;gap:5px;font-size:10.5px;min-width:0}
-#scSquad.v3 .hg-res b{font-size:12.5px}.rplus{width:18px;height:18px;padding:0;border-radius:50%;background:#e9c86a;color:#1a1a0a;font-size:14px;line-height:18px;font-weight:900;border:0;box-shadow:none;flex:none}
+#scSquad.v3 .hg-res{padding:9px 10px;gap:4px;overflow:hidden}#scSquad.v3 .hg-res>div{flex:1;justify-content:center;background:#0a151cb8;border:1px solid #3f545d77;border-radius:10px;padding:5px 6px;gap:5px;font-size:10.5px;min-width:0}
+#scSquad.v3 .hg-res b{font-size:12.5px}.rplus{position:relative;width:24px;height:24px;padding:0;border-radius:50%;background:#e9c86a;color:#1a1a0a;font-size:15px;line-height:22px;font-weight:900;border:0;box-shadow:none;flex:none}
+/* 보이는 것은 24, 눌리는 것은 44 (2026-09-18 출시 전 점검 - 앱에서 제일 작은 단추였다) */
+.rplus::after{content:'';position:absolute;top:50%;left:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
 #scSquad.v3 .hg-top{padding:8px 10px 0;min-height:0;gap:8px;align-items:stretch}
 #scSquad.v3 .hg-pilot{position:static;width:auto;height:60px;flex:1;min-width:0;display:flex;align-items:center;gap:9px;background:#0f1b22cc;border:1px solid #4d626b77;border-radius:12px;padding:3px 10px 3px 3px;text-align:left}
 #scSquad.v3 .hg-pilot>img{width:52px;height:52px;border-radius:9px;object-fit:cover;object-position:center top;-webkit-mask-image:none;mask-image:none;flex:none;background:#0a1218;border:1px solid #3f545d}
 #scSquad.v3 .hg-pilot-label{position:static;padding:0;text-shadow:none;min-width:0;flex:1}
 #scSquad.v3 .hg-pilot-label small{margin-bottom:1px;font-size:9.5px}#scSquad.v3 .hg-pilot-label strong{font-size:15px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
 #scSquad.v3 .hg-pilot-label em{font-style:normal;font-size:10px;color:#9ab6c5;display:block}
-#scSquad.v3 .hg-actions{gap:5px;align-items:center;flex:none}#scSquad.v3 .hg-icon{width:36px;height:36px;border-radius:9px;flex:none}
+#scSquad.v3 .hg-actions{gap:8px;align-items:center;flex:none}#scSquad.v3 .hg-icon{width:40px;height:40px;border-radius:10px;flex:none}
 /* 파일럿 카드가 우편함 단추 밑으로 파고들었다 (2026-09-15 폰 스샷). 단추 셋 폭을 뺀 만큼만 차지하고 넘치는 글은 자른다 */
-#scSquad.v3 .hg-who{width:calc(100% - 3*36px - 2*5px - 8px - 10px);max-width:calc(100% - 3*36px - 2*5px - 8px - 10px);margin-right:10px}
+#scSquad.v3 .hg-who{width:calc(100% - 3*40px - 2*8px - 8px - 10px);max-width:calc(100% - 3*40px - 2*8px - 8px - 10px);margin-right:10px}
 #scSquad.v3 .hg-pilot{flex:1 1 0;min-width:0;width:auto;max-width:none;overflow:hidden;left:auto;bottom:auto;transform:none}   /* 더 줄임 +16px (2026-09-15 대표 「아직 겹침」) */   /* 옛 규칙의 left:4% 가 position:relative(배지용) 에 살아나 14px 밀렸다 */
 #scSquad.v3 .hg-pilot-label small,#scSquad.v3 .hg-pilot-label em{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hg-body3{display:grid;grid-template-columns:60px minmax(0,1fr) 60px;gap:6px;padding:8px 8px 0;align-items:stretch}
@@ -2107,7 +2136,13 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad.v3 #launch{background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f;min-height:52px}
 #scSquad.v3 .hg-hint{margin-top:6px}
 #tabs{grid-template-columns:repeat(5,1fr);gap:2px;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
-#tabs button{width:66px;height:62px;font-size:10.5px;padding:3px 2px;gap:2px}#tabs .nav-emo{font-size:26px;line-height:38px;height:38px}#tabs button>img.nav-art{width:38px;height:38px}
+#tabs button{width:66px;height:62px;font-size:10.5px;padding:3px 2px;gap:2px}
+/*
+ * 지금 어느 탭인지 (2026-09-18 출시 전 점검). 배경 .10 은 대비 1.2:1 이라
+ * 사실상 안 보였다. 신호는 밑줄이 진다 - 10.6:1.
+ */
+#tabs button.on{color:var(--accent);background:rgba(79,209,255,.18)}
+#tabs button.on:not(.hg-home)::before{content:'';position:absolute;left:20%;right:20%;bottom:2px;height:3px;border-radius:2px;background:var(--accent)}#tabs .nav-emo{font-size:26px;line-height:38px;height:38px}#tabs button>img.nav-art{width:38px;height:38px}
 #tabs button>img.nav-face{width:36px;height:36px;border-radius:50%;object-fit:cover;object-position:center top;border:1px solid #58747f;background:#0a1218}
 #tabs .hg-home{width:74px;height:70px}
 @media(max-width:360px){.hg-body3{grid-template-columns:54px minmax(0,1fr) 54px;gap:4px;padding:6px 6px 0}.hg-ico{height:58px;font-size:9px}.hg-form{min-height:330px}#tabs button{width:60px}}
@@ -2142,10 +2177,10 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .card.cp .shard{font-size:9.5px;color:#9fb9c5;text-align:center;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card.cp .act{display:none;position:absolute;inset:auto 0 0 0;padding:5px;background:linear-gradient(transparent,#07101ae8 30%);z-index:3}
 .card.cp.sel .act{display:block}.card.cp.sel{border-color:#a2c6bd;box-shadow:0 0 0 1px #a2c6bd66}
-.card.cp .act .arow{display:grid;grid-template-columns:1fr 1fr;gap:4px}.card.cp .act .arow button{min-height:30px;padding:4px 2px;font-size:11px;border-radius:8px}
+.card.cp .act .arow{display:grid;grid-template-columns:1fr 1fr;gap:4px}.card.cp .act .arow button{min-height:40px;padding:9px 2px;font-size:11px;border-radius:8px}
 .card.cp .act .binfo{background:#20414a;border:1px solid #a2c6bd;color:#eaf6f2}.card.cp .act .buse{background:linear-gradient(#e9c86a,#c9a44a);border:1px solid #ffe6a8;color:#1a1a0a;font-weight:800}
 .card.cp .act .buse:disabled{opacity:.6}.card.cp .act .arow:has(.binfo:only-child){grid-template-columns:1fr}
-.card.cp .act .up{margin-top:4px}.card.cp .act .up button{width:100%;min-height:28px;padding:3px;font-size:10.5px;border-radius:8px}.card.cp .act .up .lvl{display:block;font-size:9px;color:#9fb9c5;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.cp .act .up{margin-top:4px}.card.cp .act .up button{width:100%;min-height:36px;padding:7px 3px;font-size:11.5px;border-radius:8px}.card.cp .act .up .lvl{display:block;font-size:9px;color:#9fb9c5;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 카드 v3 손질: 적용중 띠는 맨 위 한 줄, 등급 태그는 그 아래 (겹침 방지) */
 .card.cp .inuse{top:0;left:0;right:0;width:auto;border-radius:10px 10px 0 0;border-width:0 0 1px;text-align:center;font-size:9.5px;padding:2px 4px}
 .card.cp .inuse.idle{background:#101820}.card.cp .tag{top:20px;left:6px}
@@ -2168,6 +2203,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .mnode.boss .mc{background:radial-gradient(circle at 50% 40%,#ff9d4a,#b2461a 70%);border-color:#ffd6a8;width:46px;height:46px;font-size:20px}
 .mnode.lock .mc{background:#1f2a31;border-color:#4d626b;box-shadow:0 0 0 3px #0b141a;font-size:14px;opacity:.85}
 .mnode.on .mc{box-shadow:0 0 0 3px #12301a,0 0 0 6px #9fe8ff,0 4px 10px #0009;animation:wingNeed 1.6s ease-in-out infinite}
+/* 움직임 줄이기 설정이면 깜빡임을 멈춘다. 테두리 색은 남아 「여기」는 읽힌다 (2026-09-18) */
+@media (prefers-reduced-motion:reduce){.mnode.on .mc,#scSquad .hg-pilot.grow,#scSquad .hg-main.grow{animation:none}}
 .mnode .ml{margin-top:2px;font-size:12px;font-weight:900;color:#f2fff4;text-shadow:0 1px 3px #000,0 0 6px #000}
 .mnode .st{display:flex;gap:2px;justify-content:center;margin-top:1px}.mnode .st i{width:9px;height:9px;background:#ffd23f;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}.mnode .st i.off{opacity:.25;filter:grayscale(1)}
 .mapinfo{position:absolute;right:8px;top:8px;background:#0a151cd9;border:1px solid #3f545d;border-radius:9px;padding:5px 9px;max-width:46%;text-align:right}.mapinfo b{display:block;font-size:13px}.mapinfo small{display:block;font-size:9.5px;color:#9fb9c5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2214,32 +2251,38 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .hgs-body{max-height:min(62vh,560px);overflow-y:auto;overscroll-behavior:contain;padding-right:2px;margin-top:4px}
 .hgs-body .miss{gap:5px;margin-top:4px}
 .hgs-body .mrow{padding:6px 9px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:3px 8px}
-.hgs-body .mrow .top{grid-column:1;font-size:11.5px;gap:6px}.hgs-body .mrow .top .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hgs-body .mrow .rw{font-size:10.5px}
+.hgs-body .mrow .top{grid-column:1;font-size:11.5px;gap:6px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}.hgs-body .mrow .top .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hgs-body .mrow .top .mgo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46%}.hgs-body .mrow .rw{font-size:10.5px}
 .hgs-body .mrow .bar2{grid-column:1;height:4px;margin-top:2px}
 .hgs-body .mrow button{grid-column:2;grid-row:1/3;margin:0;width:auto;min-width:66px;padding:6px 8px;font-size:11px;min-height:30px}
 /* 카드 안을 세로 flex 로. 전투력 줄이 맨 아래에 고정되고 그림이 남는 공간을 쓴다 (2026-09-15) */
 .card.cp{display:flex;flex-direction:column;padding-bottom:7px}
 .card.cp .pimg{flex:0 0 auto;height:52px;margin-top:24px}
-.card.cp .stars,.card.cp .nm,.card.cp .shard{flex:0 0 auto}
+.card.cp .stars,.card.cp .nm,.card.cp .shard,.card.cp .wpn{flex:0 0 auto}
 .card.cp .cmp{flex:0 0 auto;margin-top:auto;padding-top:2px;font-size:9.5px;line-height:1.2}
 .card.cp .cmp b{font-size:15px}
 /* 파워 상자: 자리별 몫 + 컬렉션 (2026-09-15) */
 .pl-diag .pd-pow{min-width:0;max-width:52%}.pl-diag .pd-pow .pd-bd{display:flex;flex-wrap:wrap;gap:2px 6px;margin-top:3px;font-size:9px;color:#c9d6de;font-variant-numeric:tabular-nums}
 .pl-diag .pd-pow .pd-bd .off{color:#5b6a80}
-.pl-diag .pd-coll{margin-top:4px;padding:2px 7px;font-size:9.5px;border-radius:8px;background:#20414a;border:1px solid #a2c6bd88;color:#eaf6f2;box-shadow:none;min-height:0}
+.pl-diag .pd-coll{position:relative;margin-top:4px;padding:4px 8px;font-size:10.5px;border-radius:8px;background:#20414a;border:1px solid #a2c6bd88;color:#eaf6f2;box-shadow:none;min-height:0}
+/* 높이 17 이었다. 빗나가면 엉뚱한 기체 상세가 열린다 - 보이는 크기는 두고 눌리는 폭만 (2026-09-18) */
+.pl-diag .pd-coll::after{content:'';position:absolute;inset:-8px -6px}
 .pl-diag .pd-name small{white-space:normal;line-height:1.35}
 /* 기체 화면 위쪽을 줄여 목록 두 줄이 보이게 (2026-09-15) */
 #scPlanes h1{font-size:14px;margin:0 0 2px}
 .slotTabs.v3{margin:0 0 6px;gap:5px}.slotTabs.v3 button{min-height:62px;padding:3px 2px}.slotTabs.v3 button img{height:30px}.slotTabs.v3 button .plus{height:30px;line-height:30px;font-size:19px}
 .pl-diag{height:122px;margin-bottom:6px}.pl-diag .pd-img{height:84px;top:4px}.pl-diag .pd-pow{padding:4px 8px}.pl-diag .pd-pow b{font-size:15px}.pl-diag .pd-pow .pd-bd{margin-top:2px}.pl-diag .pd-coll{margin-top:3px}
 .pl-diag .pd-name{bottom:4px}.pl-diag .pd-name b{font-size:13px}.pl-diag .pd-name small{font-size:9px}.pl-diag .pd-bar{margin-top:3px;height:4px}
-.filters.v3{margin-bottom:4px}.filters.v3 .frow button{padding:4px 7px;font-size:10px}
+.filters.v3{margin-bottom:4px}.filters.v3 .frow button{padding:9px 7px;font-size:11.5px}   /* 높이 20 -> 32 (2026-09-18) */
 .card.cp .pimg{height:42px;margin-top:20px}.card.cp .wpn{font-size:9px;color:#9fb9c5;text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card.cp .wpn .wi{width:10px;height:10px;vertical-align:-1px;margin-right:2px}
 .card.cp .nm{font-size:11px;margin-top:1px}.card.cp .stars{font-size:9px}.card.cp .cmp b{font-size:14px}
 .hp-page{padding:2px 3px 3px}
+/* 페이지가 넘치면 안에서 굴린다 - 잘린 줄이 안 보이는 것보다 낫다 (2026-09-18) */
+#gBody .hp-page,.mailsheet .hp-page{overflow-y:auto;overscroll-behavior:contain}
 /* 낮은 화면: 카드가 줄면 무기 줄·별을 뺀다. 홈 탭은 편대 화면에서만 도드라진다 (2026-09-15) */
 .card.cp.snug .pimg{height:36px;margin-top:20px}.card.cp.snug .stars{display:none}
+/* 낮은 폰(cardH<150)에서는 한 단 낮춘다 - 안 그러면 단추 셋이 카드의 76% 를 덮는다 (2026-09-18) */
+.card.cp.tight .act .arow button{min-height:34px;padding:6px 2px}.card.cp.tight .act .up button{min-height:30px;padding:5px 3px}
 .card.cp.tight .pimg{height:28px;margin-top:20px}.card.cp.tight .stars{display:none}.card.cp.tight .cmp b{font-size:12px}.card.cp.tight .nm{font-size:10.5px}
 #tabs .hg-home:not(.on){background:transparent;border-color:transparent;box-shadow:none;top:0;width:66px;height:62px}
 #tabs .hg-home:not(.on)>img{width:44px;height:44px}
@@ -2293,7 +2336,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 /* ── 편대 전투력 (2026-09-16) ── */
 .hg-pw{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
 .hg-pw small{font-size:10px;color:#b4c9d2}.hg-pw b{font-size:20px;font-weight:900;color:var(--gold);line-height:1}
-.hg-pw button{width:20px;height:20px;padding:0;border-radius:50%;font-size:12px;font-weight:900;line-height:1;background:#101e27cc;border:1px solid #4d626b;color:#cfe0e6;box-shadow:none;margin:0}
+.hg-pw button{position:relative;z-index:2;width:28px;height:28px;padding:0;border-radius:50%;font-size:15px;font-weight:900;line-height:1;background:#101e27cc;border:1px solid #4d626b;color:#cfe0e6;box-shadow:none;margin:0}
+.hg-pw button::after{content:'';position:absolute;top:50%;left:50%;width:44px;height:44px;transform:translate(-50%,-50%);border-radius:50%}
 .pwtotal{text-align:center;margin:4px 0 10px}.pwtotal small{display:block;font-size:11px;color:var(--muted)}.pwtotal b{font-size:30px;font-weight:900;color:var(--gold)}
 .pwrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #2e3f49}.pwrow span{font-size:12.5px}.pwrow span small{display:block;font-size:10px;color:var(--muted);margin-top:1px}.pwrow b{font-size:14px;white-space:nowrap}
 #pwPop{z-index:64;background:rgba(4,5,9,.55)}
@@ -2546,7 +2590,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <div class="gbox abox nmbox">
     <h3 id="nameTitle">파일럿명을 정해 주세요</h3>
     <p id="nameSub"></p>
-    <input class="nm" id="nameInput" maxlength="12" autocomplete="off">
+    <input class="nm" id="nameInput" maxlength="6" autocomplete="off">
     <div class="arow">
       <button id="nameRnd" class="ghost">🎲 무작위</button>
       <button id="nameOk">확인</button>
@@ -2657,7 +2701,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
       <button id="pMusic" class="ghost"></button>
       <button id="pSfx" class="ghost"></button>
     </div>
-    <button id="pQuit" class="ghost">출격 준비로</button>
+    <button id="pQuit" class="ghost">편대로</button>
     <div class="ps">화면 아무 데나 눌러도 2초 뒤에 이어집니다</div>
   </div>
 </div>
@@ -2670,7 +2714,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
     <!-- 이기면 다음 단계, 지면 다시 도전이 주 단추다. 격납고는 보조 -->
     <button id="nextGo" hidden>다음 단계 출격</button>
     <button id="retry" class="ghost" hidden>다시 도전</button>
-    <button id="again" class="ghost">격납고로</button>
+    <button id="again" class="ghost">편대로</button>
   </div>
 </div>
 
@@ -2692,7 +2736,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <div>
     <h2 id="advTitle">광고</h2>
     <p class="sub" id="advBody">여기에 광고가 나옵니다.<br>지금은 자리만 잡아 둔 것입니다.</p>
-    <button id="advSkip" disabled>3</button>
+    <button id="advSkip" disabled>3초 뒤 보상</button>
+    <button id="advClose" class="ghost small">그만두기</button>
   </div>
 </div>
 
@@ -3266,7 +3311,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 08:38'
+const BUILD_AT = '09-18 09:35'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -3790,7 +3835,7 @@ function showGotPop(force) {
       '<div class="gname">' + p.name + '<span class="tag ' + tag + '">' + tname + '</span></div>' +
       '<div class="gsub">' + (isP
         ? '<b>' + WEAPONS[p.weapon].name + '</b> · ' + WEAPONS[p.weapon].desc
-        : (p.desc || '') + (pilotOpen(p) ? '' : ' · 파일럿 Lv.' + pilotNeedLv(p) + ' 에 합류')) + '</div>' +
+        : (p.desc || '') + (pilotOpen(p) ? '' : ' · 파일럿 Lv.' + pilotNeedLv(p) + '에 합류')) + '</div>' +
       '<div class="gbar">' +
       '<button class="ghost" id="gotDetail">상세 보기</button>' +
       (empty !== undefined ? '<button id="gotSlot">' + SLOT_META[empty].role + ' 자리에 넣기</button>' : '') +
@@ -4779,14 +4824,18 @@ function openMail(tab) {
     for (const m of left) {
       m.claimed = true
       for (const k in (m.items || {})) {
-        if (typeof m.items[k] === 'number') all[k] = (all[k] || 0) + m.items[k]
-        else all[k] = m.items[k]
+        const v = m.items[k]
+        if (typeof v === 'number') all[k] = (all[k] || 0) + v
+
+        else (all._list = all._list || []).push(itemText({ [k]: v }))
       }
       grantItems(m.items)
     }
     save(); sfx('got'); haptic('ult')
     openMail()
-    say(itemText(all) + '을(를) 받았습니다.', '우편함 · ' + left.length + '개')
+    const extra = all._list || []; delete all._list
+    const txt = [Object.keys(all).length ? itemText(all) : ''].concat(extra).filter(Boolean).join(', ')
+    say(eul(txt) + ' 받았습니다.', '우편함 · ' + left.length + '개')
   }
   body.querySelectorAll('[data-claim]').forEach((b) => {
     b.onclick = (e) => {
@@ -4801,11 +4850,11 @@ function openMail(tab) {
       if (m.items && (m.items.plane || m.items.pilot) && showGotPop(true)) return
       const empty = m.items && m.items.plane ? [0, 2, 3].find((i) => slotOpen(i) && !prog.squad[i]) : undefined
       if (empty !== undefined) {
-        askOpen(itemText(m.items) + '을(를) 받았습니다.\n' + SLOT_META[empty].role + ' 자리가 비어 있습니다. 거기 넣으면 메인과 함께 쏩니다(화력 ' +
+        askOpen(eul(itemText(m.items)) + ' 받았습니다.\n' + SLOT_META[empty].role + ' 자리가 비어 있습니다. 거기 넣으면 메인과 함께 쏩니다(화력 ' +
                 Math.round(slotMul(empty) * 100) + '% 몫). 비워 두면 아무것도 안 쏩니다.',
                 '우편함', '자리에 넣으러 가기', false, () => { close(); guideNav = false; go('squad') })
       } else {
-        say(itemText(m.items) + '을(를) 받았습니다.', '우편함')
+        say(eul(itemText(m.items)) + ' 받았습니다.', '우편함')
       }
     }
   })
@@ -4861,7 +4910,7 @@ function passGrantPlane() {
   const pool = PLANES.filter((p) => p.tier === 'legend' && !unlocked(p))
   const p = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null
   mailAdd({ title: '출격 패스 · 첫 결제 선물',
-            body: p ? '레전드 기체 ' + p.name + ' 을(를) 보냅니다. 편대에 넣어 보세요.'
+            body: p ? '레전드 기체 ' + eul(p.name) + ' 보냅니다. 편대에 넣어 보세요.'
                     : '레전드 기체를 모두 가지고 계셔서 가챠권 50장으로 대신 보냅니다.',
             items: p ? { plane: p.id } : { ticket: 50 } })
 }
@@ -5100,7 +5149,7 @@ const STATS = {
 
   luck: { name: '행운', per: 0.5, unit: '%', desc: '맞아도 피해를 흘릴 확률입니다. 파일럿 등급이 밑값을 정합니다' },
 
-  all:  { name: '올스탯', per: 1, unit: '', desc: '네 스탯이 모두 최대일 때 열립니다. 한 칸에 네 가지가 같이 오릅니다' },
+  all:  { name: '올스탯', per: 1, unit: '', desc: '다섯 스탯이 모두 최대일 때 열립니다. 한 칸에 다섯 가지가 같이 오릅니다' },
 }
 const ST_KEYS = Object.keys(STATS)
 
@@ -5906,7 +5955,7 @@ function go(name) {
     if (k === name) shown = el
   }
   elTabs.hidden = false
-  const mainTab = name === 'rank' ? 'squad' : name
+  const mainTab = (name === 'rank' || name === 'stage') ? 'squad' : name
   elTabs.querySelectorAll('button').forEach((b) => {
     const on = b.dataset.go === mainTab
     b.classList.toggle('on', on)
@@ -6055,7 +6104,7 @@ function guideNext() {
 
   if (prog.ticket >= GACHA.plane.cost && !g.ticketOnce) {
     g.ticketOnce = true; g.ticketAt = prog.ticket; save()
-    return point('#tabs button[data-go="gacha"]', '뽑기권이 있습니다', '뽑기권 ' + prog.ticket + '장. 뽑기에서 새 기체를 엽니다.', null)
+    return point('#tabs button[data-go="gacha"]', '가챠권이 있습니다', '가챠권 ' + prog.ticket + '장. 뽑기에서 새 기체를 엽니다.', null)
   }
   return false
 }
@@ -6101,13 +6150,13 @@ function showStatGuide() {
 }
 
 const TOUR_FULL = [
-  ['#resBar', '가진 것', '출격권으로 나가고, 부품과 조각으로 기체를 강화합니다. 뽑기권은 새 기체를 엽니다.'],
+  ['#resBar', '가진 것', '출격권으로 나가고, 부품과 조각으로 기체를 강화합니다. 가챠권은 새 기체를 엽니다.'],
   ['#hgMain', '메인 기체', '화력의 대부분이 여기서 나옵니다. 눌러서 기체를 바꾸고 강화합니다.'],
   ['#hgPilot', '파일럿', '경험치로 화력·연사를 올립니다. 올릴 것이 있으면 금색으로 빛납니다.'],
   ['#slots', '윙맨 자리', '레벨이 오르면 열립니다. 자리마다 화력 몫이 붙으니 비워 두지 마세요.'],
   ['#hgStage', '전선', '어느 판에 나갈지 고릅니다. 깨면 다음 단계가 열립니다.'],
   ['#launch', '출격', '준비가 끝나면 여기를 누릅니다. 이동은 드래그, 공격은 자동입니다. 판에서 떨어지는 강화 아이템은 꼭 주우세요 - 클리어를 가릅니다.'],
-  ['#tabs', '아래 메뉴', '전선·격납고·뽑기로 오갑니다. 할 일이 있으면 노란 점이 켜집니다.'],
+  ['#tabs', '아래 메뉴', '상점·뽑기·기체·파일럿으로 오갑니다. 가운데가 편대 화면입니다. 할 일이 있으면 노란 점이 켜집니다.'],
 ]
 
 const TOUR_FIRST = []
@@ -6259,7 +6308,7 @@ function renderSquad() {
   $('hgModeName').textContent = modeDef(runMode)[1]
   const rb = $('hgRushBtn')
   rb.classList.toggle('lock', !rushModeOpen())
-  rb.onclick = () => { if (rushModeOpen()) openRushSheet(); else say('파일럿 Lv.' + RUSH_LV + ' 에 열립니다.', '보스 도전') }
+  rb.onclick = () => { if (rushModeOpen()) openRushSheet(); else say('파일럿 Lv.' + RUSH_LV + '에 열립니다.', '보스 도전') }
   $('hgPlaneName').textContent = main ? main.name : '기체 선택'
   $('hgPlaneMeta').textContent = main ? WEAPONS[main.weapon].name + ' · 강화 ' + upgOf(main.id) + '/' + UPG_MAX : '메인 자리가 비어 있습니다'
   const pv = $('hgPwVal'); if (pv) pv.textContent = squadPower().toLocaleString('ko-KR')
@@ -6329,7 +6378,7 @@ function renderSquad() {
   $('squadSub').classList.toggle('need', needSlot)
   $('resBar').innerHTML = '<div><i class="ic fuel" aria-hidden="true"></i><span>출격권</span><b id="hgEnergy"></b><small id="enWait" class="hg-wt"></small><button class="rplus" data-go="shop" aria-label="출격권 충전">+</button></div>' +
     '<div><i class="ic part" aria-hidden="true"></i><span>부품</span><b id="vParts"></b><button class="rplus" data-go="shop" aria-label="부품 상점">+</button></div>' +
-    '<div><i class="ic tk" aria-hidden="true"></i><span>뽑기권</span><b id="vTicket"></b><button class="rplus" data-go="gacha" aria-label="뽑기">+</button></div>'
+    '<div><i class="ic tk" aria-hidden="true"></i><span>가챠권</span><b id="vTicket"></b><button class="rplus" data-go="gacha" aria-label="뽑기">+</button></div>'
   $('resBar').querySelectorAll('.rplus').forEach((b) => { b.onclick = () => go(b.dataset.go) })
 
   $('hgGoShop').onclick = () => go('shop')
@@ -6492,6 +6541,8 @@ function renderMissions(close) {
     const fire = () => { sfx('pick'); missGoTo(row.dataset.mgo, close) }
     row.onclick = fire
     row.onkeydown = (e) => {
+
+      if (e.target !== row) return
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire() }
     }
   })
@@ -6502,7 +6553,7 @@ const elSet = document.getElementById('setting')
 function renderSet() {
   const row = (key, nm, de) =>
     `<div class="setrow"><div><div class="nm">${nm}</div><div class="de">${de}</div></div>` +
-    `<div class="sw${AU.on[key] ? ' on' : ''}" data-set="${key}"></div></div>`
+    `<button type="button" class="sw${AU.on[key] ? ' on' : ''}" data-set="${key}" role="switch" aria-checked="${AU.on[key] ? 'true' : 'false'}" aria-label="${nm}"></button></div>`
 
   document.getElementById('setBody').innerHTML =
     row('music', '배경음악', '켜면 곡 파일 1.1MB 를 한 번 받습니다') +
@@ -6516,11 +6567,11 @@ function renderSet() {
     '<input type="range" id="spRange" min="' + SPEED_MIN + '" max="' + SPEED_MAX + '" step="5" value="' + AU.on.speed + '">' +
     '<div class="ends"><span>' + SPEED_MIN + ' 느리게</span><span>' + SPEED_MAX + ' 빠르게</span></div></div>' +
     '<div class="lab">파일럿명</div>' +
-    '<input class="nm" id="pilotNm" maxlength="12" placeholder="무명" value="' +
+    '<input class="nm" id="pilotNm" maxlength="6" placeholder="무명" value="' +
       (prog.pilot.name || '').replace(/"/g, '&quot;') + '">' +
 
     '<div class="lab">그 밖에</div>' +
-    '<div class="bar"><button class="ghost small" id="devUnlock">개발용 전체 해금</button></div>'
+    '<div class="bar"><button class="ghost small" id="devUnlock" hidden>개발용 전체 해금 (테스트)</button></div>'
 
   const sp = document.getElementById('spRange')
   if (sp) {
@@ -6551,7 +6602,12 @@ document.getElementById('hgMail').onclick = () => openMail()
 document.getElementById('btnSet').onclick = () => { elSet.hidden = false; renderSet(); setTaps = 0; document.getElementById('setReset').hidden = true; modalOn(elSet, () => document.getElementById('setClose').click()) }
 
 let setTaps = 0
-document.getElementById('setTitle').onclick = () => { if (++setTaps >= 5) document.getElementById('setReset').hidden = false }
+document.getElementById('setTitle').onclick = () => {
+  if (++setTaps >= 5) {
+    document.getElementById('setReset').hidden = false
+    const du = document.getElementById('devUnlock'); if (du) du.hidden = false
+  }
+}
 document.getElementById('setReset').onclick = () => {
   ask('저장을 전부 지우고 처음부터 시작합니다.\n기체·파일럿·레벨·진행이 모두 사라집니다.', () => {
     ask('정말 지웁니까?', () => {
@@ -6612,6 +6668,9 @@ function renderPlanes() {
         `<div class="pd-empty"><span class="plus" aria-hidden="true">＋</span>${SLOT_META[activeSlot].role} 자리가 비었습니다<small>아래에서 기체를 눌러 「사용」</small></div>`)
     const pc = document.getElementById('pdColl')
     if (pc) pc.onclick = (e) => { e.stopPropagation(); openCollectionSheet() }
+
+    if (cur) kbClickable(dg)
+    else { dg.removeAttribute('role'); dg.removeAttribute('tabindex') }
     dg.onclick = () => { if (cur) openDetail(cur, PLANES.filter(unlocked)) }
   }
 
@@ -6744,6 +6803,8 @@ function renderPlanes() {
       elPlanes.querySelectorAll('.card.cp.sel').forEach((x) => x.classList.remove('sel'))
       if (!was) c.classList.add('sel')
     }
+
+    const ac = c.querySelector('.act'); if (ac) ac.onclick = (ev) => ev.stopPropagation()
     const bi = c.querySelector('.binfo')
     if (bi) bi.onclick = (ev) => { ev.stopPropagation(); openDetail(p, list) }
     const bu = c.querySelector('.buse')
@@ -6937,9 +6998,10 @@ function paintRates() {
     `<div class="lab" style="margin-top:0">무엇이 나오는가</div>` +
     `<div class="rate"><span>기체</span><span class="v">${100 - pilotPct}%</span></div>` +
     `<div class="rate"><span>파일럿</span><span class="v">${pilotPct}%` +
-    (pilotPct ? '' : ' (다 모아서 안 나옵니다)') + `</span></div>` +
-    block('plane'),
+    (pilotPct ? '' : ' (다 모아서 안 나옵니다)') + `</span></div>`,
   ]
+
+  pages.push(block('plane'))
   if (pilotPct) pages.push(block('pilot'))
   pages.push(
     `<div class="lab" style="margin-top:0">그 밖의 규칙</div>` +
@@ -7084,8 +7146,8 @@ function hardBox() {
   const ds = !open && runMode !== 'normal'
     ? '일반으로 한 번 깨면 열립니다'
     : runMode === 'normal'
-      ? (open ? '하드코어·크레이지는 처음 깰 때 가챠권을 줍니다'
-              : '이 판을 일반으로 깨면 하드코어·크레이지가 열립니다')
+      ? (open ? '익스트림·하드코어·크레이지는 처음 깰 때 가챠권을 줍니다'
+              : '이 판을 일반으로 깨면 익스트림·하드코어·크레이지가 열립니다')
       : done
         ? `이미 깬 판입니다 · 가챠권은 처음 깰 때만 (${modeCount(runMode)}판 완료)`
         : `${md[2]} · 처음 깨면 가챠권 ${md[3]}장`
@@ -7316,13 +7378,13 @@ function openPilot(pl, list) {
     const eff = k === 'luck'
       ? ((LUCK_BASE[pl.grade] || LUCK_BASE.normal) + (v + (st.all || 0)) * S.per).toFixed(1) + '%'
       : !v ? '-'
-      : k === 'all' ? '네 스탯 +' + v
+      : k === 'all' ? '다섯 스탯 +' + v
       : k === 'hp' ? '+' + (v * S.per)
       : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
     const mx = stMax(k)
     const locked = k === 'all' && !ST_BASE_KEYS.every((b) => (st[b] || 0) >= ST_MAX)
     const pips = k === 'all'
-      ? '<span class="alv">' + (locked ? '네 스탯 최대에 열림' : 'Lv.' + v) + '</span>'
+      ? '<span class="alv">' + (locked ? '다섯 스탯 최대에 열림' : 'Lv.' + v) + '</span>'
       : Array.from({ length: ST_MAX },
           (_, i) => '<i class="' + (i < v ? 'on' : '') + '"></i>').join('')
     const cost = v < mx ? statCost(stCostIdx(k, v), pl.grade) : 0
@@ -7345,7 +7407,7 @@ function openPilot(pl, list) {
       ' · 화력·체력 ×' + gradeMul(pl.grade).toFixed(2) + '</div>' +
     '<div class="de">' + pl.desc + '</div></div></div>' +
     (SWAP_NOTE ? '<div class="pnote">' + SWAP_NOTE.prev + '의 스탯을 초기화하고 경험치 ' +
-      SWAP_NOTE.back.toLocaleString('ko-KR') + ' 을 돌려받았습니다. 이제 ' + pl.name + '에게 쓰세요.</div>' : '') +
+      eul(SWAP_NOTE.back.toLocaleString('ko-KR')) + ' 돌려받았습니다. 이제 ' + pl.name + '에게 쓰세요.</div>' : '') +
     '<div class="pxp">' +
       '<span>쓸 수 있는 경험치 <b>' + pilotXp().toLocaleString('ko-KR') + '</b></span>' +
       '<span>사용 경험치 <b>' + back.toLocaleString('ko-KR') + '</b></span>' +
@@ -7368,7 +7430,7 @@ function openPilot(pl, list) {
     (have && ST_KEYS.some((k) => canStat(k, pl.id))
       ? '<div class="bar stauto"><button class="ghost" id="stAuto">자동 배분 · 위에서부터 채우기</button></div>' : '') +
     (have ? '' : pl.grade === 'normal'
-      ? '<div class="pnote">파일럿 Lv.' + pilotNeedLv(pl) + ' 에 합류합니다.</div>'
+      ? '<div class="pnote">파일럿 Lv.' + pilotNeedLv(pl) + '에 합류합니다.</div>'
       : canRecruit(pl.grade)
         ? '<div class="pnote">' + G.name + ' 조각이 ' + GRADE_NEED[pl.grade] + '개 찼습니다. 확인하면 ' + G.name +
           ' 파일럿 중 아직 안 온 ' + gradeLeft(pl.grade).length + '명 가운데 <b>한 명이 무작위로</b> 합류합니다.</div>'
@@ -7461,7 +7523,7 @@ function openPilot(pl, list) {
   if (rs) rs.onclick = () => {
 
     ask(pl.name + ' 의 스탯을 모두 되돌립니다.\n' +
-        '경험치 ' + back.toLocaleString('ko-KR') + ' 을 돌려받습니다.', () => {
+        '경험치 ' + eul(back.toLocaleString('ko-KR')) + ' 돌려받습니다.', () => {
       const cur = stOf(pl.id)
       ST_KEYS.forEach((k) => { cur[k] = 0 })
       prog.pilot.xp = (prog.pilot.xp || 0) + back
@@ -7506,7 +7568,7 @@ function openPilot(pl, list) {
     }
     if (back > 0) {
       ask('파일럿을 바꾸면 지금 쓰던 ' + prev.name + '의 스탯이 초기화됩니다.\n' +
-          '사용한 경험치 ' + back.toLocaleString('ko-KR') + ' 은 전부 돌려받습니다.',
+          '사용한 경험치 ' + eun(back.toLocaleString('ko-KR')) + ' 전부 돌려받습니다.',
           doSwap, { title: '파일럿 바꾸기', ok: '바꿉니다' })
     } else doSwap()
   }
@@ -7621,7 +7683,7 @@ function newPilotPopup() {
     '<div class="note2">' +
     (back
       ? '지금 쓰는 ' + cur.name + '에게 경험치 ' + back.toLocaleString('ko-KR') +
-        ' 을 사용하셨습니다. 「스탯 되돌리기」로 한 번에 돌려받아 새 파일럿에게 다시 쓸 수 있습니다. 되돌리기는 몇 번이든 됩니다.'
+        '을 사용하셨습니다. 「스탯 되돌리기」로 한 번에 돌려받아 새 파일럿에게 다시 쓸 수 있습니다. 되돌리기는 몇 번이든 됩니다.'
       : '스탯은 파일럿마다 따로 쌓입니다. 경험치는 하나로 모이니 누구에게 쓸지가 선택입니다.') +
     '</div>' +
     '<div class="bar">' +
@@ -7645,7 +7707,7 @@ function newPilotPopup() {
       setTimeout(() => tourRun([
         ['#pReset', '사용 경험치 되돌리기',
          cur.name + '에게 사용한 경험치 ' + back.toLocaleString('ko-KR') +
-         ' 을 그대로 돌려받습니다. 그 경험치로 새 파일럿을 키우면 됩니다.'],
+         '을 그대로 돌려받습니다. 그 경험치로 새 파일럿을 키우면 됩니다.'],
       ], null), 50)
     } else {
       setTimeout(() => tourRun([
@@ -7752,7 +7814,7 @@ function renderPilot() {
       '<div class="gr ' + G.tag + '">' + G.name + '</div>' +
       '<div class="de">' + pl.desc + '</div>' +
       '<div class="stx">' + (owned
-        ? (pilotOpen(pl) ? stLine(pl.id) : '파일럿 Lv.' + pilotNeedLv(pl) + ' 에 합류')
+        ? (pilotOpen(pl) ? stLine(pl.id) : '파일럿 Lv.' + pilotNeedLv(pl) + '에 합류')
         : ready ? '합류 가능 · 눌러서 확인 (무작위 1명)'
         : '조각 ' + shardG(pl.grade) + '/' + GRADE_NEED[pl.grade]) + '</div>' +
       '</div>' +
@@ -7785,7 +7847,7 @@ function renderPilot() {
     const eff = k === 'luck'
       ? ((LUCK_BASE[nowP.grade] || LUCK_BASE.normal) + (v + (nowSt.all || 0)) * S.per).toFixed(1) + '%'
       : !v ? '-'
-      : k === 'all' ? '네 스탯 +' + v
+      : k === 'all' ? '다섯 스탯 +' + v
       : k === 'hp' ? '+' + (v * S.per)
       : (k === 'rate' ? '-' : '+') + (v * S.per).toFixed(1) + '%'
     return '<div class="c' + (v ? ' on' : '') + '">' +
@@ -7862,6 +7924,7 @@ function renderPilot() {
     el.onclick = () => openPilot(PILOT_BY[el.dataset.who], list)
   })
 
+  kbClickable(document.getElementById('pilotNowCard'))
   document.getElementById('pilotNowCard').onclick = () => openPilot(pilotNow(), list)
 
   document.getElementById('pilotGacha').onclick = () => openGacha()
@@ -8123,7 +8186,7 @@ function pickPlaneTo(p, done) {
   if (dup >= 0 && dup !== activeSlot) {
     const back = planeById(prog.squad[activeSlot])
     ask('「' + p.name + '」은(는) 현재 ' + SLOT_META[dup].role + '에 배치된 기체입니다.\n' +
-        SLOT_META[activeSlot].role + '(으)로 옮기고, ' + SLOT_META[dup].role + '에는 ' +
+        euro(SLOT_META[activeSlot].role) + ' 옮기고, ' + SLOT_META[dup].role + '에는 ' +
         (back ? '지금 ' + SLOT_META[activeSlot].role + '의 「' + back.name + '」을(를) 넣습니다.' : '아무것도 넣지 않습니다.') +
         '\n변경하시겠습니까?', apply, { title: '배치 변경', ok: '변경' })
     return
@@ -8428,7 +8491,7 @@ document.getElementById('pQuit').onclick = () => {
   if (!state || !state.running) return
 
   pauseUI(false)
-  ask('이번 판을 버리고 출격 준비로 돌아갑니다.\n지금까지의 점수와 보상은 사라지고, 쓴 출격권은 돌아오지 않습니다.', () => {
+  ask('이번 판을 버리고 편대 화면으로 돌아갑니다.\n지금까지의 점수와 보상은 사라지고, 쓴 출격권은 돌아오지 않습니다.', () => {
     state.running = false
     state.paused = false
     music('hangar')
@@ -9357,10 +9420,22 @@ function subOpen(ci, sub) {
 }
 function chapterOpen(ci) { return ci === 0 || starOf(ci - 1, SUBS) > 0 }
 
-function eul(w) {
-  const c = w.charCodeAt(w.length - 1) - 0xac00
-  const has = c >= 0 && c <= 11171 && c % 28 !== 0
-  return w + (has ? '을' : '를')
+function josaHas(w) {
+  w = String(w)
+  const ch = w[w.length - 1]
+  if ('013678'.includes(ch)) return true
+  if ('2459'.includes(ch)) return false
+  const c = ch.charCodeAt(0) - 0xac00
+  return c >= 0 && c <= 11171 && c % 28 !== 0
+}
+function eul(w) { return w + (josaHas(w) ? '을' : '를') }
+function eun(w) { return w + (josaHas(w) ? '은' : '는') }
+function iga(w) { return w + (josaHas(w) ? '이' : '가') }
+function euro(w) {
+  const ch = String(w)[String(w).length - 1]
+  const c = ch.charCodeAt(0) - 0xac00
+  const rieul = c >= 0 && c <= 11171 && c % 28 === 8
+  return w + (josaHas(w) && !rieul ? '으로' : '로')
 }
 
 function chapterStep(d) {
@@ -11113,24 +11188,29 @@ function showAd(title, onDone) {
 
   if (passActive()) { sfx('pick'); onDone(); return }
   const btn = document.getElementById('advSkip')
+  const quit = document.getElementById('advClose')
   document.getElementById('advTitle').textContent = title
   scAd.hidden = false
   let left = 3
   btn.disabled = true
-  btn.textContent = left
+
+  btn.textContent = left + '초 뒤 보상'
   const iv = setInterval(() => {
     left--
-    if (left > 0) { btn.textContent = left; return }
+    if (left > 0) { btn.textContent = left + '초 뒤 보상'; return }
     clearInterval(iv)
     btn.disabled = false
     btn.textContent = '보상 받기'
   }, 1000)
+  const close = () => { clearInterval(iv); scAd.hidden = true; modalOff() }
+  modalOn(scAd, close)
   btn.onclick = () => {
     if (btn.disabled) return
-    clearInterval(iv)
-    scAd.hidden = true
+    close()
     onDone()
   }
+
+  quit.onclick = () => { sfx('pick'); close() }
 }
 
 function reviveByAd() {
@@ -15840,7 +15920,7 @@ function draw() {
     g.fillStyle = tk ? 'rgba(232,238,247,.95)' : tone
     g.font = 'bold 15px system-ui'
     g.fillText(tk ? '뽑기에서 새 기체와 파일럿이 나옵니다'
-                  : '스테이지 클리어에 큰 영향을 미칩니다', W / 2, ty + 28)
+                  : '이 아이템이 클리어를 가릅니다', W / 2, ty + 28)
     if (M) {
       g.fillStyle = tone
       g.font = 'bold 14px system-ui'
@@ -16573,7 +16653,7 @@ function end(win) {
       : freshSlots.length ? '새 자리에 기체 넣기' : '새 기체 적용하기'
     goHangar.classList.remove('ghost')
   } else {
-    goHangar.textContent = '격납고로'
+    goHangar.textContent = '편대로'
     goHangar.classList.add('ghost')
   }
 
@@ -16607,10 +16687,10 @@ function end(win) {
     (!win
       ? ''
       : hardGot
-        ? cell('tk', '가챠권', '+' + (tickets + hardGot), '보유 ' + prog.ticket, true)
+        ? cell('tk', '가챠권', '+' + (tickets + hardGot), '보유 ' + prog.ticket + '장', true)
         : tickets
-          ? cell('tk', '가챠권', '+' + tickets, '보유 ' + prog.ticket, true)
-          : cell('tk', '가챠권', STAR_TICKET - prog.star + '별 남음', '')) +
+          ? cell('tk', '가챠권', '+' + tickets, '보유 ' + prog.ticket + '장', true)
+          : cell('tk', '가챠권', '별 ' + (STAR_TICKET - prog.star) + '개 남음', '')) +
 
     (hardGot
       ? cell('hard', modeName + ' 첫 클리어', '가챠권 +' + hardGot, '', true)
@@ -16688,7 +16768,7 @@ function end(win) {
     lvBox +
     (!zone && win && nextSub <= SUBS ? '<div class="rnext"><b>' + nextSub + '단계</b>가 열렸습니다</div>' : '') +
     (opened != null
-      ? '<div class="rnext hot"><b>' + CHAPTERS[opened].name + '</b> 이 열렸습니다</div>' : '')
+      ? '<div class="rnext hot"><b>' + CHAPTERS[opened].name + '</b>' + (josaHas(CHAPTERS[opened].name) ? '이' : '가') + ' 열렸습니다</div>' : '')
   const rv = document.getElementById('revive')
   rv.hidden = (win && !zone) || state.adUsed.revive >= reviveLimit()
   scOver.hidden = false
@@ -16732,7 +16812,7 @@ function doLaunch(zoneMode) {
   voiceWarm()
   if (energy() > 0) { energySpend(); start(); return true }
   if (adDayLeft() <= 0) {
-    say('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 한 판이 찹니다.', '출격권')
+    say('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 출격권 한 장이 찹니다.', '출격권')
     return false
   }
   showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
