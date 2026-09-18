@@ -3333,7 +3333,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 10:43'
+const BUILD_AT = '09-18 10:55'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5301,7 +5301,10 @@ function stOf(id) {
     pt.sts[id] = ST_KEYS.reduce((o, k) => (o[k] = moved ? (old[k] || 0) : 0, o), {})
     if (moved) { ST_KEYS.forEach((k) => { pt.st[k] = 0 }) }
   }
-  return pt.sts[id]
+
+  const o = pt.sts[id]
+  for (const k of ST_KEYS) if (typeof o[k] !== 'number' || !isFinite(o[k])) o[k] = 0
+  return o
 }
 
 function pilotSt() { return stOf(pilotNow().id) }
@@ -5434,6 +5437,21 @@ if (!PILOT_BY[prog.pilot.who]) {
   save()
 }
 delete prog.__migPilot
+
+{
+  const pt = prog.pilot
+  const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d)
+  pt.lv = Math.max(1, Math.min(PILOT_MAX, Math.round(num(pt.lv, 1))))
+  pt.xpTotal = Math.max(0, Math.round(num(pt.xpTotal, 0)))
+  if (typeof pt.xp !== 'number' || !isFinite(pt.xp)) {
+    if (pt.sts) for (const id in pt.sts) stOf(id)
+    let spent = 0
+    if (pt.sts) for (const id in pt.sts) spent += stSpent(id)
+    pt.xp = Math.max(0, pt.xpTotal - spent)
+    save()
+    console.warn('pilot xp 되살림', pt.xp)
+  }
+}
 
 function pilotName() { return prog.pilot.name || '무명' }
 
@@ -7515,8 +7533,10 @@ function openPilot(pl, list) {
     let n = 0
     for (const k of ST_KEYS) {
       while (canStat(k, pl.id)) {
-        prog.pilot.xp -= statCost(stCostIdx(k, cur[k]), pl.grade)
-        cur[k]++
+
+        const v0 = cur[k] || 0
+        prog.pilot.xp -= statCost(stCostIdx(k, v0), pl.grade)
+        cur[k] = v0 + 1
         n++
         if (n > 200) break
       }
@@ -7538,8 +7558,9 @@ function openPilot(pl, list) {
       if (!hasGrade(pl.grade) || !canStat(k, pl.id)) return
       const cur = stOf(pl.id)
       const pwBefore = squadPower()
-      prog.pilot.xp -= statCost(stCostIdx(k, cur[k]), pl.grade)
-      cur[k]++
+      const v0 = cur[k] || 0
+      prog.pilot.xp -= statCost(stCostIdx(k, v0), pl.grade)
+      cur[k] = v0 + 1
       save(); sfx('ready'); haptic('ult')
       missBump('stat')
       guideDone('stat')
