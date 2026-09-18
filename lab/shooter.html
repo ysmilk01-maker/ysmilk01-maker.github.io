@@ -1021,6 +1021,37 @@
   .rank .sc { font-weight: 800; font-variant-numeric: tabular-nums; }
   .rank .dt { margin-left: auto; color: var(--dim); font-size: 10.5px; }
   .rank.top .sc { color: var(--gold); }
+  /* 순위표 (2026-09-18) */
+  .rank .nm { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rank .sc { margin-left: auto; flex: none; }
+  .rank.me { background: rgba(79,209,255,.14); }
+  .rank.me .nm { color: var(--accent); font-weight: 800; }
+  .rank .no.m1 { color: #ffd479; }
+  .rank .no.m2 { color: #cfd8e3; }
+  .rank .no.m3 { color: #d9a06a; }
+  .rank .no.out { width: auto; }
+  #scRank .rtabs { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden;
+    padding-bottom: 8px; margin-bottom: 2px; scrollbar-width: none; }
+  #scRank .rtabs::-webkit-scrollbar { display: none; }
+  #scRank .rtabs button {
+    flex: none; min-height: 36px; padding: 8px 13px; font-size: 12px; font-weight: 700;
+    border-radius: 999px; background: #16202e; border: 1px solid #2a3a50;
+    color: var(--muted); box-shadow: none; margin: 0;
+  }
+  #scRank .rtabs button.on { background: #2b3a55; border-color: #3f5680; color: var(--ink); }
+  /* 서른 줄이 한 장에 들어간다 - 넘기지 않고 굴린다 */
+  #rankBody { overflow-y: auto; overscroll-behavior: contain; }
+  #rankBody .rksum { padding: 10px 11px; font-size: 11.5px; color: var(--dim); line-height: 1.7; }
+  /*
+   * 내 줄은 바닥에 붙여 둔다 (2026-09-18).
+   *
+   * 서른 줄을 굴려 내려가야 내 자리가 나오면, 정작 보러 온 것을 제일
+   * 늦게 본다. 굴려도 따라온다.
+   */
+  #rankBody .rkme { position: sticky; bottom: 0; margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid #33506e; background: #0c1420f2;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  #rankBody .rkme .rank { border-bottom: 0; }
   .empty { color: var(--dim); font-size: 12.5px; padding: 22px 2px; line-height: 1.8; }
 
   .filters { display: flex; gap: 7px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -2409,7 +2440,6 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
     </div>
     <div class="hg-actions">
     <button id="hgMail" class="hg-icon" aria-label="우편함" title="우편함"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></svg><span class="badge" id="hgMailBadge" hidden></span></button>
-    <button id="hgRank" class="hg-icon" aria-label="랭킹" title="랭킹"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Z M8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 13v6m-4 2h8"/></svg></button>
     <button id="btnSet" class="hg-icon" aria-label="설정" title="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3 1-1h4l1 3 3 1 3 3-1 3 1 3-3 3-3 1-1 3h-4l-1-3-3-1-3-3 1-3-1-3 3-3 3-1Z"/><circle cx="12" cy="12" r="3"/></svg></button>
     </div>
   </header>
@@ -2417,7 +2447,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
     <div class="hg-body3">
       <div class="hg-col">
         <button class="hg-ico" id="hgGoShop"><span class="ie" aria-hidden="true">🛍️</span><span>상점</span></button>
-        <button class="hg-ico" id="hgGoGacha"><span class="ie" aria-hidden="true">🎁</span><span>뽑기</span><b class="mdot" id="hgGachaDot" hidden></b></button>
+        <button class="hg-ico" id="hgGoRank"><span class="ie" aria-hidden="true">🏅</span><span>랭킹</span></button>
         <button class="hg-ico" id="hgGoPass"><span class="ie" aria-hidden="true">🎫</span><span>출격 패스</span></button>
       </div>
       <div class="hg-form">
@@ -2502,7 +2532,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div class="screen bgpic" id="scRank" hidden>
   <button class="hg-back" data-hangar-back>‹ 편대로</button>
   <h1>랭킹</h1>
-  <p class="sub">아직 내 기록만 나옵니다. 다른 사람 순위는 게임 등록 뒤에 붙습니다.</p>
+  <div class="rtabs" id="rankTabs"></div>
   <div class="hp" id="rankBody"></div>
 </div>
 
@@ -3333,7 +3363,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 15:02'
+const BUILD_AT = '09-18 15:35'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -6435,12 +6465,11 @@ function renderSquad() {
   $('resBar').querySelectorAll('.rplus').forEach((b) => { b.onclick = () => go(b.dataset.go) })
 
   $('hgGoShop').onclick = () => go('shop')
-  $('hgGoGacha').onclick = () => go('gacha')
+  $('hgGoRank').onclick = () => go('rank')
   $('hgGoPass').onclick = () => go('shop')
   $('hgGoMiss').onclick = () => openMissionSheet()
   $('hgGoInfo').onclick = () => openInfoSheet()
   $('hgGoColl').onclick = () => openCollectionSheet()
-  $('hgGachaDot').hidden = !(prog.ticket >= GACHA.plane.cost)
   fxNum($('vParts'), prog.parts, 'parts')
   fxNum($('vTicket'), prog.ticket, 'ticket')
   const sum = SLOT_META.reduce((a, m, i) => a + (slotOpen(i) && prog.squad[i] ? slotMul(i) : 0), 0)
@@ -6452,7 +6481,6 @@ function renderSquad() {
   $('hgPilotStats').textContent = '호출부호 ' + pilotName() + ' · ' + stLine(pl.id)
   $('hgDestination').textContent = curChapter().name + ' ' + curSub() + '단계'
   $('hgStage').onclick = () => go('stage')
-  $('hgRank').onclick = () => go('rank')
   renderMissions()
   const ms = missions().list
   const ready = ms.filter(q => !q.taken && missDone(q)).length
@@ -6498,9 +6526,16 @@ function openCollectionSheet() {
 function openMissionSheet() { openHgSheet('오늘의 임무', '<div class="miss" id="missBody"></div>', (close) => renderMissions(close)) }
 function openInfoSheet() {
   const g = (id) => document.getElementById(id)
+
+  const st = prog.stats
   openHgSheet('편대 정보', '<div class="sum">' + g('squadSum').innerHTML + '</div>' +
     '<p class="note2">' + g('hgPower').textContent + '</p>' +
-    '<p class="note2">' + g('hgPilotStats').textContent + '</p><p class="note2">' + g('wallet').textContent + '</p>')
+    '<p class="note2">' + g('hgPilotStats').textContent + '</p><p class="note2">' + g('wallet').textContent + '</p>' +
+    '<div class="lab">내 기록</div><div class="sum">' +
+    row('최고 점수', st.best.toLocaleString('ko-KR'), true) +
+    row('출격', st.runs.toLocaleString('ko-KR') + '판') +
+    row('클리어', st.clears.toLocaleString('ko-KR') + '회') +
+    row('총 격추', st.kills.toLocaleString('ko-KR')) + '</div>')
 }
 function paintEnergy() {
   paintHangarStatus()
@@ -7150,16 +7185,6 @@ function paintStage(cv, sg) {
   }
 }
 
-function openTossRank() {
-  const fn = (window.AppsInToss && window.AppsInToss.openGameCenterLeaderboard) ||
-             window.openGameCenterLeaderboard
-  if (typeof fn !== 'function') {
-    say('토스 앱 안에서, 게임으로 등록된 뒤에 열립니다.\n지금은 아래 내 기록만 봅니다.', '순위표')
-    return
-  }
-  try { fn() } catch (e) {   }
-}
-
 let mapCh = null
 
 function hardOpen() { return starOf(prog.chapter || 0, curSub()) > 0 }
@@ -7350,59 +7375,100 @@ function renderStage() {
     `${hd}${curChapter().name} ${curSub()}단계 · 출격권 ${n}`
 }
 
+const RANK_NAMES = [
+  '강철나비', '야간비행', '적란운', '해무', '북극성', '흑표', '창공', '번개추적자',
+  '고요한새벽', '철갑상어', '붉은노을', '한산', '비행운', '서리까마귀', '폭풍전야',
+  '은하수', '먹구름', '초계비행', '흰매', '청룡', '기류', '낙하산', '노을사냥꾼',
+  '바람의결', '별자리', '수평선', '아지랑이', '연무', '제트기류', '천둥', '칼바람',
+  '파랑새', '하늘길', '활주로', '회오리', '흑조', '구름사다리', '날개뼈', '달무리',
+  '무지개', '반딧불', '새벽안개', '소나기', '오로라', '유성우', '이슬비', '잔물결',
+  '태풍의눈',
+]
+const RANK_N = 30
+
+function rankCleared(k) {
+  let n = 0
+  CHAPTERS.forEach((c, ci) => {
+    for (let sub = 1; sub <= SUBS; sub++) {
+      if (k === 'normal' ? starOf(ci, sub) > 0 : !!(prog[k] || {})[stageKey(ci, sub)]) n++
+    }
+  })
+  return n
+}
+
+function rankRush() {
+  let n = 0
+  for (let i = 0; i < BOSS_RUSH.length; i++) n += rushBest(i) + 1
+  return n
+}
+
+const STAGE_CAP = () => CHAPTERS.length * SUBS
+const RUSH_CAP = () => BOSS_RUSH.length * RUSH_DIFF.length
+const RANK_TABS = [
+  { k: 'power',   n: '전투력',    hi: 42000, lo: 9000, my: () => squadPower(),        f: (v) => v.toLocaleString('ko-KR') },
+  { k: 'normal',  n: '일반',      hi: 180,   lo: 96,   cap: STAGE_CAP, my: () => rankCleared('normal'),  f: (v) => v + '판' },
+  { k: 'extreme', n: '익스트림',  hi: 180,   lo: 64,   cap: STAGE_CAP, my: () => rankCleared('extreme'), f: (v) => v + '판' },
+  { k: 'crazy',   n: '크레이지',  hi: 174,   lo: 46,   cap: STAGE_CAP, my: () => rankCleared('crazy'),   f: (v) => v + '판' },
+  { k: 'hard',    n: '하드코어',  hi: 165,   lo: 33,   cap: STAGE_CAP, my: () => rankCleared('hard'),    f: (v) => v + '판' },
+  { k: 'rush',    n: '보스 도전', hi: 75,    lo: 21,   cap: RUSH_CAP,  my: () => rankRush(),             f: (v) => v + '칸' },
+]
+
+function rankRnd(seed) {
+  let x = (seed >>> 0) || 1
+  return () => { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296 }
+}
+function rankSeed(k) {
+  let h = 2166136261
+  for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 16777619) }
+  return h >>> 0
+}
+function rankBoard(t) {
+  const rnd = rankRnd(rankSeed(t.k))
+  const names = RANK_NAMES.slice()
+  for (let i = names.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1)); const x = names[i]; names[i] = names[j]; names[j] = x
+  }
+  const vs = []
+  for (let i = 0; i < RANK_N; i++) {
+
+    const f = Math.pow(i / (RANK_N - 1), 0.85)
+    const base = t.hi - (t.hi - t.lo) * f
+    const cap = t.cap ? t.cap() : Infinity
+    vs.push(Math.min(cap, Math.max(t.lo, Math.round(base * (0.97 + rnd() * 0.06)))))
+  }
+  vs.sort((a, b) => b - a)
+  return vs.map((v, i) => ({ nm: names[i % names.length], v }))
+}
+let rankTab = 'power'
 function renderRank() {
-  const st = prog.stats
-  const list = (prog.scores || []).slice().sort((a, b) => b.s - a.s).slice(0, 20)
-  const when = (t) => {
-    const d = new Date(t)
-    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  }
+  const tabs = document.getElementById('rankTabs')
   const host = document.getElementById('rankBody')
-
-  const farthest = (has) => {
-    let best = null, cnt = 0
-    CHAPTERS.forEach((c, ci) => { for (let k = 1; k <= SUBS; k++) if (has(ci, k)) { cnt++; best = [ci, k] } })
-    return best ? { txt: CHAPTERS[best[0]].id + '장 ' + best[1] + '단계', cnt } : { txt: '-', cnt: 0 }
+  if (!tabs || !host) return
+  tabs.innerHTML = RANK_TABS.map((t) =>
+    '<button data-rt="' + t.k + '"' + (t.k === rankTab ? ' class="on"' : '') + '>' + t.n + '</button>').join('')
+  tabs.querySelectorAll('[data-rt]').forEach((b) => {
+    b.onclick = () => { sfx('uiTab', 1); rankTab = b.dataset.rt; renderRank() }
+  })
+  const t = RANK_TABS.find((x) => x.k === rankTab) || RANK_TABS[0]
+  const my = t.my() || 0
+  const me = { nm: pilotName(), v: my, me: true }
+  const all = rankBoard(t).concat([me])
+    .sort((a, b) => b.v - a.v || (a.me ? -1 : b.me ? 1 : 0))
+  const myRank = all.indexOf(me) + 1
+  const line = (e, i) => {
+    const no = i + 1
+    return '<div class="rank' + (e.me ? ' me' : '') + (no === 1 ? ' top' : '') + '">' +
+      '<span class="no' + (no <= 3 ? ' m' + no : '') + '">' + no + '</span>' +
+      '<span class="nm">' + e.nm + (e.me ? ' · 나' : '') + '</span>' +
+      '<span class="sc">' + t.f(e.v) + '</span></div>'
   }
-  const modeRows = MODES.map(([k, nm]) => {
-    const r = k === 'normal' ? farthest((ci, sub) => starOf(ci, sub) > 0)
-                             : farthest((ci, sub) => !!(prog[k] || {})[stageKey(ci, sub)])
-    return row(nm, r.txt + (r.cnt ? ' · ' + r.cnt + '판' : ''), k === 'normal')
-  }).join('')
+  const top = all.slice(0, RANK_N).map(line).join('')
 
-  const pwNow = squadPower()
-  if (pwNow > (st.pwBest || 0)) { st.pwBest = pwNow; save() }
-  const pwParts = squadParts().filter((x) => x.open && x.plane)
-    .sort((a, b) => b.v - a.v)
-    .map((x) => row(x.role + ' · ' + x.plane.name, x.v.toLocaleString('ko-KR'))).join('')
-  const items = [
-    { h: 30, html: '<div class="lab" style="margin-top:0">전투력</div>' },
-    { h: 108, html: '<div class="sum" style="margin-top:0">' +
-      row('지금 편대 전투력', pwNow.toLocaleString('ko-KR'), true) +
-      row('최고 기록', (st.pwBest || 0).toLocaleString('ko-KR')) +
-      row('파일럿', pilotName() + ' · ' + pilotRank() + ' Lv.' + prog.pilot.lv) + '</div>' },
-    { h: 36 * Math.max(1, pwParts ? squadParts().filter((x) => x.open && x.plane).length : 1) + 12,
-      html: '<div class="sum" style="margin-top:0">' + (pwParts || row('기체', '없음')) + '</div>' },
-    { h: 30, html: '<div class="lab" style="margin-top:0">모드별 진행</div>' },
-    { h: 36 * MODES.length + 12, html: '<div class="sum" style="margin-top:0">' + modeRows + '</div>' },
-    { h: 186, html: '<div class="sum" style="margin-top:0">' +
-      row('최고 점수', st.best.toLocaleString('ko-KR'), true) +
-      row('출격', st.runs.toLocaleString('ko-KR') + '판') +
-      row('클리어', st.clears.toLocaleString('ko-KR') + '회') +
-      row('총 격추', st.kills.toLocaleString('ko-KR')) + '</div>' },
-    { h: 54, html: '<div class="bar" style="margin-top:0"><button class="ghost small" id="tossRank">토스 랭킹 열기</button></div>' },
-    { h: 30, html: '<div class="lab">내 기록 상위 20</div>' },
-  ]
-  if (list.length) list.forEach((r, i) => items.push({ h: 42, html:
-    `<div class="rank${i === 0 ? ' top' : ''}">` +
-    `<span class="no">${i + 1}</span>` +
-    `<span class="sc">${r.s.toLocaleString('ko-KR')}</span>` +
-    `<span class="k">${r.w ? '클리어' : ''}</span>` +
-    `<span class="dt">${when(r.t)}</span></div>` }))
-  else items.push({ h: 60, html: '<div class="empty">아직 기록이 없습니다.<br>한 판 하고 오세요.</div>' })
-  hpager(host, hpChunk(host, items, 0))
-  const tr = document.getElementById('tossRank')
-  if (tr) tr.onclick = openTossRank
+  const mine = '<div class="rkme"><div class="rank me">' +
+    '<span class="no out">' + myRank + '위</span>' +
+    '<span class="nm">' + pilotName() + ' · 나</span>' +
+    '<span class="sc">' + t.f(my) + '</span></div></div>'
+  hpPlain(host, top + mine)
 }
 
 function pilotFace(pl) {
