@@ -1789,6 +1789,14 @@
   }
   .gcrate:not(:disabled):active img { filter: drop-shadow(0 6px 14px rgba(0,0,0,.55)) brightness(1.3); }
   .gcrate:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 14px; }
+  /*
+   * 파일럿 상자 (2026-09-19). filter 는 덮어쓰기라 그림자를 같이 적어야
+   * 한다 - hue-rotate 만 적으면 상자가 바닥에서 뜬 것처럼 보인다.
+   */
+  .gcrate.pilot img { filter: drop-shadow(0 10px 22px rgba(0,0,0,.55)) hue-rotate(180deg); }
+  .gcrate.pilot:not(:disabled):active img {
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,.55)) brightness(1.3) hue-rotate(180deg);
+  }
   @keyframes crateBob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }
   @media (prefers-reduced-motion: reduce) { .gcrate img { animation: none } }
   #scGacha .gmain[hidden] { display: none; }   /* .bar 의 display:flex 가 [hidden] 을 이긴다 (2026-09-19) */
@@ -3396,7 +3404,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 08:28'
+const BUILD_AT = '09-19 08:59'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4105,7 +4113,13 @@ function bestOf(list) {
   return b
 }
 
-const GFX = { raf: 0, skip: false }
+const CRATE_HUE = { plane: 0, pilot: 180 }
+
+const CRATE_FALLBACK = {
+  plane: { body: '#4a5233', band: '#6f7a52', rivet: '#9aa877' },
+  pilot: { body: '#2f4653', band: '#4e6f80', rivet: '#7fa6b8' },
+}
+const GFX = { raf: 0, skip: false, kind: 'plane' }
 
 function gfxPlay(list, done) {
   const panel = document.getElementById('gfx')
@@ -4115,6 +4129,8 @@ function gfxPlay(list, done) {
 
   const top = bestOf(list)
   const tone = gTone(top.tier)
+
+  GFX.kind = (list[0] && list[0].kind) || 'plane'
   const T1 = 0.42, T2 = 0.92, T3 = 1.55
 
   const many = list.length > 1
@@ -4374,22 +4390,27 @@ function gfxCrate(c, open, tone) {
 
   const key = open <= 0 ? 'crateC' : open < 0.7 ? 'crateO' : 'crateB'
   const cim = gc(key)
+  const hue = CRATE_HUE[GFX.kind] || 0
   if (cim) {
     const sz = 150
+
+    if (hue) c.filter = 'hue-rotate(' + hue + 'deg)'
     c.drawImage(cim, -sz / 2, -sz / 2 - 12, sz, sz)
+    if (hue) c.filter = 'none'
     return
   }
+  const F = CRATE_FALLBACK[GFX.kind] || CRATE_FALLBACK.plane
   const w = 116, h = 84
 
-  c.fillStyle = '#4a5233'
+  c.fillStyle = F.body
   c.beginPath(); c.roundRect(-w / 2, -h / 2, w, h, 6); c.fill()
   c.fillStyle = 'rgba(0,0,0,.22)'
   c.fillRect(-w / 2, -h / 2 + h * 0.62, w, 3)
 
-  c.strokeStyle = '#6f7a52'; c.lineWidth = 5
+  c.strokeStyle = F.band; c.lineWidth = 5
   c.beginPath(); c.roundRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, 4); c.stroke()
 
-  c.fillStyle = '#9aa877'
+  c.fillStyle = F.rivet
   for (const dx of [-w / 2 + 12, w / 2 - 12]) {
     for (const dy of [-h / 2 + 12, h / 2 - 12]) {
       c.beginPath(); c.arc(dx, dy, 2.6, 0, 6.283); c.fill()
@@ -7006,11 +7027,6 @@ function renderGacha(res) {
 
   if (gaTab === 'plane' || gaTab === 'pilot') gKind = gaTab
   const isPlane = gKind === 'plane'
-  document.getElementById('gaSub').innerHTML = isPlane
-    ? '<b>기체 조각</b>이 나옵니다. 조각이 다 모이면 그 기체가 열립니다.'
-    : (pilotLeft()
-        ? '<b>파일럿 조각</b>이 나옵니다. 등급 조각이 다 모이면 그 등급에서 한 명이 옵니다.'
-        : '파일럿은 다 모으셨습니다. 조각은 등급 강화에 씁니다.')
 
   const pity = PITY[gKind]
   const li = pity ? pity.at - (prog.pull[gKind] % pity.at) : 0
@@ -7059,13 +7075,19 @@ function paintGacha(res) {
     if (!crate && !crateWarm) {
       crateWarm = true
       warmImgs(GC, ['crateC'], () => {
-        if (curScreen === 'gacha' && gaTab === 'pull') renderGacha(null)
+
+        if (curScreen === 'gacha' && (gaTab === 'plane' || gaTab === 'pilot')) renderGacha(null)
       })
     }
     hpPlain(body, head +
-      (crate ? `<button type="button" class="gcrate" id="gCrate" aria-label="뽑기"><img src="${crate.src}" alt=""></button>` : '') +
+      (crate ? `<button type="button" class="gcrate${gKind === 'pilot' ? ' pilot' : ''}" id="gCrate"` +
+               ` aria-label="${gKind === 'pilot' ? '파일럿' : '기체'} 뽑기"><img src="${crate.src}" alt=""></button>` : '') +
 
-      `<div class="empty">` + (crate ? '상자를 누르면 열립니다.' : '조각을 모으면 열립니다.') +
+      `<div class="empty"><b>${gKind === 'pilot' ? '파일럿' : '기체'} 조각</b>이 나옵니다. ` +
+      (gKind === 'pilot'
+        ? '등급 조각이 다 차면 그 등급에서 한 명이 옵니다.'
+        : '한 기체의 조각이 다 모이면 그 기체가 열립니다.') +
+      `<br>` + (crate ? '상자를 누르면 열립니다.' : '조각을 모으면 열립니다.') +
       ` 남는 조각은 강화에 씁니다.<br>` +
       `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.</div>`)
 
