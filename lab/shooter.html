@@ -3311,7 +3311,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-18 09:35'
+const BUILD_AT = '09-18 10:14'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4075,6 +4075,7 @@ function gfxPlay(list, done) {
   panel.onclick = () => { if (!held) GFX.skip = true }
 
   GFX.fuse = setTimeout(end, 120 * 1000)
+  if (!GFX.skip) sfx('uiShake')
 
   const bits = []
   for (let i = 0; i < 34; i++) {
@@ -4725,6 +4726,7 @@ function mailAdd(m) {
   list.unshift({ id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
                  at: dayKey(), read: false, claimed: !m.items, ...m })
   if (list.length > 60) list.length = 60
+  sfx('uiMail')
   save()
   paintMailBadge()
 }
@@ -4813,7 +4815,7 @@ function openMail(tab) {
   modalOn(panel, close)
   panel.onclick = (e) => { if (e.target === panel) close() }
   document.getElementById('dClose').onclick = close
-  body.querySelectorAll('[data-mt]').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); openMail(b.dataset.mt) } })
+  body.querySelectorAll('[data-mt]').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); sfx('uiTab', 1); openMail(b.dataset.mt) } })
   const mAll = document.getElementById('mailAll')
   if (mAll) mAll.onclick = (e) => {
     e.stopPropagation()
@@ -5891,7 +5893,8 @@ function modalOn(panel, close) {
   }
 
   const reopen = MODAL.el === panel
-  if (!reopen) MODAL.back = document.activeElement
+
+  if (!reopen) { MODAL.back = document.activeElement; sfx('uiOpen') }
 
   titleInert(true)
   if (MODAL.key) document.removeEventListener('keydown', MODAL.key)
@@ -5922,6 +5925,7 @@ function modalOff() {
   titleInert(false)
   if (MODAL.key) document.removeEventListener('keydown', MODAL.key)
   MODAL.key = null; MODAL.el = null; MODAL.close = null
+  sfx('uiClose')
 
   let back = MODAL.back
   if (back && !back.isConnected) {
@@ -5968,6 +5972,7 @@ function go(name) {
   fxIn(shown)
   if (name === 'squad') setTimeout(() => { showGotPop(); pwCheckOnSquad() }, 260)
   if (previous !== name) {
+    sfx('uiTab')
     if (name === 'squad') hangarFocus()
     else { const h = shown && shown.querySelector('h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }
   }
@@ -6576,8 +6581,8 @@ function renderSet() {
   const sp = document.getElementById('spRange')
   if (sp) {
     const lab = document.getElementById('spVal')
-    sp.oninput = () => { AU.on.speed = speedClamp(sp.value); if (lab) lab.textContent = AU.on.speed }
-    sp.onchange = () => { AU.on.speed = speedClamp(sp.value); if (lab) lab.textContent = AU.on.speed; auSave(); haptic('soft') }
+    sp.oninput = () => { AU.on.speed = speedClamp(sp.value); if (lab) lab.textContent = AU.on.speed; sfx('uiSlide', AU.on.speed) }
+    sp.onchange = () => { AU.on.speed = speedClamp(sp.value); if (lab) lab.textContent = AU.on.speed; auSave(); haptic('soft'); sfx('uiSpeed', AU.on.speed) }
   }
   const nm = document.getElementById('pilotNm')
   if (nm) nm.oninput = () => { prog.pilot.name = nm.value.trim().slice(0, 12); save() }
@@ -6591,9 +6596,10 @@ function renderSet() {
   document.querySelectorAll('[data-set]').forEach((el) => {
     el.onclick = () => {
       const k = el.dataset.set
-      if (k === 'music') setMusic(!AU.on.music)
-      else if (k === 'sfx') setSfx(!AU.on.sfx)
-      else { AU.on.vib = !AU.on.vib; auSave(); haptic('soft') }
+
+      if (k === 'music') { setMusic(!AU.on.music); sfx('uiSw', AU.on.music) }
+      else if (k === 'sfx') { if (AU.on.sfx) sfx('uiSw', 0); setSfx(!AU.on.sfx); if (AU.on.sfx) sfx('uiSw', 1) }
+      else { AU.on.vib = !AU.on.vib; auSave(); haptic('soft'); sfx('uiSw', AU.on.vib) }
       renderSet()
     }
   })
@@ -6699,7 +6705,7 @@ function renderPlanes() {
       const b = document.createElement('button')
       b.textContent = txt
       b.className = now === k ? 'on' : ''
-      b.onclick = () => { set(k); renderPlanes() }
+      b.onclick = () => { sfx('uiTab', 1); set(k); renderPlanes() }
       row.appendChild(b)
     }
     ef.appendChild(row)
@@ -6802,6 +6808,7 @@ function renderPlanes() {
       const was = c.classList.contains('sel')
       elPlanes.querySelectorAll('.card.cp.sel').forEach((x) => x.classList.remove('sel'))
       if (!was) c.classList.add('sel')
+      sfx('uiCard', was ? 0 : 1)
     }
 
     const ac = c.querySelector('.act'); if (ac) ac.onclick = (ev) => ev.stopPropagation()
@@ -6847,6 +6854,7 @@ function showDaily(got) {
       `<div class="n">${r.n.toLocaleString('ko-KR')}${unit[r.kind]}</div></div>`
   }).join('')
   document.getElementById('daily').hidden = false
+  sfx('uiGift')
 
   titleInert(true)
   const ok = document.getElementById('dailyOk')
@@ -6889,7 +6897,7 @@ function renderGacha(res) {
 
   document.querySelectorAll('#gaTabs button').forEach((b) => {
     b.className = b.dataset.t === gaTab ? 'on' : ''
-    b.onclick = () => { gaTab = b.dataset.t; renderGacha(null) }
+    b.onclick = () => { sfx('uiTab', 1); gaTab = b.dataset.t; renderGacha(null) }
   })
 
   const bar = document.getElementById('gaBar')
@@ -7162,10 +7170,12 @@ function bindModes(root, rerender) {
       e.stopPropagation()
       const k = b.dataset.mode
       if (k !== 'normal' && !anyHardOpen()) {
+        sfx('uiNo')
         say('일반으로 한 번 깬 판이 있어야 다른 모드로 갈 수 있습니다.', '아직 못 갑니다')
         return
       }
       runMode = k
+      sfx('uiMode', k)
       const moved = jumpToModeStage(k)
       rerender()
       if (moved && typeof hgToast === 'function') hgToast(modeDef(k)[1] + ' → ' + CHAPTERS[moved[0]].name + ' ' + moved[1] + '단계로 이동')
@@ -7247,7 +7257,7 @@ function renderStage() {
         `${BOSS_RUSH.filter((d, i) => rushBest(i) >= rushDiff()).length}` +
         ` / ${BOSS_RUSH.length} 격파</span><span class="go">▸</span></button>`
       : `<div class="lab" style="margin-top:8px">보스 도전 <span style="color:var(--dim);font-weight:500">- 파일럿 Lv.${RUSH_LV} 에 열립니다</span></div>`)
-  el.querySelectorAll('[data-ch]').forEach((t) => { t.onclick = () => { mapCh = +t.dataset.ch; renderStage() } })
+  el.querySelectorAll('[data-ch]').forEach((t) => { t.onclick = () => { sfx('uiPage'); mapCh = +t.dataset.ch; renderStage() } })
   const onTab = el.querySelector('.mtab.on'); if (onTab && onTab.scrollIntoView) onTab.scrollIntoView({ block: 'nearest', inline: 'center' })
 
   paintStage(el.querySelector('.pv'), ch)
@@ -7276,7 +7286,8 @@ function renderStage() {
   el.querySelectorAll('[data-sub]').forEach((d) => {
     const sub = +d.dataset.sub
     d.onclick = () => {
-      if (!subOpen(mapCh, sub)) { say(`${sub - 1}단계를 먼저 깨야 합니다.`, '잠긴 단계'); return }
+      if (!subOpen(mapCh, sub)) { sfx('uiNo'); say(`${sub - 1}단계를 먼저 깨야 합니다.`, '잠긴 단계'); return }
+      sfx('uiNode', BOSS_AT.includes(sub))
       prog.chapter = mapCh
       prog.sub = sub
       save(); renderStage()
@@ -7460,8 +7471,8 @@ function openPilot(pl, list) {
   if (list && list.length > 1) {
     const at = list.indexOf(pl)
     const go2 = (d) => openPilot(list[(at + d + list.length) % list.length], list)
-    document.getElementById('dPrev').onclick = () => go2(-1)
-    document.getElementById('dNext').onclick = () => go2(1)
+    document.getElementById('dPrev').onclick = () => { sfx('uiPage'); go2(-1) }
+    document.getElementById('dNext').onclick = () => { sfx('uiPage'); go2(1) }
   }
 
   const aBtn = document.getElementById('stAuto')
@@ -7591,7 +7602,7 @@ function askOpen(text, title, okLabel, twoWay, onOk) {
   ASK.ok = onOk || null
   ASK.no = null
   el.hidden = false
-  sfx('pick')
+
   modalOn(el, askClose)
 }
 
@@ -8156,8 +8167,8 @@ function openDetail(p, list) {
     }
     const pv = document.getElementById('dPrev')
     const nx = document.getElementById('dNext')
-    if (pv) pv.onclick = () => go2(-1)
-    if (nx) nx.onclick = () => go2(1)
+    if (pv) pv.onclick = () => { sfx('uiPage'); go2(-1) }
+    if (nx) nx.onclick = () => { sfx('uiPage'); go2(1) }
   }
 
   guideFollow('planeSheet')
@@ -9442,6 +9453,7 @@ function chapterStep(d) {
   const t = mapCh + d
   if (t < 0 || t >= CHAPTERS.length) return
   if (!chapterOpen(t)) return
+  sfx('uiPage')
   mapCh = t
   renderStage()
 }
@@ -9817,6 +9829,7 @@ function nextZone() {
   const before = pl.hp
 
   banner('제 ' + s.zone + ' 구역')
+  sfx('zoneNext')
   if (pl.hp > before + 1) sfx('pick')
   if (s.zone > (prog.stats.zoneBest || 0)) { prog.stats.zoneBest = s.zone; save() }
 }
@@ -9847,6 +9860,7 @@ function holdWall(n) {
   let gap2 = 1 + Math.floor(Math.random() * (cnt - 2))
   if (Math.abs(gap2 - gap1) < 2) gap2 = (gap1 + 3) % cnt
 
+  sfx('holdWall', cnt)
   const stopY = H * (0.34 + Math.random() * 0.16)
   const vy = 210 * SPD_K
   for (let i = 0; i < cnt; i++) {
@@ -9919,6 +9933,7 @@ function spawnUfo() {
 function dive(n) {
   for (let i = 0; i < n; i++) {
     state.enemies.push(mkEnemy('dive', 60 + Math.random() * (W - 120), -40 - i * 70, 0))
+    sfx('spawn', 'dive')
   }
 }
 
@@ -9932,6 +9947,7 @@ function wing(kind, n) {
     e.holdY = top + Math.abs(off) * 18
     e.baseX = e.x
     e.hold = 2.8
+    sfx('spawn', e.kind === 'mid' ? 'wingmid' : 'wing')
     state.enemies.push(e)
   }
 }
@@ -9976,6 +9992,7 @@ function swarmPack(n) {
     const e = mkEnemy('swarm', cx + Math.cos(a) * 16, -30 + Math.sin(a) * 16, 0)
     e.packA = a
     e.packT = burst
+    sfx('spawn', 'swarm')
     s.enemies.push(e)
   }
 }
@@ -11078,6 +11095,7 @@ function chainFrom(from, b) {
       if (d < bd) { bd = d; best = t }
     }
     if (!best) break
+    sfx('chainArc', j)
     s.arcs.push({ x1: cur.x, y1: cur.y, x2: best.x, y2: best.y, age: 0, life: .22,
                   seed: Math.random() * 100 })
     if (best.e) {
@@ -11197,10 +11215,11 @@ function showAd(title, onDone) {
   btn.textContent = left + '초 뒤 보상'
   const iv = setInterval(() => {
     left--
-    if (left > 0) { btn.textContent = left + '초 뒤 보상'; return }
+    if (left > 0) { btn.textContent = left + '초 뒤 보상'; sfx('uiCount', 0); return }
     clearInterval(iv)
     btn.disabled = false
     btn.textContent = '보상 받기'
+    sfx('uiReward')
   }, 1000)
   const close = () => { clearInterval(iv); scAd.hidden = true; modalOff() }
   modalOn(scAd, close)
@@ -11234,6 +11253,7 @@ function reviveNow() {
     scOver.hidden = true
     last = performance.now()
     banner('이어서 갑니다')
+    sfx('revive')
     const s = state
     if (s.cleared && !s.boss) {
       banner('보스 격파')
@@ -11270,7 +11290,7 @@ function fireUlt() {
   s.ultUsed++
   s.ultKind = k
   banner(ULT[k].name)
-  sfx('ult')
+  sfx('ult', k)
   haptic('ult')
 
   s.ultFx = { t: 0, life: 0.85, tone: ultTone(k), x: s.player.x, y: s.player.y }
@@ -11309,6 +11329,7 @@ function fireUlt() {
 
       let n = 0
       for (const b of s.ebullets) { if (!b.dead) { b.dead = true; n++ } }
+      if (n) sfx('wipe', n)
       s.beams.length = 0
       s.shards.push({ x: pl.x, y: pl.y, r: 10, kind: 'shock' })
       s.flareT = Math.min(0.46, s.flareT + 0.34)
@@ -11545,6 +11566,7 @@ function updateUlt(dt) {
         if ((b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 < R * R) {
           b.dead = true
           s.orbCharge = Math.min(ORB_ULT.cap, (s.orbCharge || 0) + ORB_ULT.gain)
+          sfx('absorb', s.orbCharge / ORB_ULT.cap)
 
           s.parts.push({ x: b.x, y: b.y, vx: (pl.x - b.x) * 1.6, vy: (pl.y - b.y) * 1.6,
                          age: 0, life: .3, color: '#e0d0ff' })
@@ -11594,7 +11616,7 @@ function updateUlt(dt) {
         s.shards.push({ x: pl.x, y: pl.y, r: 10, kind: 'pulse', dmg })
         s.shake = Math.max(s.shake, 16)
         s.flareT = Math.min(0.46, s.flareT + 0.2)
-        sfx('ult'); haptic('ult')
+        sfx('ult', 'orb'); haptic('ult')
         banner('반사 ' + Math.round(dmg))
         s.orbCharge = 0
       }
@@ -11783,7 +11805,8 @@ function update(dt) {
 
   pl.x = Math.max(18, Math.min(W - 18, pl.x))
   pl.y = Math.max(70, Math.min(H - 34, pl.y))
-  if (pl.inv > 0) pl.inv -= dt
+
+  if (pl.inv > 0) { pl.inv -= dt; if (pl.inv <= 0) sfx('invEnd') }
 
   s.trailAcc = (s.trailAcc || 0) + dt
   while (s.trailAcc >= 1 / 60) {
@@ -11843,7 +11866,7 @@ function update(dt) {
         const rr = b.rad * (1 - t) + 9 * t
         b.x = p.x + Math.cos(b.a) * rr
         b.y = p.y - 14 * t + Math.sin(b.a) * rr
-        if (t >= 1) { b.go = true; b.vx = Math.cos(b.a) * 60; b.vy = -640 }
+        if (t >= 1) { b.go = true; b.vx = Math.cos(b.a) * 60; b.vy = -640; sfx('orbGo', b.owner) }
         break
       }
       case 'mine': {
@@ -11865,7 +11888,7 @@ function update(dt) {
       case 'boomer': {
 
         if (!b.back) {
-          if (b.y <= 10 || b.age > 2.2) b.back = true
+          if (b.y <= 10 || b.age > 2.2) { b.back = true; sfx('boomer', 0) }
         } else {
           const p = slotPos(b.home != null ? b.home : MAIN_SLOT)
           const dx = p.x - b.x, dy = p.y - b.y
@@ -11873,7 +11896,7 @@ function update(dt) {
           const sp = 600
           b.vx = (dx / d) * sp
           b.vy = (dy / d) * sp
-          if (d < 18) b.dead = true
+          if (d < 18) { b.dead = true; sfx('boomer', 1) }
         }
         break
       }
@@ -11925,6 +11948,8 @@ function update(dt) {
         e.y += e.sp * dt
         e.x += (pl.x - e.x) * Math.min(1, dt * 2.4)
       } else {
+
+        if (!e.dashed) { e.dashed = true; sfx('diveDash') }
         e.y += e.dashSp * dt
       }
       continue
@@ -11936,9 +11961,9 @@ function update(dt) {
       e.x += (e.dir || 1) * e.sp * dt
       e.y += Math.sin(e.t * 1.6) * 22 * dt
 
-      if (e.ufoT > 18) e.y -= 150 * dt
+      if (e.ufoT > 18) { if (!e.fled) { e.fled = true; sfx('ufo', 0) } e.y -= 150 * dt }
 
-      if (e.x < -70 || e.x > W + 70 || e.y < -80) { e.dead = true; e.reaped = true }
+      if (e.x < -70 || e.x > W + 70 || e.y < -80) { e.dead = true; e.reaped = true; sfx('ufo', 1) }
       continue
     }
 
@@ -11974,7 +11999,7 @@ function update(dt) {
         e.x = u * u * P[0][0] + 2 * u * t * P[1][0] + t * t * P[2][0]
         e.y = u * u * P[0][1] + 2 * u * t * P[1][1] + t * t * P[2][1]
       }
-      if (e.pt > 1.02) { e.dead = true; e.reaped = true }
+      if (e.pt > 1.02) { e.dead = true; e.reaped = true; sfx('snakeOut') }
     } else {
       e.y += e.sp * dt
       const wobble = e.sway ? Math.sin(e.t * 1.1) * e.sway : Math.sin(e.t * 1.6) * 34
@@ -11989,6 +12014,7 @@ function update(dt) {
       e.packT -= dt
       if (e.packT <= 0 && !e.spread) {
         e.spread = true
+        sfx('swarmSpread')
         e.vx = Math.cos(e.packA) * 120
         e.sp *= 0.72
       }
@@ -12000,6 +12026,7 @@ function update(dt) {
       if (e.cd <= 0 && e.y > 0 && e.y < H * .8) {
         e.cd = e.fire * fireScale()
         for (const dir of [-1, 1]) {
+          sfx('eshot', 2)
           s.ebullets.push(mkEB({ x: e.x + dir * (e.r + 4), y: e.y, vx: dir * 190, vy: 40,
                             r: 4.2, age: 0, dmg: DMG.bullet }))
         }
@@ -12013,6 +12040,7 @@ function update(dt) {
         e.cd = e.fire * fireScale()
         s.ebullets.push(mkEB({ x: e.x, y: e.y - e.r, vx: 0, vy: 0, r: 7, age: 0,
                           kind: 'hold', dmg: DMG.bullet, flyT: 0, stayT: 4.2 }))
+                          sfx('emine')
       }
       continue
     }
@@ -12028,6 +12056,7 @@ function update(dt) {
         if (e.cd <= 0 && e.y > 60 && e.y < H * .62) {
           e.cd = e.fire * fireScale()
           e.beamPh = 1.65
+          sfx('ebeam', 'h')
         }
       }
       continue
@@ -12043,6 +12072,7 @@ function update(dt) {
         if (e.cd <= 0 && e.y > 40 && e.y < H * .55) {
           e.cd = e.fire * fireScale()
           e.beamPh = 1.45
+          sfx('ebeam', 'v')
         }
       }
       continue
@@ -12054,6 +12084,7 @@ function update(dt) {
       if (e.kind === 'gunner') {
 
         const nb = volley(5)
+        sfx('efan', nb)
         for (let k = 0; k < nb; k++) {
           const d = (k - (nb - 1) / 2) * .17
           s.ebullets.push(mkEB({ x: e.x, y: e.y, vx: Math.cos(a + d) * 170,
@@ -12064,6 +12095,7 @@ function update(dt) {
       if (e.kind === 'tank') {
 
         const nb = volley(2)
+        sfx('ecannon', 0)
         for (let k = 0; k < nb; k++) {
           const d = (k - (nb - 1) / 2) * .2
           s.ebullets.push(mkEB({ x: e.x, y: e.y, vx: Math.cos(a + d) * 130, vy: Math.sin(a + d) * 130,
@@ -12073,9 +12105,11 @@ function update(dt) {
       }
 
       if ((e.kind === 'mid' || e.kind === 'tank') && Math.random() < .45) {
+        sfx('emissile', 0)
         s.ebullets.push(mkEB({ x: e.x, y: e.y, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120,
                           r: 5, kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0, dmg: DMG.missile }))
       } else {
+        sfx('eshot', e.kind === 'mid' ? 1 : 0)
         const sp = e.kind === 'mid' ? 190 : 160
 
         const nb = volley(1)
@@ -12102,7 +12136,7 @@ function update(dt) {
 
     if (bs.entering) {
       bs.y += 60 * dt
-      if (bs.y >= 130) { bs.y = 130; bs.entering = false }
+      if (bs.y >= 130) { bs.y = 130; bs.entering = false; sfx('bland', bs.mid); s.shake = Math.max(s.shake, 10) }
     } else {
       let alive = 0; for (const p of bs.parts) if (p.alive) alive++
 
@@ -12110,6 +12144,7 @@ function update(dt) {
 
       if (special && bs.phase === 2 && bs.dashPh <= 0 && bs.lancePh <= 0 && Math.random() < dt * 0.4) {
         bs.dashPh = 2.2; bs.dashX = pl.x
+        sfx('bdash')
       }
 
       const swing = Math.max(0, W / 2 - Math.max(70, bs.r + 24))
@@ -12155,6 +12190,7 @@ function update(dt) {
         p.cd -= dt
         if (p.cd <= 0) {
           p.cd = 1.3
+          sfx('eshot', 3)
           const tx = bs.x + p.dx, ty = bs.y + p.dy
           const a = Math.atan2(pl.y - ty, pl.x - tx)
 
@@ -12168,6 +12204,7 @@ function update(dt) {
       bs.summonCd -= dt
       if (bs.summonCd <= 0) {
         bs.summonCd = bs.phase === 2 ? 4.5 : 7
+        sfx('bsummon', bs.phase)
         for (const sx of [70, W - 70]) s.enemies.push(mkEnemy('small', sx, -30, 0))
       }
 
@@ -12184,6 +12221,7 @@ function update(dt) {
         bossSmoke(bs, dt)
 
         const pat = BOSS_PAT[bs.pat || bs.form] || BOSS_PAT.air
+        sfx('bshot', bs.phase)
         if (bs.phase === 2) {
           bs.cd = pat.cd2 * slow * haste * chf * 1.111
           pat.p2(bs, pl)
@@ -12406,6 +12444,7 @@ function updateGround(u, dt) {
       u.cd -= dt
       if (u.cd <= 0) {
         u.cd = 1.8 * fireScale()
+        sfx('ecannon', 1)
         const a = Math.atan2(pl.y - u.y, pl.x - u.x)
 
         const nb = volley(3)
@@ -12421,6 +12460,7 @@ function updateGround(u, dt) {
       u.cd -= dt
       if (u.cd <= 0) {
         u.cd = 3.0 * fireScale()
+        sfx('ecannon', 2)
 
         s.ebullets.push(mkEB({ x: u.x, y: u.y - 10, vx: (pl.x - u.x) * .35, vy: -300,
                           r: 5, kind: 'flakshell', burstY: Math.max(60, pl.y - 40), age: 0 }))
@@ -12429,12 +12469,13 @@ function updateGround(u, dt) {
     }
     case 'laser': {
       u.cd -= dt
-      if (u.phase === 'idle' && u.cd <= 0) { u.phase = 'aim'; u.ph = 0.9; u.aimX = pl.x }
+      if (u.phase === 'idle' && u.cd <= 0) { u.phase = 'aim'; u.ph = 0.9; u.aimX = pl.x; sfx('glaser', 0) }
       else if (u.phase === 'aim') {
         u.ph -= dt
         if (u.ph <= 0) {
           u.phase = 'idle'; u.cd = 3.4 * fireScale()
           s.beams.push({ x: u.aimX, y: u.y, w: 20, age: 0, warn: 0, life: 0.55 })
+          sfx('glaser', 1)
         }
       }
       break
@@ -12452,6 +12493,7 @@ function updateGround(u, dt) {
           u.phase = 'idle'
           u.cd = 5.0 * fireScale()
           banner('지대공 미사일')
+          sfx('emissile', 2)
           s.ebullets.push(mkEB({
             x: u.x, y: u.y - 12, vx: 0, vy: -70,
             r: 6, kind: 'sam', turn: SAM_TURN, age: 0,
@@ -12469,6 +12511,7 @@ function updateGround(u, dt) {
           u.lock = 0
           banner('미사일')
           for (const k of [-1, 1]) {
+            sfx('emissile', 1)
             s.ebullets.push(mkEB({ x: u.x + k * 12, y: u.y - 8, vx: k * 90, vy: -160,
                               r: 5, kind: 'missile', turn: ENEMY_HOMING_TURN, age: 0 }))
           }
@@ -12494,6 +12537,7 @@ function legHurt(e, dmg, col) {
 function legBlast(x, y, r, dmg, col) {
   const s = state
   s.blasts.push({ x, y, r, age: 0, life: .34 })
+  sfx('legBlast')
   const rr = r * r
   for (const e of s.enemies) {
     if (e.dead) continue
@@ -12567,7 +12611,7 @@ function legendSig(e, b) {
   const p = u && u.plane
   if (!p || p.tier !== 'legend') return
   const f = LEGEND_SIG[p.weapon]
-  if (f) f(e, b)
+  if (f) { sfx('legendSig', p.weapon); f(e, b) }
 }
 
 function splitBullet(b) {
@@ -12636,6 +12680,7 @@ function collide() {
       if (b.hitList && b.hitList.has(u)) continue
       if (near(b, u, u.r + b.r)) {
         u.hp -= b.dmg * enemyMul(b); u.flash = .1
+        sfx('ghit')
         if (b.pierce > 0) { b.pierce--; (b.hitList = b.hitList || new Set()).add(u) }
         else b.dead = true
         if (u.hp <= 0) {
@@ -12667,6 +12712,7 @@ function collide() {
         if (!ahead) {
           b.dead = true
           boom(b.x, b.y, 2, '#8aa0c0')
+          sfx('tink', 0)
         }
       }
     }
@@ -12736,6 +12782,7 @@ function collide() {
         boom(e.x, e.y, 14, '#ffd27a')
       } else {
         boom(e.x, e.y, 3, '#ffd27a')
+        sfx('tink', 1)
       }
       break
     }
@@ -16026,8 +16073,11 @@ function frame(now) {
   if (state.paused) {
     state.dt = dt
     if (state.resumeT > 0) {
+
+      const pre = Math.ceil(state.resumeT)
       state.resumeT -= dt
-      if (state.resumeT <= 0) { state.paused = false; state.resumeT = 0 }
+      if (state.resumeT > 0 && Math.ceil(state.resumeT) !== pre) sfx('uiCount', 1)
+      if (state.resumeT <= 0) { state.paused = false; state.resumeT = 0; sfx('uiGo') }
     }
     draw()
     return
@@ -16476,13 +16526,31 @@ function sfx(kind, arg) {
       auHiss(320, 2100, 1.2, 0.07, 'bandpass')
       break
     }
-    case 'ult':
+    case 'ult': {
 
-      auTone('sawtooth', 190, 1500, 0.34, 0.1)
-      auTone('sine', 130, 42, 0.55, 0.26, AU.ctx.currentTime + 0.3)
-      auHiss(5000, 500, 0.5, 0.1, 'lowpass')
+      const U = {
+        rapid:  { w: 'square',   to: 1200, hit: 150, tail: [3000, 700, 0.45, 0.09, 'bandpass'] },
+        spread: { w: 'sawtooth', to: 1800, hit: 120, tail: [7000, 900, 0.60, 0.11, 'lowpass'] },
+        laser:  { w: 'sawtooth', to: 2400, hit: 110, tail: [9000, 2000, 0.55, 0.10, 'highpass'] },
+        homing: { w: 'triangle', to: 1400, hit: 140, tail: [2400, 600, 0.50, 0.08, 'bandpass'] },
+        pierce: { w: 'sawtooth', to: 2000, hit: 100, tail: [6000, 1200, 0.42, 0.10, 'bandpass'] },
+        wave:   { w: 'sine',     to: 900,  hit: 90,  tail: [5000, 300, 0.70, 0.12, 'lowpass'] },
+        orb:    { w: 'triangle', to: 1600, hit: 125, tail: [4000, 800, 0.55, 0.09, 'bandpass'] },
+        mine:   { w: 'square',   to: 700,  hit: 80,  tail: [1600, 200, 0.75, 0.13, 'lowpass'] },
+        beam:   { w: 'sawtooth', to: 1100, hit: 105, tail: [2000, 400, 0.80, 0.11, 'lowpass'] },
+        boomer: { w: 'triangle', to: 1300, hit: 135, tail: [3400, 900, 0.50, 0.09, 'bandpass'] },
+        chain:  { w: 'square',   to: 2600, hit: 115, tail: [8000, 1500, 0.45, 0.11, 'highpass'] },
+      }
+      const u = U[arg] || U.rapid
+      const t0 = AU.ctx.currentTime
+      auTone(u.w, 190, u.to, 0.34, 0.1, t0)
+      auTone('sine', u.hit, 42, 0.55, 0.26, t0 + 0.3)
+      auHiss(u.tail[0], u.tail[1], u.tail[2], u.tail[3], u.tail[4], t0)
       break
+    }
     case 'alarm':
+
+      if (!auGate('alarm', 0.5)) return
       for (let i = 0; i < 3; i++) {
         auTone('square', 440, 440, 0.16, 0.07, AU.ctx.currentTime + i * 0.24)
         auTone('square', 330, 330, 0.16, 0.07, AU.ctx.currentTime + i * 0.24 + 0.1)
@@ -16496,6 +16564,432 @@ function sfx(kind, arg) {
       [523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => {
         auTone('triangle', hz, hz, 0.5, 0.11, AU.ctx.currentTime + i * 0.12)
       })
+      break
+
+    case 'eshot': {
+
+      const a = arg | 0
+      if (!auGate('eshot' + a, [0.05, 0.05, 0.06, 0.11][a] || 0.05)) return
+      if (a === 1) { auTone('triangle', 560, 210, 0.06, 0.06); auHiss(700, 200, 0.045, 0.035, 'lowpass'); break }
+      if (a === 2) { auTone('triangle', 1000, 560, 0.04, 0.045); break }
+      if (a === 3) { auTone('triangle', 620, 260, 0.07, 0.07); auHiss(1800, 600, 0.05, 0.045, 'bandpass'); break }
+      auTone('triangle', 760, 300, 0.05, 0.05)
+      break
+    }
+
+    case 'efan': {
+
+      if (!auGate('efan', 0.08)) return
+      const n = (arg | 0) || 5, big = n > 5
+      auTone('sawtooth', 520, 260, big ? 0.10 : 0.08, big ? 0.08 : 0.07)
+      auHiss(2500, 900, big ? 0.09 : 0.07, 0.05, 'bandpass')
+      break
+    }
+
+    case 'ecannon': {
+
+      const a = arg | 0
+      if (!auGate('ecan' + a, [0.10, 0.10, 0.20][a] || 0.10)) return
+      if (a === 1) { auTone('square', 300, 120, 0.09, 0.10); auHiss(4000, 1500, 0.03, 0.05, 'highpass'); break }
+      if (a === 2) { auTone('sine', 140, 60, 0.15, 0.12); auHiss(600, 150, 0.20, 0.08, 'lowpass'); break }
+      auTone('sine', 160, 70, 0.12, 0.12)
+      auHiss(500, 120, 0.10, 0.07, 'lowpass')
+      break
+    }
+
+    case 'emissile': {
+
+      const a = arg | 0
+      if (!auGate('emis' + a, [0.15, 0.20, 0.30][a] || 0.15)) return
+      if (a === 1) { auHiss(700, 2400, 0.30, 0.08, 'bandpass'); auTone('sine', 240, 700, 0.25, 0.06); break }
+      if (a === 2) { auHiss(300, 1800, 0.60, 0.15, 'lowpass'); auTone('sine', 90, 260, 0.50, 0.08); break }
+      auHiss(600, 2200, 0.25, 0.07, 'bandpass')
+      auTone('sine', 300, 900, 0.25, 0.06)
+      break
+    }
+
+    case 'emine': {
+
+      if (!auGate('emine', 0.12)) return
+      auTone('triangle', 330, 180, 0.08, 0.07)
+      auHiss(800, 200, 0.06, 0.04, 'lowpass')
+      break
+    }
+
+    case 'ebeam': {
+
+      const v = arg === 'v'
+      if (!auGate(v ? 'ebeamv' : 'ebeamh', 0.3)) return
+      const t0 = AU.ctx.currentTime, d = v ? 1.1 : 1.3
+      auTone('sine', v ? 250 : 200, v ? 1000 : 900, d, 0.05, t0)
+      auHiss(v ? 3400 : 3000, v ? 900 : 800, 0.35, 0.13, 'bandpass', t0 + d)
+      auTone('sawtooth', v ? 1000 : 800, v ? 620 : 500, 0.30, 0.06, t0 + d)
+      break
+    }
+
+    case 'glaser': {
+
+      if ((arg | 0) === 1) {
+        if (!auGate('glfire', 0.30)) return
+        auHiss(5000, 1500, 0.50, 0.13, 'bandpass')
+        auTone('sawtooth', 900, 600, 0.45, 0.06)
+        break
+      }
+      if (!auGate('glaim', 0.25)) return
+      auChime([1800, 1800], { gap: 0.12, dur: 0.05, peak: 0.06 })
+      break
+    }
+
+    case 'bshot': {
+
+      if (!auGate('bshot', 0.22)) return
+      const p3 = (arg | 0) >= 3, k = p3 ? 0.5 : 1
+      auTone('sawtooth', 380 * k, 140 * k, p3 ? 0.17 : 0.14, 0.11)
+      auHiss(1800 * (p3 ? 0.7 : 1), 400, 0.12, 0.09, 'bandpass')
+      auTone('sine', 120 * k, 60 * k, 0.10, 0.09, AU.ctx.currentTime + 0.006)
+      break
+    }
+
+    case 'bsummon': {
+
+      if (!auGate('bsummon', 0.3)) return
+      const t0 = AU.ctx.currentTime
+      auTone('triangle', 240, 120, 0.20, 0.08, t0)
+      auHiss(800, 2000, 0.30, 0.06, 'bandpass', t0 + 0.12)
+      break
+    }
+
+    case 'bdash': {
+
+      if (!auGate('bdash', 0.5)) return
+      const t0 = AU.ctx.currentTime
+      auTone('sine', 120, 60, 0.60, 0.14, t0)
+      auHiss(400, 3000, 0.50, 0.20, 'lowpass', t0 + 0.7)
+      auTone('sawtooth', 90, 45, 0.50, 0.12, t0 + 0.7)
+      break
+    }
+
+    case 'bland': {
+
+      if (!auGate('bland', 0.5)) return
+      const mid = !!arg, k = mid ? 0.7 : 1, h = mid ? 1.25 : 1
+      const t0 = AU.ctx.currentTime
+      auTone('sine', 90 * h, 35 * h, 0.50, 0.28 * k, t0)
+      auHiss(300 * h, 60, 0.60, 0.17 * k, 'lowpass', t0)
+      auTone('triangle', 500 * h, 200, 0.30, 0.06, t0 + 0.06)
+      break
+    }
+
+    case 'spawn': {
+
+      if (!auGate('sp_' + arg, 0.3)) return
+      const t0 = AU.ctx.currentTime
+      if (arg === 'dive') { auTone('sine', 700, 1000, 0.30, 0.04, t0); break }
+      if (arg === 'swarm') { auTone('sawtooth', 260, 250, 0.40, 0.05, t0); auTone('sawtooth', 266, 256, 0.40, 0.04, t0); break }
+      const lo = arg === 'wingmid'
+      auTone('triangle', lo ? 104 : 130, lo ? 88 : 110, 0.60, 0.06, t0)
+      auHiss(lo ? 700 : 900, 300, 0.50, 0.04, 'lowpass', t0)
+      break
+    }
+
+    case 'swarmSpread': {
+
+      if (!auGate('swspread', 0.1)) return
+      auHiss(2500, 900, 0.15, 0.08, 'bandpass')
+      auTone('triangle', 500, 900, 0.10, 0.05)
+      break
+    }
+
+    case 'diveDash': {
+
+      if (!auGate('dive', 0.1)) return
+      auTone('sine', 1500, 300, 0.45, 0.09)
+      auHiss(2500, 600, 0.40, 0.05, 'bandpass')
+      break
+    }
+
+    case 'ufo': {
+
+      if ((arg | 0) === 1) {
+        if (!auGate('ufoOut', 0.5)) return
+        auChime([600, 450], { gap: 0.1, dur: 0.2, peak: 0.05 })
+        break
+      }
+      if (!auGate('ufoFled', 1)) return
+      auTone('sine', 400, 1600, 0.60, 0.08)
+      auTone('triangle', 800, 2400, 0.50, 0.04)
+      break
+    }
+
+    case 'snakeOut': {
+
+      if (!auGate('snakeOut', 0.28)) return
+      auHiss(1500, 300, 0.30, 0.03, 'lowpass')
+      break
+    }
+
+    case 'holdWall': {
+
+      if (!auGate('holdWall', 0.5)) return
+      const t0 = AU.ctx.currentTime
+      auTone('triangle', 180, 180, 0.60, 0.07, t0)
+      for (let i = 0; i < 3; i++) auTone('square', 1200, 1200, 0.03, 0.04, t0 + i * 0.1)
+      break
+    }
+
+    case 'wipe': {
+
+      const n = arg | 0
+      if (!n || !auGate('wipe', 0.3)) return
+      auHiss(6000, 1500, 0.30, Math.min(0.18, 0.05 + n * 0.004), 'bandpass')
+      auHiss(9000, 5000, 0.05, 0.07, 'highpass')
+      break
+    }
+
+    case 'orbGo': {
+
+      if (!auGate('orbGo', 0.12)) return
+      auTone('sine', 900, 1500, 0.08, (arg | 0) === MAIN_SLOT ? 0.065 : 0.05)
+      break
+    }
+
+    case 'boomer': {
+
+      if ((arg | 0) === 1) {
+        if (!auGate('bcatch', 0.08)) return
+        auTone('square', 320, 180, 0.05, 0.045)
+        break
+      }
+      if (!auGate('boomer', 0.1)) return
+      auHiss(1800, 600, 0.14, 0.05, 'bandpass')
+      auTone('triangle', 520, 380, 0.12, 0.04)
+      break
+    }
+
+    case 'ghit': {
+
+      if (!auGate('ghit', 0.03)) return
+      auHiss(900, 300, 0.06, 0.07, 'lowpass')
+      break
+    }
+
+    case 'tink': {
+
+      if ((arg | 0) === 1) {
+        if (!auGate('tinkM', 0.04)) return
+        auTone('triangle', 1900, 1300, 0.04, 0.045)
+        break
+      }
+      if (!auGate('tinkB', 0.05)) return
+      auTone('triangle', 2200, 1600, 0.05, 0.05)
+      auHiss(5000, 3000, 0.03, 0.03, 'highpass')
+      break
+    }
+
+    case 'chainArc': {
+
+      const j = arg | 0
+      if (j === 0) { AU.arcMute = !auGate('arc', 0.04); if (AU.arcMute) return }
+      else if (AU.arcMute || j > 3) return
+      const t0 = AU.ctx.currentTime + j * 0.03, k = 1 - j * 0.2
+      auHiss(4000 - j * 400, 1500, 0.06, 0.06 * k, 'bandpass', t0)
+      auTone('square', 1800 - j * 200, 600, 0.05, 0.03 * k, t0)
+      break
+    }
+
+    case 'legendSig': {
+
+      if (!auGate('leg', 0.09)) return
+      const F = { rapid: 1568, spread: 1397, laser: 1760, homing: 1319, pierce: 1865, wave: 1175, orb: 1480, mine: 988, beam: 2093, boomer: 1245 }
+      const f = F[arg] || 1568, t0 = AU.ctx.currentTime
+      auTone('triangle', f, f * 1.5, 0.07, 0.055, t0)
+      auTone('triangle', f * 2, f * 2.6, 0.12, 0.025, t0 + 0.03)
+      break
+    }
+
+    case 'legBlast': {
+
+      if (!auGate('legBlast', 0.12)) return
+      const t0 = AU.ctx.currentTime
+      auHiss(2200, 300, 0.22, 0.12, 'bandpass', t0)
+      auTone('sine', 150, 50, 0.20, 0.14, t0 + 0.004)
+      break
+    }
+
+    case 'absorb': {
+
+      if (!auGate('absorb', 0.05)) return
+      const r = Math.max(0, Math.min(1, +arg || 0))
+      auTone('sine', 620 + r * 380, 980 + r * 620, 0.06, 0.045)
+      break
+    }
+
+    case 'zoneNext': {
+
+      if (!auGate('zoneNext', 0.5)) return
+      auChime([784, 1046.5, 1318.5], { gap: 0.08, dur: 0.4, peak: 0.09 })
+      break
+    }
+
+    case 'revive': {
+
+      const t0 = AU.ctx.currentTime
+      auTone('sawtooth', 220, 880, 0.35, 0.08, t0)
+      auChime([1046.5, 1568], { gap: 0.12, dur: 0.5, peak: 0.08, t0: t0 + 0.25 })
+      break
+    }
+
+    case 'invEnd': {
+
+      if (!auGate('invEnd', 0.5)) return
+      const t0 = AU.ctx.currentTime
+      auTone('square', 660, 660, 0.05, 0.04, t0)
+      auTone('square', 660, 660, 0.05, 0.04, t0 + 0.07)
+      break
+    }
+
+    case 'uiStart': {
+
+      auChime([783.99, 1567.98], { gap: 0.09, dur: 0.5, peak: 0.12 })
+      auTone('sine', 196, 130, 0.22, 0.10)
+      break
+    }
+
+    case 'uiTab': {
+
+      const sub = arg > 0
+      if (!auGate(sub ? 'filt' : 'tab', 0.08)) return
+      if (sub) auTone('triangle', 1000, 1250, 0.05, 0.04)
+      else auTone('triangle', 900, 1300, 0.06, 0.06)
+      break
+    }
+
+    case 'uiOpen':
+
+      if (!auGate('sheet', 0.12)) return
+      auHiss(1200, 2600, 0.09, 0.05, 'bandpass')
+      break
+
+    case 'uiClose':
+
+      if (!auGate('sheetX', 0.12)) return
+      auHiss(2600, 1200, 0.08, 0.04, 'bandpass')
+      break
+
+    case 'uiSw': {
+
+      if (!auGate('setSw', 0.05)) return
+      if (arg) auTone('square', 700, 1100, 0.05, 0.06)
+      else auTone('square', 1100, 700, 0.05, 0.05)
+      break
+    }
+
+    case 'uiSlide': {
+
+      if (!auGate('slide', 0.06)) return
+      const hz = 520 + (speedClamp(arg) - SPEED_MIN) * 6
+      auTone('triangle', hz, hz, 0.04, 0.03)
+      break
+    }
+
+    case 'uiSpeed': {
+
+      if (!auGate('speedSet', 0.10)) return
+      const hz = 520 + (speedClamp(arg) - SPEED_MIN) * 6
+      auTone('triangle', hz, hz, 0.08, 0.07)
+      break
+    }
+
+    case 'uiCard': {
+
+      if (!auGate('card', 0.06)) return
+      const open = arg > 0
+      auHiss(3000, 900, 0.04, open ? 0.05 : 0.04, 'bandpass')
+      auTone('sine', open ? 420 : 300, open ? 300 : 220, 0.05, 0.04)
+      break
+    }
+
+    case 'uiPage':
+
+      if (!auGate('page', 0.08)) return
+      auHiss(2200, 4500, 0.05, 0.05, 'highpass')
+      break
+
+    case 'uiNo':
+
+      if (!auGate('no', 0.2)) return
+      auTone('square', 300, 300, 0.09, 0.06)
+      auTone('square', 300, 300, 0.09, 0.06, AU.ctx.currentTime + 0.13)
+      break
+
+    case 'uiShake': {
+
+      if (!auGate('shake', 0.5)) return
+      const t0 = AU.ctx.currentTime
+      for (let i = 0; i < 3; i++) {
+        const t = t0 + i * 0.13
+        auHiss(900, 300, 0.05, 0.07, 'lowpass', t)
+        auTone('sine', 120, 80, 0.06, 0.08, t)
+      }
+      break
+    }
+
+    case 'uiCount': {
+
+      if (!auGate('cnt', 0.3)) return
+      const hz = arg > 0 ? 1000 : 880
+      auTone('sine', hz, hz, 0.05, arg > 0 ? 0.06 : 0.05)
+      break
+    }
+
+    case 'uiReward':
+
+      auChime([1318.5, 1760], { gap: 0.08, dur: 0.4, peak: 0.09 })
+      break
+
+    case 'uiGo':
+
+      auTone('square', 600, 1200, 0.12, 0.09)
+      break
+
+    case 'uiChapter':
+
+      auTone('sine', 110, 55, 0.5, 0.14)
+      auChime([783.99, 987.77, 1174.66, 1567.98], { gap: 0.11, dur: 0.9, peak: 0.11 })
+      break
+
+    case 'uiLevel':
+
+      auChime([1046.5, 1318.5, 1568, 2093], { gap: 0.09, dur: 0.8, peak: 0.11 })
+      if (arg) auTone('sine', 110, 55, 0.5, 0.16)
+      break
+
+    case 'uiMode': {
+
+      if (!auGate('mode', 0.08)) return
+      const hz = { normal: 600, extreme: 720, hard: 850, crazy: 1000 }[arg] || 600
+      auTone('square', hz, hz * 0.8, 0.09, 0.07)
+      if (arg === 'hard' || arg === 'crazy') auHiss(200, 60, 0.2, 0.06, 'lowpass')
+      break
+    }
+
+    case 'uiNode':
+
+      if (!auGate('node', 0.08)) return
+      auTone('triangle', 1400, 900, 0.05, 0.06)
+      auHiss(5000, 2000, 0.03, 0.04, 'highpass')
+      if (arg) auTone('sine', 150, 90, 0.15, 0.06)
+      break
+
+    case 'uiGift':
+
+      auChime([1318.5, 1568, 2093], { gap: 0.09, dur: 0.6, peak: 0.09 })
+      break
+
+    case 'uiMail':
+
+      if (!auGate('mail', 0.5)) return
+      auChime([987.77, 1318.5], { gap: 0.1, dur: 0.5, peak: 0.07, t0: AU.ctx.currentTime + 0.5 })
       break
   }
 }
@@ -16784,6 +17278,7 @@ function end(win) {
               rankUp ? '파일럿 · ' + rankAfter : '파일럿 · ' + who.name,
               'Lv.' + prog.pilot.lv,
               gTone(rankUp ? 'legend' : prog.pilot.grade).main)
+      sfx('uiLevel', rankUp)
       haptic('ult')
     }, 420)
   }
@@ -16886,6 +17381,7 @@ function showChapter(ci) {
   document.getElementById('chapGo').textContent =
     ch.name + ' 1단계가 선택되었습니다.'
   paintStage(p.querySelector('canvas.pv'), ch)
+  sfx('uiChapter')
   p.hidden = false
   return true
 }
@@ -16974,6 +17470,8 @@ function titleStart() {
   elTitle.hidden = true
   titleInert(false)
   music('hangar')
+
+  sfx('uiStart')
   warmBattle()
 
   const go1 = () => {
