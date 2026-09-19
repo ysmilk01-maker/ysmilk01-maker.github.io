@@ -3429,7 +3429,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 09:21'
+const BUILD_AT = '09-19 09:34'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -9843,15 +9843,23 @@ const BOSS_HP_MUL = BOSS_HP_UP * BOSS_HP_ADD * ENEMY_HP_DOWN * HP_ALL_UP
 function gStage(chId, sub) { return ((chId | 0) - 1) * SUBS + (sub | 0) }
 const G_MAX = 15 * SUBS
 
-const CURVE_HP0 = 0.73, CURVE_HP1 = 85.9869
-const CURVE_HP_STEP = Math.pow(CURVE_HP1 / CURVE_HP0, 1 / (G_MAX - 1))
+const CURVE_RATE = 1.027
+const CURVE_RATE_LATE = 1.022
+const CURVE_KNEE_CH = 5
+const CURVE_KNEE = (CURVE_KNEE_CH - 1) * SUBS
 
-function hpAtG(g) { return CURVE_HP0 * Math.pow(CURVE_HP_STEP, g - 1) }
+function curveMul(g, g0) {
+  const a = Math.min(g, CURVE_KNEE) - g0
+  const b = Math.max(0, g - CURVE_KNEE)
+  return Math.pow(CURVE_RATE, a) * Math.pow(CURVE_RATE_LATE, b)
+}
+const CURVE_HP0 = 0.73, CURVE_HP1 = 45.1494
 
-const CURVE_BOSS0 = 3060, CURVE_BOSS1 = 315485
-const CURVE_BOSS_STEP = Math.pow(CURVE_BOSS1 / CURVE_BOSS0, 1 / (G_MAX - 6))
+function hpAtG(g) { return CURVE_HP0 * curveMul(g, 1) }
 
-function bossAtG(g) { return Math.round(CURVE_BOSS0 * Math.pow(CURVE_BOSS_STEP, g - 6)) }
+const CURVE_BOSS0 = 3060, CURVE_BOSS1 = 165653
+
+function bossAtG(g) { return Math.round(CURVE_BOSS0 * curveMul(g, 6)) }
 
 const SP_END = 1.3, FIRE_END = 1.5, SPAWN_END = 1.3
 const CURVE_SP0 = 1.14
