@@ -3629,7 +3629,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 23:46'
+const BUILD_AT = '09-20 06:12'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -7004,8 +7004,10 @@ function renderSet() {
     '<input class="nm" id="pilotNm" maxlength="6" placeholder="무명" value="' +
       (prog.pilot.name || '').replace(/"/g, '&quot;') + '">' +
 
-    '<div class="lab">그 밖에</div>' +
-    (DEV_TOOLS ? '<div class="bar"><button class="ghost small" id="devUnlock" hidden>개발용 전체 해금 (테스트)</button></div>' : '')
+    (DEV_TOOLS
+      ? '<div class="lab">그 밖에</div>' +
+        '<div class="bar"><button class="ghost small" id="devUnlock" hidden>개발용 전체 해금 (테스트)</button></div>'
+      : '')
 
   const sp = document.getElementById('spRange')
   if (sp) {
