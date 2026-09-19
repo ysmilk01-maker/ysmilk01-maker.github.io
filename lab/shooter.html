@@ -3429,7 +3429,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 09:15'
+const BUILD_AT = '09-19 09:21'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -10304,9 +10304,13 @@ function snake(kind, n, dir) {
 }
 
 const SMALL_MUL = 1.79
+
+const LANCER_MUL = 0.7
+const COUNT_MUL = { small: SMALL_MUL, lancer: LANCER_MUL }
 function enemyCount(n, kind) {
-  if (kind !== 'small') return n
-  const raw = n * SMALL_MUL
+  const m = COUNT_MUL[kind]
+  if (!m) return n
+  const raw = n * m
   const base = Math.floor(raw)
   return base + (Math.random() < raw - base ? 1 : 0)
 }
