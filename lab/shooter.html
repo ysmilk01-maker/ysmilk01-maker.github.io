@@ -1803,7 +1803,16 @@
    * 쓰면 내 규칙이 뒤에 있어 그 창들을 통째로 덮어쓴다.
    */
   .crboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 4px; }
+  /*
+   * 세로로 쌓고 **단추를 바닥에 붙인다** (2026-09-19 대표 지적 「높이 좀 맞추고」).
+   *
+   * 천장 줄이 상자마다 다르다 - 기체는 「확정까지」 한 줄, 파일럿은
+   * 「상급 이상」까지 두 줄이다. 그래서 그냥 쌓으면 파일럿 쪽 단추만
+   * 한 줄 내려가 두 상자가 어긋나 보인다. 줄 수를 억지로 맞추는
+   * 대신(없는 줄을 지어내야 한다) 남는 자리를 단추 위가 먹게 한다.
+   */
   .crbox {
+    display: flex; flex-direction: column;
     background: #101a26cc; border: 1px solid #2a3a50; border-radius: 14px;
     padding: 9px 7px 8px; text-align: center; min-width: 0;
   }
@@ -1813,7 +1822,7 @@
   .gbp { display: flex; flex-direction: column; gap: 1px; font-size: 10px;
          color: var(--dim); margin-bottom: 7px; }
   .gbp b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .gbb { display: grid; gap: 4px; }
+  .gbb { display: grid; gap: 4px; margin-top: auto; }   /* 남는 자리를 먹어 단추를 바닥에 맞춘다 */
   .gbb button { min-height: 34px; padding: 6px 3px; font-size: 11.5px; margin: 0; width: 100%; }
   /*
    * 파일럿 상자 (2026-09-19). filter 는 덮어쓰기라 그림자를 같이 적어야
@@ -3429,7 +3438,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 09:34'
+const BUILD_AT = '09-19 09:41'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7107,11 +7116,12 @@ function paintGacha(res) {
     }
     hpPlain(body,
       `<div class="crboxes">` + boxHtml('plane') + boxHtml('pilot') + `</div>` +
+
       `<div class="empty">` +
-      (enough ? '상자를 누르면 한 번 뽑습니다.' : '가챠권이 없습니다.') +
-      ` 남는 조각은 강화에 씁니다.<br>` +
-      `<b>기체 상자</b>는 기체 조각만, <b>파일럿 상자</b>는 파일럿 조각만 나옵니다.<br>` +
-      `아주 낮은 확률로 조각 대신 완성품이 바로 나옵니다.</div>`)
+      (enough ? '상자를 누르면 조각이 나옵니다.' : '가챠권이 없습니다.') +
+      ` 다 모으면 <b>기체가 열리고 파일럿이 합류</b>합니다.<br>` +
+      `<b>「확정까지」는 남은 횟수</b>입니다. 그 횟수째에는 기체나 파일럿이 반드시 나옵니다.<br>` +
+      `남은 조각은 강화에 씁니다.</div>`)
 
     const fire = (el, kind, target) => {
       el.onclick = () => { gKind = kind; target.click() }
