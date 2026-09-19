@@ -1032,7 +1032,19 @@
   #gBody.ratesdoc .empty { padding: 10px 2px 2px; }
   /* 순위표 (2026-09-18) */
   .rank .nm { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .rank .sc { margin-left: auto; flex: none; }
+  .rank .sc { margin-left: auto; flex: none; text-align: right; line-height: 1.3; }
+  /*
+   * 값 아래 한 줄 (2026-09-19). `.rank.top .sc` 와 머리 칸의 금·하늘색이
+   * 이 줄까지 물들이면 두 값이 한 덩어리로 읽힌다 - 색을 따로 눌러 둔다.
+   * 머리 칸 쪽은 앞선 규칙이 더 구체적이라 세 자리를 다 적어야 이긴다.
+   */
+  .rank .sc em,
+  #scRank .rkcard .v em,
+  #scRank .rkcard.me .v em,
+  #scRank .rkcard.first .v em {
+    display: block; font-style: normal; font-size: 10.5px; font-weight: 700;
+    color: var(--dim); margin-top: 1px;
+  }
   .rank.me { background: rgba(79,209,255,.14); }
   .rank.me .nm { color: var(--accent); font-weight: 800; }
   .rank .no.m1 { color: #ffd479; }
@@ -3495,7 +3507,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 10:05'
+const BUILD_AT = '09-19 10:14'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4206,6 +4218,49 @@ function bestOf(list) {
 
 const CRATE_HUE = { plane: 0, pilot: 180 }
 
+const CRATE_TINT = {}
+function hueShift(im, hue) {
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height
+  if (!w || !h) return im
+  const cv = document.createElement('canvas')
+  cv.width = w; cv.height = h
+  const x = cv.getContext('2d')
+  x.drawImage(im, 0, 0)
+  let d
+
+  try { d = x.getImageData(0, 0, w, h) } catch (e) { return im }
+  const a = hue * Math.PI / 180, co = Math.cos(a), si = Math.sin(a)
+
+  const m = [
+    0.213 + co * 0.787 - si * 0.213, 0.715 - co * 0.715 - si * 0.715, 0.072 - co * 0.072 + si * 0.928,
+    0.213 - co * 0.213 + si * 0.143, 0.715 + co * 0.285 + si * 0.140, 0.072 - co * 0.072 - si * 0.283,
+    0.213 - co * 0.213 - si * 0.787, 0.715 - co * 0.715 + si * 0.715, 0.072 + co * 0.928 + si * 0.072,
+  ]
+  const p = d.data
+  for (let i = 0; i < p.length; i += 4) {
+    if (!p[i + 3]) continue
+    const r = p[i], g = p[i + 1], b = p[i + 2]
+    p[i]     = Math.max(0, Math.min(255, m[0] * r + m[1] * g + m[2] * b))
+    p[i + 1] = Math.max(0, Math.min(255, m[3] * r + m[4] * g + m[5] * b))
+    p[i + 2] = Math.max(0, Math.min(255, m[6] * r + m[7] * g + m[8] * b))
+  }
+  x.putImageData(d, 0, 0)
+  return cv
+}
+
+function crateArt(key) {
+  const im = gc(key)
+  if (!im) return null
+  const hue = CRATE_HUE[GFX.kind] || 0
+  if (!hue) return im
+  const ck = key + '@' + hue
+  if (CRATE_TINT[ck]) return CRATE_TINT[ck]
+  const out = hueShift(im, hue)
+
+  if (out !== im) CRATE_TINT[ck] = out
+  return out
+}
+
 const CRATE_FALLBACK = {
   plane: { body: '#4a5233', band: '#6f7a52', rivet: '#9aa877' },
   pilot: { body: '#2f4653', band: '#4e6f80', rivet: '#7fa6b8' },
@@ -4480,14 +4535,11 @@ function gfxPlay(list, done) {
 function gfxCrate(c, open, tone) {
 
   const key = open <= 0 ? 'crateC' : open < 0.7 ? 'crateO' : 'crateB'
-  const cim = gc(key)
-  const hue = CRATE_HUE[GFX.kind] || 0
+
+  const cim = crateArt(key)
   if (cim) {
     const sz = 150
-
-    if (hue) c.filter = 'hue-rotate(' + hue + 'deg)'
     c.drawImage(cim, -sz / 2, -sz / 2 - 12, sz, sz)
-    if (hue) c.filter = 'none'
     return
   }
   const F = CRATE_FALLBACK[GFX.kind] || CRATE_FALLBACK.plane
@@ -7608,14 +7660,17 @@ function rankRush() {
 
 const STAGE_CAP = () => CHAPTERS.length * SUBS
 const RUSH_CAP = () => BOSS_RUSH.length * RUSH_DIFF.length
+
 const RANK_TABS = [
   { k: 'power',   n: '전투력',    hi: 42000, lo: 9000, my: () => squadPower(),        f: (v) => v.toLocaleString('ko-KR') },
-  { k: 'normal',  n: '일반',      hi: 180,   lo: 96,   cap: STAGE_CAP, my: () => rankCleared('normal'),  f: (v) => v + '판' },
-  { k: 'extreme', n: '익스트림',  hi: 180,   lo: 64,   cap: STAGE_CAP, my: () => rankCleared('extreme'), f: (v) => v + '판' },
-  { k: 'crazy',   n: '크레이지',  hi: 174,   lo: 46,   cap: STAGE_CAP, my: () => rankCleared('crazy'),   f: (v) => v + '판' },
-  { k: 'hard',    n: '하드코어',  hi: 165,   lo: 33,   cap: STAGE_CAP, my: () => rankCleared('hard'),    f: (v) => v + '판' },
-  { k: 'rush',    n: '보스 도전', hi: 75,    lo: 21,   cap: RUSH_CAP,  my: () => rankRush(),             f: (v) => v + '칸' },
+  { k: 'normal',  n: '일반',      hi: 180,   lo: 96,   cap: STAGE_CAP, pw: true, u: '판', my: () => rankCleared('normal'),  f: (v) => v + '판' },
+  { k: 'extreme', n: '익스트림',  hi: 180,   lo: 64,   cap: STAGE_CAP, pw: true, u: '판', my: () => rankCleared('extreme'), f: (v) => v + '판' },
+  { k: 'crazy',   n: '크레이지',  hi: 174,   lo: 46,   cap: STAGE_CAP, pw: true, u: '판', my: () => rankCleared('crazy'),   f: (v) => v + '판' },
+  { k: 'hard',    n: '하드코어',  hi: 165,   lo: 33,   cap: STAGE_CAP, pw: true, u: '판', my: () => rankCleared('hard'),    f: (v) => v + '판' },
+  { k: 'rush',    n: '보스 도전', hi: 75,    lo: 21,   cap: RUSH_CAP,  pw: true, u: '칸', my: () => rankRush(),             f: (v) => v + '칸' },
 ]
+
+const RANK_POWER = RANK_TABS.find((x) => x.k === 'power')
 
 function rankRnd(seed) {
   let x = (seed >>> 0) || 1
@@ -7641,7 +7696,12 @@ function rankBoard(t) {
     vs.push(Math.min(cap, Math.max(t.lo, Math.round(base * (0.97 + rnd() * 0.06)))))
   }
   vs.sort((a, b) => b - a)
-  return vs.map((v, i) => ({ nm: names[i % names.length], v }))
+
+  return vs.map((v, i) => {
+    const g = Math.pow(i / (RANK_N - 1), 0.85)
+    const pb = RANK_POWER.hi - (RANK_POWER.hi - RANK_POWER.lo) * g
+    return { nm: names[i % names.length], v, p: Math.round(pb * (0.9 + rnd() * 0.2)) }
+  }).sort((a, b) => b.v - a.v || b.p - a.p)
 }
 
 function medalSvg(n) {
@@ -7667,9 +7727,13 @@ function renderRank() {
   })
   const t = RANK_TABS.find((x) => x.k === rankTab) || RANK_TABS[0]
   const my = t.my() || 0
-  const me = { nm: pilotName(), v: my, me: true }
+  const me = { nm: pilotName(), v: my, p: squadPower() || 0, me: true }
+
   const all = rankBoard(t).concat([me])
-    .sort((a, b) => b.v - a.v || (a.me ? -1 : b.me ? 1 : 0))
+    .sort((a, b) => b.v - a.v || b.p - a.p || (a.me ? -1 : b.me ? 1 : 0))
+
+  const val = (e) => t.f(e.v) +
+    (t.pw ? '<em>전투력 ' + (e.p || 0).toLocaleString('ko-KR') + '</em>' : '')
   const myRank = all.indexOf(me) + 1
   const first = all[0]
 
@@ -7677,20 +7741,24 @@ function renderRank() {
     '<div class="rkcard me"><small>내 순위</small>' +
       '<span class="rk">' + myRank + '위</span>' +
       '<span class="nm">' + pilotName() + '</span>' +
-      '<span class="v">' + t.f(my) + '</span></div>' +
+      '<span class="v">' + val(me) + '</span></div>' +
     '<div class="rkcard first"><small>1위</small>' +
       '<span class="rk">' + medalSvg(1) + '</span>' +
       '<span class="nm">' + first.nm + (first.me ? ' · 나' : '') + '</span>' +
-      '<span class="v">' + t.f(first.v) + '</span></div>'
+      '<span class="v">' + val(first) + '</span></div>'
   const line = (e, i) => {
     const no = i + 1
     return '<div class="rank' + (e.me ? ' me' : '') + (no === 1 ? ' top' : '') + '">' +
       '<span class="no' + (no <= 3 ? ' m' + no : '') + '">' + no + '</span>' +
       '<span class="mw">' + medalSvg(no) + '</span>' +
       '<span class="nm">' + e.nm + (e.me ? ' · 나' : '') + '</span>' +
-      '<span class="sc">' + t.f(e.v) + '</span></div>'
+      '<span class="sc">' + val(e) + '</span></div>'
   }
-  hpPlain(host, all.slice(0, RANK_N).map(line).join(''))
+
+  const note = t.pw
+    ? '<div class="rksum">깬 <b>' + t.u + ' 수</b>로 줄을 세우고, 같으면 <b>전투력</b>이 앞섭니다.</div>'
+    : ''
+  hpPlain(host, note + all.slice(0, RANK_N).map(line).join(''))
 }
 
 function pilotFace(pl) {
