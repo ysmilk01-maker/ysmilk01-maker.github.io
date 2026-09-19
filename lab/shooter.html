@@ -2857,7 +2857,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 -->
 <div class="screen bgpic" id="scShop" hidden>
   <h1>상점</h1>
-  <p class="sub" id="shopSub">월정액 하나로 광고 없이, 더 자주, 더 많이.</p>
+  <p class="sub" id="shopSub">30일 이용권 하나로 광고 없이, 더 자주, 더 많이.</p>
   <div class="gatab shoptab" id="shopTabs">
     <button data-st="pass" class="on">패스</button>
     <button data-st="ticket">가챠권</button>
@@ -3507,7 +3507,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 15:38'
+const BUILD_AT = '09-19 15:50'
 const FREE_PLAY = false
 
 const DEV_TOOLS = true
@@ -4973,7 +4973,7 @@ const MAIL_NOTICES = [
     body: '편대를 짜고 전선으로 나가세요. 판에서 떨어지는 강화 아이템은 꼭 주우세요 - 클리어를 가릅니다. 첫 선물로 가챠권 3장을 보냅니다.',
     items: { ticket: 3 } },
   { id: 'n-shop', at: '2026-09-13', title: '상점과 출격 패스 안내',
-    body: '아래 「상점」 탭에서 가챠권·기체·파일럿과 월정액 「출격 패스」를 볼 수 있습니다. 결제는 곧 열립니다. 광고로 받는 가챠권(하루 5장)은 지금 됩니다.' },
+    body: '아래 「상점」 탭에서 가챠권·기체·파일럿과 30일 이용권 「출격 패스」를 볼 수 있습니다. 결제는 곧 열립니다. 광고로 받는 가챠권(하루 5장)은 지금 됩니다.' },
 ]
 function mailList() { if (!Array.isArray(prog.mail)) prog.mail = []; return prog.mail }
 function mailSync() {
@@ -5132,6 +5132,15 @@ function openMail(tab) {
 const PASS = { price: 9900, name: '출격 패스', tickets: 10, energy: 10, shard: 30, enMax: 15 }
 function passActive() { return !!(prog.pass && prog.pass.until && prog.pass.until > Date.now()) }
 
+function passGive(days) {
+  const now = Date.now()
+  const p = prog.pass = prog.pass || {}
+  const on = p.until && p.until > now
+  if (!on) p.since = now
+  p.until = (on ? p.until : now) + (days || 30) * 86400e3
+  save()
+}
+
 function passRange() {
   if (!passActive()) return ''
   const f = (t) => { const d = new Date(t); return d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0') }
@@ -5195,17 +5204,18 @@ function passCard() {
   const on = passActive()
   return '<div class="passcard' + (on ? ' on' : '') + '" data-buy="pass" role="button" tabindex="0">' +
     '<div class="pc-head"><span class="pc-name">' + PASS.name + '</span>' +
-    '<span class="pc-price">월 ' + PASS.price.toLocaleString('ko-KR') + '원</span></div>' +
-    '<div class="pc-sub">' + (on ? '이용 중 · ' + passRange() + ' · ' + passDaysLeft() + '일 남음' : '한 달 동안 여섯 가지 혜택') + '</div>' +
+    '<span class="pc-price">30일 ' + PASS.price.toLocaleString('ko-KR') + '원</span></div>' +
+    '<div class="pc-sub">' + (on ? '이용 중 · ' + passRange() + ' · ' + passDaysLeft() + '일 남음' : '30일 동안 여섯 가지 혜택') + '</div>' +
     PASS_BEN.map(([i, b, t]) => '<div class="pc-ben"><i>' + i + '</i><b>' + b + '</b><span>' + t + '</span></div>').join('') +
-    '<button id="passBuy">' + (on ? '이용 중' : '구독하기 · 월 ' + PASS.price.toLocaleString('ko-KR') + '원') + '</button>' +
-    '<div class="pc-note">언제든 해지할 수 있습니다. 결제는 곧 열립니다.</div>' +
+
+    '<button id="passBuy">' + (on ? '30일 더 · ' : '') + PASS.price.toLocaleString('ko-KR') + '원</button>' +
+    '<div class="pc-note">산 날부터 30일입니다. 저절로 갱신되지 않습니다. 결제는 곧 열립니다.</div>' +
     '</div>'
 }
 
 let shopTab = 'pass'
 const SHOP_SUB = {
-  pass: '월정액 하나로 광고 없이, 더 자주, 더 많이.',
+  pass: '30일 이용권 하나로 광고 없이, 더 자주, 더 많이.',
   ticket: '가챠권은 광고로 하루 ' + AD_TK_DAY + '장까지. 출격권 묶음도 여기 있습니다.',
   pilot: '한 명씩 삽니다. 조각을 모아도 열립니다.',
   plane: '지정 구매 - 확률형이 아닙니다. 조각을 모아도 열립니다.',
@@ -5292,16 +5302,18 @@ function openShopItem(id) {
   let html = '', okLabel = '구매', onOk = null
   if (id === 'pass') {
     const on = passActive()
-    html = '<h3>' + PASS.name + '</h3><div class="sub2">월정액 · 월 ' + won(PASS.price) + (on ? ' · 이용 중' : '') + '</div>' +
+    html = '<h3>' + PASS.name + '</h3><div class="sub2">30일 이용권 · ' + won(PASS.price) + (on ? ' · 이용 중' : '') + '</div>' +
       '<div class="rows">' +
       (on ? r2('이용 기간', passRange() + ' <span style="color:var(--dim);font-weight:500">(' + passDaysLeft() + '일 남음)</span>') : '') +
       PASS_BEN.map(([i, b, t]) => r2(b, t)).join('') + '</div>' +
-      '<div class="note2">결제일마다 자동으로 갱신되고 언제든 해지할 수 있습니다. 해지해도 남은 기간은 그대로 씁니다. ' +
+
+      '<div class="note2">산 날부터 30일입니다. 저절로 갱신되지 않으니 해지할 것도 없습니다. ' +
+      '기간이 남아 있을 때 또 사면 뒤에 30일이 이어 붙습니다. ' +
       '매일 가챠권·출격권·조각 상자와 첫 결제 선물은 우편함으로 옵니다. 레전드 기체는 처음 한 번만 드립니다. ' +
       '조각 상자의 기체는 날마다 바뀌고, 아직 안 연 기체가 먼저 나옵니다.</div>' +
-      '<div class="price"><small>월</small>' + won(PASS.price) + '</div>'
-    okLabel = on ? '이용 중' : '구독하기'
-    onOk = on ? null : () => soon(PASS.name, '월 ' + won(PASS.price))
+      '<div class="price">' + won(PASS.price) + '</div>'
+    okLabel = on ? '30일 더 사기' : '구매하기'
+    onOk = () => soon(PASS.name + (on ? ' 30일 연장' : ' 30일'), won(PASS.price))
   } else if (id === 'adTk') {
     const left = adTkLeft()
     html = '<h3>가챠권 1장</h3><div class="sub2">광고 보고 받기</div>' +
