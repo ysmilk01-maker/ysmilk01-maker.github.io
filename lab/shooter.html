@@ -3507,7 +3507,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 10:14'
+const BUILD_AT = '09-19 10:27'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -5737,6 +5737,11 @@ const W = 420
 const H = Math.round(Math.max(720, Math.min(880, W * (innerHeight / Math.max(1, innerWidth)))))
 const SPD_K = H / 720
 const PLAYER_R = 8
+
+const GRAZE_R = 15
+const LOWHP_WARN = 0.30
+const LOWHP_HARD = 0.15
+const CHAIN_WIN = 0.7
 const canvas = document.getElementById('c')
 const g = canvas.getContext('2d', { alpha: false })
 
@@ -7255,6 +7260,8 @@ function paintGacha(res) {
     ? `<div class="dupefx${im ? ' hasim' : ''}" aria-hidden="true"><span class="whole">${im}</span>` +
       '<i></i>'.repeat(7) + `</div>`
     : im
+
+  if (res.dupe) setTimeout(() => sfx('shatter'), 780)
 
   hpPlain(body,
     `<div class="got">` + pic +
@@ -11266,6 +11273,7 @@ function bossHit(bs, x, y, dmg) {
       if (p.hp <= 0) {
         p.alive = false
         boom(px, py, 26, '#ffd27a')
+        sfx('partDown')
         hitStop(0.05)
         s.score += 400
         if (bs.parts.every((q) => !q.alive)) openCore(bs)
@@ -11308,6 +11316,7 @@ function bossArea(bs, dmg) {
     if (p.hp <= 0) {
       p.alive = false
       boom(bs.x + p.dx, bs.y + p.dy, 26, '#ffd27a')
+      sfx('partDown')
       state.score += 400
       if (bs.parts.every((q) => !q.alive)) openCore(bs)
     }
@@ -12796,7 +12805,17 @@ function update(dt) {
     s.supplyT = supplyGap() * perk('sup')
   }
 
+  if (pl.hp > 0 && pl.maxHp > 0) {
+    const hr = pl.hp / pl.maxHp
+    if (hr <= LOWHP_HARD) sfx('lowhp', 1)
+    else if (hr <= LOWHP_WARN) sfx('lowhp', 0)
+  }
+
+  if (s.chainT > 0) { s.chainT -= dt; if (s.chainT <= 0) s.chainN = 0 }
+
   for (const it of s.items) { it.y += 165 * dt; it.t += dt }
+
+  for (const it of s.items) { if (it.y >= H + 30) { sfx('miss'); break } }
   keepIf(s.items, (it) => it.y < H + 30)
 
   if (s.tipWait) {
@@ -13141,7 +13160,14 @@ function collide() {
 
   for (const b of s.ebullets) {
     if (b.warnT > 0) continue
-    if (!near(b, pl, b.r + PLAYER_R)) continue
+    if (!near(b, pl, b.r + PLAYER_R)) {
+
+      if (!b.grazed && near(b, pl, b.r + PLAYER_R + GRAZE_R)) {
+        b.grazed = true
+        sfx('graze')
+      }
+      continue
+    }
     b.dead = true
     hitPlayer(b.dmg || DMG.bullet)
   }
@@ -13156,6 +13182,12 @@ function collide() {
   for (const e of s.enemies) {
     if (!e.dead || e.reaped) continue
     e.reaped = true
+
+    if (e.hp <= 0) {
+      s.chainN = (s.chainT > 0 ? (s.chainN || 0) : 0) + 1
+      s.chainT = CHAIN_WIN
+      if (s.chainN >= 3) sfx('chain', s.chainN)
+    }
     if (e.ufo) {
 
       if (e.hp <= 0) {
@@ -17309,6 +17341,65 @@ function sfx(kind, arg) {
       const t0 = AU.ctx.currentTime
       auTone('sawtooth', 220, 880, 0.35, 0.08, t0)
       auChime([1046.5, 1568], { gap: 0.12, dur: 0.5, peak: 0.08, t0: t0 + 0.25 })
+      break
+    }
+
+    case 'graze': {
+
+      if (!auGate('graze', 0.05)) return
+      auHiss(7200, 2400, 0.05, 0.042, 'highpass')
+      break
+    }
+
+    case 'lowhp': {
+
+      const urgent = arg > 0
+      if (!auGate('lowhp', urgent ? 0.6 : 1.15)) return
+      const t0 = AU.ctx.currentTime
+      const f = urgent ? 560 : 440
+      auTone('sine', 150, 108, 0.2, 0.05, t0)
+      auTone('square', f, f, 0.06, 0.05, t0)
+      auTone('square', f, f, 0.06, 0.05, t0 + (urgent ? 0.09 : 0.13))
+      break
+    }
+
+    case 'chain': {
+
+      if (!auGate('chain', 0.05)) return
+      const n = Math.max(3, Math.min(12, arg | 0))
+      const hz = 523.25 * Math.pow(2, (n - 3) / 12)
+      auTone('triangle', hz, hz * 1.5, 0.085, 0.055)
+      break
+    }
+
+    case 'partDown': {
+
+      if (!auGate('partDown', 0.12)) return
+      const t0 = AU.ctx.currentTime
+      auTone('sawtooth', 340, 88, 0.34, 0.12, t0)
+      auHiss(2600, 480, 0.3, 0.13, 'bandpass', t0)
+      auTone('triangle', 720, 300, 0.22, 0.055, t0 + 0.04)
+      break
+    }
+
+    case 'shatter': {
+
+      const t0 = AU.ctx.currentTime
+      auHiss(9000, 2800, 0.18, 0.1, 'highpass', t0)
+      auTone('sine', 180, 68, 0.26, 0.085, t0)
+      const hz = [2637, 3136, 2093, 3520, 1760]
+      for (let i = 0; i < hz.length; i++) {
+        auTone('triangle', hz[i], hz[i] * 0.82, 0.3 + i * 0.04, 0.042, t0 + 0.03 + i * 0.035)
+      }
+      break
+    }
+
+    case 'miss': {
+
+      if (!auGate('miss', 0.32)) return
+      const t0 = AU.ctx.currentTime
+      auTone('triangle', 520, 520, 0.07, 0.045, t0)
+      auTone('triangle', 370, 320, 0.16, 0.045, t0 + 0.085)
       break
     }
 
