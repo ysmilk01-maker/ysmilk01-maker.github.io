@@ -1134,6 +1134,12 @@
   /* 서른 줄이 한 장에 들어간다 - 넘기지 않고 굴린다 */
   #rankBody { overflow-y: auto; overscroll-behavior: contain; }
   /* 만든 순위 알림 (2026-09-19). 순위표 맨 위에 한 줄 */
+  /* 계정 줄 (2026-09-20) */
+  #setBody .acctOn{
+    display:inline-block;padding:6px 10px;border-radius:8px;
+    background:#13301f;border:1px solid #2f6b47;
+    font-size:12px;color:#86e0a8;
+  }
   #rankBody .rkfake{
     margin:0 2px 10px;padding:8px 10px;border-radius:9px;
     background:#2a1f0e88;border:1px solid #6b552699;
@@ -3629,7 +3635,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-20 06:12'
+const BUILD_AT = '09-20 06:24'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -7004,10 +7010,17 @@ function renderSet() {
     '<input class="nm" id="pilotNm" maxlength="6" placeholder="무명" value="' +
       (prog.pilot.name || '').replace(/"/g, '&quot;') + '">' +
 
+    '<div class="lab">계정</div>' +
+    '<div class="setrow col" id="acctRow"><div class="top"><div>' +
+      '<div class="nm">구글 로그인</div>' +
+      '<div class="de" id="acctDe">기기를 바꿔도 기록이 따라옵니다</div>' +
+    '</div></div>' +
+    '<div class="bar" id="acctBar"></div></div>' +
     (DEV_TOOLS
       ? '<div class="lab">그 밖에</div>' +
         '<div class="bar"><button class="ghost small" id="devUnlock" hidden>개발용 전체 해금 (테스트)</button></div>'
       : '')
+  sbPaintAccount()
 
   const sp = document.getElementById('spRange')
   if (sp) {
@@ -7059,6 +7072,25 @@ if (DEV_TOOLS) document.getElementById('setReset').onclick = () => {
   }, { title: '처음부터 다시', ok: '계속' })
 }
 document.getElementById('setClose').onclick = () => { elSet.hidden = true; modalOff(); render() }
+
+function sbPaintAccount() {
+  const bar = document.getElementById('acctBar')
+  const de = document.getElementById('acctDe')
+  if (!bar) return
+  const who = sbAccountLabel()
+  if (who) {
+    bar.innerHTML = '<span class="acctOn">' + who + ' 로 로그인됨</span>'
+    if (de) de.textContent = '기록이 이 계정에 저장됩니다'
+    return
+  }
+  bar.innerHTML = '<button class="ghost small" id="acctGo">구글로 로그인</button>'
+  if (de) de.textContent = '지금은 이 기기에만 기록이 남습니다. 로그인하면 따라옵니다'
+  const b = document.getElementById('acctGo')
+  if (b) b.onclick = async () => { sfx('pick'); b.disabled = true; b.textContent = '여는 중...'
+    await sbSignInGoogle(); b.disabled = false; b.textContent = '구글로 로그인' }
+
+  if (!SB.tried) sbInit().then(() => { if (document.getElementById('acctBar')) sbPaintAccount() })
+}
 
 const OWN_FILTERS  = [['all', '전체'], ['own', '보유'], ['lock', '미보유']]
 const TIER_FILTERS = [['all', '전체'], ['common', '일반'],
@@ -7868,7 +7900,8 @@ function medalSvg(n) {
 
 const SB_URL = 'https://qzimykxyvmoripifqmbi.supabase.co'
 const SB_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
-const SB = { cli: null, ready: false, tried: false, err: null, boards: {}, busy: {}, sent: 0 }
+const SB = { cli: null, ready: false, tried: false, err: null, boards: {}, busy: {}, sent: 0,
+             user: null, anon: true }
 
 async function sbInit() {
   if (SB.tried) return SB.ready
@@ -7884,12 +7917,43 @@ async function sbInit() {
       const r = await SB.cli.auth.signInAnonymously()
       if (r.error) throw r.error
     }
+    sbMarkUser((await SB.cli.auth.getUser()).data.user)
     SB.ready = true
   } catch (e) {
     SB.err = (e && e.message) || String(e)
     SB.ready = false
   }
   return SB.ready
+}
+
+function sbMarkUser(u) {
+  SB.user = u || null
+
+  const ids = (u && u.identities) || []
+  SB.anon = !u || u.is_anonymous === true || ids.length === 0
+}
+
+function sbAccountLabel() {
+  const u = SB.user
+  if (!u || SB.anon) return ''
+  return (u.email || (u.user_metadata && u.user_metadata.email) || '구글 계정')
+}
+
+async function sbSignInGoogle() {
+  if (!(await sbInit())) { say('지금은 서버에 닿지 않습니다. 잠시 뒤에 다시 해 주세요.', '로그인'); return }
+  const back = location.href.split('#')[0]
+  try {
+    if (SB.anon) {
+      const r = await SB.cli.auth.linkIdentity({ provider: 'google', options: { redirectTo: back } })
+      if (!r.error) return
+
+    }
+    const r2 = await SB.cli.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: back } })
+    if (r2.error) throw r2.error
+  } catch (e) {
+    SB.err = (e && e.message) || String(e)
+    say('구글 로그인을 열지 못했습니다.\n' + SB.err, '로그인')
+  }
 }
 
 async function sbSubmitAll() {
