@@ -3507,7 +3507,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 22:33'
+const BUILD_AT = '09-19 22:37'
 const FREE_PLAY = false
 
 const DEV_TOOLS = true
@@ -13680,6 +13680,8 @@ const SKIN_OF = {
 }
 
 const ENEMY_OK = Object.create(null)
+
+function artFit(im) { const n = im && im.naturalWidth; return n ? n / 144 : 1 }
 function enemyArt(kind) {
 
   const th0 = (state && state.stage && state.stage.theme) || 'sea'
@@ -14146,7 +14148,7 @@ function drawEnemy(e) {
   const art = e.ufo ? (bimg(BOSS_IMG, 'mid7') || enemyArt('tank')) : enemyArt(e.kind)
   if (art) {
 
-    const sd = e.r * (big ? 3.1 : 2.9)
+    const sd = e.r * (big ? 3.1 : 2.9) * artFit(art)
     drawShadow(art, e.x, e.y, sd, sd, .3, 0, big ? 1.1 : .9)
   } else {
     g.fillStyle = 'rgba(0,12,28,.24)'
@@ -14193,7 +14195,7 @@ function drawEnemy(e) {
   }
 
   if (art) {
-    const sz = e.r * (big ? 3.1 : 2.9)
+    const sz = e.r * (big ? 3.1 : 2.9) * artFit(art)
     g.save(); g.translate(e.x, e.y)
     if (e.flash > 0) g.globalAlpha = .6
     g.drawImage(art, -sz / 2, -sz / 2, sz, sz)
