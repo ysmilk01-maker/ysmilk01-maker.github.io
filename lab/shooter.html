@@ -1638,6 +1638,63 @@
   .got .big { font-size: 20px; font-weight: 800; }
   .got .cnt { font-size: 13px; color: var(--gold); font-weight: 800; }
   .got .msg { font-size: 12px; color: var(--muted); }
+  .got .dupemsg { color: var(--ink); font-weight: 700; line-height: 1.45; }
+  /*
+   * 갈라지는 연출 (2026-09-19 대표 지정 「조각으로 변하는 애니메이션」).
+   *
+   * 덩어리가 부풀었다가 흩어지고 조각 일곱이 자리를 잡는다. 조각은
+   * 갈 자리를 각자 변수로 들고 있어서, 수를 늘리려면 줄 하나만 보탠다.
+   */
+  .dupefx { position: relative; width: 92px; height: 92px; margin: 2px 0 4px; }
+  .dupefx .whole {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    border-radius: 18px; background: linear-gradient(160deg, #2e4159, #151f2e);
+    border: 1px solid #44618a; box-shadow: 0 0 18px rgba(75, 122, 179, .33);
+    animation: dupeWhole 1.25s cubic-bezier(.3, .7, .4, 1) forwards;
+  }
+  /* 파일럿은 그림이 없다. 덩어리 가운데에 표식만 찍는다 */
+  .dupefx .whole::after {
+    content: ''; width: 26px; height: 26px; border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #cfe4ff, #5b87b8);
+    box-shadow: 0 0 12px rgba(143, 196, 255, .5);
+  }
+  /* 기체 그림이 있으면 표식은 빼고 그림을 보여 준다 */
+  .dupefx.hasim .whole::after { content: none; }
+  .dupefx .whole img { width: 74px; height: 74px; object-fit: contain; margin: 0; }
+  .dupefx i {
+    position: absolute; left: 50%; top: 50%; width: 15px; height: 15px;
+    margin: -8px 0 0 -8px; border-radius: 4px;
+    background: linear-gradient(150deg, #9ecbff, #3f6f9e);
+    box-shadow: 0 0 8px rgba(106, 168, 224, .45); opacity: 0;
+    animation: dupeShard 1.25s cubic-bezier(.2, .8, .3, 1) forwards;
+  }
+  .dupefx i:nth-child(2) { --dx: -31px; --dy: -25px; --rot: -28deg; }
+  .dupefx i:nth-child(3) { --dx:  30px; --dy: -27px; --rot:  22deg; }
+  .dupefx i:nth-child(4) { --dx: -36px; --dy:   8px; --rot:  14deg; }
+  .dupefx i:nth-child(5) { --dx:  35px; --dy:  10px; --rot: -18deg; }
+  .dupefx i:nth-child(6) { --dx: -19px; --dy:  30px; --rot:  33deg; }
+  .dupefx i:nth-child(7) { --dx:  21px; --dy:  31px; --rot: -11deg; }
+  .dupefx i:nth-child(8) { --dx:   1px; --dy:  -4px; --rot:   7deg; }
+  @keyframes dupeWhole {
+    0%   { transform: scale(.72); opacity: 0; }
+    20%  { transform: scale(1.06); opacity: 1; }
+    38%  { transform: scale(1) rotate(-2deg); }
+    45%  { transform: scale(1.02) rotate(2.5deg); }
+    52%  { transform: scale(1) rotate(-2deg); }
+    62%  { transform: scale(1.05); filter: brightness(1.8); opacity: 1; }
+    74%  { transform: scale(.5); filter: brightness(1.8); opacity: 0; }
+    100% { transform: scale(.5); opacity: 0; }
+  }
+  @keyframes dupeShard {
+    0%, 62% { opacity: 0; transform: translate(0, 0) scale(.35) rotate(0deg); }
+    73%     { opacity: 1; transform: translate(calc(var(--dx) * 1.3), calc(var(--dy) * 1.3)) scale(1.12) rotate(var(--rot)); }
+    100%    { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1) rotate(var(--rot)); }
+  }
+  /* 움직임을 줄여 달라고 한 사람에게는 끝 모습만 보여 준다 */
+  @media (prefers-reduced-motion: reduce) {
+    .dupefx .whole { animation: none; opacity: 0; }
+    .dupefx i { animation: none; opacity: 1; transform: translate(var(--dx), var(--dy)); }
+  }
 
   /* ── 뽑기 연출 ──────────────────────────────────────────────── */
   #gfx { background: rgba(4,5,9,.93); z-index: 60; display: grid; place-items: center; }
@@ -3438,7 +3495,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 10:01'
+const BUILD_AT = '09-19 10:05'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -4568,7 +4625,8 @@ function paintGacha10(list) {
       pic +
       `<div class="t">${nm}</div>` +
       `<div class="c">${r.jack || r.hard ? '완성품' : '조각 ' + r.n}</div>` +
-      `<div class="n">${r.got ? '열림' : ''}</div>` +
+
+      `<div class="n">${r.got ? '열림' : r.dupe ? '이미 보유' : ''}</div>` +
       `</div>`
   }).join('')
   hpPlain(body,
@@ -4628,15 +4686,16 @@ function pull(kind) {
       save()
       return { kind, tier, n: 1, name: pl.name + ' 합류', pilot: pl, got: true, jack: true }
     }
-    let big = false
-    if (jack) { n = JACK_SHARD; big = true }
+    let big = false, dupe = false
+
+    if (jack) { n = JACK_SHARD; big = true; dupe = GRADE_NEED[tier] > 0 }
     let any = false
 
     if (!fresh && gradeLv(tier) >= GRADE_UP_MAX) { prog.shardAny = shardAny() + n; any = true }
     else prog.shardG[tier] = shardG(tier) + n
 
     save()
-    return { kind, tier, n, big, any, name: any ? '공용 파일럿 조각' : GRADES[tier].name + ' 파일럿 조각',
+    return { kind, tier, n, big, any, dupe, name: any ? '공용 파일럿 조각' : GRADES[tier].name + ' 파일럿 조각',
              got: false, ready: canRecruit(tier) }
   }
 
@@ -4659,15 +4718,16 @@ function pull(kind) {
     save()
     return { kind, tier, n: 1, name: pick.name, plane: pick, got: true, jack: true }
   }
-  let big = false
-  if (jack) { n = JACK_SHARD; big = true }
+  let big = false, dupe = false
+
+  if (jack) { n = JACK_SHARD; big = true; dupe = true }
 
   n = Math.round(n * perk('shard'))
   prog.shardP[pick.id] = shardOf(pick.id) + n
   const got = fresh && prog.shardP[pick.id] >= shardNeed(pick)
   if (got) { prog.owned.push(pick.id); prog.shardP[pick.id] -= shardNeed(pick); queueGot('plane', pick.id) }
   save()
-  return { kind, tier, n, big, name: pick.name + ' 조각', plane: pick, got }
+  return { kind, tier, n, big, dupe, name: pick.name + ' 조각', plane: pick, got }
 }
 
 const UPG_MAX = 7
@@ -7132,11 +7192,17 @@ function paintGacha(res) {
     return
   }
 
-  const label = res.hard ? '100장 확정!' : res.jack ? '완성품!' : res.big ? `조각 ${res.n}개 (완성품 대체)` : res.any ? `공용 조각 ${res.n}개` : `조각 ${res.n}개`
+  const label = res.hard ? '100장 확정!' : res.jack ? '완성품!'
+    : res.dupe ? (res.any ? `공용 조각 ${res.n}개` : `조각 ${res.n}개`)
+    : res.big ? `조각 ${res.n}개 (완성품 대체)` : res.any ? `공용 조각 ${res.n}개` : `조각 ${res.n}개`
 
   const shipIm = res.plane && SHIP_IMG[res.plane.id]
-  const pic = shipIm && shipIm.complete && shipIm.naturalWidth
-    ? `<img src="${shipIm.src}" alt="">` : ''
+  const im = shipIm && shipIm.complete && shipIm.naturalWidth ? `<img src="${shipIm.src}" alt="">` : ''
+
+  const pic = res.dupe
+    ? `<div class="dupefx${im ? ' hasim' : ''}" aria-hidden="true"><span class="whole">${im}</span>` +
+      '<i></i>'.repeat(7) + `</div>`
+    : im
 
   hpPlain(body,
     `<div class="got">` + pic +
@@ -7146,7 +7212,12 @@ function paintGacha(res) {
     `<span class="big">${res.name.replace(/ 조각$/, '')}</span>` +
 
     `<span class="cnt">${res.kind === 'pilot' ? '파일럿' : '기체'} · ${label}</span>` +
-    (res.got ? `<span class="msg">${res.jack ? '바로 열렸습니다' : '조각이 다 모여 열렸습니다'}</span>` : '') +
+    (res.dupe
+      ? `<span class="msg dupemsg">` +
+        (res.kind === 'pilot'
+          ? '보유 중인 파일럿을 획득하여 조각으로 변화되었습니다.'
+          : '보유 중인 기체를 획득하여 조각으로 변화되었습니다.') + `</span>`
+      : res.got ? `<span class="msg">${res.jack ? '바로 열렸습니다' : '조각이 다 모여 열렸습니다'}</span>` : '') +
     `</div>`)
 }
 
