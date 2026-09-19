@@ -3438,7 +3438,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 09:41'
+const BUILD_AT = '09-19 10:01'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -7097,8 +7097,6 @@ function paintGacha(res) {
 
     const boxHtml = (kind) => {
       const isP = kind === 'pilot'
-      const p = PITY[kind]
-      const li = p ? p.at - (prog.pull[kind] % p.at) : 0
       const hard = HARD_PITY - (prog.pull[kind] % HARD_PITY)
       return `<div class="crbox${isP ? ' pilot' : ''}">` +
         `<div class="gbn">${isP ? '파일럿' : '기체'}</div>` +
@@ -7106,9 +7104,8 @@ function paintGacha(res) {
           ? `<button type="button" class="gcrate${isP ? ' pilot' : ''}" data-crate="${kind}"` +
             ` aria-label="${isP ? '파일럿' : '기체'} 한 번 뽑기"><img src="${crate.src}" alt=""></button>`
           : '') +
-        `<div class="gbp"><span>확정까지 <b>${hard}</b></span>` +
-        (p ? `<span>${GRADES[p.tier].name} 이상 <b>${li}</b></span>` : '') +
-        `</div>` +
+
+        `<div class="gbp"><span>확정까지 <b>${hard}</b></span></div>` +
         `<div class="gbb">` +
         `<button data-pull="${kind}"${enough ? '' : ' disabled'}>${cost}장</button>` +
         `<button data-pull10="${kind}"${ten ? '' : ' disabled'}>10연차 ${cost * TEN_COST}장</button>` +
