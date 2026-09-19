@@ -3507,8 +3507,10 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 11:07'
+const BUILD_AT = '09-19 12:12'
 const FREE_PLAY = false
+
+const DEV_TOOLS = true
 
 const SAVE_KEY = 'shooter-proto-v3'
 const OLD_KEY = 'shooter-proto-v2'
@@ -6868,7 +6870,7 @@ function renderSet() {
       (prog.pilot.name || '').replace(/"/g, '&quot;') + '">' +
 
     '<div class="lab">그 밖에</div>' +
-    '<div class="bar"><button class="ghost small" id="devUnlock" hidden>개발용 전체 해금 (테스트)</button></div>'
+    (DEV_TOOLS ? '<div class="bar"><button class="ghost small" id="devUnlock" hidden>개발용 전체 해금 (테스트)</button></div>' : '')
 
   const sp = document.getElementById('spRange')
   if (sp) {
@@ -6878,7 +6880,7 @@ function renderSet() {
   }
   const nm = document.getElementById('pilotNm')
   if (nm) nm.oninput = () => { prog.pilot.name = nm.value.trim().slice(0, 12); save() }
-  const du = document.getElementById('devUnlock')
+  const du = DEV_TOOLS ? document.getElementById('devUnlock') : null
   if (du) du.onclick = () => {
     prog.owned = PLANES.map((p) => p.id).concat(LEGEND_PILOT.id)
     prog.pilot.lv = PILOT_MAX
@@ -6900,13 +6902,18 @@ document.getElementById('hgMail').onclick = () => openMail()
 document.getElementById('btnSet').onclick = () => { elSet.hidden = false; renderSet(); setTaps = 0; document.getElementById('setReset').hidden = true; modalOn(elSet, () => document.getElementById('setClose').click()) }
 
 let setTaps = 0
-document.getElementById('setTitle').onclick = () => {
-  if (++setTaps >= 5) {
-    document.getElementById('setReset').hidden = false
-    const du = document.getElementById('devUnlock'); if (du) du.hidden = false
+if (DEV_TOOLS) {
+  document.getElementById('setTitle').onclick = () => {
+    if (++setTaps >= 5) {
+      const rs = document.getElementById('setReset'); if (rs) rs.hidden = false
+      const du = document.getElementById('devUnlock'); if (du) du.hidden = false
+    }
   }
+} else {
+
+  const rs = document.getElementById('setReset'); if (rs) rs.remove()
 }
-document.getElementById('setReset').onclick = () => {
+if (DEV_TOOLS) document.getElementById('setReset').onclick = () => {
   ask('저장을 전부 지우고 처음부터 시작합니다.\n기체·파일럿·레벨·진행이 모두 사라집니다.', () => {
     ask('정말 지웁니까?', () => {
       try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(OLD_KEY) } catch {}
