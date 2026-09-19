@@ -1133,6 +1133,13 @@
   #scRank .rtabs button.on { background: #2b3a55; border-color: #3f5680; color: var(--ink); }
   /* 서른 줄이 한 장에 들어간다 - 넘기지 않고 굴린다 */
   #rankBody { overflow-y: auto; overscroll-behavior: contain; }
+  /* 만든 순위 알림 (2026-09-19). 순위표 맨 위에 한 줄 */
+  #rankBody .rkfake{
+    margin:0 2px 10px;padding:8px 10px;border-radius:9px;
+    background:#2a1f0e88;border:1px solid #6b552699;
+    font-size:11.5px;line-height:1.5;color:#e0cd9a;
+  }
+  #rankBody .rkfake b{color:#ffd98a}
   #rankBody .rksum { padding: 10px 11px; font-size: 11.5px; color: var(--dim); line-height: 1.7; }
   /*
    * 머리 칸 둘 (2026-09-18 대표 지정 「내 순위 왼쪽 위·1위 오른쪽 위 고정」).
@@ -2409,7 +2416,14 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad.v3 .hg-pilot-label em{font-style:normal;font-size:10px;color:#9ab6c5;display:block}
 #scSquad.v3 .hg-actions{gap:8px;align-items:center;flex:none}#scSquad.v3 .hg-icon{width:40px;height:40px;border-radius:10px;flex:none}
 /* 파일럿 카드가 우편함 단추 밑으로 파고들었다 (2026-09-15 폰 스샷). 단추 셋 폭을 뺀 만큼만 차지하고 넘치는 글은 자른다 */
-#scSquad.v3 .hg-who{width:calc(100% - 3*40px - 2*8px - 8px - 10px);max-width:calc(100% - 3*40px - 2*8px - 8px - 10px);margin-right:10px}
+/* 2026-09-19 코덱스 14차. 손으로 뺀 폭이 단추 셋 기준인데 실제로는 둘이라 48px 을 헛되이 잡았다 */
+#scSquad.v3 .hg-who{flex:1;width:auto;max-width:none;margin-right:0}
+/* 320px 에서는 이름과 등급을 먼저 살린다 - 장식(✈ 표식)과 초상을 줄인다 */
+@media (max-width:360px){
+  #scSquad.v3 .hg-cmd .cmk{display:none}
+  #scSquad.v3 .hg-pilot>img{width:40px;height:40px}
+  #scSquad.v3 .hg-pilot{gap:5px;padding-right:5px}
+}
 #scSquad.v3 .hg-pilot{flex:1 1 0;min-width:0;width:auto;max-width:none;overflow:hidden;left:auto;bottom:auto;transform:none}   /* 더 줄임 +16px (2026-09-15 대표 「아직 겹침」) */   /* 옛 규칙의 left:4% 가 position:relative(배지용) 에 살아나 14px 밀렸다 */
 #scSquad.v3 .hg-pilot-label small,#scSquad.v3 .hg-pilot-label em{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hg-body3{display:grid;grid-template-columns:60px minmax(0,1fr) 60px;gap:6px;padding:8px 8px 0;align-items:stretch}
@@ -2893,7 +2907,8 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   <div class="gbox abox nmbox">
     <h3 id="nameTitle">파일럿명을 정해 주세요</h3>
     <p id="nameSub"></p>
-    <input class="nm" id="nameInput" maxlength="6" autocomplete="off">
+    <input class="nm" id="nameInput" maxlength="6" autocomplete="off"
+           aria-labelledby="nameTitle" aria-describedby="nameSub">
     <div class="arow">
       <button id="nameRnd" class="ghost">🎲 무작위</button>
       <button id="nameOk">확인</button>
@@ -3112,8 +3127,8 @@ const ULT = {
   orb:    { name: '반사 방벽', desc: '막은 만큼 모았다가 펄스로 되돌려 줍니다' },
   mine:   { name: '융단 폭격', desc: '화면 전체에 폭탄 20발. 보스가 있으면 절반은 보스 위로' },
   beam:   { name: '기지 화력 지원', desc: '조준한 뒤 기지에서 미사일 100발이 줄지어 올라옵니다' },
-  boomer: { name: '편대 일제 사격', desc: '아군 다섯이 한 줄로 들어와 퍼붓습니다' },
-  chain:  { name: '뇌우', desc: '번개가 화면의 적을 차례로 물고 갑니다. 세 번 칩니다' },
+  boomer: { name: '편대 일제 사격', desc: '아군 다섯이 한 줄로 들어와 사격합니다' },
+  chain:  { name: '뇌우', desc: '번개가 화면의 적을 차례로 공격합니다. 세 번 반복합니다' },
 }
 
 const ULT_TONE = {
@@ -3614,10 +3629,10 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 23:18'
+const BUILD_AT = '09-19 23:46'
 const FREE_PLAY = false
 
-const DEV_TOOLS = true
+const DEV_TOOLS = false
 
 const SAVE_KEY = 'shooter-proto-v3'
 const OLD_KEY = 'shooter-proto-v2'
@@ -5826,7 +5841,7 @@ function openNamePop(done) {
   const first = !prog.pilot.name
   document.getElementById('nameTitle').textContent = first ? '파일럿명을 정해 주세요' : '파일럿명 바꾸기'
   document.getElementById('nameSub').textContent = first
-    ? '앞자리에 앉는 사람이 당신입니다. 뒷자리 보조 파일럿은 뽑기로 얻습니다.'
+    ? '게임에서 쓸 이름입니다. 비워 두면 적혀 있는 이름을 그대로 씁니다. 나중에 바꿀 수 있습니다.'
     : '언제든 바꿀 수 있습니다.'
   inp.value = prog.pilot.name || ''
   inp.placeholder = randomPilotName()
@@ -7848,6 +7863,70 @@ function medalSvg(n) {
     '<path d="M12 11.9l1.16 2.35 2.6.38-1.88 1.83.44 2.59L12 17.83l-2.32 1.22.44-2.59' +
     '-1.88-1.83 2.6-.38z" fill="#23190455" /></svg>'
 }
+
+const SB_URL = 'https://qzimykxyvmoripifqmbi.supabase.co'
+const SB_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
+const SB = { cli: null, ready: false, tried: false, err: null, boards: {}, busy: {}, sent: 0 }
+
+async function sbInit() {
+  if (SB.tried) return SB.ready
+  SB.tried = true
+  try {
+    const m = await import('https://esm.sh/@supabase/supabase-js@2')
+    SB.cli = m.createClient(SB_URL, SB_KEY, {
+
+      auth: { persistSession: true, autoRefreshToken: true, storageKey: 'n2sl.shooter.auth' },
+    })
+    const cur = await SB.cli.auth.getSession()
+    if (!cur.data.session) {
+      const r = await SB.cli.auth.signInAnonymously()
+      if (r.error) throw r.error
+    }
+    SB.ready = true
+  } catch (e) {
+    SB.err = (e && e.message) || String(e)
+    SB.ready = false
+  }
+  return SB.ready
+}
+
+async function sbSubmitAll() {
+  if (!SB.ready) return
+  const now = Date.now()
+  if (now - SB.sent < 30000) return
+  SB.sent = now
+  try {
+    await SB.cli.rpc('sh_set_name', { p_name: pilotName() })
+    const pw = squadPower() || 0
+    for (const t of RANK_TABS) {
+      await SB.cli.rpc('sh_submit_score', { p_board: t.k, p_value: t.my() || 0, p_power: pw })
+    }
+  } catch (e) { SB.err = (e && e.message) || String(e) }
+}
+
+async function sbBoard(k) {
+  if (!SB.ready) return null
+  try {
+    const r = await SB.cli.rpc('sh_board', { p_board: k, p_limit: 30 })
+    if (r.error || !Array.isArray(r.data)) return null
+    return r.data.map((e) => ({ nm: e.name, v: e.value, p: e.power, me: !!e.me }))
+  } catch (e) { return null }
+}
+
+async function sbRankHydrate(k) {
+  if (SB.busy[k]) return
+  SB.busy[k] = true
+  try {
+    if (!(await sbInit())) return
+    await sbSubmitAll()
+    const rows = await sbBoard(k)
+
+    if (!rows || rows.length < 2) return
+    SB.boards[k] = rows
+    if (rankTab === k) renderRank()
+  } finally { SB.busy[k] = false }
+}
+
 let rankTab = 'power'
 function renderRank() {
   const tabs = document.getElementById('rankTabs')
@@ -7863,8 +7942,14 @@ function renderRank() {
   const my = t.my() || 0
   const me = { nm: pilotName(), v: my, p: squadPower() || 0, me: true }
 
-  const all = rankBoard(t).concat([me])
-    .sort((a, b) => b.v - a.v || b.p - a.p || (a.me ? -1 : b.me ? 1 : 0))
+  const live = SB.boards[t.k]
+  const all = live
+    ? live.slice().sort((a, b) => b.v - a.v || b.p - a.p)
+    : rankBoard(t).concat([me])
+        .sort((a, b) => b.v - a.v || b.p - a.p || (a.me ? -1 : b.me ? 1 : 0))
+  if (live && !all.some((e) => e.me)) all.push(me)
+
+  sbRankHydrate(t.k)
 
   const val = (e) => t.f(e.v) +
     (t.pw ? '<em>전투력 ' + (e.p || 0).toLocaleString('ko-KR') + '</em>' : '')
@@ -7889,9 +7974,13 @@ function renderRank() {
       '<span class="sc">' + val(e) + '</span></div>'
   }
 
-  const note = t.pw
-    ? '<div class="rksum">깬 <b>' + t.u + ' 수</b>로 줄을 세우고, 같으면 <b>전투력</b>이 앞섭니다.</div>'
+  const rule = t.pw
+    ? '<div class="rksum">클리어한 <b>' + t.u + ' 수</b>가 많을수록 순위가 높습니다. 같으면 <b>전투력</b>이 높은 순입니다.</div>'
     : ''
+
+  const note = rule + (SB.boards[t.k]
+    ? ''
+    : '<div class="rkfake">지금 보이는 상대는 <b>이 기기에서 만든 연습 상대</b>입니다. 다른 사람의 기록이 아닙니다.</div>')
   hpPlain(host, note + all.slice(0, RANK_N).map(line).join(''))
 }
 
@@ -14498,8 +14587,11 @@ function drawBoss(bs) {
   g.fillStyle = 'rgba(255,255,255,.85)'
   g.fillRect(30 + w * coreK - 1, 12, 2, 14)
 
-  g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '10px system-ui'
-  g.textAlign = 'right'
+  g.save()
+  g.fillStyle = '#0a101a'
+  g.fillRect(W / 2 - 85, 27, 170, 20)
+  g.fillStyle = '#e8edf7'; g.font = '11px system-ui'
+  g.textAlign = 'center'; g.textBaseline = 'top'
   {
     const sig = bs.core.open ? -1 : nAliveP
     if (bs._hudSig !== sig) {
@@ -14508,8 +14600,10 @@ function drawBoss(bs) {
         ? (bs.mid ? '중간보스' : '보스') + ' · 코어 노출'
         : (bs.mid ? '중간보스' : '보스') + ' · 부위 ' + nAliveP + '개 남음'
     }
-    g.fillText(bs._hudTxt, W - 30, 34)
+    g.fillText(bs._hudTxt, W / 2, 30)
   }
+  g.restore()
+
   g.textAlign = 'left'
 }
 
@@ -16227,11 +16321,16 @@ function draw() {
       g.fillStyle = '#ff5470'
       g.fillRect(s.player.x - 5, by, 10, 4)
     } else {
+
       const r = Math.max(0, s.player.hp / s.player.maxHp)
-      g.fillStyle = 'rgba(0,0,0,.45)'
-      g.fillRect(bx - 1, by - 1, bw + 2, 6)
+      g.save()
+      g.fillStyle = '#07111a'
+      g.fillRect(bx - 2, by - 2, bw + 4, 10)
       g.fillStyle = r > .55 ? '#5fd48a' : r > .28 ? '#ffcf5c' : '#ff5470'
-      g.fillRect(bx, by, bw * r, 4)
+      g.fillRect(bx, by, bw * r, 6)
+      g.strokeStyle = '#d6e4ed'; g.lineWidth = 1
+      g.strokeRect(bx - 1, by - 1, bw + 2, 8)
+      g.restore()
     }
   }
 
