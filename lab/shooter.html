@@ -3507,7 +3507,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 10:27'
+const BUILD_AT = '09-19 11:07'
 const FREE_PLAY = false
 
 const SAVE_KEY = 'shooter-proto-v3'
@@ -17354,12 +17354,14 @@ function sfx(kind, arg) {
     case 'lowhp': {
 
       const urgent = arg > 0
-      if (!auGate('lowhp', urgent ? 0.6 : 1.15)) return
+      if (!auGate('lowhp', urgent ? 0.5 : 1.0)) return
       const t0 = AU.ctx.currentTime
-      const f = urgent ? 560 : 440
-      auTone('sine', 150, 108, 0.2, 0.05, t0)
-      auTone('square', f, f, 0.06, 0.05, t0)
-      auTone('square', f, f, 0.06, 0.05, t0 + (urgent ? 0.09 : 0.13))
+      const f = urgent ? 1180 : 940
+      const gap = urgent ? 0.07 : 0.1
+      const n = urgent ? 4 : 3
+      for (let i = 0; i < n; i++) {
+        auTone('square', f, f * 0.94, 0.045, 0.052, t0 + i * gap)
+      }
       break
     }
 
