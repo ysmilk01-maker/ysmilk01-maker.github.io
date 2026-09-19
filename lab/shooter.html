@@ -3614,7 +3614,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-19 22:52'
+const BUILD_AT = '09-19 23:18'
 const FREE_PLAY = false
 
 const DEV_TOOLS = true
@@ -8335,7 +8335,8 @@ function renderPilot() {
 
   const early = false
   const list = PILOTS.filter((pl) => {
-    const own = pilotBought(pl) || pl.grade === 'normal'
+
+    const own = pilotOpen(pl)
     return pilotOwn === 'all' || (pilotOwn === 'own' ? own : !own)
   })
 
