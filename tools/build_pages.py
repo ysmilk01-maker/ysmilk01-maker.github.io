@@ -218,6 +218,7 @@ APPS = {
     h1='피하고, 맞히고.<br>오늘도 출격.',
     desc='기체를 움직여 적의 탄을 피하고, 자동 사격으로 전선을 돌파합니다. 보유한 기체를 골라 나만의 편대를 꾸려보세요.',
     hero_img='games/shooter.webp',
+    asset_v='20260920b',
     hero_alt='오늘도 출격 실제 시작 화면. 비행 편대와 부대 문장, 출격 버튼.',
     hero_width=780,
     hero_height=1688,
@@ -265,11 +266,12 @@ def page(a):
   tint = 'var(--%s)' % a['tint']
   how = '\n'.join('      <li>%s</li>' % h for h in a['how'])
 
+  asset_query = ('?v=' + a['asset_v']) if a.get('asset_v') else ''
   shots = ''
   if a['shots']:
     items = '\n'.join(
-      '      <li class="rise"><img src="../img/shots/%s.webp" width="%s" height="%s" alt="%s" loading="lazy" decoding="async"></li>'
-      % (f, a.get("shot_width", 636), a.get("shot_height", 1048), alt) for f, alt in a['shots'])
+      '      <li class="rise"><img src="../img/shots/%s.webp%s" width="%s" height="%s" alt="%s" loading="lazy" decoding="async"></li>'
+      % (f, asset_query, a.get("shot_width", 636), a.get("shot_height", 1048), alt) for f, alt in a['shots'])
     shots = '''
 <!-- 화면 둘러보기. 실제 앱 화면 — 옆으로 넘긴다 -->
 <section class="sec shots" style="--tint:%s">
@@ -446,7 +448,7 @@ def page(a):
       </ul>
     </div>
     <div class="phone rise">
-      <img src="../img/%(hero_img)s" width="%(hero_width)s" height="%(hero_height)s" alt="%(hero_alt)s" decoding="async">
+      <img src="../img/%(hero_img)s%(asset_query)s" width="%(hero_width)s" height="%(hero_height)s" alt="%(hero_alt)s" decoding="async">
     </div>
   </div>
 </section>
@@ -507,7 +509,7 @@ def page(a):
 <script src="../site.js"></script>%(appjs)s
 </body>
 </html>
-''' % dict(a, hero_width=a.get("hero_width", 1170), hero_height=a.get("hero_height", 2532), tintvar=tint, how=how, shots=shots, feats=feats, mid=mid, steps=steps, notes=notes, others=others, appjs=appjs, action=action, launch=launch)
+''' % dict(a, hero_width=a.get("hero_width", 1170), hero_height=a.get("hero_height", 2532), asset_query=asset_query, tintvar=tint, how=how, shots=shots, feats=feats, mid=mid, steps=steps, notes=notes, others=others, appjs=appjs, action=action, launch=launch)
 
 
 def main():
