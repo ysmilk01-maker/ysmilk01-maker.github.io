@@ -3635,7 +3635,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-20 19:49'
+const BUILD_AT = '09-20 20:02'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -16694,9 +16694,9 @@ function draw() {
     g.save()
     g.globalAlpha = 0.32
     g.fillStyle = '#fff'
-    g.font = 'bold 15px system-ui'
+    g.font = 'bold 45px system-ui'
     g.textAlign = 'center'; g.textBaseline = 'middle'
-    g.fillText('이탈 ' + Math.ceil(s.finLeft), W / 2, H * 0.17)
+    g.fillText(String(Math.ceil(s.finLeft)), W / 2, H * 0.17)
     g.restore()
     g.textAlign = 'left'; g.textBaseline = 'alphabetic'
   }
