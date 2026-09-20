@@ -212,9 +212,9 @@ APPS = {
     tint='shooter',
     glow='var(--shooter-glow)',
     title='오늘도 출격 · 나인투식스랩',
-    meta='기체를 움직여 적의 탄을 피하고 자동 사격으로 전선을 돌파하는 편대 슈팅게임. 정식 출시를 준비 중입니다.',
-    og='피하고, 맞히고. 오늘도 출격. 개발 중인 편대 슈팅게임.',
-    badge='개발 중 · 정식 출시 준비',
+    meta='기체를 움직여 적탄을 피하고 자동 사격으로 전선을 돌파하는 편대 슈팅게임. 오늘도 출격을 원스토어에서 만나보세요.',
+    og='피하고, 맞히고. 오늘도 출격. 원스토어에서 만나는 한 손 편대 비행 슈팅.',
+    badge='서비스 중 · 원스토어',
     h1='피하고, 맞히고.<br>오늘도 출격.',
     desc='기체를 움직여 적의 탄을 피하고, 자동 사격으로 전선을 돌파합니다. 보유한 기체를 골라 나만의 편대를 꾸려보세요.',
     hero_img='games/shooter.webp',
@@ -222,9 +222,10 @@ APPS = {
     hero_width=780,
     hero_height=1688,
     how=['편대 슈팅', '드래그 이동', '자동 사격', '기체 성장'],
-    open_href=None,
-    open_label='정식 출시 준비 중',
-    hint='현재 개발 중인 게임입니다. 출시가 확정되면 공식 서비스 플랫폼을 안내하겠습니다.',
+    open_href='https://onesto.re/0001009423',
+    open_label='원스토어에서 보기',
+    open_external=True,
+    hint='안드로이드에서 원스토어 상세 페이지를 열어 설치할 수 있습니다. 전체이용가 게임입니다.',
     shots=[('shooter-play', '오늘도 출격 실제 전투 화면. 바다 위 기체와 적탄, 자동 사격.'),
            ('shooter-squad', '오늘도 출격 실제 편대 준비 화면. 기체 편성과 출격 버튼.')],
     shot_width=780,
@@ -234,9 +235,16 @@ APPS = {
     feats=[('이동', '드래그로 조종', '화면을 누른 채 손가락을 움직여 조종합니다. PC에서는 방향키도 지원합니다.'),
            ('자동', '사격은 맡기세요', '기체가 자동으로 사격합니다. 적의 탄과 이동 경로를 보며 피해 보세요.'),
            ('편대', '기체를 고르는 재미', '보유 기체를 편성하고 강화합니다. 진행에 따라 편대 구성을 넓혀갑니다.')],
-    steps=[],
-    notes=['<strong>정식 출시 전입니다.</strong> 소개된 기능과 화면은 개발 과정에서 바뀔 수 있습니다.',
-           '홈페이지에서는 테스트 버전을 제공하지 않습니다. 출시 소식과 이용 경로는 이 페이지에서 안내합니다.'],
+    status_h2='원스토어 출시와<br>최신 업데이트',
+    status=[('원스토어', '서비스 중', '2026년 9월 20일 원스토어에 출시했습니다. 안드로이드에서 설치할 수 있습니다.'),
+            ('전투', '난이도 흐름 개선', '단계가 바뀔 때 적의 수가 갑자기 줄던 구간을 고쳐 전선 전체의 난이도가 자연스럽게 이어집니다.'),
+            ('마무리', '10초 뒤 작전 이탈', '보스가 없는 전투는 마지막 물결 뒤 10초가 지나면 보호막을 펼치고 이탈합니다.')],
+    steps=[('원스토어 페이지를 엽니다', '아래 버튼을 누르면 오늘도 출격 공식 상세 페이지로 이동합니다.'),
+           ('앱을 설치합니다', '안드로이드 원스토어에서 다운로드합니다.'),
+           ('편대를 꾸리고 출격합니다', '기체를 편성하고 드래그로 움직이며 전선을 돌파하세요.')],
+    notes=['<strong>원스토어 공식 버전을 이용해 주세요.</strong> 홈페이지에서는 브라우저 플레이와 테스트 버전을 제공하지 않습니다.',
+           '진행 기록과 설정은 먼저 기기에 저장됩니다. 선택한 Google 로그인과 랭킹 기능은 서버 연결을 사용합니다.',
+           '상점에는 인앱구매 상품이 있으며, 보상형 광고는 광고 시청이 완료된 경우에만 보상을 지급합니다.'],
     others=['beatwave', 'sudoku', 'coin', 'krx', 'ai'],
   ),
 }
@@ -361,13 +369,13 @@ def page(a):
 <section class="sec" style="--tint:%s">
   <div class="inner">
     <p class="eyebrow rise">서비스 플랫폼</p>
-    <h2 class="rise">토스와 원스토어에서<br>만날 수 있습니다</h2>
+    <h2 class="rise">%s</h2>
     <ul class="feats">
 %s
     </ul>
   </div>
 </section>
-''' % (tint, items)
+''' % (tint, a.get('status_h2', '토스와 원스토어에서<br>만날 수 있습니다'), items)
 
   steps = '\n'.join(
     '      <li class="rise"><i>%d</i><h3>%s</h3><p>%s</p></li>' % (i + 1, t, d) for i, (t, d) in enumerate(a['steps']))
@@ -378,7 +386,8 @@ def page(a):
 
   # 실행 버튼은 공식 서비스가 있는 앱에만 만든다. 개발 중인 앱에는 링크를 출력하지 않는다.
   if a.get('open_href'):
-    action = '<a class="open rise" href="%s">%s <span aria-hidden="true">↗</span></a>' % (a['open_href'], a['open_label'])
+    external = ' target="_blank" rel="noopener noreferrer"' if a.get('open_external') else ''
+    action = '<a class="open rise" href="%s"%s>%s <span aria-hidden="true">↗</span></a>' % (a['open_href'], external, a['open_label'])
     if a.get('extra_href'):
       action += '<a class="open open-secondary rise" href="%s" target="_blank" rel="noopener noreferrer">%s <span aria-hidden="true">↗</span></a>' % (a['extra_href'], a['extra_label'])
     launch = '<section class="stage light-stage" style="--tint:%s"><div class="inner"><p class="eyebrow rise" style="color:var(--muted-light)">이용 방법</p><h2 class="rise">공식 플랫폼에서 시작하세요</h2><ol class="steps">%s</ol>%s</div></section>' % (tint, steps, action)
