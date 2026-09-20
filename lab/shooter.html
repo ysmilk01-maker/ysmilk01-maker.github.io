@@ -3635,7 +3635,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-20 20:02'
+const BUILD_AT = '09-20 21:18'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -7129,6 +7129,8 @@ async function shopInit() {
   }
   return SHOPX.ready
 }
+
+setTimeout(() => { if (sbNative()) shopInit() }, 1200)
 
 function shopGrant(e) {
   if (!e || !e.productId || !e.token) return
