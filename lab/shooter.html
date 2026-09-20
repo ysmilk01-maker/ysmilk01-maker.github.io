@@ -3633,9 +3633,9 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.1'
+const BUILD_TAG = '0.9.7'
 
-const BUILD_AT = '09-20 21:18'
+const BUILD_AT = '09-20 21:53'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -16688,17 +16688,6 @@ function draw() {
         g.fillText('탭', 0, 11)
       }
     }
-    g.restore()
-    g.textAlign = 'left'; g.textBaseline = 'alphabetic'
-  }
-
-  if (s.finLeft > 0 && !s.fin) {
-    g.save()
-    g.globalAlpha = 0.32
-    g.fillStyle = '#fff'
-    g.font = 'bold 45px system-ui'
-    g.textAlign = 'center'; g.textBaseline = 'middle'
-    g.fillText(String(Math.ceil(s.finLeft)), W / 2, H * 0.17)
     g.restore()
     g.textAlign = 'left'; g.textBaseline = 'alphabetic'
   }
