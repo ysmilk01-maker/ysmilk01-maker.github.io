@@ -3635,7 +3635,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-20 06:24'
+const BUILD_AT = '09-20 09:45'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -7049,7 +7049,12 @@ function renderSet() {
   })
 }
 document.getElementById('hgMail').onclick = () => openMail()
-document.getElementById('btnSet').onclick = () => { elSet.hidden = false; renderSet(); setTaps = 0; document.getElementById('setReset').hidden = true; modalOn(elSet, () => document.getElementById('setClose').click()) }
+
+document.getElementById('btnSet').onclick = () => {
+  elSet.hidden = false; renderSet(); setTaps = 0
+  const rs = document.getElementById('setReset'); if (rs) rs.hidden = true
+  modalOn(elSet, () => document.getElementById('setClose').click())
+}
 
 let setTaps = 0
 if (DEV_TOOLS) {
@@ -7910,8 +7915,12 @@ async function sbInit() {
     const m = await import('https://esm.sh/@supabase/supabase-js@2')
     SB.cli = m.createClient(SB_URL, SB_KEY, {
 
-      auth: { persistSession: true, autoRefreshToken: true, storageKey: 'n2sl.shooter.auth' },
+      auth: {
+        persistSession: true, autoRefreshToken: true, storageKey: 'n2sl.shooter.auth',
+        flowType: 'pkce', detectSessionInUrl: !sbNative(),
+      },
     })
+    sbDeepLink()
     const cur = await SB.cli.auth.getSession()
     if (!cur.data.session) {
       const r = await SB.cli.auth.signInAnonymously()
@@ -7924,6 +7933,56 @@ async function sbInit() {
     SB.ready = false
   }
   return SB.ready
+}
+
+function sbNative() {
+  const C = window.Capacitor
+  return !!(C && typeof C.isNativePlatform === 'function' && C.isNativePlatform())
+}
+
+function sbSay(e) {
+  const m = ((e && e.message) || String(e || '')).toLowerCase()
+  if (m.indexOf('code verifier') >= 0 || m.indexOf('flow state') >= 0)
+    return '로그인 창을 너무 오래 열어 두었거나 도중에 닫혔습니다. 다시 눌러 주세요.'
+  if (m.indexOf('identity is already linked') >= 0 || m.indexOf('already been registered') >= 0)
+    return '그 구글 계정은 이미 다른 기록에 붙어 있습니다.'
+  if (m.indexOf('manual linking') >= 0 || m.indexOf('not enabled') >= 0)
+    return '지금은 계정 잇기가 꺼져 있습니다. 잠시 뒤에 다시 해 주세요.'
+  if (m.indexOf('network') >= 0 || m.indexOf('fetch') >= 0 || m.indexOf('failed to fetch') >= 0)
+    return '서버에 닿지 않았습니다. 연결을 확인하고 다시 해 주세요.'
+  if (m.indexOf('access_denied') >= 0 || m.indexOf('cancel') >= 0)
+    return '로그인을 취소했습니다.'
+
+  const raw = ((e && e.message) || String(e || '')).split(/[.\n]/)[0]
+  return '로그인을 마치지 못했습니다.\n' + raw
+}
+
+const SB_DEEPLINK = 'com.ninetosixlab.shooter://login'
+
+let sbDeepLinkOn = false
+function sbDeepLink() {
+  if (sbDeepLinkOn || !sbNative()) return
+  const P = (window.Capacitor && window.Capacitor.Plugins) || {}
+  if (!P.App || !P.App.addListener) return
+  sbDeepLinkOn = true
+  P.App.addListener('appUrlOpen', async (ev) => {
+    const url = (ev && ev.url) || ''
+    if (url.indexOf('code=') < 0 && url.indexOf('error') < 0) return
+    try { if (P.Browser && P.Browser.close) await P.Browser.close() } catch (e) {}
+    try {
+      const q = new URLSearchParams(url.split('?')[1] || '')
+      const code = q.get('code')
+      if (!code) throw new Error(q.get('error_description') || q.get('error') || '코드가 오지 않았습니다')
+      const r = await SB.cli.auth.exchangeCodeForSession(code)
+      if (r.error) throw r.error
+      sbMarkUser(r.data && r.data.user)
+      sbPaintAccount()
+      say(sbAccountLabel() + ' 로 로그인했습니다.\n이제 기기를 바꿔도 기록이 따라옵니다.', '로그인')
+    } catch (e) {
+      SB.err = (e && e.message) || String(e)
+      say(sbSay(e), '로그인')
+    }
+  })
 }
 
 function sbMarkUser(u) {
@@ -7941,18 +8000,29 @@ function sbAccountLabel() {
 
 async function sbSignInGoogle() {
   if (!(await sbInit())) { say('지금은 서버에 닿지 않습니다. 잠시 뒤에 다시 해 주세요.', '로그인'); return }
-  const back = location.href.split('#')[0]
+  const native = sbNative()
+  const back = native ? SB_DEEPLINK : location.href.split('#')[0]
+  const opt = { redirectTo: back, skipBrowserRedirect: native }
   try {
+    let url = ''
     if (SB.anon) {
-      const r = await SB.cli.auth.linkIdentity({ provider: 'google', options: { redirectTo: back } })
-      if (!r.error) return
+      const r = await SB.cli.auth.linkIdentity({ provider: 'google', options: opt })
+      if (!r.error) { url = (r.data && r.data.url) || '' ; if (!native) return }
 
     }
-    const r2 = await SB.cli.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: back } })
-    if (r2.error) throw r2.error
+    if (!url) {
+      const r2 = await SB.cli.auth.signInWithOAuth({ provider: 'google', options: opt })
+      if (r2.error) throw r2.error
+      url = (r2.data && r2.data.url) || ''
+      if (!native) return
+    }
+    if (!url) throw new Error('로그인 주소를 받지 못했습니다')
+    const P = (window.Capacitor && window.Capacitor.Plugins) || {}
+    if (P.Browser && P.Browser.open) await P.Browser.open({ url, presentationStyle: 'popover' })
+    else location.href = url
   } catch (e) {
     SB.err = (e && e.message) || String(e)
-    say('구글 로그인을 열지 못했습니다.\n' + SB.err, '로그인')
+    say(sbSay(e), '로그인')
   }
 }
 
