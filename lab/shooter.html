@@ -3635,7 +3635,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.1'
 
-const BUILD_AT = '09-20 10:10'
+const BUILD_AT = '09-20 19:49'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -9075,6 +9075,7 @@ function newState() {
     ult: 0, ultT: 0, ultKind: null, escorts: [], shards: [], sweeps: [],
     adUsed: { revive: 0 },
     squad, lives: LIVES, score: 0, kills: 0, ultUsed: 0, hitCount: 0, clearWait: 0,
+    fin: null, finLeft: 0,
     bullets: [], ebullets: [], enemies: [], items: [], parts: [], stars: [], elfx: [],
     grounds: [], slabs: [], bands: [], zones: [], shadows: [], beams: [], arcs: [], blasts: [], wrecks: [],
 
@@ -10212,7 +10213,7 @@ function buildWaves(ch, sub) {
 
   const ramp = Math.min(1, dens / 12)
 
-  const early = ch.id === 1 ? 0.59 : 1
+  const gapMul = 1 / crowdAtG(gStage(ch.id, sub))
 
   const spawnMul = spawnAtG(gStage(ch.id, sub))
 
@@ -10236,13 +10237,13 @@ function buildWaves(ch, sub) {
       }
 
       const gm = (ph.gap < 1 ? ph.gap + (1 - ph.gap) * (1 - ramp) : ph.gap) * solo * 0.667
-      t += (base * gm + r() * 1.1 * gm) * early / spawnMul
+      t += (base * gm + r() * 1.1 * gm) * gapMul / spawnMul
     }
     acc = end
     if (t >= len) break
   }
 
-  const cap = Math.round(len * 0.82 / early * spawnMul)
+  const cap = Math.round(len * 0.82 / gapMul * spawnMul)
   if (out.length > cap) {
     const keep = []
     const step = out.length / cap
@@ -10420,8 +10421,8 @@ const BOSS_HP_MUL = BOSS_HP_UP * BOSS_HP_ADD * ENEMY_HP_DOWN * HP_ALL_UP
 function gStage(chId, sub) { return ((chId | 0) - 1) * SUBS + (sub | 0) }
 const G_MAX = 15 * SUBS
 
-const CURVE_RATE = 1.027
-const CURVE_RATE_LATE = 1.022
+const CURVE_RATE = 1.03
+const CURVE_RATE_LATE = 1.024
 const CURVE_KNEE_CH = 5
 const CURVE_KNEE = (CURVE_KNEE_CH - 1) * SUBS
 
@@ -10430,15 +10431,15 @@ function curveMul(g, g0) {
   const b = Math.max(0, g - CURVE_KNEE)
   return Math.pow(CURVE_RATE, a) * Math.pow(CURVE_RATE_LATE, b)
 }
-const CURVE_HP0 = 0.73, CURVE_HP1 = 45.1494
+const CURVE_HP0 = 0.73, CURVE_HP1 = 67.0296
 
 function hpAtG(g) { return CURVE_HP0 * curveMul(g, 1) }
 
-const CURVE_BOSS0 = 3060, CURVE_BOSS1 = 165653
+const CURVE_BOSS0 = 3060, CURVE_BOSS1 = 242370
 
 function bossAtG(g) { return Math.round(CURVE_BOSS0 * curveMul(g, 6)) }
 
-const SP_END = 1.3, FIRE_END = 1.5, SPAWN_END = 1.3
+const SP_END = 1.3, FIRE_END = 1.5, SPAWN_END = 1.43
 const CURVE_SP0 = 1.14
 const CURVE_SP_STEP = Math.pow(SP_END, 1 / (G_MAX - 1))
 function spAtG(g) { return CURVE_SP0 * Math.pow(CURVE_SP_STEP, g - 1) }
@@ -10450,6 +10451,12 @@ function fireAtG(g) { return CURVE_FIRE0 * Math.pow(CURVE_FIRE_STEP, g - 1) }
 const CURVE_SPAWN0 = 1.0
 const CURVE_SPAWN_STEP = Math.pow(SPAWN_END, 1 / (G_MAX - 1))
 function spawnAtG(g) { return CURVE_SPAWN0 * Math.pow(CURVE_SPAWN_STEP, g - 1) }
+
+const CROWD0 = 1.5, CROWD1 = 2.0
+const CROWD_STEP = Math.pow(CROWD1 / CROWD0, 1 / (G_MAX - 1))
+function crowdAtG(g) { return CROWD0 * Math.pow(CROWD_STEP, g - 1) }
+
+function spawnTotalAtG(g) { return crowdAtG(g) * spawnAtG(g) }
 const CRAZY_HP = 2
 
 function finalRushBoss(stage) {
@@ -11754,6 +11761,9 @@ function bossArea(bs, dmg) {
 
 function banner(t) { state.banner = t; state.bannerT = 1.6 }
 
+const FIN_COUNT = 10
+const FIN_FLY = 1.5
+
 function drawLuck() {
   const s = state
   if (!(s.luckT > 0)) return
@@ -12058,6 +12068,19 @@ function showAd(title, onDone) {
   missBump('ad')
 
   if (passActive()) { sfx('pick'); onDone(); return }
+  const C = window.Capacitor
+  const P = C && C.Plugins && C.Plugins.Ads
+  if (!P) { adPanel(title, onDone); return }
+  P.show().then(r => {
+    if (!r || !r.shown) { adPanel(title, onDone); return }
+
+    if (r.rewarded) { onDone(); return }
+    sfx('pick')
+    say('광고를 끝까지 보지 않아 보상을 드리지 못했습니다.', title)
+  }).catch(() => adPanel(title, onDone))
+}
+
+function adPanel(title, onDone) {
   const btn = document.getElementById('advSkip')
   const quit = document.getElementById('advClose')
   document.getElementById('advTitle').textContent = title
@@ -12656,8 +12679,10 @@ function update(dt) {
   if (keys.ArrowUp) pl.y -= kv
   if (keys.ArrowDown) pl.y += kv
 
-  pl.x = Math.max(18, Math.min(W - 18, pl.x))
-  pl.y = Math.max(70, Math.min(H - 34, pl.y))
+  if (!s.fin) {
+    pl.x = Math.max(18, Math.min(W - 18, pl.x))
+    pl.y = Math.max(70, Math.min(H - 34, pl.y))
+  }
 
   if (pl.inv > 0) { pl.inv -= dt; if (pl.inv <= 0) sfx('invEnd') }
 
@@ -12676,17 +12701,32 @@ function update(dt) {
   const wv = s.stage.waves
   while (s.waveIdx < wv.length && s.t >= wv[s.waveIdx].at) { wv[s.waveIdx].f(); s.waveIdx++ }
 
-  if (!s.cleared && !s.boss && s.waveIdx >= wv.length && s.enemies.length === 0) {
-    s.clearWait = (s.clearWait || 0) + dt
-    if (s.clearWait > 1.2) {
+  if (!s.cleared && !s.boss) {
+    if (s.fin) {
 
-      if (s.zone) { nextZone(); return }
-      s.cleared = true
-      banner('작전 완료')
-      setTimeout(() => { if (s.running) end(true) }, 800)
+      s.fin.t += dt
+      s.player.inv = 9
+
+      const fk = s.fin.t / FIN_FLY
+      s.player.y -= (60 + 3000 * fk * fk) * dt
+      if (s.fin.t >= FIN_FLY || s.player.y < -120) {
+        s.cleared = true
+        if (s.running) end(true)
+      }
+    } else if (s.waveIdx >= wv.length) {
+      const last = wv.length ? wv[wv.length - 1].at : 0
+      s.finLeft = Math.max(0, last + FIN_COUNT - s.t)
+
+      s.clearWait = s.enemies.length === 0 ? (s.clearWait || 0) + dt : 0
+      if (s.finLeft <= 0 || s.clearWait > 1.2) {
+
+        if (s.zone) { s.finLeft = 0; nextZone(); return }
+        s.fin = { t: 0 }
+        s.finLeft = 0
+        banner('작전 완료')
+        sfx('absorb')
+      }
     }
-  } else {
-    s.clearWait = 0
   }
 
   for (const b of s.bullets) {
@@ -16491,11 +16531,26 @@ function draw() {
     }
   }
 
-  if (!(s.player.inv > 0 && Math.floor(s.player.inv * 12) % 2 === 0)) {
+  if (s.fin || !(s.player.inv > 0 && Math.floor(s.player.inv * 12) % 2 === 0)) {
     s.squad.forEach((u, i) => {
       if (!u.plane) return
       const p = slotPos(i); drawShip(p.x, p.y, u, i === 1)
     })
+  }
+
+  if (s.fin) {
+    const open = Math.min(1, s.fin.t / 0.26)
+    const away = Math.min(1, s.fin.t / FIN_FLY)
+    const p = slotPos(1)
+    const rr = 24 + 26 * open
+    g.save()
+    g.globalAlpha = 0.55 * open * (1 - away * 0.55)
+    g.fillStyle = '#7fd4ff'
+    g.beginPath(); g.arc(p.x, p.y, rr, 0, Math.PI * 2); g.fill()
+    g.globalAlpha = 0.85 * open * (1 - away * 0.5)
+    g.strokeStyle = '#cdefff'; g.lineWidth = 2.5
+    g.beginPath(); g.arc(p.x, p.y, rr, 0, Math.PI * 2); g.stroke()
+    g.restore()
   }
 
   for (const e of s.enemies) if (!e.dead) drawStatus(e, e.r)
@@ -16631,6 +16686,17 @@ function draw() {
         g.fillText('탭', 0, 11)
       }
     }
+    g.restore()
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic'
+  }
+
+  if (s.finLeft > 0 && !s.fin) {
+    g.save()
+    g.globalAlpha = 0.32
+    g.fillStyle = '#fff'
+    g.font = 'bold 15px system-ui'
+    g.textAlign = 'center'; g.textBaseline = 'middle'
+    g.fillText('이탈 ' + Math.ceil(s.finLeft), W / 2, H * 0.17)
     g.restore()
     g.textAlign = 'left'; g.textBaseline = 'alphabetic'
   }
@@ -18403,7 +18469,7 @@ function showChapter(ci) {
 
     r2('적 체력', '×' + hpAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + hpAtG(gStage(ch.id, SUBS)).toFixed(2)) +
     r2('적 속도', '×' + spAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + spAtG(gStage(ch.id, SUBS)).toFixed(2)) +
-    r2('적 출현량', '×' + spawnAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + spawnAtG(gStage(ch.id, SUBS)).toFixed(2)) +
+    r2('적 출현량', '×' + spawnTotalAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + spawnTotalAtG(gStage(ch.id, SUBS)).toFixed(2)) +
     r2('보스', bossAtG(gStage(ch.id, 6)).toLocaleString('ko-KR') + ' · ' +
                bossAtG(gStage(ch.id, SUBS)).toLocaleString('ko-KR')) +
     r2('단계', SUBS + '개')
