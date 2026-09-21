@@ -3633,9 +3633,9 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.7'
+const BUILD_TAG = '0.9.10'
 
-const BUILD_AT = '09-20 21:53'
+const BUILD_AT = '09-21 23:56'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -3722,14 +3722,14 @@ const GACHA = {
   plane: {
     name: '기체 뽑기', cost: 1,
 
-    rates: [['legend', 2], ['high', 7], ['rare', 22], ['common', 69]],
+    rates: [['legend', 0.4], ['high', 3.5], ['rare', 23.2], ['common', 72.9]],
     amount: { legend: [4, 8], high: [3, 6], rare: [6, 11], common: [10, 18] },
     jackpot: 0.01,
   },
   pilot: {
     name: '파일럿 뽑기', cost: 1,
 
-    rates: [['legend', 2], ['high', 7], ['mid', 22], ['normal', 69]],
+    rates: [['legend', 0.4], ['high', 3.5], ['mid', 23.2], ['normal', 72.9]],
     amount: { legend: [4, 8], high: [3, 6], mid: [6, 11], normal: [10, 18] },
     jackpot: 0.005,
   },
@@ -5163,6 +5163,8 @@ function grantItems(items) {
 let mailTab = 'box'
 function openMail(tab) {
   mailSync()
+
+  mailPullServer().then((n) => { if (n) openMail() })
   if (tab) mailTab = tab
   const panel = document.getElementById('detail')
   const body = document.getElementById('detailBody')
@@ -5212,14 +5214,23 @@ function openMail(tab) {
   document.getElementById('dClose').onclick = close
   body.querySelectorAll('[data-mt]').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); sfx('uiTab', 1); openMail(b.dataset.mt) } })
   const mAll = document.getElementById('mailAll')
-  if (mAll) mAll.onclick = (e) => {
+  if (mAll) mAll.onclick = async (e) => {
     e.stopPropagation()
 
     const left = mailList().filter((m) => m.kind !== 'notice' && !m.claimed)
     if (!left.length) return
     const all = {}
+    let done = 0
     for (const m of left) {
+
+      if (m.sid) {
+        const got = await mailClaimServer(m)
+        if (got === undefined) continue
+        if (got === null) { m.claimed = true; continue }
+        m.items = got
+      }
       m.claimed = true
+      done++
       for (const k in (m.items || {})) {
         const v = m.items[k]
         if (typeof v === 'number') all[k] = (all[k] || 0) + v
@@ -5228,17 +5239,30 @@ function openMail(tab) {
       }
       grantItems(m.items)
     }
-    save(); sfx('got'); haptic('ult')
-    openMail()
+    save(); openMail()
+    if (!done) { say('지금은 서버에 닿지 않습니다. 잠시 뒤에 다시 해 주세요.', '우편함'); return }
+    sfx('got'); haptic('ult')
     const extra = all._list || []; delete all._list
     const txt = [Object.keys(all).length ? itemText(all) : ''].concat(extra).filter(Boolean).join(', ')
-    say(eul(txt) + ' 받았습니다.', '우편함 · ' + left.length + '개')
+    say(eul(txt) + ' 받았습니다.', '우편함 · ' + done + '개')
   }
   body.querySelectorAll('[data-claim]').forEach((b) => {
-    b.onclick = (e) => {
+    b.onclick = async (e) => {
       e.stopPropagation()
       const m = mailList().find((x) => x.id === b.dataset.claim)
       if (!m || m.claimed) return
+
+      if (m.sid) {
+        b.disabled = true
+        const got = await mailClaimServer(m)
+        b.disabled = false
+        if (got === undefined) { say('지금은 서버에 닿지 않습니다. 잠시 뒤에 다시 눌러 주세요.', '우편함'); return }
+        if (got === null) {
+          m.claimed = true; save(); openMail()
+          say('이미 받았거나 회수된 우편입니다.', '우편함'); return
+        }
+        m.items = got
+      }
       m.claimed = true
       grantItems(m.items)
       sfx('got')
@@ -6737,6 +6761,8 @@ function paintHangarStatus() {
 function renderSquad() {
   const $ = id => document.getElementById(id)
   mailSync(); passDaily(); paintMailBadge()
+
+  mailPullServer()
   const main = planeById(prog.squad[MAIN_SLOT])
   const pl = pilotNow(), pt = prog.pilot
   const mb = $('squadModes')
@@ -7549,6 +7575,8 @@ function paintRates() {
   const body = document.getElementById('gBody')
 
   const pct = (v) => (Math.round(v * 1000) / 1000) + '%'
+
+  const pctFine = (v) => (Math.round(v * 100000) / 100000) + '%'
   const row = (k, v) => `<div class="rate"><span>${k}</span><span class="v">${v}</span></div>`
   const lab = (t) => `<div class="lab" style="margin-top:0">${t}</div>`
 
@@ -7604,6 +7632,33 @@ function paintRates() {
       `지금 남은 횟수는 뽑기 화면 위에 적혀 있습니다.</div>`
   }
 
+  const pageItems = (kind) => {
+    const g = GACHA[kind]
+    let h = lab((kind === 'plane' ? '기체' : '파일럿') + ' 상자 · 등급 안의 세부 목록과 확률')
+    for (const [t, w] of g.rates) {
+      const list = kind === 'plane'
+        ? PLANES.filter((p) => p.tier === t)
+        : PILOTS.filter((p) => p.grade === t)
+      if (!list.length) continue
+      const each = w / list.length
+      h += lab(nameOf(kind, t) + ' ' + pct(w) + ' · ' + list.length + '종')
+      h += list.map((p) => row(p.name, pctFine(each))).join('')
+      h += `<div class="empty"><b>${nameOf(kind, t)} 안에서는 확률이 모두 같습니다.</b>` +
+           ` 등급 확률 ${pct(w)} 를 ${list.length}종으로 똑같이 나눈 값입니다` +
+           ` (${pct(w)} ÷ ${list.length} = ${pctFine(each)}).` +
+           ` 소수점 아래는 반올림해 적었으므로 낱개를 더하면 ${pct(w)} 와 조금 다를 수 있습니다.</div>`
+    }
+    h += `<div class="empty">위 확률은 <b>이 상자에서 한 번 뽑을 때</b> 그 항목이 나올 값입니다.` +
+         (kind === 'plane'
+           ? ` 다만 아직 열지 않은 기체가 있으면 그 등급 안에서 <b>조각이 가장 많이 모인 미보유 기체</b>에`
+             + ` 먼저 쌓입니다(같은 등급 안에서 순서를 정하는 규칙일 뿐, 등급이 나올 확률은 위 표 그대로입니다).`
+             + ` 그 등급을 다 열었으면 위 확률대로 무작위입니다.`
+           : ` 파일럿 조각은 <b>등급별로 함께 쌓이고</b>, 다 모이면 그 등급에서 아직 오지 않은 사람 중`
+             + ` 무작위로 한 명이 합류합니다 - 그때의 확률도 위와 같이 등급 안에서 모두 같습니다.`) +
+         `</div>`
+    return h
+  }
+
   const pageRule =
     lab('무엇이 뽑히는가') +
     row('기체 조각', '그 등급 중 <b>조각이 가장 많이 모인</b> 미보유 기체') +
@@ -7621,8 +7676,8 @@ function paintRates() {
 
   body.classList.add('ratesdoc')
   hpPlain(body, [
-    pageRate('plane'), pageAmt('plane'), pagePity('plane'),
-    pageRate('pilot'), pageAmt('pilot'), pagePity('pilot'),
+    pageRate('plane'), pageItems('plane'), pageAmt('plane'), pagePity('plane'),
+    pageRate('pilot'), pageItems('pilot'), pageAmt('pilot'), pagePity('pilot'),
     pageRule,
   ].join('<div class="rgap"></div>'))
 }
@@ -8096,6 +8151,47 @@ async function sbSignInGoogle() {
   } catch (e) {
     SB.err = (e && e.message) || String(e)
     say(sbSay(e), '로그인')
+  }
+}
+
+const SMAIL = { at: 0, busy: false }
+const SMAIL_GAP = 60000
+
+async function mailPullServer(force) {
+  if (SMAIL.busy) return 0
+  const now = Date.now()
+  if (!force && now - SMAIL.at < SMAIL_GAP) return 0
+  if (!SB.ready && !(await sbInit())) return 0
+  SMAIL.busy = true
+  let added = 0
+  try {
+    SMAIL.at = Date.now()
+    const r = await SB.cli.rpc('sh_mail_pull')
+    if (r.error) throw r.error
+    const list = mailList()
+    for (const row of (r.data || [])) {
+      if (list.some((m) => m.sid === row.id)) continue
+      list.push({ id: 's-' + row.id, sid: row.id, at: String(row.created_at || '').slice(0, 10),
+                  title: row.title, body: row.body || '', items: row.items || null,
+                  read: false, claimed: false })
+      added++
+    }
+    if (added) { save(); sfx('uiMail'); paintMailBadge() }
+  } catch (e) { SB.err = (e && e.message) || String(e) }
+  SMAIL.busy = false
+  return added
+}
+
+async function mailClaimServer(m) {
+  if (!m || !m.sid) return null
+  if (!SB.ready && !(await sbInit())) return undefined
+  try {
+    const r = await SB.cli.rpc('sh_mail_claim', { p_id: m.sid })
+    if (r.error) throw r.error
+    return r.data || null
+  } catch (e) {
+    SB.err = (e && e.message) || String(e)
+    return undefined
   }
 }
 
@@ -10321,6 +10417,8 @@ function curStage() {
 
     fireMul: fireAtG(gStage(ch.id, sub)),
 
+    dmgMul: dmgAtG(gStage(ch.id, sub)),
+
     ...(bossRun >= 0 ? (() => {
       const rc = CHAPTERS[rushCh(bossRun, rushDiff()) - 1] || CHAPTERS[0]
       return { hpMul: rc.hpMul, spMul: rc.spMul, fireMul: rc.fireMul || 1 }
@@ -10424,7 +10522,7 @@ function gStage(chId, sub) { return ((chId | 0) - 1) * SUBS + (sub | 0) }
 const G_MAX = 15 * SUBS
 
 const CURVE_RATE = 1.03
-const CURVE_RATE_LATE = 1.024
+const CURVE_RATE_LATE = 1.0267
 const CURVE_KNEE_CH = 5
 const CURVE_KNEE = (CURVE_KNEE_CH - 1) * SUBS
 
@@ -10433,15 +10531,22 @@ function curveMul(g, g0) {
   const b = Math.max(0, g - CURVE_KNEE)
   return Math.pow(CURVE_RATE, a) * Math.pow(CURVE_RATE_LATE, b)
 }
-const CURVE_HP0 = 0.73, CURVE_HP1 = 67.0296
+const CURVE_HP0 = 0.73, CURVE_HP1 = 94.9000
 
 function hpAtG(g) { return CURVE_HP0 * curveMul(g, 1) }
 
-const CURVE_BOSS0 = 3060, CURVE_BOSS1 = 242370
+const CURVE_BOSS0 = 3060, CURVE_BOSS1 = 306000
 
-function bossAtG(g) { return Math.round(CURVE_BOSS0 * curveMul(g, 6)) }
+const CURVE_BOSS_RATE = CURVE_RATE
+const CURVE_BOSS_RATE_LATE = 1.02581
+function bossCurveMul(g) {
+  const a = Math.min(g, CURVE_KNEE) - 6
+  const b = Math.max(0, g - CURVE_KNEE)
+  return Math.pow(CURVE_BOSS_RATE, a) * Math.pow(CURVE_BOSS_RATE_LATE, b)
+}
+function bossAtG(g) { return Math.round(CURVE_BOSS0 * bossCurveMul(g)) }
 
-const SP_END = 1.3, FIRE_END = 1.5, SPAWN_END = 1.43
+const SP_END = 1.5, FIRE_END = 1.5, SPAWN_END = 1.3333
 const CURVE_SP0 = 1.14
 const CURVE_SP_STEP = Math.pow(SP_END, 1 / (G_MAX - 1))
 function spAtG(g) { return CURVE_SP0 * Math.pow(CURVE_SP_STEP, g - 1) }
@@ -10454,11 +10559,15 @@ const CURVE_SPAWN0 = 1.0
 const CURVE_SPAWN_STEP = Math.pow(SPAWN_END, 1 / (G_MAX - 1))
 function spawnAtG(g) { return CURVE_SPAWN0 * Math.pow(CURVE_SPAWN_STEP, g - 1) }
 
-const CROWD0 = 1.5, CROWD1 = 2.0
+const CROWD0 = 1.5, CROWD1 = 2.25
 const CROWD_STEP = Math.pow(CROWD1 / CROWD0, 1 / (G_MAX - 1))
 function crowdAtG(g) { return CROWD0 * Math.pow(CROWD_STEP, g - 1) }
 
 function spawnTotalAtG(g) { return crowdAtG(g) * spawnAtG(g) }
+
+const DMG_END = 2.0
+const CURVE_DMG_STEP = Math.pow(DMG_END, 1 / (G_MAX - 1))
+function dmgAtG(g) { return Math.pow(CURVE_DMG_STEP, g - 1) }
 const CRAZY_HP = 2
 
 function finalRushBoss(stage) {
@@ -12611,6 +12720,10 @@ function levelUp() {
 
 const HIT_INV = 0.55
 
+function stageDmgMul() {
+  const st = state && state.stage
+  return (st && st.dmgMul) || 1
+}
 function hitPlayer(dmg) {
   const pl = state.player
   if (pl.inv > 0) return
@@ -12624,7 +12737,7 @@ function hitPlayer(dmg) {
 
   pl.inv = HIT_INV + perk('inv')
 
-  pl.hp -= (dmg || DMG.bullet) * modeDmg() * DMG_TAKEN
+  pl.hp -= (dmg || DMG.bullet) * modeDmg() * DMG_TAKEN * stageDmgMul()
   boom(pl.x, pl.y, dmg >= 20 ? 22 : 10, '#7fd6ff')
 
   const k = Math.min(1, (dmg || 8) / 26)
@@ -18461,6 +18574,7 @@ function showChapter(ci) {
     r2('적 체력', '×' + hpAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + hpAtG(gStage(ch.id, SUBS)).toFixed(2)) +
     r2('적 속도', '×' + spAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + spAtG(gStage(ch.id, SUBS)).toFixed(2)) +
     r2('적 출현량', '×' + spawnTotalAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + spawnTotalAtG(gStage(ch.id, SUBS)).toFixed(2)) +
+    r2('적 공격력', '×' + dmgAtG(gStage(ch.id, 1)).toFixed(2) + ' → ×' + dmgAtG(gStage(ch.id, SUBS)).toFixed(2)) +
     r2('보스', bossAtG(gStage(ch.id, 6)).toLocaleString('ko-KR') + ' · ' +
                bossAtG(gStage(ch.id, SUBS)).toLocaleString('ko-KR')) +
     r2('단계', SUBS + '개')
