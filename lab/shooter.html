@@ -1,6 +1,12 @@
 <!doctype html>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  maximum-scale=1 · user-scalable=no 는 **확대·축소를 막는 것**이다
+  (2026-09-24 대표 지적 — 앱인토스판에서 화면 일부가 확대됐다).
+  게임은 화면을 꽉 채워 쓰므로 사람이 줌을 할 이유가 없고, 하면
+  레이아웃이 어긋난 채 왼쪽 위로 몰린다.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>오늘도 출격</title>
 <!--
   제목 글꼴 — 따로 받지 않는다.
@@ -94,8 +100,25 @@
     word-break: keep-all;
     -webkit-font-smoothing: antialiased;
     overflow: hidden; overscroll-behavior: none;
+    /*
+     * 핀치 줌을 막는다 (2026-09-24). **`manipulation` 은 안 된다** —
+     * 명세상 `pan-x pan-y pinch-zoom` 과 같아서 핀치를 허용하고
+     * 더블탭 확대만 막는다. `pinch-zoom` 을 빼야 핀치가 막힌다.
+     *
+     * 캔버스(`none`)와 `.chpage`(`pan-y`)는 자식이라 그대로 남는다 —
+     * 격납고 세로 스크롤은 계속 된다.
+     */
+    touch-action: pan-x pan-y;
   }
   #wrap { position: fixed; inset: 0; display: grid; place-items: center; }
+  /*
+   * 앱인토스: 판을 상태바 **아래**에 붙인다 (2026-09-24).
+   *
+   * X 버튼 몫(56)은 빼지 않는다 - 그것까지 비우면 위가 휑하고,
+   * 09-24 오전처럼 HUD 만 내리면 보스 위에 얹힌다. X 는 판 위에
+   * 겹쳐 두고 그 자리를 쓰는 HUD 만 비켜 그린다.
+   */
+  body.aitTop #wrap { align-items: start; padding-top: var(--aitTop, 0px); }
   canvas {
     display: block; touch-action: none; background: #05060a;
     box-shadow: 0 0 0 1px var(--line), 0 24px 80px rgba(0,0,0,.7); border-radius: 12px;
@@ -2222,6 +2245,103 @@
 .hg-wt{margin-left:5px;font-size:10px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
 :root{--hg-nav:82px}
 .screen{padding-bottom:calc(var(--hg-nav) + 12px + env(safe-area-inset-bottom,0px))}
+/*
+ * 앱인토스 상단 안전영역 (2026-09-22, 2026-09-23 고침).
+ *
+ * 토스 앱 상태바가 **미니앱 화면 위에 겹쳐** 그려지고, 그 아래 오른쪽에
+ * 프레임워크가 X 버튼을 얹는다. 그 자리를 비우지 않으면 시계·배터리가
+ * 자원 바 글자와 포개지고, X 와 게임 단추가 겹치면 검수에서 반려된다.
+ * 원스토어·웹은 그런 일이 없으므로 body.aitTop 이 붙을 때만 건다.
+ *
+ *   --aitPad = 상태바 높이(브리지가 SafeAreaInsets 로 받는다) + X 자리 56px
+ *
+ * X 는 top+10 에서 시작하고 버튼이 40px 남짓이라 56 이면 그 아래다.
+ * env(safe-area-inset-top) 은 앱인토스에서 0 이라 못 쓴다.
+ *
+ * ## 비운 만큼 화면이 짧아진다 - 그것을 알려 줘야 한다 (2026-09-23)
+ *
+ * 처음에는 padding-top 하나만 걸었다. 자리는 비었는데 **짧아졌다는 것을
+ * 아무도 몰랐다.** 격납고 속은 여전히 화면 전체가 제 것인 줄 알고 자리를
+ * 잡았고, @media(max-height:700px) 도 innerHeight 만 보므로 844 짜리
+ * 폰에서는 안 켜졌다. 실제로 쓸 수 있는 것은 729 인데 기체 칸이 352px 를
+ * 차지해 **윙맨 세 칸이 스크롤 밖으로 밀려 나갔다** - 「메뉴가 겹친다」고
+ * 본 것이 이것이다.
+ *
+ * 그래서 두 단계로 줄인다. aitTop 이면 한 번(700px 폰과 같은 값), 남는
+ * 높이가 660 아래면 한 번 더. **aitShort 는 JS 가 토글한다** - 미디어쿼리는
+ * 시스템에 내준 몫을 뺀 높이를 알 수 없다.
+ */
+body.aitTop .screen{padding-top:var(--aitPad, 56px) !important}
+body.aitTop #scSquad.v3 .hg-res{padding-top:6px;padding-bottom:6px}
+body.aitTop #scSquad.v3 .hg-top{padding-top:5px;gap:6px}
+body.aitTop #scSquad.v3 .hg-pilot{height:54px}
+body.aitTop #scSquad.v3 .hg-pilot>img{width:46px;height:46px}
+body.aitTop #scSquad.v3 .hg-icon{width:36px;height:36px}
+body.aitTop #scSquad.v3 .hg-actions{gap:6px}
+/* 1 단계 - @media(max-height:700px) 가 쓰는 값과 같다 */
+body.aitTop .hg-form{min-height:300px}
+body.aitTop #scSquad.v3 .hg-main{top:26px;height:50%}
+body.aitTop #scSquad.v3 .hg-wing{height:74px}
+body.aitTop #scSquad.v3 .hg-wing img{height:38px}
+/* 2 단계 - 남는 높이가 660 아래. 좌우 메뉴 칸과 아래 띠까지 같이 줄인다 */
+body.aitShort .hg-form{min-height:224px}
+body.aitShort .hg-body3{padding:6px 6px 0;gap:4px}
+body.aitShort .hg-ico{height:52px;font-size:9px}
+body.aitShort .hg-ico .ie{font-size:19px}
+body.aitShort #scSquad.v3 .hg-main{top:16px;height:42%}
+body.aitShort #scSquad.v3 .hg-wing{height:54px}
+body.aitShort #scSquad.v3 .hg-wing img{height:26px}
+body.aitShort .hg-wing-title{font-size:9px;margin-bottom:4px}
+body.aitShort .hg-plane-name strong{font-size:20px}
+body.aitShort .hg-top{min-height:45px}
+body.aitShort .hg-res{padding-block:8px}
+/*
+ * 아래 띠. 마디마다 3px 씩 - 한 군데를 크게 줄이면 그 요소만 어색해진다.
+ * **v3 규칙이 더 구체적이라 클래스만으로는 안 먹는다** - 여백은 특이도를
+ * #scSquad.v3 까지 올려 둔다.
+ */
+body.aitShort #scSquad.v3 .hg-footer{padding-top:5px;padding-bottom:5px}
+body.aitShort #scSquad.v3 .hg-destination{margin-bottom:5px}
+body.aitShort #scSquad.v3 .hg-modes{margin-bottom:5px}
+body.aitShort #scSquad #launch{min-height:46px;font-size:19px}
+body.aitShort .hg-hint{margin-top:4px;line-height:1.4}
+/*
+ * 전투 화면 (2026-09-23 도입 → **2026-09-24 되돌림**).
+ *
+ * 09-23 에는 판 **전체**를 `--aitPad` 만큼 내렸다. 「HUD 만 내리면 적이
+ * 내려오는 위쪽이 가려져 불리해진다」는 판단이었다. **그 판단이 과했다.**
+ *
+ * 대표 지시(09-24): 「게임 화면에서 상단이 너무 비어 보인다. 게임 필수
+ * 내용은 가리지 않는 선에서 전체 화면으로 만들 수 없나」
+ *
+ * X 버튼은 우측 상단 모서리 90x50 남짓이고 적이 그 자리를 지나는 것은
+ * 한순간이다. 다른 토스 게임들은 전부 X 를 게임 화면 위에 겹쳐 두고
+ * 화면을 꽉 채운다. **캔버스는 전체 화면을 쓰고 HUD 만 내린다**
+ * (fit() 의 HUD_OFF).
+ *
+ * `.screen` 의 padding-top 은 그대로다 — 격납고·상점은 글자와 단추가
+ * X 와 겹치면 안 되는 화면이다.
+ */
+/*
+ * 타이틀 (2026-09-23).
+ *
+ * #title 은 .screen 이 아니라 위 규칙에서 빠졌다. 재 보니 회사 로고가
+ * y 25~49 로 **상태바 안**이었고, 엠블럼은 y 19~95 에 우측이라 **X 버튼
+ * 자리와 겹쳤다** - 게임 안을 다 고쳐도 첫 화면이 그러면 거기서 반려된다.
+ *
+ * 배경(.tbg)은 그대로 둔다 - 화면을 꽉 채워야 하고, 그 위에 시계가
+ * 얹히는 것은 문제가 아니다. 글자와 단추만 내린다.
+ */
+body.aitTop #title .tsub{top:calc(var(--aitPad, 0px) + 4px)}
+body.aitTop #title .tem{top:calc(var(--aitPad, 0px) + 2px)}
+body.aitTop #title .tin{margin-top:calc(var(--aitPad, 0px) + 86px)}
+/*
+ * 덮개. inset:0 에 place-items:center 라 내용이 길면 위로 넘쳐 같은
+ * 자리에 닿는다. 짧은 시트는 그만큼 가운데에서 내려앉지만, 상단이
+ * 가려지는 쪽이 더 나쁘다.
+ */
+body.aitTop .panel{padding-top:calc(24px + var(--aitPad, 0px))}
+body.aitTop #tour{padding-top:var(--aitPad, 0px)}
 .screen>.body{min-height:0}
 button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2px solid #d0f4ed;outline-offset:3px}
 #scSquad{max-width:480px;margin-inline:auto;padding:0 0 calc(var(--hg-nav) + env(safe-area-inset-bottom,0px));--pic:url('img/squad_bg.webp');color:#e4edf0}
@@ -2356,6 +2476,20 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
   .mail .mi button { margin-left: auto; padding: 5px 14px; font-size: 12px; border-radius: 8px; }
   .mail .mi .got { margin-left: auto; color: var(--dim); font-weight: 600; }
   .shoptab { margin: 0 0 8px; grid-template-columns: repeat(4, 1fr); }
+  /*
+   * 구매 복구 줄 (2026-09-22).
+   *
+   * 원스토어에서만 보인다. 눈에 띄되 상품보다 앞서지는 않게 - 평소에는
+   * 쓸 일이 없고, 돈이 나갔는데 물건이 안 온 사람만 찾는 자리다.
+   */
+  .shop-fix { margin: 10px 2px 0; display: flex; align-items: center; gap: 8px; }
+  .shop-fix button {
+    flex: 0 0 auto; padding: 7px 12px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06);
+    color: var(--fg); font-size: 12px; font-weight: 700;
+  }
+  .shop-fix button:disabled { opacity: .5; }
+  .shop-fix span { font-size: 11px; line-height: 1.35; opacity: .6; }
   .gcard .gimg { width: 60px; height: 44px; object-fit: contain; margin-left: 10px; flex: none; }
   .gcard .gtag { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: 8.5px; border-radius: 4px; vertical-align: 1px; }
   .passcard {
@@ -2993,6 +3127,14 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
     <button data-st="plane">기체</button>
   </div>
   <div class="hp" id="shopBody"></div>
+  <!--
+    결제는 됐는데 물건이 안 들어온 경우를 사람이 직접 풀 수 있는 자리.
+    원스토어에서만 켜진다 - shopInit 이 켠다.
+  -->
+  <div class="shop-fix" id="shopFix" hidden>
+    <button type="button" id="shopRestore">구매 복구</button>
+    <span>결제했는데 물건이 안 들어왔다면 눌러 주세요.</span>
+  </div>
 </div>
 
 <nav class="tabs" id="tabs" aria-label="주 메뉴">
@@ -3095,6 +3237,20 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 
 <script>
 'use strict'
+
+;(() => {
+  const stop = (e) => { if (e.cancelable) e.preventDefault() }
+
+  for (const t of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(t, stop, { passive: false })
+  }
+
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches.length > 1) stop(e)
+  }, { passive: false })
+
+  document.addEventListener('wheel', (e) => { if (e.ctrlKey) stop(e) }, { passive: false })
+})()
 
 const ART = { planes: {}, enemySmall: '', enemyMid: '', boss: '' }
 const IMG = {}
@@ -3458,9 +3614,9 @@ const PLANES = []
 
     rare:   (i) => (i === 2 ? { kind: 'lv', v: 10 } : { kind: 'gacha' }),
 
-    high:   () => ({ kind: 'gacha', price: 3000 }),
+    high:   () => ({ kind: 'gacha', price: 3300 }),
 
-    legend: (i) => ({ kind: 'paid', v: 5000 + Math.round(i * 10 / 3) * 100 }),
+    legend: (i) => ({ kind: 'paid', v: 5500 + Math.round(i / 3) * 1100 }),
   }
 
   Object.keys(WEAPONS).filter((w) => w !== 'chain').forEach((w, i) => {
@@ -3484,7 +3640,7 @@ const PLANES = []
     id: 'chain-legend', name: '뇌신', weapon: 'chain', tier: 'legend',
 
     power: 2.77, rate: 0.80, el: 'elec', trait: { rate: 1, split: 1 },
-    unlock: { kind: 'paid', v: 8000 },
+    unlock: { kind: 'paid', v: 8800 },
   })
 }
 
@@ -3633,9 +3789,9 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.10'
+const BUILD_TAG = '0.9.13'
 
-const BUILD_AT = '09-21 23:56'
+const BUILD_AT = '09-25 09:12'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -3742,9 +3898,9 @@ const HARD_PITY = 100
 const HARD_PITY_ALT = 20
 
 const SHOP = [
-  { n: 10, won: 1000 },
-  { n: 20, won: 1500 },
-  { n: 50, won: 3000 },
+  { n: 10, won: 1100 },
+  { n: 20, won: 1650 },
+  { n: 50, won: 3300 },
 ]
 
 const SHOP_EN = [
@@ -5039,7 +5195,10 @@ function pwCheckOnSquad() {
 function upgPower(id) { return 1 + upgOf(id) * 0.06 }
 function upgRate(id) { return 1 - upgOf(id) * 0.02 }
 function save() {
+
+  prog._ts = Date.now()
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(prog)) } catch {   }
+  cloudPush()
 }
 let prog = load()
 if (!prog.energy.t) { prog.energy.t = Date.now(); prog.energy.n = EN_MAX }
@@ -5356,11 +5515,11 @@ function passCard() {
   const on = passActive()
   return '<div class="passcard' + (on ? ' on' : '') + '" data-buy="pass" role="button" tabindex="0">' +
     '<div class="pc-head"><span class="pc-name">' + PASS.name + '</span>' +
-    '<span class="pc-price">30일 ' + PASS.price.toLocaleString('ko-KR') + '원</span></div>' +
+    '<span class="pc-price">30일 ' + skuWon(SKU.pass30, PASS.price).toLocaleString('ko-KR') + '원</span></div>' +
     '<div class="pc-sub">' + (on ? '이용 중 · ' + passRange() + ' · ' + passDaysLeft() + '일 남음' : '30일 동안 여섯 가지 혜택') + '</div>' +
     PASS_BEN.map(([i, b, t]) => '<div class="pc-ben"><i>' + i + '</i><b>' + b + '</b><span>' + t + '</span></div>').join('') +
 
-    '<button id="passBuy">' + (on ? '30일 더 · ' : '') + PASS.price.toLocaleString('ko-KR') + '원</button>' +
+    '<button id="passBuy">' + (on ? '30일 더 · ' : '') + skuWon(SKU.pass30, PASS.price).toLocaleString('ko-KR') + '원</button>' +
     '<div class="pc-note">산 날부터 30일입니다. 저절로 갱신되지 않습니다. 결제는 곧 열립니다.</div>' +
     '</div>'
 }
@@ -5381,7 +5540,13 @@ function shopPlanes() {
 function shopPilots() {
   return PILOTS.filter((p) => p.grade === 'legend').concat(PILOTS.filter((p) => p.grade === 'high'))
 }
-function planePrice(p) { return p.unlock.kind === 'paid' ? p.unlock.v : (p.unlock.price || 3000) }
+
+function planePrice(p) {
+  const base = p.unlock.kind === 'paid' ? p.unlock.v : (p.unlock.price || 3300)
+  return skuWon(planeSku(p.id), base)
+}
+
+function pilotPrice(p) { return skuWon(pilotSku(p.id), PILOT_PRICE[p.grade]) }
 function renderShop() {
   const body = document.getElementById('shopBody')
   if (!body) return
@@ -5412,24 +5577,26 @@ function renderShop() {
     card('adTk', '', '<div style="width:10px"></div>', '가챠권 1장', '', '광고를 끝까지 보면 한 장 · 오늘 ' + (AD_TK_DAY - left) + '/' + AD_TK_DAY,
          left > 0 ? '광고 보기' : '내일 다시', left <= 0)
     lab('가챠권 묶음')
-    SHOP.forEach((it, i) => card('pack:' + i, '', '<div style="width:10px"></div>', '가챠권 ' + it.n + '장', '', '장당 ' + Math.round(it.won / it.n) + '원', won(it.won), false))
+    SHOP.forEach((it, i) => { const w = skuWon(packSku(it.n), it.won)
+      card('pack:' + i, '', '<div style="width:10px"></div>', '가챠권 ' + it.n + '장', '', '장당 ' + Math.round(w / it.n) + '원', won(w), false) })
 
     lab('출격권 묶음')
-    SHOP_EN.forEach((it, i) => card('en:' + i, '', '<div style="width:10px"></div>', '출격권 ' + it.n + '장', '', '장당 ' + Math.round(it.won / it.n) + '원 · 한도를 넘겨 쌓입니다', won(it.won), false))
+    SHOP_EN.forEach((it, i) => { const w = skuWon(SKU.energy10, it.won)
+      card('en:' + i, '', '<div style="width:10px"></div>', '출격권 ' + it.n + '장', '', '장당 ' + Math.round(w / it.n) + '원 · 한도를 넘겨 쌓입니다', won(w), false) })
   } else if (shopTab === 'pilot') {
     let last = ''
     for (const p of shopPilots()) {
       const G = GRADES[p.grade]
-      if (last !== p.grade) { lab(G.name + ' 파일럿 · 한 명 ' + won(PILOT_PRICE[p.grade])); last = p.grade }
+      if (last !== p.grade) { lab(G.name + ' 파일럿 · 한 명 ' + won(pilotPrice(p))); last = p.grade }
       const have = pilotBought(p)
       const face = pilotFace(p)
       const pic = face ? '<div class="pf" style="--face:var(--gc-' + face + ')"></div>' : '<div class="pf"></div>'
-      card('pilot:' + p.id, 'tier-' + p.grade, pic, p.name, tag(G.tag, G.name), p.desc, have ? '보유' : won(PILOT_PRICE[p.grade]), have)
+      card('pilot:' + p.id, 'tier-' + p.grade, pic, p.name, tag(G.tag, G.name), p.desc, have ? '보유' : won(pilotPrice(p)), have)
     }
   } else {
     let last = ''
     for (const p of shopPlanes()) {
-      if (last !== p.tier) { lab(TIERS[p.tier] + ' 기체 · ' + (p.tier === 'legend' ? '지정 구매' : '한 대 ' + won(3000))); last = p.tier }
+      if (last !== p.tier) { lab(TIERS[p.tier] + ' 기체 · ' + (p.tier === 'legend' ? '지정 구매' : '한 대 ' + won(planePrice(p)))); last = p.tier }
       const have = unlocked(p)
       const pic = '<img class="gimg" src="' + hangarPlaneImage(p) + '" alt="">'
       card('plane:' + p.id, 'tier-' + p.tier, pic, p.name, tag('t-' + p.tier, TIERS[p.tier]),
@@ -5454,7 +5621,8 @@ function openShopItem(id) {
   let html = '', okLabel = '구매', onOk = null
   if (id === 'pass') {
     const on = passActive()
-    html = '<h3>' + PASS.name + '</h3><div class="sub2">30일 이용권 · ' + won(PASS.price) + (on ? ' · 이용 중' : '') + '</div>' +
+    const psW = skuWon(SKU.pass30, PASS.price)
+    html = '<h3>' + PASS.name + '</h3><div class="sub2">30일 이용권 · ' + won(psW) + (on ? ' · 이용 중' : '') + '</div>' +
       '<div class="rows">' +
       (on ? r2('이용 기간', passRange() + ' <span style="color:var(--dim);font-weight:500">(' + passDaysLeft() + '일 남음)</span>') : '') +
       PASS_BEN.map(([i, b, t]) => r2(b, t)).join('') + '</div>' +
@@ -5463,9 +5631,9 @@ function openShopItem(id) {
       '기간이 남아 있을 때 또 사면 뒤에 30일이 이어 붙습니다. ' +
       '매일 가챠권·출격권·조각 상자와 첫 결제 선물은 우편함으로 옵니다. 레전드 기체는 처음 한 번만 드립니다. ' +
       '조각 상자의 기체는 날마다 바뀌고, 아직 안 연 기체가 먼저 나옵니다.</div>' +
-      '<div class="price">' + won(PASS.price) + '</div>'
+      '<div class="price">' + won(psW) + '</div>'
     okLabel = on ? '30일 더 사기' : '구매하기'
-    onOk = () => shopBuy(SKU.pass30, PASS.name + (on ? ' 30일 연장' : ' 30일'), won(PASS.price))
+    onOk = () => shopBuy(SKU.pass30, PASS.name + (on ? ' 30일 연장' : ' 30일'), won(psW))
   } else if (id === 'adTk') {
     const left = adTkLeft()
     html = '<h3>가챠권 1장</h3><div class="sub2">광고 보고 받기</div>' +
@@ -5475,21 +5643,22 @@ function openShopItem(id) {
     onOk = left > 0 ? () => adTicket() : null
   } else if (id.startsWith('en:')) {
     const it = SHOP_EN[+id.slice(3)]
+    const enW = skuWon(SKU.energy10, it.won)
     html = '<h3>출격권 ' + it.n + '장</h3><div class="sub2">묶음</div>' +
-      '<div class="rows">' + r2('장당', Math.round(it.won / it.n) + '원') +
+      '<div class="rows">' + r2('장당', Math.round(enW / it.n) + '원') +
       r2('쓰는 곳', '판에 나갈 때 한 장') +
       r2('지금', energy() + '장 · 자연 충전 상한 ' + enMax() + '장') + '</div>' +
       '<div class="note2">산 것은 상한을 넘겨 쌓입니다. 자연 충전은 상한까지만 차고, 넘긴 몫은 줄지 않습니다.</div>' +
-      '<div class="price">' + won(it.won) + '</div>'
-    onOk = () => shopBuy(SKU.energy10, '출격권 ' + it.n + '장', won(it.won))
+      '<div class="price">' + won(enW) + '</div>'
+    onOk = () => shopBuy(SKU.energy10, '출격권 ' + it.n + '장', won(enW))
   } else if (id.startsWith('pack:')) {
     const it = SHOP[+id.slice(5)]
+    const pkW = skuWon(packSku(it.n), it.won)
     html = '<h3>가챠권 ' + it.n + '장</h3><div class="sub2">묶음</div>' +
-      '<div class="rows">' + r2('장당', Math.round(it.won / it.n) + '원') + r2('쓰는 곳', '뽑기 화면 · 기체와 파일럿 조각') + '</div>' +
-      '<div class="price">' + won(it.won) + '</div>'
+      '<div class="rows">' + r2('장당', Math.round(pkW / it.n) + '원') + r2('쓰는 곳', '뽑기 화면 · 기체와 파일럿 조각') + '</div>' +
+      '<div class="price">' + won(pkW) + '</div>'
 
-    onOk = () => shopBuy(it.n === 50 ? SKU.gacha50 : it.n === 20 ? SKU.gacha20 : SKU.gacha10,
-                         '가챠권 ' + it.n + '장', won(it.won))
+    onOk = () => shopBuy(packSku(it.n), '가챠권 ' + it.n + '장', won(pkW))
   } else if (id.startsWith('pilot:')) {
     const p = PILOT_BY[id.slice(6)]
     if (!p) return
@@ -5502,9 +5671,9 @@ function openShopItem(id) {
       '<div class="rows">' + r2('특성', p.desc) +
       r2('조각으로도', G.name + ' 조각 ' + shardG(p.grade) + ' / ' + GRADE_NEED[p.grade]) + '</div>' +
       '<div class="note2">사면 합류 레벨을 기다리지 않고 바로 씁니다. 스탯은 파일럿마다 따로 올립니다.</div>' +
-      (have ? '' : '<div class="price">' + won(PILOT_PRICE[p.grade]) + '</div>')
+      (have ? '' : '<div class="price">' + won(pilotPrice(p)) + '</div>')
     okLabel = have ? '보유 중' : '구매'
-    onOk = have ? null : () => soon(p.name + ' 파일럿', won(PILOT_PRICE[p.grade]))
+    onOk = have ? null : () => shopBuy(pilotSku(p.id), p.name + ' 파일럿', won(pilotPrice(p)))
   } else if (id.startsWith('plane:')) {
     const p = planeById(id.slice(6))
     if (!p) return
@@ -5520,7 +5689,7 @@ function openShopItem(id) {
       r2('조각으로도', shardOf(p.id) + ' / ' + shardNeed(p)) + '</div>' +
       (have ? '' : '<div class="price">' + won(planePrice(p)) + '</div>')
     okLabel = have ? '보유 중' : '구매'
-    onOk = have ? null : () => soon(p.name + ' 기체', won(planePrice(p)))
+    onOk = have ? null : () => shopBuy(planeSku(p.id), p.name + ' 기체', won(planePrice(p)))
   } else return
   body.innerHTML = html +
     '<div class="bar">' +
@@ -5556,10 +5725,10 @@ function unlockLabel(p) {
   if (p.unlock.kind === 'free') return ''
 
   if (unlocked(p)) return ''
-  if (p.unlock.kind === 'gacha') return `뽑기로 조각 ${shardNeed(p)}개` + (p.unlock.price ? ` · ${p.unlock.price.toLocaleString('ko-KR')}원` : '')
+  if (p.unlock.kind === 'gacha') return `뽑기로 조각 ${shardNeed(p)}개` + (p.unlock.price ? ` · ${planePrice(p).toLocaleString('ko-KR')}원` : '')
   if (p.unlock.kind === 'lv') return `파일럿 Lv.${p.unlock.v}`
   if (p.unlock.kind === 'score') return `누적 ${p.unlock.v.toLocaleString('ko-KR')}점`
-  return `${p.unlock.v.toLocaleString('ko-KR')}원`
+  return `${planePrice(p).toLocaleString('ko-KR')}원`
 }
 
 const GRADES = {
@@ -5737,7 +5906,7 @@ function pilotRank() {
 
 const LEGEND_PILOT = { id: 'pilot-legend', price: 3000 }
 
-const PILOT_PRICE = { high: 3000, legend: 5000 }
+const PILOT_PRICE = { high: 3300, legend: 5500 }
 function boughtLegend() { return prog.owned.includes(LEGEND_PILOT.id) || hasGrade('legend') }
 
 function isLegend() { return PLANES.some((p) => p.tier === 'legend' && unlocked(p)) }
@@ -5903,7 +6072,17 @@ while (prog.squad.length < 4) prog.squad.push(null)
 prog.squad = prog.squad.map((id) => { const p = id && planeById(id); return p && unlocked(p) ? id : null })
 
 const W = 420
-const H = Math.round(Math.max(720, Math.min(880, W * (innerHeight / Math.max(1, innerWidth)))))
+
+const AIT_XBTN = 56
+function aitPadRead() {
+  const A = window.__AIT
+  if (!A || !A.insets) return 0
+  try { const v = A.insets(); return ((v && +v.top) || 0) + AIT_XBTN } catch (e) { return AIT_XBTN }
+}
+let AIT_PAD = aitPadRead()
+document.documentElement.style.setProperty('--aitPad', AIT_PAD + 'px')
+
+const H = Math.round(Math.max(720, Math.min(880, W * (Math.max(320, innerHeight) / Math.max(1, innerWidth)))))
 const SPD_K = H / 720
 const PLAYER_R = 8
 
@@ -5914,8 +6093,17 @@ const CHAIN_WIN = 0.7
 const canvas = document.getElementById('c')
 const g = canvas.getContext('2d', { alpha: false })
 
+let FIT_S = 1
+
+let HUD_OFF = 0
+
 function fit() {
-  const s = Math.min((innerWidth - 16) / W, (innerHeight - 16) / H)
+
+  const topPad = AIT_PAD > 0 ? Math.max(0, AIT_PAD - AIT_XBTN) : 0
+  const s = Math.min((innerWidth - 16) / W, Math.max(120, innerHeight - 16 - topPad) / H)
+  FIT_S = s
+
+  HUD_OFF = 0
   const dpr = Math.min(devicePixelRatio || 1, 2)
 
   if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
@@ -7040,15 +7228,26 @@ function renderSet() {
 
     '<div class="lab">계정</div>' +
     '<div class="setrow col" id="acctRow"><div class="top"><div>' +
-      '<div class="nm">구글 로그인</div>' +
+      '<div class="nm" id="acctNm">구글 로그인</div>' +
       '<div class="de" id="acctDe">기기를 바꿔도 기록이 따라옵니다</div>' +
     '</div></div>' +
     '<div class="bar" id="acctBar"></div></div>' +
+
+    '<div class="lab">결제</div>' +
+    '<div class="setrow col"><div class="top"><div>' +
+      '<div class="nm">결제 내역</div>' +
+      '<div class="de">이 기기에서 받은 상품을 봅니다</div>' +
+    '</div></div>' +
+    '<div class="bar"><button class="ghost small" id="payLogGo">내역 보기</button></div></div>' +
     (DEV_TOOLS
       ? '<div class="lab">그 밖에</div>' +
         '<div class="bar"><button class="ghost small" id="devUnlock" hidden>개발용 전체 해금 (테스트)</button></div>'
       : '')
   sbPaintAccount()
+  {
+    const pl = document.getElementById('payLogGo')
+    if (pl) pl.onclick = () => { sfx('pick'); say(payLogText(), '결제 내역') }
+  }
 
   const sp = document.getElementById('spRange')
   if (sp) {
@@ -7116,6 +7315,18 @@ function sbPaintAccount() {
     if (de) de.textContent = '기록이 이 계정에 저장됩니다'
     return
   }
+
+  if (aitHere()) {
+    const nm = document.getElementById('acctNm')
+    if (nm) nm.textContent = '기록 보관'
+    bar.innerHTML = '<span class="acctOn">' + (CLOUD.on ? '토스 계정에 저장됨' : '이 기기에 저장됨') + '</span>'
+    if (de) {
+      de.textContent = CLOUD.on
+        ? '기기를 바꿔도 같은 토스 계정이면 기록이 따라옵니다'
+        : '서버에 닿지 못했습니다. 지금은 이 기기에만 남습니다'
+    }
+    return
+  }
   bar.innerHTML = '<button class="ghost small" id="acctGo">구글로 로그인</button>'
   if (de) de.textContent = '지금은 이 기기에만 기록이 남습니다. 로그인하면 따라옵니다'
   const b = document.getElementById('acctGo')
@@ -7132,9 +7343,152 @@ const SKU = {
   energy10: 'energy_10', pass30: 'pass_30',
 }
 
+function planeSku(id) { return 'plane_' + String(id).replace(/-/g, '_') }
+function pilotSku(id) { return 'pilot_' + String(id).replace(/-/g, '_') }
+
+function skuToPlane(sku) {
+  if (String(sku).indexOf('plane_') !== 0) return null
+  const want = String(sku).slice(6)
+  const hit = PLANES.find((p) => String(p.id).replace(/-/g, '_') === want)
+  return hit ? hit.id : null
+}
+function skuToPilot(sku) {
+  if (String(sku).indexOf('pilot_') !== 0) return null
+  const want = String(sku).slice(6)
+  const hit = PILOTS.find((p) => String(p.id).replace(/-/g, '_') === want)
+  return hit ? hit.id : null
+}
+
+const AIT_SKU = {
+
+  gacha_10:  'ait.0000078358.39429b18.e152361c1d.0051257662',
+  gacha_20:  'ait.0000078358.e15ec948.313cb3e643.0051270115',
+  gacha_50:  'ait.0000078358.642a43d4.b272571182.0051271704',
+  energy_10: 'ait.0000078358.33aa619a.34b089d20c.0051278177',
+  pass_30:   'ait.0000078358.bfcaa703.fe923d7bf6.0051280067',
+
+  plane_rapid_high:      'ait.0000078358.74ade4d8.e4618ecd6d.0139299990',
+  plane_rapid_legend:    'ait.0000078358.51206630.af26a49b48.0139301681',
+  plane_spread_high:     'ait.0000078358.3502ad32.8f9f28d555.0139303540',
+  plane_spread_legend:   'ait.0000078358.d972bb47.f637168531.0139306145',
+  plane_laser_high:      'ait.0000078358.5a3314a9.69e6d5a83f.0139307629',
+  plane_laser_legend:    'ait.0000078358.077a2ebb.1a033c12bc.0139309041',
+  plane_homing_high:     'ait.0000078358.c4dc1be0.02ee65e9d2.0139310810',
+  plane_homing_legend:   'ait.0000078358.ea6d174e.48c0fe0e21.0139312839',
+  plane_pierce_high:     'ait.0000078358.7b9a9f40.dd6c513e44.0139314343',
+  plane_pierce_legend:   'ait.0000078358.4e1abd5a.feb09d1f49.0139378704',
+  plane_wave_high:       'ait.0000078358.351fc45c.c29f4699c8.0139381665',
+  plane_wave_legend:     'ait.0000078358.cae9b118.feefe0148a.0139384464',
+  plane_orb_high:        'ait.0000078358.829527e1.f802ed3047.0139387923',
+  plane_orb_legend:      'ait.0000078358.20ca456a.350af236d7.0139390666',
+  plane_mine_high:       'ait.0000078358.5ebe42a0.44714037f2.0139394037',
+  plane_mine_legend:     'ait.0000078358.e2950f61.59f7cf634b.0139396497',
+  plane_beam_high:       'ait.0000078358.bc533e2b.050dec8790.0139399433',
+  plane_beam_legend:     'ait.0000078358.de2af249.99f85a51d0.0139401787',
+  plane_boomer_high:     'ait.0000078358.a525b957.6bf60568e2.0139478329',
+  plane_boomer_legend:   'ait.0000078358.e07b2e53.f3cc5ddabc.0139480176',
+  plane_chain_legend:    'ait.0000078358.a59ff143.c32640b215.0139482145',
+  pilot_h1:              'ait.0000078358.b360663e.6d6cc14572.0139484104',
+  pilot_h2:              'ait.0000078358.bc4124d6.f961b2e850.0139485931',
+  pilot_l1:              'ait.0000078358.e40b6502.131b91d7d2.0139487828',
+  pilot_l2:              'ait.0000078358.59510336.738b980a0a.0139489671',
+  pilot_h3:              'ait.0000078358.aa394f84.9ab5a16d2d.0139491702',
+  pilot_l3:              'ait.0000078358.bbd57880.2aa2fdc3d7.0139493450',
+}
+
+const AIT_MINE = {}
+for (const k in AIT_SKU) AIT_MINE[AIT_SKU[k]] = k
+
+function aitSkuOf(mine) { return AIT_SKU[mine] || mine }
+
+function aitMineOf(id) { return AIT_MINE[id] || id }
+
+function wonOf(v) {
+  if (v == null) return NaN
+  return typeof v === 'string' ? +String(v).replace(/[^0-9.]/g, '') : +v
+}
+
+const PRICE_WARNED = {}
+
+function skuWon(mine, base) {
+  const got = wonOf(SHOPX.price[mine])
+  if (!isFinite(got) || got <= 0) return base
+  if (base && got !== base) {
+    if (!PRICE_WARNED[mine] && window.console) {
+      PRICE_WARNED[mine] = 1
+      console.warn('[가격] 가게 값이 적어 둔 값과 다릅니다 -',
+        mine, '가게', SHOPX.price[mine], '/ 우리', base, '-> 우리 값을 씁니다')
+    }
+    return base
+  }
+  return got
+}
+
+function packSku(n) { return n === 50 ? SKU.gacha50 : n === 20 ? SKU.gacha20 : SKU.gacha10 }
+
+function aitShop() {
+  const A = window.__AIT
+  try { return A && A.iap && A.iap.ready() ? A : null } catch (e) { return null }
+}
+function aitAds(slot) {
+  const A = window.__AIT
+  try { return A && A.ads && A.ads.ready(slot || 'ticket') ? A : null } catch (e) { return null }
+}
+
+let AIT_BACK = null
+function aitBackInit() {
+  const A = window.__AIT
+  if (!A || !A.onBack || AIT_BACK) return
+  AIT_BACK = A.onBack(() => {
+
+    const pop = document.getElementById('askPop')
+    if (pop && !pop.hidden) { askClose(); return }
+    if (state && state.running && !state.paused) { appHidden(); return }
+    ask('게임을 나갈까요?\n\n진행한 것은 저장되어 있습니다.',
+        () => { try { A.close() } catch (e) {} },
+        { title: '나가기', ok: '나가기' })
+  })
+}
+
+let AIT_HOOKED = false
+function aitHook() {
+  const A = window.__AIT
+  if (!A || AIT_HOOKED) return
+  AIT_HOOKED = true
+
+  A.iap.onGrant((sku, orderId) => shopGrant({
+    productId: aitMineOf(sku || ''),
+    token: orderId || '',
+    orderId: orderId || '',
+    payload: (SB.user && SB.user.id) || '',
+  }))
+  A.on('failed', () => { auDuck(false); say('결제를 마치지 못했습니다.\n잠시 뒤에 다시 해 주세요.', '상점') })
+
+  A.on('done', () => { auDuck(false) })
+}
+
 async function shopInit() {
   if (SHOPX.tried) return SHOPX.ready
   SHOPX.tried = true
+
+  if (aitShop()) {
+    aitHook()
+    SHOPX.ready = true
+
+    try {
+      const list = await aitShop().iap.products()
+      for (const p of (list || [])) {
+        const mine = aitMineOf(p.sku || p.productId || p.id || '')
+
+        const v = (p.displayAmount != null) ? p.displayAmount
+          : (p.price != null) ? p.price
+          : (p.amount != null) ? p.amount : p.displayPrice
+        const n = typeof v === 'string' ? +String(v).replace(/[^0-9.]/g, '') : +v
+        if (mine && isFinite(n) && n > 0) SHOPX.price[mine] = n
+      }
+    } catch (e) {   }
+    return true
+  }
   const P = (window.Capacitor && window.Capacitor.Plugins) || {}
   if (!P.Shop) return false
   try {
@@ -7142,13 +7496,20 @@ async function shopInit() {
     SHOPX.ready = !!(st && st.ready)
     if (!SHOPX.ready) return false
     P.Shop.addListener('purchased', (e) => shopGrant(e))
+
+    void shopDrain()
+    shopFixShow()
     P.Shop.addListener('failed', (e) => {
       say('결제를 마치지 못했습니다.\n잠시 뒤에 다시 해 주세요.', '상점')
       if (window.console) console.warn('shop failed', e)
     })
 
     const pr = await P.Shop.products()
-    ;(pr && pr.items || []).forEach((i) => { SHOPX.price[i.id] = i.price })
+
+    ;(pr && pr.items || []).forEach((i) => {
+      const w = wonOf(i.price)
+      if (isFinite(w) && w > 0) SHOPX.price[i.id] = w
+    })
   } catch (e) {
     SHOPX.ready = false
     if (window.console) console.warn('shopInit', e)
@@ -7158,10 +7519,59 @@ async function shopInit() {
 
 setTimeout(() => { if (sbNative()) shopInit() }, 1200)
 
+async function shopDrain(list) {
+  const P = (window.Capacitor && window.Capacitor.Plugins) || {}
+  if (!P.Shop || !P.Shop.drain) return 0
+  let items = list
+  if (!items) {
+    try { items = ((await P.Shop.drain()) || {}).items } catch (e) { return 0 }
+  }
+  let n = 0
+  for (const e of (items || [])) {
+    let gave = false
+    try { gave = shopGrant(e) } catch (x) { gave = false }
+
+    if (!gave) continue
+    n++
+    try { await P.Shop.ack({ token: e.token }) } catch (x) {   }
+  }
+  return n
+}
+
+function shopFixShow() {
+  const row = document.getElementById('shopFix')
+  if (!row) return
+  row.hidden = false
+  const btn = document.getElementById('shopRestore')
+  if (!btn || btn._on) return
+  btn._on = true
+  btn.addEventListener('click', () => { void shopRestore() })
+}
+
+async function shopRestore() {
+  const P = (window.Capacitor && window.Capacitor.Plugins) || {}
+  if (!P.Shop || !P.Shop.restore) return
+  const btn = document.getElementById('shopRestore')
+  if (btn) { btn.disabled = true; btn.textContent = '확인하는 중' }
+  let n = 0
+  try {
+    const r = await P.Shop.restore()
+    n = await shopDrain((r && r.items) || [])
+  } catch (e) {
+    if (window.console) console.warn('shopRestore', e)
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '구매 복구' }
+  say(n > 0
+    ? '받지 못한 구매 ' + n + '건을 넣어 드렸습니다.'
+    : '받지 못한 구매가 없습니다.\n\n결제하신 지 얼마 안 됐다면 잠시 뒤에 다시 눌러 주세요.',
+    '구매 복구')
+}
+
 function shopGrant(e) {
-  if (!e || !e.productId || !e.token) return
+  if (!e || !e.productId || !e.token) return false
   const b = prog.bought = prog.bought || { seen: [] }
-  if (b.seen.indexOf(e.token) >= 0) return
+
+  if (b.seen.indexOf(e.token) >= 0) return true
   b.seen.push(e.token)
   if (b.seen.length > 200) b.seen = b.seen.slice(-200)
 
@@ -7173,18 +7583,47 @@ function shopGrant(e) {
 
     case SKU.energy10: prog.energy.n = energy() + 10; msg = '출격권 10장'; break
     case SKU.pass30: passGive(30); msg = PASS.name + ' 30일'; break
-    default:
+    default: {
+
+      const pid = skuToPlane(e.productId)
+      if (pid) {
+        const pl = PLANES.find((p) => p.id === pid)
+        if (prog.owned.includes(pid)) { msg = (pl ? pl.name : '기체') + ' (이미 보유)' }
+        else { grantItems({ plane: pid }); msg = (pl ? pl.name : '기체') + ' 기체' }
+        break
+      }
+      const qid = skuToPilot(e.productId)
+      if (qid) {
+        const ql = PILOTS.find((p) => p.id === qid)
+        if (pilotBought({ id: qid })) { msg = (ql ? ql.name : '파일럿') + ' (이미 보유)' }
+        else { grantItems({ pilot: qid }); msg = (ql ? ql.name : '파일럿') + ' 파일럿' }
+        break
+      }
 
       if (window.console) console.warn('모르는 상품', e.productId)
-      save(); return
+      save(); return false
+    }
   }
+
+  b.log = b.log || []
+  b.log.push({ p: e.productId, n: msg, t: Date.now() })
+  if (b.log.length > 50) b.log = b.log.slice(-50)
+
   save(); sfx('got'); renderWallet()
   if (curScreen === 'shop') renderShop()
   say(msg + ' 을(를) 받았습니다.', '상점')
+  return true
 }
 
 async function shopBuy(sku, nm, price) {
   if (!(await shopInit())) { say(nm + ' · ' + price + '\n\n결제는 곧 열립니다.', '상점'); return }
+
+  const A = aitShop()
+  if (A) {
+    auDuck(true)
+    if (!A.iap.buy(aitSkuOf(sku))) { auDuck(false); say('결제창을 열지 못했습니다.\n잠시 뒤에 다시 해 주세요.', '상점') }
+    return
+  }
   try {
     await window.Capacitor.Plugins.Shop.buy({
       productId: sku,
@@ -7773,7 +8212,8 @@ function jumpToModeStage(k) {
     }
     return null
   }
-  const ok = (ci, sub) => starOf(ci, sub) > 0 && !(prog[k] || {})[stageKey(ci, sub)]
+
+  const ok = (ci, sub) => subOpen(ci, sub, k) && starAt(k, stageKey(ci, sub)) === 0
   if (ok(prog.chapter || 0, curSub())) return null
   for (let ci = 0; ci < CHAPTERS.length; ci++) for (let sub = 1; sub <= SUBS; sub++) {
     if (ok(ci, sub)) { prog.chapter = ci; prog.sub = sub; save(); return [ci, sub] }
@@ -7832,27 +8272,28 @@ function bindModes(root, rerender) {
 
 function renderStage() {
   if (mapCh == null) mapCh = prog.chapter || 0
-  if (!chapterOpen(mapCh)) mapCh = 0
+  if (!chapterOpen(mapCh, runMode)) mapCh = 0
   const ch = CHAPTERS[mapCh]
   const el = document.getElementById('stageBody')
 
   const canPrev = mapCh > 0
-  const canNext = mapCh < CHAPTERS.length - 1 && chapterOpen(mapCh + 1)
+  const canNext = mapCh < CHAPTERS.length - 1 && chapterOpen(mapCh + 1, runMode)
   const bar =
     `<div class="chbar">` +
     `<button class="chnav" data-chn="-1"${canPrev ? '' : ' disabled'}>‹</button>` +
     `<div class="chcur">` +
     `<div class="cn">${ch.id}. ${ch.name}</div>` +
     `<div class="cs">${ch.id} / ${CHAPTERS.length} · ` +
-    `${chapterStars(mapCh)}/${SUBS * 3}<i class="sti"></i></div>` +
+    `${chapterStars(mapCh, runMode)}/${SUBS * 3}<i class="sti"></i>` +
+    `${runMode === 'normal' ? '' : ' · ' + modeDef(runMode)[1]}</div>` +
     `</div>` +
     `<button class="chnav" data-chn="1"${canNext ? '' : ' disabled'}>›</button>` +
     `</div>`
 
   const nodes = Array.from({ length: SUBS }, (_, k) => {
     const sub = k + 1
-    const open = subOpen(mapCh, sub)
-    const st = starOf(mapCh, sub)
+    const open = subOpen(mapCh, sub, runMode)
+    const st = starIn(runMode, mapCh, sub)
     const isBoss = BOSS_AT.includes(sub)
     const isMid = MID_AT.includes(sub)
     const pick = mapCh === (prog.chapter || 0) && sub === curSub()
@@ -7867,16 +8308,16 @@ function renderStage() {
   }).join('')
 
   const tabs = CHAPTERS.map((c, i) => {
-    const open = chapterOpen(i)
+    const open = chapterOpen(i, runMode)
     return `<button class="mtab${i === mapCh ? ' on' : ''}${open ? '' : ' lock'}" data-ch="${i}"${open ? '' : ' disabled'}>` +
-      `<span>챕터 ${c.id}</span><b>${open ? chapterStars(i) + '/' + (SUBS * 3) + '★' : '잠김'}</b></button>`
+      `<span>챕터 ${c.id}</span><b>${open ? chapterStars(i, runMode) + '/' + (SUBS * 3) + '★' : '잠김'}</b></button>`
   }).join('')
 
   const POS = [[14, 88], [38, 80], [62, 86], [84, 74], [66, 62], [40, 66], [16, 56], [30, 42], [56, 46], [80, 38], [60, 24], [34, 16]]
   const mapNodes = Array.from({ length: SUBS }, (_, k) => {
     const sub = k + 1
-    const open = subOpen(mapCh, sub)
-    const st = starOf(mapCh, sub)
+    const open = subOpen(mapCh, sub, runMode)
+    const st = starIn(runMode, mapCh, sub)
     const isBoss = sub === SUBS, isMid = (BOSS_AT.includes(sub) && !isBoss) || MID_AT.includes(sub)
     const pick = mapCh === (prog.chapter || 0) && sub === curSub()
     const [x, y] = POS[k] || [50, 50]
@@ -7931,7 +8372,16 @@ function renderStage() {
   el.querySelectorAll('[data-sub]').forEach((d) => {
     const sub = +d.dataset.sub
     d.onclick = () => {
-      if (!subOpen(mapCh, sub)) { sfx('uiNo'); say(`${sub - 1}단계를 먼저 깨야 합니다.`, '잠긴 단계'); return }
+      if (!subOpen(mapCh, sub, runMode)) {
+        sfx('uiNo')
+        const md = runMode === 'normal' ? '' : modeDef(runMode)[1] + '으로 '
+
+        const needNormal = runMode !== 'normal' && starIn('normal', mapCh, sub) <= 0
+        say(needNormal
+          ? `이 단계를 일반으로 먼저 깨야 ${modeDef(runMode)[1]}에 도전할 수 있습니다.`
+          : `${md}${sub - 1}단계를 먼저 깨야 합니다.`, '잠긴 단계')
+        return
+      }
       sfx('uiNode', BOSS_AT.includes(sub))
       prog.chapter = mapCh
       prog.sub = sub
@@ -7962,7 +8412,7 @@ function rankCleared(k) {
   let n = 0
   CHAPTERS.forEach((c, ci) => {
     for (let sub = 1; sub <= SUBS; sub++) {
-      if (k === 'normal' ? starOf(ci, sub) > 0 : !!(prog[k] || {})[stageKey(ci, sub)]) n++
+      if (starIn(k, ci, sub) > 0) n++
     }
   })
   return n
@@ -8040,7 +8490,10 @@ async function sbInit() {
   if (SB.tried) return SB.ready
   SB.tried = true
   try {
-    const m = await import('https://esm.sh/@supabase/supabase-js@2')
+
+    const m = (window.supabase && window.supabase.createClient)
+      ? window.supabase
+      : await import('https://esm.sh/@supabase/supabase-js@2')
     SB.cli = m.createClient(SB_URL, SB_KEY, {
 
       auth: {
@@ -8113,6 +8566,65 @@ function sbDeepLink() {
   })
 }
 
+function shopRevoke(mine, orderId) {
+  const b = prog.bought = prog.bought || { seen: [] }
+  if (!orderId) return false
+  b.back = b.back || []
+  if (b.back.indexOf(orderId) >= 0) return false
+  if (b.seen.indexOf(orderId) < 0) return false
+  b.back.push(orderId)
+  if (b.back.length > 200) b.back = b.back.slice(-200)
+
+  let msg = ''
+  switch (mine) {
+    case SKU.gacha10: prog.ticket = Math.max(0, prog.ticket - 10); msg = '가챠권 10장'; break
+    case SKU.gacha20: prog.ticket = Math.max(0, prog.ticket - 20); msg = '가챠권 20장'; break
+    case SKU.gacha50: prog.ticket = Math.max(0, prog.ticket - 50); msg = '가챠권 50장'; break
+    case SKU.energy10: prog.energy.n = Math.max(0, energy() - 10); msg = '출격권 10장'; break
+    case SKU.pass30:
+
+      if (prog.pass && prog.pass.until) prog.pass.until -= 30 * 86400e3
+      msg = PASS.name + ' 30일'
+      break
+    default: return false
+  }
+
+  b.log = b.log || []
+  b.log.push({ p: mine, n: msg + ' 환불', t: Date.now() })
+  if (b.log.length > 50) b.log = b.log.slice(-50)
+
+  save(); renderWallet()
+  if (curScreen === 'shop') renderShop()
+  return msg
+}
+
+async function aitOrders() {
+  const A = window.__AIT
+  if (!A || !A.iap) return
+  try { await A.iap.restore() } catch (e) {   }
+  try {
+    const list = await A.iap.refunded()
+    const back = []
+    for (const o of (list || [])) {
+      const m = shopRevoke(aitMineOf(o.sku || ''), o.orderId)
+      if (m) back.push(m)
+    }
+    if (back.length) say('환불되어 회수했습니다.\n\n' + back.join('\n'), '환불')
+  } catch (e) {   }
+}
+
+function payLogText() {
+  const L = (prog.bought && prog.bought.log) || []
+  if (!L.length) return '아직 결제한 것이 없습니다.'
+  const p2 = (n) => String(n).padStart(2, '0')
+  return L.slice().reverse().slice(0, 30).map((x) => {
+    const d = new Date(x.t || 0)
+    return d.getFullYear() + '.' + p2(d.getMonth() + 1) + '.' + p2(d.getDate()) +
+           ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()) +
+           '   ' + (x.n || x.p || '알 수 없는 상품')
+  }).join('\n')
+}
+
 function sbMarkUser(u) {
   SB.user = u || null
 
@@ -8152,6 +8664,82 @@ async function sbSignInGoogle() {
     SB.err = (e && e.message) || String(e)
     say(sbSay(e), '로그인')
   }
+}
+
+const CLOUD = { key: '', on: false, t: 0, busy: false, pulled: null, wait: null }
+
+function aitHere() { return !!window.__AIT }
+
+function aitSafeInit() {
+  const A = window.__AIT
+  if (!A || !A.insets) return
+  const put = (v) => {
+    const t = (v && +v.top) || 0
+    document.documentElement.style.setProperty('--aitTop', t + 'px')
+    aitPadApply(t + AIT_XBTN)
+  }
+  try { put(A.insets()) } catch (e) {   }
+  try { if (A.onInsets) A.onInsets(put) } catch (e) {}
+}
+
+function aitPadApply(px) {
+  if (px !== AIT_PAD) {
+    AIT_PAD = px
+    document.documentElement.style.setProperty('--aitPad', px + 'px')
+    try { fit() } catch (e) {   }
+    CANVAS_RECT = null
+  }
+  aitShortSync()
+}
+
+function aitShortSync() {
+  document.body.classList.toggle('aitShort', AIT_PAD > 0 && (innerHeight - AIT_PAD) <= 660)
+}
+addEventListener('resize', aitShortSync)
+
+async function cloudBoot() {
+  if (!aitHere() || !window.__AIT.userKey) return
+  try {
+    const k = await window.__AIT.userKey()
+    if (!k) return
+    CLOUD.key = k
+    if (!(await sbInit())) return
+    const r = await SB.cli.rpc('sh_save_pull', { p_key: k })
+    if (r.error) throw r.error
+    CLOUD.on = true
+    CLOUD.pulled = r.data || null
+  } catch (e) {
+    SB.err = (e && e.message) || String(e)
+  }
+}
+
+function cloudApply() {
+  const d = CLOUD.pulled
+  CLOUD.pulled = null
+  if (!d || typeof d !== 'object') return false
+  if ((d._ts || 0) <= ((prog && prog._ts) || 0)) return false
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(d))
+    prog = load()
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+function cloudPush() {
+  if (!CLOUD.on || !CLOUD.key) return
+  clearTimeout(CLOUD.t)
+  CLOUD.t = setTimeout(async () => {
+    if (CLOUD.busy) return
+    CLOUD.busy = true
+    try {
+      await SB.cli.rpc('sh_save_push', { p_key: CLOUD.key, p_data: prog, p_ts: prog._ts || 0 })
+    } catch (e) {
+      SB.err = (e && e.message) || String(e)
+    }
+    CLOUD.busy = false
+  }, 8000)
 }
 
 const SMAIL = { at: 0, busy: false }
@@ -10360,13 +10948,28 @@ function subScale(sub) { return 1 + (sub - 1) * 0.0583 }
 function curChapter() { return CHAPTERS[Math.min(prog.chapter || 0, CHAPTERS.length - 1)] }
 function curSub() { return Math.min(SUBS, Math.max(1, prog.sub || 1)) }
 function stageKey(ci, sub) { return CHAPTERS[ci].id + '-' + sub }
-function starOf(ci, sub) { return prog.stars[stageKey(ci, sub)] || 0 }
 
-function subOpen(ci, sub) {
-  if (sub === 1) return ci === 0 || starOf(ci - 1, SUBS) > 0
-  return starOf(ci, sub - 1) > 0
+function starBox(k) {
+  if (!k || k === 'normal') return prog.stars
+  if (!prog[k]) prog[k] = {}
+  return prog[k]
 }
-function chapterOpen(ci) { return ci === 0 || starOf(ci - 1, SUBS) > 0 }
+
+function starAt(k, key) { return key ? (+starBox(k)[key] || 0) : 0 }
+function starIn(k, ci, sub) { return starAt(k, stageKey(ci, sub)) }
+
+function starOf(ci, sub) { return starIn('normal', ci, sub) }
+
+function subOpen(ci, sub, mode) {
+  const m = mode || 'normal'
+  if (m !== 'normal' && starIn('normal', ci, sub) <= 0) return false
+  if (sub === 1) return ci === 0 || starIn(m, ci - 1, SUBS) > 0
+  return starIn(m, ci, sub - 1) > 0
+}
+
+function chapterOpen(ci, mode) {
+  return ci === 0 || starIn(mode || 'normal', ci - 1, SUBS) > 0
+}
 
 function josaHas(w) {
   w = String(w)
@@ -10389,15 +10992,15 @@ function euro(w) {
 function chapterStep(d) {
   const t = mapCh + d
   if (t < 0 || t >= CHAPTERS.length) return
-  if (!chapterOpen(t)) return
+  if (!chapterOpen(t, runMode)) return
   sfx('uiPage')
   mapCh = t
   renderStage()
 }
 
-function chapterStars(ci) {
+function chapterStars(ci, mode) {
   let n = 0
-  for (let k = 1; k <= SUBS; k++) n += starOf(ci, k)
+  for (let k = 1; k <= SUBS; k++) n += starIn(mode || 'normal', ci, k)
   return n
 }
 
@@ -10883,7 +11486,7 @@ function spawnUfo() {
   if (s.enemies.some((e) => e.ufo)) return
   const dir = Math.random() < .5 ? 1 : -1
   const y = 120 + Math.random() * 130
-  banner('미확인기')
+  banner('미확인기', '잡으면 가챠권 ' + UFO_TICKET + '장')
   sfx('alarm')
 
   edgeWarn(dir > 0 ? 'l' : 'r', y, 1.2, 90)
@@ -11797,6 +12400,10 @@ function killBoss(bs) {
   hitStop(bs.mid ? 0.08 : 0.12)
   haptic('down')
   s.score += bs.mid ? 1800 : 4000
+
+  banner(bs.mid ? '중간보스 격파' : '보스 격파', '+' + (bs.mid ? 1800 : 4000).toLocaleString('ko-KR'))
+  popAdd(bs.x, bs.y - bs.r * 0.6, '+' + (bs.mid ? 1800 : 4000).toLocaleString('ko-KR'), true)
+  s.flashT = 0.25
   s.boss = null
 
   if (s.zone) { s.zoneDone = true; setTimeout(() => { if (s.running) { s.zoneDone = false; nextZone() } }, 900); return }
@@ -11870,7 +12477,16 @@ function bossArea(bs, dmg) {
   }
 }
 
-function banner(t) { state.banner = t; state.bannerT = 1.6 }
+function banner(t, sub) { state.banner = t; state.bannerSub = sub || ''; state.bannerT = 1.6 }
+
+const POP_MAX = 24
+const POP_LIFE = 0.6
+function popAdd(x, y, txt, big) {
+  const s = state
+  if (!s.pops) s.pops = []
+  if (s.pops.length >= POP_MAX) s.pops.shift()
+  s.pops.push({ x, y, t: 0, txt, big: !!big })
+}
 
 const FIN_COUNT = 10
 const FIN_FLY = 1.5
@@ -12175,10 +12791,29 @@ function reviveLimit() {
 
 const scAd = document.getElementById('adv')
 
-function showAd(title, onDone) {
+function showAd(title, onDone, slot) {
   missBump('ad')
 
   if (passActive()) { sfx('pick'); onDone(); return }
+
+  const sl = slot || 'ticket'
+  const A = aitAds(sl)
+  if (A) {
+    let got = false
+    auDuck(true)
+
+    const ok = A.ads.show(sl,
+      () => { got = true; onDone() },
+      (failed) => {
+        auDuck(false)
+        if (got) return
+        if (failed) { adPanel(title, onDone); return }
+        sfx('pick'); say('광고를 끝까지 보지 않아 보상을 드리지 못했습니다.', title)
+      })
+    if (ok) return
+    auDuck(false)
+    adPanel(title, onDone); return
+  }
   const C = window.Capacitor
   const P = C && C.Plugins && C.Plugins.Ads
   if (!P) { adPanel(title, onDone); return }
@@ -12223,7 +12858,7 @@ function reviveByAd() {
 
   if (!state) return
   if (state.adUsed.revive >= reviveLimit()) return
-  showAd('이어하기', () => { state.adUsed.revive++; reviveNow() })
+  showAd('이어하기', () => { state.adUsed.revive++; reviveNow() }, 'revive')
 }
 
 function reviveNow() {
@@ -13453,6 +14088,14 @@ function update(dt) {
   keepIf(s.sparks, (k) => k.age < .18)
   collide()
   if (s.bannerT > 0) s.bannerT -= dt
+
+  if (s.pops && s.pops.length) {
+    for (const p of s.pops) p.t += dt
+
+    s.pops = s.pops.filter((p) => p.t < POP_LIFE)
+  }
+  if (s.chainPulse > 0) s.chainPulse -= dt
+  if (s.flashT > 0) s.flashT -= dt
 }
 
 function updateGround(u, dt) {
@@ -13765,7 +14408,9 @@ function collide() {
     if (e.hp <= 0) {
       s.chainN = (s.chainT > 0 ? (s.chainN || 0) : 0) + 1
       s.chainT = CHAIN_WIN
-      if (s.chainN >= 3) sfx('chain', s.chainN)
+      if (s.chainN >= 3) { sfx('chain', s.chainN); s.chainPulse = 0.15 }
+
+      if (!e.ufo && e.score > 0) popAdd(e.x, e.y - (e.r || 12), '+' + e.score, e.score >= 250)
     }
     if (e.ufo) {
 
@@ -14924,7 +15569,10 @@ function drawBoss(bs) {
   g.beginPath(); g.ellipse(0, -bs.r * .1, 7 + bs.phase, 5, 0, 0, Math.PI * 2); g.fill()
   g.restore()
 
-  const w = W - 60
+  g.save()
+  g.translate(0, HUD_OFF)
+
+  const w = W - 60 - (AIT_PAD > 0 ? 100 : 0)
   let partHp = 0, partMax = 0, nAliveP = 0
   for (const p of bs.parts) { partHp += Math.max(0, p.hp); partMax += p.maxHp; if (p.alive) nAliveP++ }
   const total = partMax + bs.core.maxHp
@@ -14964,6 +15612,7 @@ function drawBoss(bs) {
     }
     g.fillText(bs._hudTxt, W / 2, 30)
   }
+  g.restore()
   g.restore()
 
   g.textAlign = 'left'
@@ -16081,7 +16730,8 @@ function hudTopDirty(s) {
   const T = HUD_TOP
   const dpr = Math.min(devicePixelRatio || 1, 2)
   if (!T.cv || T.dpr !== dpr || T.score !== s.score || T.lv !== s.player.lv || T.lives !== s.lives ||
-      T.hard !== !!s.hard || T.crazy !== !!s.crazy || T.zone !== (s.zone || 0) || T.stage !== s.stage) return true
+      T.hard !== !!s.hard || T.crazy !== !!s.crazy || T.zone !== (s.zone || 0) || T.stage !== s.stage ||
+      T.aitp !== AIT_PAD) return true
   for (let i = 0; i < MOD_KEYS.length; i++) if (T.mods[i] !== (s.mods[MOD_KEYS[i]] || 0)) return true
   return false
 }
@@ -16095,7 +16745,7 @@ function hudTopPaint(s) {
     T.dpr = dpr
   }
   T.score = s.score; T.lv = s.player.lv; T.lives = s.lives; T.hard = !!s.hard; T.crazy = !!s.crazy
-  T.zone = s.zone || 0; T.stage = s.stage
+  T.zone = s.zone || 0; T.stage = s.stage; T.aitp = AIT_PAD
   T.mods = MOD_KEYS.map((k) => s.mods[k] || 0)
   const c = T.c
   c.setTransform(1, 0, 0, 1, 0, 0)
@@ -16124,12 +16774,14 @@ function hudTopPaint(s) {
       c.fillText(where, 14 + tw + 7, 54)
     }
   }
+
+  const rdy = AIT_PAD > 0 ? 28 : 0
   c.font = 'bold 15px system-ui'
   c.textAlign = 'right'; c.textBaseline = 'top'; c.fillStyle = '#4fd1ff'
-  c.fillText('편대 ' + s.player.lv, W - 14, 30)
+  c.fillText('편대 ' + s.player.lv, W - 14, 30 + rdy)
   for (let i = 0; i < s.lives; i++) {
     c.fillStyle = '#ff5470'
-    const x = W - 16 - i * 16, y = 56
+    const x = W - 16 - i * 16, y = 56 + rdy
     c.beginPath(); c.moveTo(x, y - 5); c.lineTo(x + 5, y + 4); c.lineTo(x - 5, y + 4); c.closePath(); c.fill()
   }
 
@@ -16669,6 +17321,23 @@ function draw() {
   }
 
   for (const e of s.enemies) if (!e.dead) drawStatus(e, e.r)
+
+  if (s.pops && s.pops.length) {
+    g.save()
+    g.textAlign = 'center'; g.textBaseline = 'middle'
+    for (const p of s.pops) {
+      const k = p.t / POP_LIFE
+      g.globalAlpha = Math.max(0, 1 - k * k)
+      g.font = p.big ? 'bold 17px system-ui' : 'bold 12px system-ui'
+      const y = p.y - 26 * k
+
+      g.lineWidth = p.big ? 4 : 3; g.strokeStyle = 'rgba(0,0,0,.65)'
+      g.strokeText(p.txt, p.x, y)
+      g.fillStyle = p.big ? '#ffd166' : 'rgba(255,255,255,.85)'
+      g.fillText(p.txt, p.x, y)
+    }
+    g.restore()
+  }
   if (s.boss && !s.boss.entering) drawStatus(s.boss, s.boss.r + 18)
 
   drawElfx()
@@ -16687,7 +17356,7 @@ function draw() {
   g.globalAlpha = 1
 
   if (hudTopDirty(s)) hudTopPaint(s)
-  g.drawImage(HUD_TOP.cv, 0, 0, W, HUD_TOP_H)
+  g.drawImage(HUD_TOP.cv, 0, HUD_OFF, W, HUD_TOP_H)
 
   {
     const bw = 42, bx = s.player.x - bw / 2, by = s.player.y + 26
@@ -16714,7 +17383,8 @@ function draw() {
   {
 
     PAUSE_BTN.x = W - 26
-    PAUSE_BTN.y = 66
+
+    PAUSE_BTN.y = 66 + HUD_OFF + (AIT_PAD > 0 ? 28 : 0)
     g.save()
     g.translate(PAUSE_BTN.x, PAUSE_BTN.y)
     g.fillStyle = 'rgba(10,16,26,.62)'
@@ -16814,10 +17484,39 @@ function draw() {
     g.fillStyle = '#fff'; g.font = 'bold 26px system-ui'
     g.textAlign = 'center'; g.textBaseline = 'middle'
     g.fillText(s.banner, W / 2, H * .34)
+    if (s.bannerSub) {
+      g.fillStyle = '#ffe27a'; g.font = 'bold 16px system-ui'
+      g.fillText(s.bannerSub, W / 2, H * .34 + 28)
+    }
     g.globalAlpha = 1
   }
 
   g.restore()
+
+  if (s.chainN >= 3 && s.chainT > 0) {
+    const n = s.chainN
+    const pulse = s.chainPulse > 0 ? 1 + s.chainPulse * 1.6 : 1
+    g.save()
+    g.translate(16, HUD_OFF + HUD_TOP_H + 16)
+    g.scale(pulse, pulse)
+    g.globalAlpha = Math.min(1, s.chainT / CHAIN_WIN + 0.35)
+    g.textAlign = 'left'; g.textBaseline = 'middle'
+    g.font = 'bold 20px system-ui'
+    g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.6)'
+    const txt = '연속 ' + n
+    g.strokeText(txt, 0, 0)
+    g.fillStyle = n >= 20 ? '#ff6a6a' : n >= 10 ? '#ff9a4a' : '#ffd166'
+    g.fillText(txt, 0, 0)
+    g.restore()
+  }
+
+  if (s.flashT > 0) {
+    g.save()
+    g.globalAlpha = Math.min(0.45, s.flashT / 0.25 * 0.45)
+    g.fillStyle = '#fff'
+    g.fillRect(0, 0, W, H)
+    g.restore()
+  }
 
   if (s.flareT > 0) {
     const fa = Math.min(1, s.flareT / 0.46) * 0.17
@@ -17163,6 +17862,8 @@ addEventListener('error', (e) => { ERR_LOG.push(String(e.message || e)); if (ERR
 addEventListener('unhandledrejection', (e) => { ERR_LOG.push('promise: ' + String(e.reason && e.reason.message || e.reason)); if (ERR_LOG.length > 20) ERR_LOG.shift() })
 
 function appHidden() {
+
+  auDuck(true)
   if (!state || !state.running || state.paused) return
   if (state.ultGuide != null || state.itemGuide) return
   state.paused = true; state.resumeT = 0; drag = null
@@ -17170,6 +17871,7 @@ function appHidden() {
 }
 function appShown() {
   last = performance.now()
+  auDuck(false)
 
   if (AU.ctx && AU.ctx.state !== 'running') { try { AU.ctx.resume().catch(() => {}) } catch {} }
 }
@@ -17380,7 +18082,17 @@ function auPlay(name) {
 function music(name) {
   if (AU.want === name) return
   AU.want = name
-  if (AU.on.music) auPlay(name)
+
+  if (AU.on.music && !AU_DUCK) auPlay(name)
+}
+
+let AU_DUCK = false
+function auDuck(on) {
+  on = !!on
+  if (AU_DUCK === on) return
+  AU_DUCK = on
+  if (on) auStop(0.15)
+  else if (AU.on.music && AU.want) auPlay(AU.want)
 }
 
 function setMusic(v) {
@@ -18234,8 +18946,10 @@ function end(win) {
     if (state.hitCount <= 12) rate++
     if (state.hitCount <= 4) rate++
   }
-  const before = key ? (prog.stars[key] || 0) : 0
-  if (key && rate > before) prog.stars[key] = rate
+
+  const runKey = modeKeyOf(state)
+  const before = starAt(runKey, key)
+  if (key && rate > before) starBox(runKey)[key] = rate
   bumpMissions(win, rate, true)
   if (key && state.score > (prog.stageBest[key] || 0)) prog.stageBest[key] = state.score
 
@@ -18304,12 +19018,10 @@ function end(win) {
   let hardGot = 0
   let modeName = ''
   if (win && key && (state.hard || state.crazy || state.extreme)) {
-    const mk = modeKeyOf(state)
-    const box = prog[mk]
-    const md = modeDef(mk)
+    const md = modeDef(runKey)
     modeName = md[1]
-    if (!box[key]) {
-      box[key] = true
+
+    if (!before) {
       prog.ticket += md[3]
       hardGot = md[3]
     }
@@ -18501,7 +19213,7 @@ function doLaunch(zoneMode) {
 
   if (!startingRush) rushPending = -1
 
-  if (zoneRun || !hardOpen()) runMode = 'normal'
+  if (zoneRun || !subOpen(prog.chapter || 0, curSub(), runMode)) runMode = 'normal'
 
   voiceWarm()
   if (energy() > 0) { energySpend(); start(); return true }
@@ -18509,7 +19221,7 @@ function doLaunch(zoneMode) {
     say('오늘 광고로 채울 수 있는 횟수를 다 썼습니다.\n' + mmss(energyWait()) + ' 뒤에 출격권 한 장이 찹니다.', '출격권')
     return false
   }
-  showAd('한 판 더', () => { prog.adDay.n++; save(); start() })
+  showAd('한 판 더', () => { prog.adDay.n++; save(); start() }, 'more')
   return true
 }
 
@@ -18666,6 +19378,24 @@ function titleShow() {
 }
 function titleStart() {
   if (titleDone) return
+
+  if (CLOUD.wait) {
+    const b0 = document.getElementById('tGo')
+
+    const t0 = b0 && b0.querySelector('.tgt')
+    if (b0) b0.disabled = true
+    if (t0) t0.textContent = '불러오는 중'
+    CLOUD.wait.then(() => {
+      CLOUD.wait = null
+      if (b0) b0.disabled = false
+      if (t0) t0.textContent = '시작하기'
+      titleStart()
+    })
+    return
+  }
+  cloudApply()
+
+  if (aitHere()) { aitHook(); void aitOrders() }
   titleDone = true
   elTitle.hidden = true
   titleInert(false)
@@ -18683,5 +19413,13 @@ function titleStart() {
   else go1()
 }
 titleShow()
+
+if (aitHere()) {
+
+  document.body.classList.add('aitTop')
+  aitSafeInit()
+  aitBackInit()
+  CLOUD.wait = Promise.race([cloudBoot(), new Promise((r) => setTimeout(r, 3000))])
+}
 document.getElementById('tGo').onclick = titleStart
 </script>
