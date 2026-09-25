@@ -3853,9 +3853,9 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.13'
+const BUILD_TAG = '0.9.14'
 
-const BUILD_AT = '09-25 21:17'
+const BUILD_AT = '09-25 21:42'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -3889,6 +3889,7 @@ function load() {
     skins: {},
     skinOn: '',
     chal: {},
+    mpos: {},
     stageBest: {},
     energy: { n: EN_MAX, t: 0 },
     login: { last: '', streak: 0 },
@@ -8341,6 +8342,35 @@ function jumpToModeStage(k) {
   return null
 }
 
+function modePosBox() {
+  if (!prog.mpos || typeof prog.mpos !== 'object') prog.mpos = {}
+  return prog.mpos
+}
+
+function modePosKeep(k) {
+  modePosBox()[k || 'normal'] = [prog.chapter || 0, curSub()]
+}
+
+function modePosGo(k) {
+  const p = modePosBox()[k || 'normal']
+  if (!Array.isArray(p)) return null
+  const ci = p[0] | 0, sub = p[1] | 0
+  if (!CHAPTERS[ci] || sub < 1 || sub > SUBS || !subOpen(ci, sub, k)) return null
+  prog.chapter = ci
+  prog.sub = sub
+  return [ci, sub]
+}
+
+function modePosEnter(k) {
+  const was = (prog.chapter || 0) + '-' + curSub()
+  const back = modePosGo(k)
+  const moved = back ? null : jumpToModeStage(k)
+  modePosKeep(k)
+  save()
+  const now = (prog.chapter || 0) + '-' + curSub()
+  return now !== was ? (moved || back) : null
+}
+
 function modeDone(k) {
   return k !== 'normal' && !!(prog[k] || {})[stageKey(prog.chapter || 0, curSub())]
 }
@@ -8379,9 +8409,13 @@ function bindModes(root, rerender) {
         say('일반으로 한 번 깬 판이 있어야 다른 모드로 갈 수 있습니다.', '아직 못 갑니다')
         return
       }
+
+      modePosKeep(runMode)
       runMode = k
       sfx('uiMode', k)
-      const moved = jumpToModeStage(k)
+      const moved = modePosEnter(k)
+
+      if (moved) mapCh = moved[0]
       rerender()
       if (moved && typeof hgToast === 'function') hgToast(modeDef(k)[1] + ' → ' + CHAPTERS[moved[0]].name + ' ' + moved[1] + '단계로 이동')
 
@@ -8513,6 +8547,7 @@ function renderStage() {
       sfx('uiNode', BOSS_AT.includes(sub))
       prog.chapter = mapCh
       prog.sub = sub
+      modePosKeep(runMode)
       save(); renderStage()
     }
   })
@@ -8930,7 +8965,8 @@ async function sbBoard(k) {
   try {
     const r = await SB.cli.rpc('sh_board', { p_board: k, p_limit: 30 })
     if (r.error || !Array.isArray(r.data)) return null
-    return r.data.map((e) => ({ nm: e.name, v: e.value, p: e.power, me: !!e.me }))
+
+    return r.data.map((e) => ({ nm: e.name, v: e.value, p: e.power, me: !!e.me, rk: e.rank | 0 }))
   } catch (e) { return null }
 }
 
@@ -8965,7 +9001,7 @@ function renderRank() {
 
   const live = SB.boards[t.k]
   const all = live
-    ? live.slice().sort((a, b) => b.v - a.v || b.p - a.p)
+    ? live.slice().sort((a, b) => (a.rk || 1e9) - (b.rk || 1e9) || b.v - a.v || b.p - a.p)
     : rankBoard(t).concat([me])
         .sort((a, b) => b.v - a.v || b.p - a.p || (a.me ? -1 : b.me ? 1 : 0))
   if (live && !all.some((e) => e.me)) all.push(me)
@@ -8974,12 +9010,14 @@ function renderRank() {
 
   const val = (e) => t.f(e.v) +
     (t.pw ? '<em>전투력 ' + (e.p || 0).toLocaleString('ko-KR') + '</em>' : '')
-  const myRank = all.indexOf(me) + 1
+
+  const mine = all.find((e) => e.me)
+  const myRank = live ? ((mine && mine.rk) || 0) : all.indexOf(me) + 1
   const first = all[0]
 
   head.innerHTML =
     '<div class="rkcard me"><small>내 순위</small>' +
-      '<span class="rk">' + myRank + '위</span>' +
+      '<span class="rk">' + (myRank > 0 ? myRank + '위' : '-') + '</span>' +
       '<span class="nm">' + pilotName() + '</span>' +
       '<span class="v">' + val(me) + '</span></div>' +
     '<div class="rkcard first"><small>1위</small>' +
@@ -8987,9 +9025,10 @@ function renderRank() {
       '<span class="nm">' + first.nm + (first.me ? ' · 나' : '') + '</span>' +
       '<span class="v">' + val(first) + '</span></div>'
   const line = (e, i) => {
-    const no = i + 1
+
+    const no = e.rk || (live && e.me ? 0 : i + 1)
     return '<div class="rank' + (e.me ? ' me' : '') + (no === 1 ? ' top' : '') + '">' +
-      '<span class="no' + (no <= 3 ? ' m' + no : '') + '">' + no + '</span>' +
+      '<span class="no' + (no > 0 && no <= 3 ? ' m' + no : '') + '">' + (no || '-') + '</span>' +
       '<span class="mw">' + medalSvg(no) + '</span>' +
       '<span class="nm">' + e.nm + (e.me ? ' · 나' : '') + '</span>' +
       '<span class="sc">' + val(e) + '</span></div>'
@@ -19302,6 +19341,8 @@ function end(win) {
     }
   }
 
+  if (!zone && state.rush < 0) modePosKeep(runKey)
+
   pendingChapter = opened
 
   pendingRush = (!zone && win && state.rush >= 0 && BOSS_RUSH[state.rush + 1])
@@ -19742,6 +19783,9 @@ function titleStart() {
     return
   }
   cloudApply()
+
+  runMode = 'normal'
+  modePosEnter('normal')
 
   if (aitHere()) { aitHook(); void aitOrders() }
   titleDone = true
