@@ -829,6 +829,27 @@
    */
   body.keeptabs .panel { padding-bottom: 88px; }
   body.keeptabs .tabs { z-index: 30; }
+  /*
+   * 도전 목록이 탭 뒤로 들어가 「최후의 기함」을 못 누르던 것 (2026-09-25 대표 신고).
+   *
+   * 시트 높이가 `100vh - 36px` 로 고정이라 덮개의 위아래 여백을 몰랐다.
+   * 앱인토스는 위에 상태바 몫(--aitPad)이 더 붙어 시트가 52px 밀려 내려갔고,
+   * 마지막 줄 가운데가 탭(기체) 위에 놓였다 - 누르면 그 탭이 눌리고 시트가
+   * 닫혔다. 390x844 · 360x740 · 360x640 셋 다 재현됐다.
+   *
+   * 아래는 탭 바의 실제 높이(82 + 홈 표시줄 몫)만큼 비우고, 시트 높이는
+   * 「화면 - 위 여백 - 아래 여백」으로 맞춘다. 아이폰처럼 홈 표시줄이
+   * 있으면 탭이 88px 보다 커지는데 전에는 그것도 몰랐다.
+   */
+  body.keeptabs .panel {
+    padding-bottom: calc(var(--hg-nav, 82px) + env(safe-area-inset-bottom, 0px) + 6px);
+  }
+  body.keeptabs #detail .dsheet.rushsheet {
+    max-height: calc(100vh - 24px - var(--hg-nav, 82px) - env(safe-area-inset-bottom, 0px) - 6px);
+  }
+  body.aitTop.keeptabs #detail .dsheet.rushsheet {
+    max-height: calc(100vh - 24px - var(--aitPad, 0px) - var(--hg-nav, 82px) - env(safe-area-inset-bottom, 0px) - 6px);
+  }
 
   /*
    * 결과 창 단추 (2026-09-13).
@@ -3834,7 +3855,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.13'
 
-const BUILD_AT = '09-25 15:50'
+const BUILD_AT = '09-25 21:17'
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -5556,7 +5577,8 @@ function passGrantPlane() {
 const PASS_BEN = [
   ['기체', '첫 결제 레전드 1기', '레전드 기체 랜덤 1기 · 처음 한 번'],
   ['출격', '매일 출격권 ' + PASS.energy + '장', '우편함으로 매일 도착합니다'],
-  ['조각', '매일 조각 상자 ' + PASS.shard + '개', '그날 정해진 기체의 조각 ' + PASS.shard + '개'],
+
+  ['조각', '매일 기체 조각 ' + PASS.shard + '개', '무작위 기체 한 대 · 날마다 바뀝니다'],
   ['가챠', '매일 가챠권 ' + PASS.tickets + '장', '우편함으로 매일 도착합니다'],
   ['한도', '출격권 한도 ' + PASS.enMax + '장', '자연 충전 상한 ' + PASS.enMax + '장 (기본 ' + EN_MAX + '장)'],
   ['광고', '광고 없음', '광고 자리마다 보상만 바로 받습니다'],
@@ -5691,7 +5713,8 @@ function openShopItem(id) {
       '<div class="note2">산 날부터 30일입니다. 저절로 갱신되지 않으니 해지할 것도 없습니다. ' +
       '기간이 남아 있을 때 또 사면 뒤에 30일이 이어 붙습니다. ' +
       '매일 가챠권·출격권·조각 상자와 첫 결제 선물은 우편함으로 옵니다. 레전드 기체는 처음 한 번만 드립니다. ' +
-      '조각 상자의 기체는 날마다 바뀌고, 아직 안 연 기체가 먼저 나옵니다.</div>' +
+      '조각 상자는 하루 한 개이고 조각 ' + PASS.shard + '개가 들어 있습니다. 어느 기체의 조각인지는 날마다 무작위로 정해지며 ' +
+      '고를 수 없습니다. 아직 안 연 기체가 먼저 나옵니다.</div>' +
       '<div class="price">' + won(psW) + '</div>'
     okLabel = on ? '30일 더 사기' : '구매하기'
     onOk = () => shopBuy(SKU.pass30, PASS.name + (on ? ' 30일 연장' : ' 30일'), won(psW))
