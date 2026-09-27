@@ -3855,7 +3855,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.15'
 
-const BUILD_AT = '09-27 21:37'
+const BUILD_AT = '09-27 22:05'
 
 const TRK_URL = 'https://qzimykxyvmoripifqmbi.supabase.co/rest/v1/rpc/sh_log'
 const TRK_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
@@ -8961,8 +8961,8 @@ async function cloudBoot() {
   try {
 
     let k = ''
-    for (let i = 0; i < 5 && !k; i++) {
-      if (i) await new Promise((r) => setTimeout(r, 1200))
+    for (let i = 0; i < 4 && !k; i++) {
+      if (i) await new Promise((r) => setTimeout(r, 800))
       k = await window.__AIT.userKey()
       why = (window.__AIT.keyWhy && window.__AIT.keyWhy()) || ''
       if (why === 'INVALID_CATEGORY' || why === 'noresult') break
@@ -19966,7 +19966,7 @@ if (aitHere()) {
   aitSafeInit()
   aitBackInit()
 
-  CLOUD.wait = Promise.race([cloudBoot(), new Promise((r) => setTimeout(r, 8000))])
+  CLOUD.wait = Promise.race([cloudBoot(), new Promise((r) => setTimeout(r, 5000))])
 }
 document.getElementById('tGo').onclick = titleStart
 </script>
