@@ -3855,7 +3855,7 @@ const AD_ENERGY_DAY = 10
 
 const BUILD_TAG = '0.9.15'
 
-const BUILD_AT = '09-27 21:22'
+const BUILD_AT = '09-27 21:37'
 
 const TRK_URL = 'https://qzimykxyvmoripifqmbi.supabase.co/rest/v1/rpc/sh_log'
 const TRK_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
@@ -19574,6 +19574,8 @@ function end(win) {
   const mustFit = freshPlanes.length + freshSlots.length > 0
 
   document.getElementById('nextGo').hidden = !hasNext
+
+  document.getElementById('nextGo').textContent = pendingRush != null ? '다음 보스 도전' : '다음 단계 출격'
   document.getElementById('retry').hidden = !(!win && !zone) || mustFit
   const goHangar = document.getElementById('again')
   if (mustFit) {
@@ -19708,7 +19710,8 @@ function end(win) {
     chalHtml +
     itemNote +
     lvBox +
-    (!zone && win && nextSub <= SUBS ? '<div class="rnext"><b>' + nextSub + '단계</b>가 열렸습니다</div>' : '') +
+
+    (!zone && win && state.rush < 0 && nextSub <= SUBS ? '<div class="rnext"><b>' + nextSub + '단계</b>가 열렸습니다</div>' : '') +
     (opened != null
       ? '<div class="rnext hot"><b>' + CHAPTERS[opened].name + '</b>' + (josaHas(CHAPTERS[opened].name) ? '이' : '가') + ' 열렸습니다</div>' : '')
   const rv = document.getElementById('revive')
