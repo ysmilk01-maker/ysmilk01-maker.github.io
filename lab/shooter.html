@@ -3853,9 +3853,9 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.15'
+const BUILD_TAG = '0.9.16'
 
-const BUILD_AT = '09-27 22:05'
+const BUILD_AT = '09-27 22:25'
 
 const TRK_URL = 'https://qzimykxyvmoripifqmbi.supabase.co/rest/v1/rpc/sh_log'
 const TRK_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
@@ -8742,23 +8742,47 @@ const SB_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
 const SB = { cli: null, ready: false, tried: false, err: null, boards: {}, busy: {}, sent: 0,
              user: null, anon: true }
 
-async function sbInit() {
-
-  if (SB.tried && (SB.ready || !SB.retryAt || Date.now() < SB.retryAt)) return SB.ready
-  SB.tried = true
-  try {
+async function sbClient() {
+  if (SB.cli) return SB.cli
+  if (SB.cliP) return SB.cliP
+  SB.cliP = (async () => {
 
     const m = (window.supabase && window.supabase.createClient)
       ? window.supabase
       : await import('https://esm.sh/@supabase/supabase-js@2')
-    SB.cli = m.createClient(SB_URL, SB_KEY, {
+    const cli = m.createClient(SB_URL, SB_KEY, {
 
       auth: {
         persistSession: true, autoRefreshToken: true, storageKey: 'n2sl.shooter.auth',
         flowType: 'pkce', detectSessionInUrl: !sbNative(),
       },
     })
+    SB.cli = cli
     sbDeepLink()
+    return cli
+  })()
+  try {
+    return await SB.cliP
+  } finally {
+    SB.cliP = null
+  }
+}
+
+async function sbInit() {
+  if (SB.ready) return true
+  if (SB.initP) return SB.initP
+  if (SB.tried && (!SB.retryAt || Date.now() < SB.retryAt)) return false
+  SB.tried = true
+  SB.initP = sbInitRun()
+  try {
+    return await SB.initP
+  } finally {
+    SB.initP = null
+  }
+}
+async function sbInitRun() {
+  try {
+    await sbClient()
     const cur = await SB.cli.auth.getSession()
     if (!cur.data.session) {
       const r = await SB.cli.auth.signInAnonymously()
@@ -8978,7 +9002,11 @@ async function cloudBoot() {
 }
 
 async function cloudConnect() {
-  if (!(await sbInit())) {
+
+  try {
+    await sbClient()
+  } catch (e) {
+    SB.err = (e && e.message) || String(e)
     track('cloud', { ok: 0, at: 'sb', why: String(SB.err || '').slice(0, 120) })
     return false
   }
@@ -9043,6 +9071,10 @@ function cloudPush() {
   }, 8000)
 }
 
+function sbHasSession() {
+  try { return !!localStorage.getItem('n2sl.shooter.auth') } catch (e) { return false }
+}
+
 const SMAIL = { at: 0, busy: false }
 const SMAIL_GAP = 60000
 
@@ -9050,6 +9082,8 @@ async function mailPullServer(force) {
   if (SMAIL.busy) return 0
   const now = Date.now()
   if (!force && now - SMAIL.at < SMAIL_GAP) return 0
+
+  if (!SB.ready && !sbHasSession() && !((prog.stats && prog.stats.runs) > 0)) return 0
   if (!SB.ready && !(await sbInit())) return 0
   SMAIL.busy = true
   let added = 0
