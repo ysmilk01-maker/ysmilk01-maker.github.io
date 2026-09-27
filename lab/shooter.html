@@ -3853,9 +3853,99 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.14'
+const BUILD_TAG = '0.9.15'
 
-const BUILD_AT = '09-25 21:42'
+const BUILD_AT = '09-27 21:22'
+
+const TRK_URL = 'https://qzimykxyvmoripifqmbi.supabase.co/rest/v1/rpc/sh_log'
+const TRK_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
+const TRK = { q: [], t: 0, did: '', off: false, store: '', errs: 0, once: {} }
+;(function trkInit() {
+  try {
+    TRK.off = localStorage.getItem('sh.notrack') === '1'
+    let d = localStorage.getItem('sh.did')
+    if (!d) {
+      d = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : Date.now().toString(36) + Math.random().toString(36).slice(2, 12)
+      localStorage.setItem('sh.did', d)
+    }
+    TRK.did = d
+  } catch (e) {
+
+    TRK.did = 'nols-' + Math.random().toString(36).slice(2, 12)
+  }
+})()
+
+function trkPlat() {
+  if (window.__AIT) return 'toss'
+  const C = window.Capacitor
+  if (C && typeof C.isNativePlatform === 'function' && C.isNativePlatform()) return TRK.store || 'android'
+  if (location.protocol === 'file:' || /^(localhost|127\.|192\.168\.)/.test(location.hostname)) return 'dev'
+  return 'web'
+}
+function track(e, v) {
+  if (TRK.off || !TRK.did) return
+  TRK.q.push({ e: e, v: v == null ? null : v, t: Date.now() })
+  if (TRK.q.length > 200) TRK.q.splice(0, TRK.q.length - 200)
+  clearTimeout(TRK.t)
+  TRK.t = setTimeout(trkFlush, TRK.q.length >= 20 ? 0 : 4000)
+}
+
+function trackOnce(e, v) {
+  if (TRK.once[e]) return
+  TRK.once[e] = 1
+  track(e, v)
+}
+function trkFlush() {
+  clearTimeout(TRK.t)
+  if (!TRK.q.length) return
+  const now = Date.now()
+
+  const evs = TRK.q.splice(0, 50).map((x) => ({ e: x.e, v: x.v, ago: Math.max(0, now - x.t) }))
+  const body = JSON.stringify({ p_did: TRK.did, p_plat: trkPlat(), p_ver: BUILD_TAG, p_evs: evs })
+  try {
+    fetch(TRK_URL, {
+      method: 'POST', keepalive: body.length < 60000,
+      headers: { apikey: TRK_KEY, 'Content-Type': 'application/json' }, body: body,
+    }).catch(() => {   })
+  } catch (e) {   }
+  if (TRK.q.length) TRK.t = setTimeout(trkFlush, 1000)
+}
+
+addEventListener('visibilitychange', () => { if (document.hidden) trkFlush() })
+addEventListener('pagehide', trkFlush)
+
+addEventListener('error', (ev) => {
+  if (TRK.errs >= 5) return
+  TRK.errs++
+  track('err', { m: String(ev.message || '').slice(0, 160), l: ev.lineno | 0, c: ev.colno | 0 })
+})
+addEventListener('unhandledrejection', (ev) => {
+  if (TRK.errs >= 5) return
+  TRK.errs++
+  const r = ev.reason
+  track('err', { m: 'rej:' + String((r && r.message) || r).slice(0, 160) })
+})
+
+;(function trkOpen() {
+  let n = 0, first = 0, last = 0
+  const now = Date.now()
+  try {
+    n = (+localStorage.getItem('sh.opens') || 0) + 1
+    first = +localStorage.getItem('sh.first') || 0
+    last = +localStorage.getItem('sh.lastOpen') || 0
+    if (!first) { first = now; localStorage.setItem('sh.first', String(now)) }
+    localStorage.setItem('sh.opens', String(n))
+    localStorage.setItem('sh.lastOpen', String(now))
+  } catch (e) {   }
+  let ref = '', src = ''
+  try { ref = document.referrer ? new URL(document.referrer).hostname : '' } catch (e) {}
+  try { src = (new URLSearchParams(location.search).get('src') || '').slice(0, 24) } catch (e) {}
+  track('open', {
+    n: n, d: first ? Math.floor((now - first) / 864e5) : 0, gap: last ? Math.round((now - last) / 36e5) : -1,
+    ref: ref, src: src, w: innerWidth, h: innerHeight, mem: navigator.deviceMemory || 0,
+  })
+})()
 const FREE_PLAY = false
 
 const DEV_TOOLS = false
@@ -6150,6 +6240,7 @@ function openNamePop(done) {
   const apply = () => {
     const v = (inp.value || '').trim().slice(0, 12)
     prog.pilot.name = v || inp.placeholder
+    if (first) track('name', { typed: v ? 1 : 0 })
     save(); sfx('pick')
     close()
     if (curScreen === 'squad') renderSquad()
@@ -6694,6 +6785,7 @@ let lastGoAt = 0
 function go(name) {
   const previous = curScreen
   curScreen = name
+  if (name !== previous) track('scr', { s: name })
 
   if (name === 'gacha') { warmImgs(GC, Object.keys(GACHA_B64)); warmImgs(GD, Object.keys(GDECO_B64).concat('room')) }
   let shown = null
@@ -7602,6 +7694,7 @@ async function shopInit() {
   if (!P.Shop) return false
   try {
     const st = await P.Shop.state()
+    if (st && st.store) TRK.store = st.store
     SHOPX.ready = !!(st && st.ready)
     if (!SHOPX.ready) return false
     P.Shop.addListener('purchased', (e) => shopGrant(e))
@@ -8650,7 +8743,8 @@ const SB = { cli: null, ready: false, tried: false, err: null, boards: {}, busy:
              user: null, anon: true }
 
 async function sbInit() {
-  if (SB.tried) return SB.ready
+
+  if (SB.tried && (SB.ready || !SB.retryAt || Date.now() < SB.retryAt)) return SB.ready
   SB.tried = true
   try {
 
@@ -8675,6 +8769,7 @@ async function sbInit() {
   } catch (e) {
     SB.err = (e && e.message) || String(e)
     SB.ready = false
+    SB.retryAt = Date.now() + 30000
   }
   return SB.ready
 }
@@ -8862,18 +8957,50 @@ addEventListener('resize', aitShortSync)
 
 async function cloudBoot() {
   if (!aitHere() || !window.__AIT.userKey) return
+  let why = ''
   try {
-    const k = await window.__AIT.userKey()
-    if (!k) return
+
+    let k = ''
+    for (let i = 0; i < 5 && !k; i++) {
+      if (i) await new Promise((r) => setTimeout(r, 1200))
+      k = await window.__AIT.userKey()
+      why = (window.__AIT.keyWhy && window.__AIT.keyWhy()) || ''
+      if (why === 'INVALID_CATEGORY' || why === 'noresult') break
+    }
+    if (!k) { track('cloud', { ok: 0, at: 'key', why: why }); return }
     CLOUD.key = k
-    if (!(await sbInit())) return
-    const r = await SB.cli.rpc('sh_save_pull', { p_key: k })
-    if (r.error) throw r.error
-    CLOUD.on = true
-    CLOUD.pulled = r.data || null
+    CLOUD.tryAt = Date.now()
+    await cloudConnect()
   } catch (e) {
     SB.err = (e && e.message) || String(e)
+    track('cloud', { ok: 0, at: 'boot', why: String(SB.err).slice(0, 120) })
   }
+}
+
+async function cloudConnect() {
+  if (!(await sbInit())) {
+    track('cloud', { ok: 0, at: 'sb', why: String(SB.err || '').slice(0, 120) })
+    return false
+  }
+  const r = await SB.cli.rpc('sh_save_pull', { p_key: CLOUD.key })
+  if (r.error) {
+    SB.err = r.error.message || String(r.error)
+    track('cloud', { ok: 0, at: 'pull', why: String(SB.err).slice(0, 120) })
+    return false
+  }
+  const d = r.data || null
+  if (titleDone) {
+    if (d && (d._ts || 0) > ((prog && prog._ts) || 0)) {
+      CLOUD.block = true
+      track('cloud', { ok: 0, at: 'late' })
+      return false
+    }
+  } else {
+    CLOUD.pulled = d
+  }
+  CLOUD.on = true
+  track('cloud', { ok: 1, has: d ? 1 : 0 })
+  return true
 }
 
 function cloudApply() {
@@ -8891,15 +9018,26 @@ function cloudApply() {
 }
 
 function cloudPush() {
-  if (!CLOUD.on || !CLOUD.key) return
+  if (!CLOUD.key || CLOUD.block) return
   clearTimeout(CLOUD.t)
   CLOUD.t = setTimeout(async () => {
     if (CLOUD.busy) return
     CLOUD.busy = true
     try {
-      await SB.cli.rpc('sh_save_push', { p_key: CLOUD.key, p_data: prog, p_ts: prog._ts || 0 })
+
+      if (!CLOUD.on && Date.now() - (CLOUD.tryAt || 0) > 30000) {
+        CLOUD.tryAt = Date.now()
+        await cloudConnect()
+      }
+      if (CLOUD.on) {
+        const r = await SB.cli.rpc('sh_save_push', { p_key: CLOUD.key, p_data: prog, p_ts: prog._ts || 0 })
+
+        if (r && r.error) throw r.error
+        trackOnce('cloudPush', { ok: 1 })
+      }
     } catch (e) {
       SB.err = (e && e.message) || String(e)
+      trackOnce('cloudPushErr', { why: String(SB.err).slice(0, 120) })
     }
     CLOUD.busy = false
   }, 8000)
@@ -19282,6 +19420,10 @@ function start() {
   last = performance.now()
   hideMenus(); scOver.hidden = true
   prog.stats.runs++
+  track('run', {
+    st: state.zone ? 'zone' : state.rush >= 0 ? 'rush' + state.rush : stageKey(prog.chapter || 0, curSub()),
+    m: modeKeyOf(state), n: prog.stats.runs,
+  })
   save()
   music('battle')
 
@@ -19314,6 +19456,12 @@ function end(win) {
   }
 
   const runKey = modeKeyOf(state)
+
+  track('end', {
+    st: key || (zone ? 'zone' : 'rush'), m: runKey, win: win ? 1 : 0, star: rate,
+    sec: Math.round(state.t || 0), hit: state.hitCount | 0,
+    kr: Math.round(killRateOf(state) * 100), sc: state.score | 0,
+  })
   const before = starAt(runKey, key)
   if (key && rate > before) starBox(runKey)[key] = rate
   bumpMissions(win, rate, true)
@@ -19788,6 +19936,7 @@ function titleStart() {
   modePosEnter('normal')
 
   if (aitHere()) { aitHook(); void aitOrders() }
+  track('go', { ms: Math.round(performance.now()), named: prog.pilot.name ? 1 : 0, runs: prog.stats.runs | 0 })
   titleDone = true
   elTitle.hidden = true
   titleInert(false)
@@ -19806,12 +19955,15 @@ function titleStart() {
 }
 titleShow()
 
+track('title', { ms: Math.round(performance.now()) })
+
 if (aitHere()) {
 
   document.body.classList.add('aitTop')
   aitSafeInit()
   aitBackInit()
-  CLOUD.wait = Promise.race([cloudBoot(), new Promise((r) => setTimeout(r, 3000))])
+
+  CLOUD.wait = Promise.race([cloudBoot(), new Promise((r) => setTimeout(r, 8000))])
 }
 document.getElementById('tGo').onclick = titleStart
 </script>
