@@ -2782,6 +2782,16 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .slotTabs.v3{margin:0 0 6px;gap:5px}.slotTabs.v3 button{min-height:62px;padding:3px 2px}.slotTabs.v3 button img{height:30px}.slotTabs.v3 button .plus{height:30px;line-height:30px;font-size:19px}
 .pl-diag{height:122px;margin-bottom:6px}.pl-diag .pd-img{height:84px;top:4px}.pl-diag .pd-pow{padding:4px 8px}.pl-diag .pd-pow b{font-size:15px}.pl-diag .pd-pow .pd-bd{margin-top:2px}.pl-diag .pd-coll{margin-top:3px}
 .pl-diag .pd-name{bottom:4px}.pl-diag .pd-name b{font-size:13px}.pl-diag .pd-name small{font-size:9px}.pl-diag .pd-bar{margin-top:3px;height:4px}
+/*
+ * 기체 화면 겹침 셋 (2026-09-29 점검 P1-10, 390x844 에서 재현).
+ * 1 「‹ 편대로」가 제목 줄 오른쪽에 떠서 아래 자리 탭의 「후방」을 덮었다 - 단추를 낮추고 탭을 조금 내린다
+ * 2 기체 칸이 122px 라 이름 줄이 「컬렉션」 단추와 부딪혔다 - 칸을 늘린다
+ * 3 .bar 의 display:flex 가 hidden 을 이겨, 올릴 것이 없을 때도 글자 없는 파란 막대가 보였다
+ */
+#scPlanes .hg-back{top:8px;min-height:30px;padding:4px 10px}
+#scPlanes .slotTabs{margin-top:12px}
+.pl-diag{height:142px}
+.bar[hidden]{display:none}
 .filters.v3{margin-bottom:4px}.filters.v3 .frow button{padding:9px 7px;font-size:11.5px}   /* 높이 20 -> 32 (2026-09-18) */
 .card.cp .pimg{height:42px;margin-top:20px}.card.cp .wpn{font-size:9px;color:#9fb9c5;text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card.cp .wpn .wi{width:10px;height:10px;vertical-align:-1px;margin-right:2px}
@@ -3853,9 +3863,9 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.16'
+const BUILD_TAG = '0.9.17'
 
-const BUILD_AT = '09-27 22:25'
+const BUILD_AT = '09-29 07:23'
 
 const TRK_URL = 'https://qzimykxyvmoripifqmbi.supabase.co/rest/v1/rpc/sh_log'
 const TRK_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
@@ -3951,6 +3961,8 @@ const FREE_PLAY = false
 const DEV_TOOLS = false
 
 const SAVE_KEY = 'shooter-proto-v3'
+
+const CLOUD = { key: '', on: false, t: 0, busy: false, pulled: null, wait: null, mode: '' }
 const OLD_KEY = 'shooter-proto-v2'
 function load() {
   const base = {
@@ -5396,7 +5408,8 @@ function energySpend() {
 
 const AD_TK_DAY = 5
 function adTkLeft() {
-  const key = new Date().toISOString().slice(0, 10)
+
+  const key = dayKey()
   if (!prog.adTk) prog.adTk = { d: '', n: 0 }
   if (prog.adTk.d !== key) { prog.adTk = { d: key, n: 0 }; save() }
   return AD_TK_DAY - prog.adTk.n
@@ -5683,7 +5696,7 @@ function passCard() {
     PASS_BEN.map(([i, b, t]) => '<div class="pc-ben"><i>' + i + '</i><b>' + b + '</b><span>' + t + '</span></div>').join('') +
 
     '<button id="passBuy">' + (on ? '30일 더 · ' : '') + skuWon(SKU.pass30, PASS.price).toLocaleString('ko-KR') + '원</button>' +
-    '<div class="pc-note">산 날부터 30일입니다. 저절로 갱신되지 않습니다. 결제는 곧 열립니다.</div>' +
+    '<div class="pc-note">산 날부터 30일입니다. 저절로 갱신되지 않습니다. 첫 결제에는 레전드 기체가 우편으로 옵니다.</div>' +
     '</div>'
 }
 
@@ -5895,7 +5908,7 @@ function openShopItem(id) {
 }
 function adDayLeft() {
   if (FREE_PLAY) return 99
-  const key = new Date().toISOString().slice(0, 10)
+  const key = dayKey()
   if (prog.adDay.d !== key) { prog.adDay = { d: key, n: 0 }; save() }
   return AD_ENERGY_DAY - prog.adDay.n
 }
@@ -7784,7 +7797,8 @@ function shopGrant(e) {
     case SKU.gacha50: prog.ticket += 50; msg = '가챠권 50장'; break
 
     case SKU.energy10: prog.energy.n = energy() + 10; msg = '출격권 10장'; break
-    case SKU.pass30: passGive(30); msg = PASS.name + ' 30일'; break
+
+    case SKU.pass30: passGive(30); passGrantPlane(); msg = PASS.name + ' 30일'; break
     default: {
 
       const pid = skuToPlane(e.productId)
@@ -8790,6 +8804,8 @@ async function sbInitRun() {
     }
     sbMarkUser((await SB.cli.auth.getUser()).data.user)
     SB.ready = true
+
+    void cloudUidStart()
   } catch (e) {
     SB.err = (e && e.message) || String(e)
     SB.ready = false
@@ -8840,6 +8856,7 @@ function sbDeepLink() {
       if (r.error) throw r.error
       sbMarkUser(r.data && r.data.user)
       sbPaintAccount()
+      void cloudUidStart()
       say(sbAccountLabel() + ' 로 로그인했습니다.\n이제 기기를 바꿔도 기록이 따라옵니다.', '로그인')
     } catch (e) {
       SB.err = (e && e.message) || String(e)
@@ -8948,8 +8965,6 @@ async function sbSignInGoogle() {
   }
 }
 
-const CLOUD = { key: '', on: false, t: 0, busy: false, pulled: null, wait: null }
-
 function aitHere() { return !!window.__AIT }
 
 function aitSafeInit() {
@@ -8993,6 +9008,7 @@ async function cloudBoot() {
     }
     if (!k) { track('cloud', { ok: 0, at: 'key', why: why }); return }
     CLOUD.key = k
+    CLOUD.mode = 'toss'
     CLOUD.tryAt = Date.now()
     await cloudConnect()
   } catch (e) {
@@ -9031,11 +9047,21 @@ async function cloudConnect() {
   return true
 }
 
+function progHas(p) {
+  return !!p && (((p.stats && p.stats.runs) || 0) > 0 || (p.total || 0) > 0 ||
+                 !!(p.bought && p.bought.log && p.bought.log.length))
+}
+
+function cloudServerWins(d) {
+  if (!d || typeof d !== 'object') return false
+  if ((d._ts || 0) > ((prog && prog._ts) || 0)) return true
+  return !progHas(prog) && progHas(d)
+}
 function cloudApply() {
   const d = CLOUD.pulled
   CLOUD.pulled = null
   if (!d || typeof d !== 'object') return false
-  if ((d._ts || 0) <= ((prog && prog._ts) || 0)) return false
+  if (!cloudServerWins(d)) return false
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(d))
     prog = load()
@@ -9053,12 +9079,15 @@ function cloudPush() {
     CLOUD.busy = true
     try {
 
-      if (!CLOUD.on && Date.now() - (CLOUD.tryAt || 0) > 30000) {
+      if (CLOUD.mode !== 'uid' && !CLOUD.on && Date.now() - (CLOUD.tryAt || 0) > 30000) {
         CLOUD.tryAt = Date.now()
         await cloudConnect()
       }
       if (CLOUD.on) {
-        const r = await SB.cli.rpc('sh_save_push', { p_key: CLOUD.key, p_data: prog, p_ts: prog._ts || 0 })
+
+        const r = CLOUD.mode === 'uid'
+          ? await SB.cli.rpc('sh_save_push_me', { p_data: prog, p_ts: prog._ts || 0 })
+          : await SB.cli.rpc('sh_save_push', { p_key: CLOUD.key, p_data: prog, p_ts: prog._ts || 0 })
 
         if (r && r.error) throw r.error
         trackOnce('cloudPush', { ok: 1 })
@@ -9069,6 +9098,62 @@ function cloudPush() {
     }
     CLOUD.busy = false
   }, 8000)
+}
+
+function cloudUidOk() { return !aitHere() && SB.ready && !!SB.user && !SB.anon }
+
+function cloudUidStart() {
+  if (CLOUD.uidP) return CLOUD.uidP
+  if (CLOUD.mode === 'toss' || CLOUD.mode === 'uid' || !cloudUidOk()) return Promise.resolve()
+  CLOUD.uidP = cloudUidRun().finally(() => { CLOUD.uidP = null })
+  return CLOUD.uidP
+}
+async function cloudUidRun() {
+  try {
+    const r = await SB.cli.rpc('sh_save_pull_me')
+    if (r.error) throw r.error
+    const d = r.data || null
+    CLOUD.mode = 'uid'
+    CLOUD.key = 'uid'
+    track('cloud', { ok: 1, has: d ? 1 : 0, mode: 'uid' })
+    if (!titleDone) {
+
+      CLOUD.pulled = d
+      CLOUD.on = true
+      return
+    }
+    if (cloudServerWins(d)) {
+
+      for (let i = 0; i < 200 && !document.getElementById('askPop').hidden; i++) {
+        await new Promise((r) => setTimeout(r, 300))
+      }
+      const lv = (d.pilot && d.pilot.lv) || 1
+      const runs = (d.stats && d.stats.runs) || 0
+      ask('이 계정에 저장된 진행이 있습니다.\n파일럿 Lv.' + lv + ' · ' + runs.toLocaleString('ko-KR') + '판\n\n' +
+          '불러오면 이 기기의 진행은 계정의 진행으로 바뀝니다.\n' +
+          '「이 기기 것 유지」를 누르면 이 기기의 진행이 계정에 저장됩니다.',
+        () => {
+          track('cloud', { ok: 1, at: 'restore', mode: 'uid' })
+          trkFlush()
+          try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)) } catch (e) {}
+          location.reload()
+        },
+        { title: '진행 불러오기', ok: '불러오기', no: '이 기기 것 유지',
+          onNo: () => { CLOUD.on = true; cloudPush() } })
+      return
+    }
+    CLOUD.on = true
+    cloudPush()
+  } catch (e) {
+    SB.err = (e && e.message) || String(e)
+    track('cloud', { ok: 0, at: 'uid', why: String(SB.err).slice(0, 120) })
+  }
+}
+
+async function cloudUidBoot() {
+  if (aitHere()) return
+  if (!(await sbInit())) return
+  await cloudUidStart()
 }
 
 function sbHasSession() {
@@ -10262,22 +10347,19 @@ canvas.addEventListener('pointerdown', (e) => {
 
     if (state.ultGuide != null) {
       const onBtn = (p.x - ULT_BTN.x) ** 2 + (p.y - ULT_BTN.y) ** 2 < (ULT_BTN.r + 16) ** 2
+
       ultGuideClose(onBtn)
-      e.preventDefault()
-      return
+      if (onBtn) { e.preventDefault(); return }
     }
 
-    if (state.itemGuide) {
-      itemGuideClose()
-      e.preventDefault()
-      return
-    }
+    if (state.itemGuide) itemGuideClose()
     if (state.paused) {
       if (state.resumeT <= 0) { state.resumeT = RESUME_WAIT; sfx('pick'); pauseUI(false) }
       e.preventDefault()
       return
     }
     if ((p.x - PAUSE_BTN.x) ** 2 + (p.y - PAUSE_BTN.y) ** 2 < (PAUSE_BTN.r + 10) ** 2) {
+      guideDrop()
       state.paused = true; state.resumeT = 0; drag = null
       sfx('pick')
       pauseUI(true)
@@ -10326,18 +10408,15 @@ function ultTip() {
   if (!state || !state.running || state.paused) return
   prog.tipUlt = true
   save()
-  state.paused = true
-  state.resumeT = 0
+
   state.ultGuide = 0
-  drag = null
+  state.guideAt = performance.now()
 }
 
-function ultGuideClose(fire) {
+function ultGuideClose(fire, quiet) {
   if (!state) return
   state.ultGuide = null
-  state.paused = false
-  state.resumeT = 0
-  sfx('pick')
+  if (!quiet) sfx('pick')
   if (fire && state.ult >= ULT_MAX) fireUlt()
 }
 function pauseUI(on) {
@@ -12996,18 +13075,32 @@ function itemTip(it) {
   if (tk) prog.tipTk = true
   else prog.tipItem2 = true
   save()
-  state.paused = true
-  state.resumeT = 0
+
   state.itemGuide = { t: 0, it: it }
-  drag = null
+  state.guideAt = performance.now()
 }
 
-function itemGuideClose() {
+function itemGuideClose(quiet) {
   if (!state) return
   state.itemGuide = null
-  state.paused = false
-  state.resumeT = 0
-  sfx('pick')
+  if (!quiet) sfx('pick')
+}
+
+const GUIDE_SLOW = 0.3
+const GUIDE_TIME = 2.6
+function guideTick() {
+  if (!state) return
+
+  const age = (performance.now() - (state.guideAt || 0)) / 1000
+  if (state.ultGuide != null && age > GUIDE_TIME) ultGuideClose(false, true)
+  const gd = state.itemGuide
+  if (gd && (age > GUIDE_TIME || !gd.it || gd.it.dead || !state.items.includes(gd.it))) itemGuideClose(true)
+}
+
+function guideDrop() {
+  if (!state) return
+  if (state.ultGuide != null) ultGuideClose(false, true)
+  if (state.itemGuide) itemGuideClose(true)
 }
 
 const MISSILE_R = 66
@@ -13211,8 +13304,9 @@ function reviveLimit() {
 
 const scAd = document.getElementById('adv')
 
-function showAd(title, onDone, slot) {
-  missBump('ad')
+function showAd(title, onDone0, slot) {
+
+  const onDone = () => { missBump('ad'); onDone0() }
 
   if (passActive()) { sfx('pick'); onDone(); return }
 
@@ -18237,12 +18331,12 @@ function draw() {
     g.restore()
   }
 
-  if (s.paused && s.ultGuide != null) {
+  if (s.ultGuide != null) {
 
-    s.ultGuide += s.dt || 1 / 60
+    s.ultGuide += s.guideDt || s.dt || 1 / 60
     const bob = Math.abs(Math.sin(s.ultGuide * 3))
     g.save()
-    g.fillStyle = 'rgba(6,9,14,.7)'
+    g.fillStyle = 'rgba(6,9,14,.42)'
     g.fillRect(0, 0, W, H)
 
     g.globalCompositeOperation = 'destination-out'
@@ -18268,10 +18362,10 @@ function draw() {
     g.font = 'bold 14px system-ui'
     g.fillText('여기를 누르세요', ULT_BTN.x - 74 + bob * 12, ULT_BTN.y - 44)
     g.restore()
-  } else if (s.paused && s.itemGuide) {
+  } else if (s.itemGuide) {
 
     const gd = s.itemGuide, it = gd.it
-    gd.t += s.dt || 1 / 60
+    gd.t += s.guideDt || s.dt || 1 / 60
     const bob = Math.abs(Math.sin(gd.t * 3))
     const ix = it.x, iy = it.y
     const M = it.mod && MODS[it.mod]
@@ -18279,7 +18373,7 @@ function draw() {
     const tone = tk ? '#ffd98a' : ((M && M.color) || '#ffd166')
     g.save()
 
-    g.fillStyle = 'rgba(6,9,14,.72)'
+    g.fillStyle = 'rgba(6,9,14,.45)'
     g.beginPath()
     g.rect(0, 0, W, H)
     g.arc(ix, iy, it.r + 22, 0, Math.PI * 2)
@@ -18387,7 +18481,8 @@ function appHidden() {
 
   auDuck(true)
   if (!state || !state.running || state.paused) return
-  if (state.ultGuide != null || state.itemGuide) return
+
+  guideDrop()
   state.paused = true; state.resumeT = 0; drag = null
   pauseUI(true)
 }
@@ -18430,7 +18525,14 @@ function frame(now) {
     return
   }
   try {
-    update(dt * GAME_SPEED * speedMul()); draw()
+
+    let slow = 1
+    if (state.ultGuide != null || state.itemGuide) {
+      slow = GUIDE_SLOW
+      state.guideDt = dt
+      guideTick()
+    }
+    update(dt * GAME_SPEED * speedMul() * slow); draw()
     frameErrs = 0
   } catch (err) {
     if (frameErrs++ === 0) console.error('frame', err)
@@ -20001,6 +20103,9 @@ if (aitHere()) {
   aitBackInit()
 
   CLOUD.wait = Promise.race([cloudBoot(), new Promise((r) => setTimeout(r, 5000))])
+} else if (sbHasSession()) {
+
+  CLOUD.wait = Promise.race([cloudUidBoot(), new Promise((r) => setTimeout(r, 4000))])
 }
 document.getElementById('tGo').onclick = titleStart
 </script>
