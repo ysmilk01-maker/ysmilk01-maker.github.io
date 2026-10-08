@@ -3364,7 +3364,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div class="panel" id="introBridge" hidden>
   <div>
     <h2>맛보기 출격 끝</h2>
-    <div class="ibody">방금 몬 편대는 레전드 기체 네 대와 레전드 파일럿입니다.<br>이제 1단계부터 내 편대를 직접 키웁니다.<br>첫 선물로 <b>가챠권 3장</b>을 우편으로 보냈습니다. 뽑기에서 기체 조각을 모으면 새 기체가 열립니다.</div>
+    <div class="ibody">방금 몬 편대는 레전드 기체 네 대와 레전드 파일럿입니다.<br>이제 1단계부터 내 편대를 직접 키웁니다.<br>첫 선물 <b>가챠권 3장</b>은 「내 편대 만들기」를 누르면 바로 들어옵니다. 뽑기에서 기체 조각을 모으면 새 기체가 열립니다.</div>
     <div class="isub" id="introNameLine"></div>
     <button id="introGo">내 편대 만들기</button>
   </div>
@@ -4014,7 +4014,7 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.23'
+const BUILD_TAG = '0.9.25'
 
 try {
   const noSelOk = e => { const t = e.target; return !!(t && t.closest && t.closest('input, textarea, [contenteditable="true"]')) }
@@ -4022,7 +4022,7 @@ try {
   document.addEventListener('contextmenu', e => { if (!noSelOk(e)) e.preventDefault() }, { capture: true })
 } catch (e) {}
 
-const BUILD_AT = '10-06 20:39'
+const BUILD_AT = '10-09 08:52'
 
 const TRK_URL = 'https://qzimykxyvmoripifqmbi.supabase.co/rest/v1/rpc/sh_log'
 const TRK_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
@@ -4085,7 +4085,20 @@ function trkFlush() {
   if (TRK.q.length) TRK.t = setTimeout(trkFlush, 1000)
 }
 
-addEventListener('visibilitychange', () => { if (document.hidden) trkFlush() })
+TRK.hideAt = 0
+function trkHide() {
+  try {
+    const now = Date.now()
+    if (now - TRK.hideAt < 2000) return
+    TRK.hideAt = now
+    const s = state
+    const v = { s: s && s.running ? (s.intro ? 'intro' : 'run') : (titleDone ? curScreen : 'title'),
+                t: Math.round(performance.now() / 1000), runs: (prog && prog.stats && prog.stats.runs) | 0 }
+    if (s && s.running) v.sec = Math.round(s.t || 0)
+    track('hide', v)
+  } catch (e) {   }
+}
+addEventListener('visibilitychange', () => { if (document.hidden) { trkHide(); trkFlush() } })
 addEventListener('pagehide', trkFlush)
 
 addEventListener('error', (ev) => {
@@ -5399,6 +5412,7 @@ function pull(kind) {
   if (prog.ticket < g.cost) return null
   prog.ticket -= g.cost
   prog.pull[kind]++
+  track('pull', { k: kind, n: prog.pull[kind] | 0 })
   missBump('pull')
 
   if (prog.pull[kind] % HARD_PITY === 0) {
@@ -7229,7 +7243,7 @@ function go(name) {
 
   lastGoAt = performance.now()
   fxIn(shown)
-  if (name === 'squad') setTimeout(() => { showGotPop(); pwCheckOnSquad() }, 260)
+  if (name === 'squad') setTimeout(() => { if (dailyDeferred()) return; showGotPop(); pwCheckOnSquad() }, 260)
   if (previous !== name) {
     sfx('uiTab')
     if (name === 'squad') hangarFocus()
@@ -7333,6 +7347,19 @@ let guideNav = false
 
 const GUIDE = { active: null }
 let SWAP_NOTE = null
+
+let DAILY_DEFER = false
+function dailyDeferred() {
+  if (!DAILY_DEFER || !titleDone) return false
+  if (!((prog.stats && prog.stats.runs) | 0)) return false
+  if (state && state.running) return false
+  if (anyOverlay()) return false
+  DAILY_DEFER = false
+  const d = claimDaily()
+  if (!d) return false
+  showDaily(d)
+  return true
+}
 function guideFlags() { return (prog.guide = prog.guide || {}) }
 function guideDone(k) { const g = guideFlags(); if (!g[k]) { g[k] = true; save() } GUIDE.active = null }
 
@@ -7349,6 +7376,7 @@ function guideNext() {
     if (!document.querySelector(sel)) return false
     GUIDE.active = active || null
     guideNav = true
+    track('guide', { g: active || sel.slice(0, 24) })
     tourRun([[sel, title, text]], null)
     return true
   }
@@ -7376,7 +7404,12 @@ function guideNext() {
 
   if (prog.ticket >= GACHA.plane.cost && !g.ticketOnce) {
     g.ticketOnce = true; g.ticketAt = prog.ticket; save()
-    return point('#tabs button[data-go="gacha"]', '가챠권이 있습니다', '가챠권 ' + prog.ticket + '장. 뽑기에서 새 기체를 엽니다.', null)
+    return point('#tabs button[data-go="gacha"]', '가챠권이 있습니다', '가챠권 ' + prog.ticket + '장. 뽑기에서 새 기체를 엽니다.', 'ticket')
+  }
+
+  if (titleDone && !((prog.stats && prog.stats.runs) | 0) && !g.sortieOnce && (g.ticketOnce || prog.ticket < GACHA.plane.cost)) {
+    g.sortieOnce = true; save()
+    return point('#launch', '첫 출격', '여기를 누르면 1단계로 나갑니다. 드래그로 움직이고 공격은 자동입니다.', 'sortie')
   }
   return false
 }
@@ -7630,7 +7663,7 @@ function renderSquad() {
 
     if (rushPending >= 0) return
 
-    if (guideNav) return
+    if (guideNav && ((prog.stats && prog.stats.runs) | 0)) return
 
     if (anyOverlay()) return
     if (rushOpenPopup()) return
@@ -9907,8 +9940,8 @@ async function sbSignInApple() {
   const L = lgPlugin(); if (!L) return
   let c
   try { c = await L.appleLogin() } catch (e) {
-    if (e && e.code === 'canceled') return
-    SB.err = (e && e.message) || String(e); say(sbSayIos(e, 'apple'), '로그인'); return
+    if (e && e.code === 'canceled') { lgStop('apple', e, true); return }
+    SB.err = (e && e.message) || String(e); lgStop('apple', e, false); say(sbSayIos(e, 'apple'), '로그인'); return
   }
   const arg = (x) => ({ provider: 'apple', token: x.idToken, nonce: x.nonce })
   let r
@@ -9926,7 +9959,7 @@ async function sbSignInApple() {
       }
     }
   } catch (e) { r = { error: e } }
-  if (r.error) { SB.err = r.error.message || String(r.error); say(sbSayIos(r.error, 'apple'), '로그인'); return }
+  if (r.error) { SB.err = r.error.message || String(r.error); lgStop('apple', r.error, false); say(sbSayIos(r.error, 'apple'), '로그인'); return }
   let u = null
   try { u = (await SB.cli.auth.getUser()).data.user } catch (e) { u = null }
   sbMarkUser(u || (r.data && r.data.user))
@@ -9938,7 +9971,38 @@ async function sbSignInApple() {
   sbAfterLogin()
 }
 
+function lgHas(m) {
+  try {
+    const H = window.Capacitor && window.Capacitor.PluginHeaders
+    if (!Array.isArray(H)) return true
+    const h = H.find((x) => x && x.name === 'Login')
+    return !h || (h.methods || []).some((x) => x && x.name === m)
+  } catch (e) { return true }
+}
+
+function lgStop(p, e, cancel) {
+  if (cancel) { track('loginStop', { p: p, r: 'cancel' }); return }
+  const c = String((e && (e.code || e.status)) || '').slice(0, 30)
+  const m = String((e && e.message) || e || '').replace(/\S+@\S+/g, '@').slice(0, 80)
+  track('loginStop', { p: p, r: 'fail', c: c, m: m })
+}
+
+async function sbGoogleIosId(L) {
+  const c = await L.googleIdToken()
+  const arg = { provider: 'google', token: c.idToken, nonce: c.nonce }
+  if (c.accessToken) arg.access_token = c.accessToken
+  let r = SB.anon ? await SB.cli.auth.linkIdentity(arg) : await SB.cli.auth.signInWithIdToken(arg)
+  if (r.error && SB.anon) r = await SB.cli.auth.signInWithIdToken(arg)
+  if (r.error) throw r.error
+  let u = null
+  try { u = (await SB.cli.auth.getUser()).data.user } catch (e) { u = null }
+  sbMarkUser(u || (r.data && r.data.user))
+  track('login', { p: 'google' })
+  sbAfterLogin()
+}
+
 async function sbGoogleIos(L) {
+  if (lgHas('googleIdToken')) return sbGoogleIosId(L)
   const opt = { redirectTo: SB_DEEPLINK, skipBrowserRedirect: true }
   let linking = false, r = null
   if (SB.anon) { r = await SB.cli.auth.linkIdentity({ provider: 'google', options: opt }); linking = !r.error && !!(r.data && r.data.url) }
@@ -10101,8 +10165,9 @@ async function sbSignInGoogle() {
   const LG = lgPlugin()
   if (LG) {
     try { await sbGoogleIos(LG) } catch (e) {
-      if (e && e.code === 'canceled') return
+      if (e && e.code === 'canceled') { lgStop('google', e, true); return }
       SB.err = (e && e.message) || String(e)
+      lgStop('google', e, false)
       say(sbSayIos(e, 'google'), '로그인')
     }
     return
@@ -21688,7 +21753,10 @@ function titleEnter(intro) {
 }
 
 function titleGo1() {
-  const daily = claimDaily()
+
+  const first = !((prog.stats && prog.stats.runs) | 0)
+  if (first) DAILY_DEFER = true
+  const daily = first ? null : claimDaily()
   if (daily) showDaily(daily)
 
   if (!daily) setTimeout(() => { if (curScreen === 'squad') showGotPop() }, 300)
@@ -21832,6 +21900,16 @@ function introEnd(win, force) {
   setTimeout(() => { if (state === s) introBridge() }, win ? 900 : 300)
 }
 
+function introWelcome() {
+  mailSync()
+  const m = mailList().find((x) => x && x.id === 'n-welcome')
+  if (!m || m.claimed || !m.items) return
+  m.claimed = true
+  m.read = true
+  grantItems(m.items)
+  track('mail', { id: 'n-welcome', direct: 1 })
+}
+
 function introBridge() {
   if (!INTRO.name) INTRO.name = randomPilotName()
   elTitle.hidden = true; elTitle.classList.remove('attract', 'taken'); titleInert(false)
@@ -21869,6 +21947,7 @@ function introGo() {
     prog.introSec = Math.round(+INTRO.sec || 0)
     save()
     track('name', { typed: 0, auto: 1 })
+    introWelcome()
   }
   INTRO.armed = false
   state = null
