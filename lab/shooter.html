@@ -912,6 +912,13 @@
   #introBridge .ibody b { color: var(--gold, #ffd98a); }
   #introBridge .isub { font-size: 12px; color: var(--muted); }
   #introBridge > div > button { width: min(340px, 88vw); }
+/* 다리 화면 v4 (0.9.26, 개선안 08): 긴 문단 대신 3단계 + 선물 카드 */
+#introBridge .isteps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;width:100%;text-align:left}
+#introBridge .isteps li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.5;color:var(--ink)}
+#introBridge .isteps b{flex:none;width:22px;height:22px;border-radius:50%;background:#ffd54a;color:#1b1300;font-size:12px;display:flex;align-items:center;justify-content:center}
+#introBridge .isteps em{font-style:normal;color:var(--gold,#ffd98a);font-weight:700}
+#introBridge .igift{width:100%;box-sizing:border-box;border:1px solid rgba(240,185,11,.5);background:rgba(240,185,11,.08);border-radius:12px;padding:10px 12px;text-align:center}
+#introBridge .igift .ig-k{font-size:11px;color:#f6dc8a}#introBridge .igift .ig-v{font-size:22px;font-weight:900;color:#ffd98a;line-height:1.2}#introBridge .igift .ig-s{font-size:11px;color:var(--muted)}
 
   /*
    * 새 챕터 알림.
@@ -1079,6 +1086,9 @@
   #scStage .nodes { gap: 5px; margin-top: 8px; }
   #scStage .node { padding: 4px 2px 3px; border-radius: 9px; }
   #scStage .node .n { font-size: 12px; }
+/* 지도 v4 (0.9.26, 개선안 04): 잠긴 판은 번호만 흐리게, 지금 판엔 금색 꼬리표 */
+.mnode.lock{opacity:.32}.maptabs .mtab.lock{opacity:.4}
+.mnode .here{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#1b1300;background:#ffd54a;border-radius:6px;padding:1px 6px;white-space:nowrap;pointer-events:none}
   #scStage .rushopen { margin-top: 8px; }
   #scStage .modes { display: none; }
 
@@ -2764,6 +2774,16 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 #scSquad.v3 #squadModes .ds{font-size:9.5px;color:#9fb9c5;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #scSquad.v3 .rushbtn{min-height:36px;align-self:start;padding:4px 10px;font-size:11px;font-weight:800;border-radius:9px;background:linear-gradient(#5a2a2a,#3a1414);border:1px solid #e08a8a;color:#ffd7d7;box-shadow:none;white-space:nowrap}
 #scSquad.v3 .rushbtn.lock{opacity:.5;filter:saturate(.4)}
+/* 편대 v4 (0.9.26, Claude Design 개선안 02): 기체 그림이 한가득, 바로가기는 아래 한 줄, 주 행동(출격)은 금색 하나 */
+.hg-body3.v4{grid-template-columns:minmax(0,1fr);gap:8px}
+.hg-body3.v4 .hg-form{min-height:300px}
+#scSquad .hg-body3.v4 .hg-wing{gap:2px}#scSquad .hg-body3.v4 .hg-wing img{height:40px}#scSquad .hg-body3.v4 .hg-wing .hg-wing-name{flex:none}body.aitTop #scSquad .hg-body3.v4 .hg-wing img{height:34px}body.aitShort #scSquad .hg-body3.v4 .hg-wing img{height:22px}body.aitShort #scSquad .hg-body3.v4 .hg-wing .hg-wing-name{display:none}
+.hg-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.hg-row .hg-ico{height:58px;font-size:10px}.hg-row .hg-ico[hidden]{display:none}
+#scSquad.v3 #launch,#scStage.v3 #launch2{background:linear-gradient(#ffd54a,#e9a800);border:1px solid #ffe79a;color:#1b1300;box-shadow:0 4px 0 #8a6400}
+#scSquad.v3 #hgStage{min-height:52px}#scSquad.v3 #hgStage .mapic{font-size:24px}
+body.aitShort .hg-row .hg-ico{height:50px}
+@media(max-height:650px) and (max-width:600px){.hg-body3.v4 .hg-form{min-height:255px}}
 /* ── 기체 화면 v3 (2026-09-14): 자리 상자 / 큰 그림+파워 / 등급 탭 / 3열 카드 ── */
 #scPlanes h1{font-size:16px;margin:0 0 4px}
 .slotTabs.v3{gap:6px;margin:0 0 8px}.slotTabs.v3 button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:74px;padding:4px 2px;font-size:10px;background:#0f1b22cc;border:1px solid #4d626b77;border-radius:12px}
@@ -2817,7 +2837,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 .mnode .st{display:flex;gap:2px;justify-content:center;margin-top:1px}.mnode .st i{width:9px;height:9px;background:#ffd23f;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}.mnode .st i.off{opacity:.25;filter:grayscale(1)}
 .mapinfo{position:absolute;right:8px;top:8px;background:#0a151cd9;border:1px solid #3f545d;border-radius:9px;padding:5px 9px;max-width:46%;text-align:right}.mapinfo b{display:block;font-size:13px}.mapinfo small{display:block;font-size:9.5px;color:#9fb9c5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #scStage.v3 .rushopen{margin-top:8px}
-#scStage.v3 .bar{margin-top:6px}#scStage.v3 #launch2{min-height:48px;font-size:18px;font-weight:800;background:linear-gradient(#8fdc74,#3f9c3c);border:1px solid #c9eeb6;color:#08200c;box-shadow:0 4px 0 #1f4d1f;border-radius:12px;padding:8px 26px}
+#scStage.v3 .bar{margin-top:6px}#scStage.v3 #launch2{min-height:48px;font-size:18px;font-weight:800;background:linear-gradient(#ffd54a,#e9a800);border:1px solid #ffe79a;color:#1b1300;box-shadow:0 4px 0 #8a6400;border-radius:12px;padding:8px 26px}
 @media(max-height:700px){.mapwrap{height:clamp(280px,46vh,400px)}}
 /* 조각 합성 · 컬렉션 (2026-09-14 밤) */
 .merge{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px 5px;align-items:center;margin-top:6px}.merge .fl{font-size:10.5px;color:var(--dim);margin-right:2px;white-space:nowrap}
@@ -3010,24 +3030,23 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
     </div>
   </header>
   <div class="hg-scroll" id="hangarScroll">
-    <div class="hg-body3">
-      <div class="hg-col">
-        <button class="hg-ico" id="hgGoShop"><span class="ie" aria-hidden="true">🛍️</span><span>상점</span></button>
-        <button class="hg-ico" id="hgGoRank"><span class="ie" aria-hidden="true">🏅</span><span>랭킹</span></button>
-        <button class="hg-ico" id="hgGoPass"><span class="ie" aria-hidden="true">🎫</span><span>출격 패스</span></button>
-      </div>
-      <div class="hg-form">
+    <div class="hg-body3 v4">
+<div class="hg-form">
         <div class="hg-plane-name"><strong id="hgPlaneName"></strong><span id="hgPlaneMeta"></span></div>
         <button class="hg-main" id="hgMain" aria-label="메인 기체 선택"><img id="hgPlaneImage" alt=""><span class="hg-change" id="hgPlaneChange">기체 변경 ›</span></button>
         <div class="hg-wings"><div class="hg-pw" id="hgPw"><small>편대 전투력</small><b id="hgPwVal">0</b><button id="hgPwInfo" aria-label="전투력 세부">?</button></div><div class="hg-wing-title">윙맨 · 후방 지원</div><div id="slots" class="hg-wing-row"></div><p id="squadSub"></p></div>
       </div>
-      <div class="hg-col">
-        <button class="hg-ico" id="hgGoMiss"><span class="ie" aria-hidden="true">📋</span><span>임무</span><b class="mdot" id="hgMissDot" hidden></b></button>
-        <button class="hg-ico" id="hgGoInfo"><span class="ie" aria-hidden="true">📊</span><span>편대 정보</span></button>
-        <button class="hg-ico" id="hgGoColl"><span class="ie" aria-hidden="true">🏆</span><span>컬렉션</span></button>
-      </div>
-    </div>
-    <div id="hgHidden" hidden><span id="hgMissionStatus"></span><span id="hgPower"></span><div id="squadSum"></div><p id="hgPilotStats"></p><p id="wallet"></p></div>
+<!-- 바로가기 한 줄 (0.9.26). 세로 열 둘이 기체를 둘러싸던 것을 아래로 모았다. 상점은 아래 탭이 있어 숨긴다 -->
+<div class="hg-row">
+<button class="hg-ico" id="hgGoMiss"><span class="ie" aria-hidden="true">📋</span><span>임무</span><b class="mdot" id="hgMissDot" hidden></b></button>
+<button class="hg-ico" id="hgGoRank"><span class="ie" aria-hidden="true">🏅</span><span>랭킹</span></button>
+<button class="hg-ico" id="hgGoPass"><span class="ie" aria-hidden="true">🎫</span><span>출격 패스</span></button>
+<button class="hg-ico" id="hgGoColl"><span class="ie" aria-hidden="true">🏆</span><span>컬렉션</span></button>
+<button class="hg-ico" id="hgGoInfo"><span class="ie" aria-hidden="true">📊</span><span>편대 정보</span></button>
+<button class="hg-ico" id="hgGoShop" hidden><span class="ie" aria-hidden="true">🛍️</span><span>상점</span></button>
+</div>
+</div>
+<div id="hgHidden" hidden><span id="hgMissionStatus"></span><span id="hgPower"></span><div id="squadSum"></div><p id="hgPilotStats"></p><p id="wallet"></p></div>
   </div>
   <footer class="hg-footer">
     <div class="hg-destination"><button id="hgStage" aria-label="출격 전선 선택"><span class="mapic" aria-hidden="true">🗺️</span><span class="mapt"><strong id="hgDestination"></strong><small>지도 · 전선 선택 ›</small></span></button>
@@ -3364,7 +3383,7 @@ button:focus-visible,summary:focus-visible,[role=button]:focus-visible{outline:2
 <div class="panel" id="introBridge" hidden>
   <div>
     <h2>맛보기 출격 끝</h2>
-    <div class="ibody">방금 몬 편대는 레전드 기체 네 대와 레전드 파일럿입니다.<br>이제 1단계부터 내 편대를 직접 키웁니다.<br>첫 선물 <b>가챠권 3장</b>은 「내 편대 만들기」를 누르면 바로 들어옵니다. 뽑기에서 기체 조각을 모으면 새 기체가 열립니다.</div>
+    <ol class="isteps"><li><b>1</b><span>방금 몬 편대는 <em>레전드 기체 네 대</em>와 <em>레전드 파일럿</em>이었습니다</span></li><li><b>2</b><span>이제 <em>1단계부터</em> 내 편대를 직접 키웁니다</span></li><li><b>3</b><span>뽑기에서 기체 조각을 모으면 <em>새 기체</em>가 열립니다</span></li></ol><div class="igift"><div class="ig-k">첫 선물 · 바로 지급</div><div class="ig-v">가챠권 3장</div><div class="ig-s">「내 편대 만들기」를 누르면 바로 들어옵니다</div></div>
     <div class="isub" id="introNameLine"></div>
     <button id="introGo">내 편대 만들기</button>
   </div>
@@ -4014,7 +4033,7 @@ function enMax() {
 const EN_REGEN = 10 * 60 * 1000
 const AD_ENERGY_DAY = 10
 
-const BUILD_TAG = '0.9.25'
+const BUILD_TAG = '0.9.26'
 
 try {
   const noSelOk = e => { const t = e.target; return !!(t && t.closest && t.closest('input, textarea, [contenteditable="true"]')) }
@@ -4022,7 +4041,7 @@ try {
   document.addEventListener('contextmenu', e => { if (!noSelOk(e)) e.preventDefault() }, { capture: true })
 } catch (e) {}
 
-const BUILD_AT = '10-09 08:52'
+const BUILD_AT = '10-12 19:06'
 
 const TRK_URL = 'https://qzimykxyvmoripifqmbi.supabase.co/rest/v1/rpc/sh_log'
 const TRK_KEY = 'sb_publishable__fSxVVDLeoed3LeIlB6cTQ_Vrc68mPl'
@@ -9492,14 +9511,14 @@ function renderStage() {
       `${isBoss || isMid ? ' boss' : ''}" data-sub="${sub}">` +
       (st >= 3 ? `<div class="md perfect"></div>` : st > 0 ? `<div class="md clear"></div>` : '') +
       `<div class="n">${sub}</div>` +
-      `<div class="k">${isBoss ? '보스' : isMid ? '중간' : open ? '' : '잠김'}</div>` +
+      `<div class="k">${isBoss ? '보스' : isMid ? '중간' : ''}</div>` +
       `<div class="st">${stars}</div></div>`
   }).join('')
 
   const tabs = CHAPTERS.map((c, i) => {
     const open = chapterOpen(i, runMode)
     return `<button class="mtab${i === mapCh ? ' on' : ''}${open ? '' : ' lock'}" data-ch="${i}"${open ? '' : ' disabled'}>` +
-      `<span>챕터 ${c.id}</span><b>${open ? chapterStars(i, runMode) + '/' + (SUBS * 3) + '★' : '잠김'}</b></button>`
+      `<span>챕터 ${c.id}</span><b>${open ? chapterStars(i, runMode) + '/' + (SUBS * 3) + '★' : '·'}</b></button>`
   }).join('')
 
   const POS = [[14, 88], [38, 80], [62, 86], [84, 74], [66, 62], [40, 66], [16, 56], [30, 42], [56, 46], [80, 38], [60, 24], [34, 16]]
@@ -9512,8 +9531,8 @@ function renderStage() {
     const [x, y] = POS[k] || [50, 50]
     const stars = [0, 1, 2].map((i) => `<i class="${i < st ? '' : 'off'}"></i>`).join('')
     return `<div class="mnode${pick && open ? ' on' : ''}${open ? '' : ' lock'}${isBoss ? ' boss' : isMid ? ' mid' : ''}${st >= 3 ? ' perfect' : st > 0 ? ' clear' : ''}" data-sub="${sub}" style="left:${x}%;top:${y}%">` +
-      `<div class="mc">${open ? (isBoss || isMid ? '💀' : '') : '🔒'}</div>` +
-      `<div class="ml">${sub}</div><div class="st">${stars}</div></div>`
+      `<div class="mc">${isBoss || isMid ? '💀' : ''}</div>` +
+      `<div class="ml">${sub}</div><div class="st">${stars}</div>${pick && open ? '<div class="here">지금 여기</div>' : ''}</div>`
   }).join('')
   const path = POS.slice(0, SUBS).map(([x, y]) => x + ',' + y).join(' ')
 
