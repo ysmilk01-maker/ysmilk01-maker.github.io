@@ -5,3 +5,8 @@ __pycache__/
 # 워드프레스 배포 산출물
 wordpress/build/
 wordpress/dist/
+
+# 슈팅 게임 본체는 공개 사이트에 올리지 않는다(2026-10-24 대표 지시). 빌드는 이 로컬 파일을 읽는다.
+lab/shooter.html
+lab/img/
+lab/audio/
